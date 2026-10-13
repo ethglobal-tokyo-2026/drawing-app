@@ -1,0 +1,44 @@
+[WebServer] Sticker chain mode is mock; nothing is minted or given on Sui
+[WebServer] The chat menu and the giver's messages are off under DEV_SIGN_IN=on
+[WebServer] ⚠ DEV_SIGN_IN=on: anyone can sign in as anyone. The REST API trusts dev access tokens without asking LINE.
+
+Running 20 tests using 2 workers
+
+  ✓   2 [chromium] › e2e/pencil.e2e.ts:113:1 › a hovering pen rings where it will land, as wide as the stroke it draws, and the ring goes as it lands or leaves (4.1s)
+  ✓   1 [chromium] › e2e/pencil.e2e.ts:88:1 › a pen's first stroke brings the Pencil only tile; fingers then only tap, until the tile lets them draw (6.3s)
+  ✓   4 [chromium] › e2e/pencil.e2e.ts:172:1 › at Smooth, a pen's line trails its nib, stays still without new packets, and finishes on release (4.2s)
+  ✓   3 [chromium] › e2e/pencil.e2e.ts:144:1 › pen pressure: a pen whose pressure never moves draws by speed; then strokes widen as they press harder, and start as light as they land (7.0s)
+  ✓   6 [chromium] › e2e/pencil.e2e.ts:307:3 › live pen speed choices work and fit the en phone panel (4.0s)
+  ✓   5 [chromium] › e2e/pencil.e2e.ts:210:1 › post correction runs after pen lift and commits one replayable stroke (5.7s)
+[WebServer] 7:30:40 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 7:30:40 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 7:30:41 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 7:30:41 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+  ✓   8 [chromium] › e2e/pencil.e2e.ts:372:1 › Japanese post correction controls fit the phone panel (4.6s)
+  ✓   7 [chromium] › e2e/pencil.e2e.ts:307:3 › live pen speed choices work and fit the ja phone panel (6.1s)
+[WebServer] 7:30:46 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 7:30:46 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 7:30:48 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 7:30:48 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+  ✓   9 [chromium] › e2e/pencil.e2e.ts:401:1 › once a pen has drawn here, a palm never draws, and a resting palm doesn't hold up two-finger undo (5.8s)
+  ✓  10 [chromium] › e2e/pencil.e2e.ts:431:1 › Settings shows Input and Pen pressure once a pen has drawn on the device, and Try it takes the pen (11.4s)
+  ✓  11 [webkit] › e2e/pencil.e2e.ts:88:1 › a pen's first stroke brings the Pencil only tile; fingers then only tap, until the tile lets them draw (5.7s)
+  ✓  12 [webkit] › e2e/pencil.e2e.ts:113:1 › a hovering pen rings where it will land, as wide as the stroke it draws, and the ring goes as it lands or leaves (3.7s)
+  ✓  13 [webkit] › e2e/pencil.e2e.ts:144:1 › pen pressure: a pen whose pressure never moves draws by speed; then strokes widen as they press harder, and start as light as they land (6.6s)
+  ✓  14 [webkit] › e2e/pencil.e2e.ts:172:1 › at Smooth, a pen's line trails its nib, stays still without new packets, and finishes on release (4.0s)
+  ✓  16 [webkit] › e2e/pencil.e2e.ts:307:3 › live pen speed choices work and fit the en phone panel (3.8s)
+[WebServer] 7:31:09 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 7:31:09 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+  ✓  15 [webkit] › e2e/pencil.e2e.ts:210:1 › post correction runs after pen lift and commits one replayable stroke (6.4s)
+[WebServer] 7:31:12 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 7:31:12 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+  ✓  17 [webkit] › e2e/pencil.e2e.ts:307:3 › live pen speed choices work and fit the ja phone panel (6.4s)
+  ✓  18 [webkit] › e2e/pencil.e2e.ts:372:1 › Japanese post correction controls fit the phone panel (5.2s)
+[WebServer] 7:31:16 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 7:31:16 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 7:31:17 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 7:31:17 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+  ✓  19 [webkit] › e2e/pencil.e2e.ts:401:1 › once a pen has drawn here, a palm never draws, and a resting palm doesn't hold up two-finger undo (4.5s)
+  ✓  20 [webkit] › e2e/pencil.e2e.ts:431:1 › Settings shows Input and Pen pressure once a pen has drawn on the device, and Try it takes the pen (12.0s)
+
+  20 passed (1.2m)

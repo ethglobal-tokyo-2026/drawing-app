@@ -1,0 +1,38 @@
+{
+  "compare-recorded-ingestions.mjs": {
+    "bytes": 6050,
+    "sha256": "fd65a98140e5c4952d9b44787cf34b4048700e9167bffd3c8bf3d0b46aa69f85"
+  },
+  "comparison.json": {
+    "bytes": 1759,
+    "sha256": "47ee7a4fbf219b763d1fb1ee94c098aed1015923cc978363a64d4e51aebcf98b"
+  },
+  "debugger.txt": {
+    "bytes": 27353,
+    "sha256": "3090f9d5ea5625bfd7ea89f3ee1022c44765f316694b0fe8311836ba967d46dd"
+  },
+  "diagnostic-ingestions.json": {
+    "bytes": 67522,
+    "sha256": "316d5a4bbd67b7799616a0ed644ec2ed5a5bbd1839bd961061b41601a296d3ff"
+  },
+  "operator-note-and-boundary.json": {
+    "bytes": 906,
+    "sha256": "d4825979e3800575acc77124d3b1567332aeff9b0d8d49d346541543a56ba462"
+  },
+  "process-resume.json": {
+    "bytes": 197,
+    "sha256": "bccf8b5258cd29c906e749c51adf8bade905a62ca76e74174e91761133eb1468"
+  },
+  "runner-result.json": {
+    "bytes": 126,
+    "sha256": "cd0fc317ecaf2857b1e068a8dcfda165e5cf3de28ac1c85624c893caefa5bccf"
+  },
+  "session.json": {
+    "bytes": 1101,
+    "sha256": "42a677cc4d2b17f12b8b806bc46fb76a656800237182e8c42eeed0a95246c560"
+  },
+  "tablet.jsonl": {
+    "bytes": 208788,
+    "sha256": "d643666eb8a70906e32b5d63cdc128505b5f5d22efd82de292d9bf3a83812186"
+  }
+}

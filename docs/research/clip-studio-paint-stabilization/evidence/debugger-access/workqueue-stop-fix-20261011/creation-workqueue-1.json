@@ -1,0 +1,11 @@
+{
+  "mode": "workqueue",
+  "stops": [],
+  "events": [],
+  "expected_retired_stops": 8,
+  "unexpected_stops_are_fatal": true,
+  "error": "RuntimeError('Expected exactly one loaded code symbol: __workq_kernreturn')",
+  "elapsed_seconds": 0.0004512090000000635,
+  "cleanup_errors": [],
+  "kill_error": "success"
+}

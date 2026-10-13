@@ -1,10 +1,26 @@
 # Mac debugger access and runtime comparison
 
+2026-10-10 update: [both capture/analysis preparations](capture-preparation.md) now exist. The live queue has an offline stateful comparator; post correction has a before/after path recorder and a strict saved-data analyzer. A [native mouse post-correction operation](evidence/debugger-access/post-mouse-manual-20261010T184049Z/README.md) was captured and passed integrity checks: 99 source nodes became eight spline nodes. The user selected the fifth indicator bar; observed numeric strength was `k=40`. Both research processes detached cleanly and were independently found resumed. Native tablet capture and whole-curve post equivalence remain unvalidated. The historical observations below are retained as evidence.
+
 Status on 2026-10-09 local session: **debugger access and a complete native mouse-route recording work**. The mouse recording includes down, drag, up, and return from the up callback, with independently checked saved packets and clean detachment. The installed app remains unchanged. Ordinary mouse follows a separate route and produced zero calls into the recovered tablet queue, so no live tablet input/output comparison is established. The primary comparison device is a drawing tablet or pen display on Mac. An iPad is a later portability/feel test, not a substitute for validating this Mac executable.
+
+## Persistent research location for subsequent sessions
+
+The research app's persistent location is `/Users/adoll/Applications/CSP Research/CLIP STUDIO PAINT Research.app`. The pinned thin reference belongs at `/Users/adoll/Applications/CSP Research/original-arm64`. Use the persistent app path after a reboot:
+
+```sh
+open '/Users/adoll/Applications/CSP Research/CLIP STUDIO PAINT Research.app'
+```
+
+The persistent-copy verification matched all 811 files (782,552,918 bytes), file modes, and symbolic links against the source. Signature verification exited successfully with `valid on disk` and `satisfies its Designated Requirement`. See the [verification record](</Users/adoll/Applications/CSP Research/persistent-copy-verification.json>).
+
+Verify the actual process executable path before attachment; a saved PID does not identify a future session. Capture helpers default to `Path.home() / 'Applications/CSP Research'` and can also receive the executable path `/Users/adoll/Applications/CSP Research/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT` and reference path explicitly through `research_executable` and `original_arm64`.
+
+The `/private/tmp/csp-debug-research-20261009/` paths below and in saved evidence are historical. Preserve them as records of the original signing and capture sessions.
 
 ## Approved research-copy outcome
 
-The user approved creation, signing, and launch of a separate research copy, then confirmed their work was saved and authorized switching from the installed instance. The installed instance was quit through its UI. The research copy is at `/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app` (macOS also presents this as `/tmp/...`).
+The user approved creation, signing, and launch of a separate research copy, then confirmed their work was saved and authorized switching from the installed instance. The installed instance was quit through its UI. For these original sessions, the research copy was at `/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app` (macOS also presents this as `/tmp/...`).
 
 - Preserved the original entitlements `com.apple.security.cs.disable-library-validation=true` and `com.apple.security.device.camera=true`; added only `com.apple.security.get-task-allow=true`. Hardened Runtime remains enabled. No persistent macOS security setting was changed.
 - Verified 775 original app manifest entries. Only the copied main executable changed; nested components and all 36 ARM64 Mach-O sections are identical. The installed app matched its original manifest afterward. See [copy-verification.json](evidence/debugger-access/copy-verification.json) and [signing-verification.txt](evidence/debugger-access/signing-verification.txt).

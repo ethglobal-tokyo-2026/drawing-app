@@ -1,0 +1,199 @@
+{
+  "originalSha256": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+  "scope": "Static extraction from pinned original image; no native execution or attachment.",
+  "instructionBytes": "Four original bytes, in little-endian storage order, on every addressed line.",
+  "ranges": [
+    {
+      "file": "1028ebd40.asm",
+      "start": "0x1028ebd40",
+      "endExclusive": "0x1028ebfe4",
+      "instructionCount": 169,
+      "bytesSha256": "39f66a83e6700e84fdd3b80090056df29e0b09f2ca2be82462cff3783d1bbc85",
+      "assemblySha256": "69a5d999e3a158d7df6fdab604a8dd11fac4194b0f033c47197361caee026689"
+    },
+    {
+      "file": "1028ec548.asm",
+      "start": "0x1028ec548",
+      "endExclusive": "0x1028ec7c4",
+      "instructionCount": 159,
+      "bytesSha256": "f155a60b4a7e2d15040a973453b9e04d576337e1a7880a1bceed93e8ae6ab5e5",
+      "assemblySha256": "0d3ff579463fea5539b58c3afba972f771e23279facc1cdb698b3f787952c220"
+    },
+    {
+      "file": "1028ec8d0.asm",
+      "start": "0x1028ec8d0",
+      "endExclusive": "0x1028ec9c4",
+      "instructionCount": 61,
+      "bytesSha256": "f3d6adb42dcc27a2493463d4b2e1b731067f4b2b3bc5a3def93478f95a7850ad",
+      "assemblySha256": "fb88abc3e8639dac5792478362644b4518c1e3de89ea718490c05ea2a2e34d17"
+    },
+    {
+      "file": "1028ec4e0.asm",
+      "start": "0x1028ec4e0",
+      "endExclusive": "0x1028ec548",
+      "instructionCount": 26,
+      "bytesSha256": "fab51d663ab7b57278eaa72ca9537625b0bb5986db350a7b33ccb90537d09bd0",
+      "assemblySha256": "a6f96ae4a17ce10021ef3c06411eb0cdc4d5ba61be1cc1e37fca143dd9f2b439"
+    },
+    {
+      "file": "1028ed064.asm",
+      "start": "0x1028ed064",
+      "endExclusive": "0x1028ed180",
+      "instructionCount": 71,
+      "bytesSha256": "7389acda8989c2936f66dd99e8bd5ae456658eebbe1a032297906390a1d72d97",
+      "assemblySha256": "4a15f47a4ef616ad65a793f8f2e493d63e41e9142697563a478b6cde24c4f273"
+    },
+    {
+      "file": "10288cd3c.asm",
+      "start": "0x10288cd3c",
+      "endExclusive": "0x10288cef8",
+      "instructionCount": 111,
+      "bytesSha256": "eb519028d863bca5ac3e7d04a0b3689385a4843d6ba71c323662706215e46779",
+      "assemblySha256": "5dc9a58a6ef79337c6871a825ba287f530cebb846855a605ff93571a31fbcfb7"
+    },
+    {
+      "file": "1028f2274.asm",
+      "start": "0x1028f2274",
+      "endExclusive": "0x1028f22b4",
+      "instructionCount": 16,
+      "bytesSha256": "4612d509f1064115eec7759f67418bb260d367f413609845577f0d810aed3e5d",
+      "assemblySha256": "52ef1e5351eac4ab707710c5002d5664e95a48fdceda45bcc2932a0e98fce91d"
+    },
+    {
+      "file": "1028f2344.asm",
+      "start": "0x1028f2344",
+      "endExclusive": "0x1028f252c",
+      "instructionCount": 122,
+      "bytesSha256": "a543feac147f8b9f900600f325d6ca0f63b5dcb07390a5c3350e09f38906ee9d",
+      "assemblySha256": "8073ce01cd5a2b423da00f53f08259a20e0f240fd5a662c855c7f8838478d09a"
+    },
+    {
+      "file": "1028f25b0.asm",
+      "start": "0x1028f25b0",
+      "endExclusive": "0x1028f2798",
+      "instructionCount": 122,
+      "bytesSha256": "884bc980357c6f0aaf0926c8352df697cdf3eb15a018054465fac2be94bb467c",
+      "assemblySha256": "7bbd82675a8042c803b831ca3193499125e90ba345b8e17861bddb118f898dc4"
+    },
+    {
+      "file": "10288d814.asm",
+      "start": "0x10288d814",
+      "endExclusive": "0x10288d864",
+      "instructionCount": 20,
+      "bytesSha256": "087faa35ef32ed301420380fc3d8828bdb9486b5e96db90fb4181fbdf44a2dc1",
+      "assemblySha256": "c71a58f481572e881edf5251351f3711e42f805a2dfa41e3dbbd5ba158c02f7c"
+    },
+    {
+      "file": "10288fb28.asm",
+      "start": "0x10288fb28",
+      "endExclusive": "0x10288fc64",
+      "instructionCount": 79,
+      "bytesSha256": "da6bf89426a125abd4ec4fa09f88b57a9855e3d10d703d90ce5be75c66203781",
+      "assemblySha256": "a67fb7e10bb19338c1bcfc301d26823d0f3d0f308b7b2a6a8d9aff62ae305700"
+    },
+    {
+      "file": "102c70688.asm",
+      "start": "0x102c70688",
+      "endExclusive": "0x102c706fc",
+      "instructionCount": 29,
+      "bytesSha256": "34bd6a0d864a1d540cb6614894ef7534c5bd5b2b3331c829e95ac4d349d4445e",
+      "assemblySha256": "b3f5a1bd1a57d70f3641b4e4378d44553bd8dd08b19c46e7d132831d4e149d2e"
+    },
+    {
+      "file": "102c709c4.asm",
+      "start": "0x102c709c4",
+      "endExclusive": "0x102c709e4",
+      "instructionCount": 8,
+      "bytesSha256": "57890f38cbf56ed3fef6ff597f78073353183f430abcfa9fae7418518f72b078",
+      "assemblySha256": "98f459fafd156a171554f02637ca4aef714124d6ade144fe9858ed3fe99d3018"
+    },
+    {
+      "file": "102c709e4.asm",
+      "start": "0x102c709e4",
+      "endExclusive": "0x102c70a14",
+      "instructionCount": 12,
+      "bytesSha256": "bce52867b436277a6d1c469adaa30b8fc3ec65943632591f76286130ab94e300",
+      "assemblySha256": "c2685513eda785c10785d3cbac72c53c79a0dd49e20f5dcd1f1a2b698be63dab"
+    },
+    {
+      "file": "begin-primary-and-secondary.asm",
+      "start": "0x10288ac14",
+      "endExclusive": "0x10288af50",
+      "instructionCount": 207,
+      "bytesSha256": "53d3824d4d9d7eb496177a22e68a864bd70d03123b460c8f93318b317b2ccb4e",
+      "assemblySha256": "9d5317143548ef2bd8757269045c0623ea6bd8ed5424568fa09e182f22234849"
+    },
+    {
+      "file": "begin-counter.asm",
+      "start": "0x10288af9c",
+      "endExclusive": "0x10288afac",
+      "instructionCount": 4,
+      "bytesSha256": "dd16607ab3927a46b1cb92088161cffd319f6b306ae0623b7e588118075f606d",
+      "assemblySha256": "4640c33fd7d680daca7ccb76eb0a611104d5247ad88e20a14a49a9cd2210860c"
+    },
+    {
+      "file": "append-primary-generated.asm",
+      "start": "0x10288db40",
+      "endExclusive": "0x10288ddc0",
+      "instructionCount": 160,
+      "bytesSha256": "5ba7b1e1ea8338f93177d2310952f9083b4e50ec2e1c7843e884947817c1e749",
+      "assemblySha256": "b1fa0c852f0e39bf3864ed4afa50e9ac34ac19f8815f4de7072354533ef86fcc"
+    },
+    {
+      "file": "append-secondary.asm",
+      "start": "0x10288de68",
+      "endExclusive": "0x10288df8c",
+      "instructionCount": 73,
+      "bytesSha256": "f64b16543d49a0ad334b2036039f6e70cc48ff05a240a4ccbef62d42c78e6fd9",
+      "assemblySha256": "d400025466240fb6df8f0c8215e639a7d2f9c74b221c6418712c997374396284"
+    },
+    {
+      "file": "append-retained-records.asm",
+      "start": "0x10288e11c",
+      "endExclusive": "0x10288e19c",
+      "instructionCount": 32,
+      "bytesSha256": "c7e202f2309a0e53156c76e4b1736dec5cc16c783f5f6acf03b808ff12b6694e",
+      "assemblySha256": "3ba8f490eae8edbc1d0a16944c5f4a3928471cc47a02c6a92be5dae0c4ea124f"
+    },
+    {
+      "file": "append-primary-direct.asm",
+      "start": "0x10288e244",
+      "endExclusive": "0x10288e2dc",
+      "instructionCount": 38,
+      "bytesSha256": "e0fada787a3664e4582bd02b97ddd28d697d7b97fe3b5be6850a395ffa042020",
+      "assemblySha256": "0c53d3fd897296599854b0424f76b88cb86e0aa70619f075ed1e4e15eed67687"
+    },
+    {
+      "file": "append-counter.asm",
+      "start": "0x10288e848",
+      "endExclusive": "0x10288e874",
+      "instructionCount": 11,
+      "bytesSha256": "397fb8f2f17ed4ee8e9659f34a4079826d8445c496f8edc1d1e1c81bb063600f",
+      "assemblySha256": "8182a5c99e23561c06878e9735174de58c40e96dfff3137eb6f022baaec858c8"
+    },
+    {
+      "file": "finish-fresh-record-and-source.asm",
+      "start": "0x10289170c",
+      "endExclusive": "0x102891874",
+      "instructionCount": 90,
+      "bytesSha256": "e61185a30df393e003d97a11b9822f287fc7643d0c22e2d857da55cd3ea437cc",
+      "assemblySha256": "f652f7d977cb010524f2cff340931bdfb758f21cd4553d2896c3fda9ef3b68a7"
+    },
+    {
+      "file": "finish-retained-records.asm",
+      "start": "0x102891970",
+      "endExclusive": "0x1028919e0",
+      "instructionCount": 28,
+      "bytesSha256": "dd60462c06cde67b1009919b89e7e237be4af32e538f4c709e069683026d1941",
+      "assemblySha256": "3181ca75c870f2037789b367d74885a86ddc5f9880825cfac16745a2e7e48596"
+    },
+    {
+      "file": "post-caller-cap-and-identity.asm",
+      "start": "0x102891ccc",
+      "endExclusive": "0x102891d70",
+      "instructionCount": 41,
+      "bytesSha256": "8bfd2e80e1b7ebfdfc50e74a399702b1eb0ffdfb0af4ba8d3bcbdf031c626ac4",
+      "assemblySha256": "8f521996fe6c00279d05757b1a0c7ad6ad3d7259b1383d19947d74fadbe5a1c3"
+    }
+  ]
+}

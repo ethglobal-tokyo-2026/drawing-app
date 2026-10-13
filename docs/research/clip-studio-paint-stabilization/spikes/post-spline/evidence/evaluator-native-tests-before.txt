@@ -1,0 +1,372 @@
+✖ six-point evaluator preserves point ordering and both branch coefficient sets (1.30825ms)
+✖ evaluator endpoints retain multiply-then-divide rounding (0.391542ms)
+✖ evaluator does not clamp an out-of-range parameter (2.658125ms)
+✖ outer neighbor uses the greater of ten and 2.5 times the opposite distance (0.76175ms)
+✖ outer-neighbor equality still recomputes coordinates (0.186125ms)
+✖ spline measure includes all four quarter chords with direct segment endpoints (0.115083ms)
+✖ sampler truncates its interval count and emits both endpoints (0.473583ms)
+✖ sampler preserves reversed and out-of-range intervals (0.282666ms)
+✖ sampler bounds allocation even when density causes infinity or NaN (0.147666ms)
+✖ native instruction E results match every saved output bit (0.4925ms)
+✖ native instruction M results match every saved output bit (0.16675ms)
+✖ native instruction N results match every saved output bit (0.119708ms)
+✖ native instruction S results match every saved output bit (0.088208ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 0
+ℹ fail 13
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 135.940333
+
+✖ failing tests:
+
+test at docs/research/clip-studio-paint-stabilization/post-spline.test.ts:21:1
+✖ six-point evaluator preserves point ordering and both branch coefficient sets (1.30825ms)
+  AssertionError [ERR_ASSERTION]: P2.x at t=0
+  
+  0 !== 99
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-spline.test.ts:32:14)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 99,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at docs/research/clip-studio-paint-stabilization/post-spline.test.ts:37:1
+✖ evaluator endpoints retain multiply-then-divide rounding (0.391542ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + '0000000000000000'
+  - '407709e05db1f3e7'
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-spline.test.ts:39:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '0000000000000000',
+    expected: '407709e05db1f3e7',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at docs/research/clip-studio-paint-stabilization/post-spline.test.ts:43:1
+✖ evaluator does not clamp an out-of-range parameter (2.658125ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    {
+  +   x: 0,
+  -   x: -65,
+      y: 0
+    }
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-spline.test.ts:44:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { x: 0, y: 0 },
+    expected: { x: -65, y: 0 },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at docs/research/clip-studio-paint-stabilization/post-spline.test.ts:48:1
+✖ outer neighbor uses the greater of ten and 2.5 times the opposite distance (0.76175ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    {
+  +   x: 0,
+  -   x: 9,
+      y: 0
+    }
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-spline.test.ts:50:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { x: 0, y: 0 },
+    expected: { x: 9, y: 0 },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at docs/research/clip-studio-paint-stabilization/post-spline.test.ts:55:1
+✖ outer-neighbor equality still recomputes coordinates (0.186125ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    {
+      x: 0,
+  +   y: 0
+  -   y: 7
+    }
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-spline.test.ts:56:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { x: 0, y: 0 },
+    expected: { x: 0, y: 7 },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at docs/research/clip-studio-paint-stabilization/post-spline.test.ts:62:1
+✖ spline measure includes all four quarter chords with direct segment endpoints (0.115083ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 3.25
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-spline.test.ts:63:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 3.25,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at docs/research/clip-studio-paint-stabilization/post-spline.test.ts:68:1
+✖ sampler truncates its interval count and emits both endpoints (0.473583ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   {
+  -     x: 0,
+  -     y: 0
+  -   },
+  -   {
+  -     x: 1.625,
+  -     y: 0
+  -   },
+  -   {
+  -     x: 1.5,
+  -     y: 0
+  -   },
+  -   {
+  -     x: 0.625,
+  -     y: 0
+  -   },
+  -   {
+  -     x: 0,
+  -     y: 0
+  -   }
+  - ]
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-spline.test.ts:69:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ { x: 0, y: 0 }, { x: 1.625, y: 0 }, { x: 1.5, y: 0 }, { x: 0.625, y: 0 }, { x: 0, y: 0 } ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at docs/research/clip-studio-paint-stabilization/post-spline.test.ts:76:1
+✖ sampler preserves reversed and out-of-range intervals (0.282666ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   {
+  -     x: 0,
+  -     y: 0
+  -   },
+  -   {
+  -     x: 0.625,
+  -     y: 0
+  -   },
+  -   {
+  -     x: 1.5,
+  -     y: 0
+  -   },
+  -   {
+  -     x: 1.625,
+  -     y: 0
+  -   },
+  -   {
+  -     x: 0,
+  -     y: 0
+  -   }
+  - ]
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-spline.test.ts:77:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ { x: 0, y: 0 }, { x: 0.625, y: 0 }, { x: 1.5, y: 0 }, { x: 1.625, y: 0 }, { x: 0, y: 0 } ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at docs/research/clip-studio-paint-stabilization/post-spline.test.ts:81:1
+✖ sampler bounds allocation even when density causes infinity or NaN (0.147666ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 256
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-spline.test.ts:82:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 256,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at docs/research/clip-studio-paint-stabilization/post-spline.test.ts:99:3
+✖ native instruction E results match every saved output bit (0.4925ms)
+  AssertionError [ERR_ASSERTION]: branch-and-endpoint--1
+  + actual - expected
+  
+    [
+  +   '0000000000000000',
+  +   '0000000000000000'
+  -   'c071279da7898648',
+  -   '402decdd59788042'
+    ]
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-spline.test.ts:120:14)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ '0000000000000000', '0000000000000000' ],
+    expected: [ 'c071279da7898648', '402decdd59788042' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at docs/research/clip-studio-paint-stabilization/post-spline.test.ts:99:3
+✖ native instruction M results match every saved output bit (0.16675ms)
+  AssertionError [ERR_ASSERTION]: random-measure-0
+  + actual - expected
+  
+    [
+  +   '0000000000000000'
+  -   '31006c2aef17f110'
+    ]
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-spline.test.ts:120:14)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ '0000000000000000' ],
+    expected: [ '31006c2aef17f110' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at docs/research/clip-studio-paint-stabilization/post-spline.test.ts:99:3
+✖ native instruction N results match every saved output bit (0.119708ms)
+  AssertionError [ERR_ASSERTION]: under-10
+  + actual - expected
+  
+    [
+  -   '4023ffffffffffff',
+      '0000000000000000',
+  +   '0000000000000000'
+    ]
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-spline.test.ts:120:14)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ '0000000000000000', '0000000000000000' ],
+    expected: [ '4023ffffffffffff', '0000000000000000' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at docs/research/clip-studio-paint-stabilization/post-spline.test.ts:99:3
+✖ native instruction S results match every saved output bit (0.088208ms)
+  AssertionError [ERR_ASSERTION]: sampling-boundaries-0
+  
+  0 !== 5
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-spline.test.ts:117:16)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 5,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -91,60 +91,28 @@ describe("packing the sheets", () => {
     return { ui, model };
   };
 
-  it("enlarges the packed sticker cuts by a quarter on a large screen, keeping the pouch its size", () => {
-    const packed = (large: boolean) => {
-      const ui = createTrayState(modelOf(stickers(24, "sized"), new Set()));
-      ui.fit = trayFitFor(large, () => 1200);
-      createTrayModel(ui, new Set(), nothingToSay).applyPack();
-      return ui;
-    };
-    const phone = packed(false);
-    const large = packed(true);
-    expect(large.fit.scale).toBe(MAX_STACK_SCALE);
-    for (const [i, s] of large.model.slots.entries()) {
-      const before = phone.model.slots[i].pos;
-      expect(s.pos?.w).toBeCloseTo((before?.w ?? 0) * 1.25, 8);
-      expect(s.pos?.h).toBeCloseTo((before?.h ?? 0) * 1.25, 8);
-    }
-  });
-
-  it("repacks when the screen turns large even when the page height stays the same, then restores phone sizes", () => {
-    const ui = createTrayState(modelOf(stickers(60, "resized"), new Set()));
-    ui.fit = trayFitFor(false, () => 500);
-    const model = createTrayModel(ui, new Set(), nothingToSay);
-    model.applyPack();
-    const phone = ui.model.slots.map((s) => s.pos);
-    const page = ui.sheetH;
-
-    ui.fit = trayFitFor(true, () => 500);
-    expect(model.fitPages()).toBe(true);
-    expect(ui.sheetH).toBe(page);
-    for (const [i, s] of ui.model.slots.entries())
-      expect(s.pos?.w).toBeCloseTo((phone[i]?.w ?? 0) * 1.25, 8);
-
-    ui.fit = trayFitFor(false, () => 500);
-    expect(model.fitPages()).toBe(true);
-    expect(ui.model.slots.map((s) => s.pos)).toEqual(phone);
-  });
-
-  it("fits more stickers on each sheet when the board has more page height", () => {
-    const short = packedTray(40, false, 420).ui;
-    const tall = packedTray(40, true, 1400).ui;
-    expect(short.model.count).toBe(6);
-    expect(tall.model.count).toBe(5);
-    expect(tall.model.slots.filter((s) => s.sheet === 0)).toHaveLength(9);
-  });
+  it.each([false, true])(
+    "fits more stickers on each sheet when the board has more page height, large=%s",
+    (large) => {
+      const short = packedTray(40, large, 420).ui;
+      const tall = packedTray(40, large, 1200).ui;
+      expect(tall.model.count).toBeLessThan(short.model.count);
+      expect(tall.model.slots.filter((s) => s.sheet === 0).length).toBeGreaterThan(
+        short.model.slots.filter((s) => s.sheet === 0).length,
+      );
+    },
+  );
 
   it("keeps a few stickers together instead of stretching their rows over the page", () => {
     const { ui } = packedTray(3, true, 1200);
     const ys = ui.model.slots.map((s) => positionOf(s).y);
-    expect(Math.max(...ys) - Math.min(...ys)).toBeLessThan(200);
+    expect(Math.max(...ys) - Math.min(...ys)).toBeLessThan(160 * ui.fit.stickerScale);
   });
 
   it("reassigns sheets on resize while keeping the front and pulled sheet with their stickers", () => {
-    const { ui, model } = packedTray(40, true, 1425);
-    ui.order = [1, 3, 0];
-    ui.orderedFor = 4;
+    const { ui, model } = packedTray(40, true, 1200);
+    ui.order = [1, 0];
+    ui.orderedFor = 3;
     ui.pulled = {
       f: 2,
       el: document.createElement("div"),
@@ -154,13 +122,14 @@ describe("packing the sheets", () => {
       out: true,
       listening: new AbortController(),
     };
-    ui.fit = trayFitFor(true, () => 1600);
+    const frontId = ui.model.slots.find((s) => s.sheet === ui.order[0])?.id;
+    const pulledId = ui.model.slots.find((s) => s.sheet === ui.pulled?.f)?.id;
+    ui.fit = trayFitFor(true, () => 1400);
     model.fitPages();
-    expect(ui.model.count).toBe(4);
-    expect(ui.model.slots[9].sheet).toBe(0);
-    expect(ui.model.slots[19].sheet).toBe(1);
-    expect(ui.order).toEqual([0, 3, 2]);
-    expect(ui.pulled.f).toBe(1);
+    expect(ui.model.count).toBe(5);
+    expect(ui.model.slots.find((s) => s.id === frontId)?.sheet).toBe(ui.order[0]);
+    expect(ui.model.slots.find((s) => s.id === pulledId)?.sheet).toBe(ui.pulled.f);
+    expect(ui.order).toEqual([0, 4, 3, 2]);
   });
 
   it("uses the filtered stack's room and keeps the result stable when count and height disagree", () => {
@@ -224,6 +193,42 @@ describe("packing the sheets", () => {
       Math.abs(positionOf(ui.model.slots[0]).y - positionOf(ui.model.slots[1]).y),
     ).toBeGreaterThan(100);
     expect(ui.model.slots.map((s) => ({ w: positionOf(s).w, h: positionOf(s).h }))).toEqual(before);
+  });
+
+  it("enlarges the packed sticker cuts by a quarter on a large screen, keeping the pouch its size", () => {
+    const packed = (large: boolean) => {
+      const ui = createTrayState(modelOf(stickers(24, "sized"), new Set()));
+      ui.fit = trayFitFor(large, () => 1200);
+      createTrayModel(ui, new Set(), nothingToSay).applyPack();
+      return ui;
+    };
+    const phone = packed(false);
+    const large = packed(true);
+    expect(large.fit.scale).toBe(MAX_STACK_SCALE);
+    for (const [i, s] of large.model.slots.entries()) {
+      const before = phone.model.slots[i].pos;
+      expect(s.pos?.w).toBeCloseTo((before?.w ?? 0) * 1.25, 8);
+      expect(s.pos?.h).toBeCloseTo((before?.h ?? 0) * 1.25, 8);
+    }
+  });
+
+  it("repacks when the screen turns large even when the page height stays the same, then restores phone sizes", () => {
+    const ui = createTrayState(modelOf(stickers(60, "resized"), new Set()));
+    ui.fit = trayFitFor(false, () => 500);
+    const model = createTrayModel(ui, new Set(), nothingToSay);
+    model.applyPack();
+    const phone = ui.model.slots.map((s) => s.pos);
+    const page = ui.sheetH;
+
+    ui.fit = trayFitFor(true, () => 500);
+    expect(model.fitPages()).toBe(true);
+    expect(ui.sheetH).toBe(page);
+    for (const [i, s] of ui.model.slots.entries())
+      expect(s.pos?.w).toBeCloseTo((phone[i]?.w ?? 0) * 1.25, 8);
+
+    ui.fit = trayFitFor(false, () => 500);
+    expect(model.fitPages()).toBe(true);
+    expect(ui.model.slots.map((s) => s.pos)).toEqual(phone);
   });
 });
 

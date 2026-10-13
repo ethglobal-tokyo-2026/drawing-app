@@ -1,0 +1,53 @@
+{
+  "capture_sha256": "68a60bc01d3cdda720f7360d12438925aef7087ce544372a7cd087135ff612e6",
+  "capture_file": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/tablet-manual-20261011T181326.241155Z-172e5259/tablet.jsonl",
+  "capture_complete": true,
+  "capture_errors": [],
+  "capture_elapsed_seconds": 23.292935083,
+  "owned_breakpoint_stops": 1033,
+  "background_step_recoveries": 1,
+  "total_paired_calls": 347,
+  "included_paired_calls": 311,
+  "included_entry_intervals": {
+    "count": 310,
+    "sum_seconds": 19.257047707999998,
+    "median_milliseconds": 60.75835450000078,
+    "p95_milliseconds": 76.14333300000098,
+    "max_milliseconds": 183.8039579999986
+  },
+  "source_begin_to_release_packet_timestamp_milliseconds": 1781,
+  "source_begin_to_release_observation_seconds": 18.294838582999997,
+  "source_begin_to_release_return_observation_seconds": 19.360830375,
+  "observed_state_intervals": {
+    "running_notice_to_stopped_notice": {
+      "count": 1033,
+      "sum_seconds": 20.217485589000074,
+      "median_milliseconds": 17.636082999999303,
+      "p95_milliseconds": 25.32037499999973,
+      "max_milliseconds": 471.6503750000003
+    },
+    "stopped_notice_to_running_notice": {
+      "count": 1032,
+      "sum_seconds": 2.9574479529999254,
+      "median_milliseconds": 2.440207999999444,
+      "p95_milliseconds": 4.627332999998401,
+      "max_milliseconds": 94.53133399999913
+    }
+  },
+  "offline_replay": {
+    "status": "differences",
+    "call_count": 311,
+    "mismatch_count": 16,
+    "numeric_difference_count": 16,
+    "maximum_numeric_ulp": 1,
+    "maximum_numeric_absolute_error": 2.2737367544323206e-13
+  },
+  "explanation": "The recorder performs three whole-process debugger stop/continue cycles per ordinary pen input, plus release observations. Each stop reads target state and writes diagnostic records. The rare background-step recovery prevents an abort but does not remove this recurring overhead.",
+  "limitations": [
+    "Event observation intervals are not exact target execution or pause durations.",
+    "These logs do not separately profile native debugger overhead, application work, register/memory reads, stack lookup, or synchronous log output.",
+    "Packet timestamp span describes saved native input timestamps, not an independent stopwatch of the physical stroke.",
+    "This arithmetic capture does not measure normal CSP pen latency, rendered output, post-correction, or identical pen feel."
+  ],
+  "next_action": "Analyze this complete saved capture offline. No repeat of this baseline is needed to investigate lag. Profile or redesign the recorder before asking the operator for further capture."
+}

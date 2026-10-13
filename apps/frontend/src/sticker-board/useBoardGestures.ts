@@ -351,10 +351,10 @@ export function useBoardGestures(options: Options) {
     };
     const release = (id: string) => setHold((held) => (held?.id === id ? null : held));
 
-    /** A tap back on the board: an open tray closes, so it isn't in the way. */
+    /** A board tap closes the tray unless a sheet is out for arranging stickers. */
     const closeTray = () => {
       const tray = latest.current.tray.current;
-      if (tray?.isOpen) void tray.close();
+      if (tray?.isOpen && !tray.hasPulledSheet) void tray.close();
     };
 
     /** Whether the tray took a sticker back into its used sticker silhouette. */

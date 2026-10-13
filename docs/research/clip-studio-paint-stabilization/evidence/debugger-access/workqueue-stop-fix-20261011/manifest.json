@@ -1,0 +1,231 @@
+{
+  "utc": "2026-10-11T18:07:47.367958+00:00",
+  "scope": "Final verified recovery implementation and retained experiments. Earlier failed setup experiments precede the final source snapshots; reports describe their limited scope.",
+  "sources": [
+    {
+      "source": "spikes/live-capture/capture_live_contract.py",
+      "snapshot": "verified-source/capture_live_contract.py",
+      "sha256": "ca93a5daff62c6633385cb38d750e04c13d5077e3fbc9cd4f09e57d4634ae9b8"
+    },
+    {
+      "source": "spikes/live-capture/capture_tablet_stroke.py",
+      "snapshot": "verified-source/capture_tablet_stroke.py",
+      "sha256": "9c6ced09d6ba81df54764f1b4d8d87b6ae5162d1d775959d4baa6bf2e41f2dbb"
+    },
+    {
+      "source": "spikes/live-capture/record_tablet_stroke.py",
+      "snapshot": "verified-source/record_tablet_stroke.py",
+      "sha256": "8c893aae014ba21597298b3586d40b90b133c7831ccc8aa32f19265ed0f95e93"
+    },
+    {
+      "source": "spikes/live-capture/check_workqueue_recovery.py",
+      "snapshot": "verified-source/check_workqueue_recovery.py",
+      "sha256": "1a26edefe2f46a748a16d7840187e2868fb59bf05f090b382c748067bdf73fab"
+    },
+    {
+      "source": "spikes/live-capture/check_record_tablet_stroke.py",
+      "snapshot": "verified-source/check_record_tablet_stroke.py",
+      "sha256": "95eb384e8acda87b35164b4ded23d3d3d4d5ad26ba6ecfd998119b824f8f6183"
+    },
+    {
+      "source": "spikes/live-capture/check_workqueue_native.py",
+      "snapshot": "verified-source/check_workqueue_native.py",
+      "sha256": "023f0c0def1345e6cec0dcc7bb4c27b49ae24833101b757750349a6eb638ac88"
+    },
+    {
+      "source": "spikes/live-capture/benchmark_thread_creation.py",
+      "snapshot": "verified-source/benchmark_thread_creation.py",
+      "sha256": "6a2d00e04d3440bc52f61ccc475d347fb09bcafb89dbfd95f686329ed82fbad2"
+    },
+    {
+      "source": "spikes/live-capture/benchmark_thread_creation.c",
+      "snapshot": "verified-source/benchmark_thread_creation.c",
+      "sha256": "702c7a2c19447f1fe2114b0b6f3d6e9f993f49d374449b6f3ad69136dbaeb6e2"
+    },
+    {
+      "source": "spikes/live-replay/reader.ts",
+      "snapshot": "verified-source/reader.ts",
+      "sha256": "499756e0be7bd201a8a593e25f6b5dbb3ba289693cd4919a5f388146b686e2ed"
+    },
+    {
+      "source": "spikes/live-replay/live-replay.test.ts",
+      "snapshot": "verified-source/live-replay.test.ts",
+      "sha256": "617d1877d56c4b0c628e1aa1541d41c0138a5b5b1512e8e05f3b576a39e33e0c"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "README.md",
+      "sha256": "d4d2f4b552ed0c7e203d2d09e8ad145f5ee742c9c2c66c0a2ccc78f43fe9594b"
+    },
+    {
+      "path": "benchmark_thread_creation",
+      "sha256": "b75809f2648051714a3dd22ed91bc169bb28e8209be3829d9a8b03fe7c4d8f59"
+    },
+    {
+      "path": "benchmark_thread_creation.dSYM/Contents/Info.plist",
+      "sha256": "6e62510fdabd8b60b51630cf001b474f3c9c52faa07253e0f1d7a7a341975b0d"
+    },
+    {
+      "path": "benchmark_thread_creation.dSYM/Contents/Resources/DWARF/benchmark_thread_creation",
+      "sha256": "7bd34d9bab05b9f5566f6a8d8f1a6d22d695452716b903b6d8dd0ef17f86ed7e"
+    },
+    {
+      "path": "benchmark_thread_creation.dSYM/Contents/Resources/Relocations/aarch64/benchmark_thread_creation.yml",
+      "sha256": "0fdb4bf2ae8067de60a134c8c99d1eeffd400fea6b23f9346477ae15e32bfcd9"
+    },
+    {
+      "path": "creation-loaded-pthread-2.json",
+      "sha256": "00741747de43edee9e7e0c6452920a2b0349f3c8609e670b60caadd2bc8d96bd"
+    },
+    {
+      "path": "creation-loaded-pthread-2.log",
+      "sha256": "fd45e6943898eae7d4513be64749852ba15b4b15e290579631f9dd6a1bb1996a"
+    },
+    {
+      "path": "creation-loaded-workqueue-1.json",
+      "sha256": "8a66efc030b2ca68ad22da759c0626b514d00e8e2830d7d260ec4518207ae900"
+    },
+    {
+      "path": "creation-loaded-workqueue-1.log",
+      "sha256": "f407315c2aaa2dc56081ea329e55cb121f47d3e05c71d4f138ebf063f3b2b2bc"
+    },
+    {
+      "path": "creation-workqueue-1.json",
+      "sha256": "06b620d2deaa1a49fb10f2f85e1160428c8ec06886bb132bb2658cd927211d34"
+    },
+    {
+      "path": "creation-workqueue-1.log",
+      "sha256": "60a49d4c97f209bf165bc8910ff26782c579e25ccab48340cacac85286734ba4"
+    },
+    {
+      "path": "csp-no-input-preflight/debugger.log",
+      "sha256": "aa9ae75285c648b8dfb2b5ac0cd504f1feef55a9b4527e721760f7172e8587a1"
+    },
+    {
+      "path": "csp-no-input-preflight/metadata.json",
+      "sha256": "c5db54083f254411e386994934c53e56d420bc9790ea439036af483801e54561"
+    },
+    {
+      "path": "csp-no-input-preflight/process-resume.txt",
+      "sha256": "aeca81dd1e9972bc89bd4c1e2714d8a84c18160023206e284618ce6c14df8a7b"
+    },
+    {
+      "path": "csp-no-input-preflight/recorder/capture_live_contract.py",
+      "sha256": "ca93a5daff62c6633385cb38d750e04c13d5077e3fbc9cd4f09e57d4634ae9b8"
+    },
+    {
+      "path": "csp-no-input-preflight/recorder/capture_tablet_stroke.py",
+      "sha256": "9c6ced09d6ba81df54764f1b4d8d87b6ae5162d1d775959d4baa6bf2e41f2dbb"
+    },
+    {
+      "path": "csp-no-input-preflight/result.json",
+      "sha256": "fe81b6107217cf32724eb771b0b5ef61e8f8e08f77397fcd96996eb669caa20a"
+    },
+    {
+      "path": "csp-no-input-preflight/tablet.jsonl",
+      "sha256": "613e556b084397d08b0384580d47560bd34ef97dde6df2fad166276297cb713c"
+    },
+    {
+      "path": "launcher-tests.txt",
+      "sha256": "55df81c03b1fc09a739803668e8b10b1a1cd87ac7e716666dddb1c968f87bb76"
+    },
+    {
+      "path": "native-s0-comparison-final.json",
+      "sha256": "bfe8c3056c5e579cb4e5bf0ade2c277e80724ddd3b77733937c758201aab0767"
+    },
+    {
+      "path": "native-s0-comparison.json",
+      "sha256": "bfe8c3056c5e579cb4e5bf0ade2c277e80724ddd3b77733937c758201aab0767"
+    },
+    {
+      "path": "native-s0-regression-final.txt",
+      "sha256": "d5a4459d44110fd0bddebf11b6628396d29fa87fd707a545e538c8c76d05a6be"
+    },
+    {
+      "path": "native-s0-regression.txt",
+      "sha256": "5e317ef354edf6a66e3336bb128dafe81ec17270ad2dd20b9152cceffc304ea0"
+    },
+    {
+      "path": "native-startup-context.json",
+      "sha256": "3e29fc4de1f63332344a2dabd291e4955463a7db205104d3f6538fb9c990d128"
+    },
+    {
+      "path": "native-startup-context.log",
+      "sha256": "3b1c6050d5a1b8b9d4087f51d9c94b3ce5bcec5c078d6df19a76b872c3567811"
+    },
+    {
+      "path": "reader-tests-final.txt",
+      "sha256": "d0c0b5df358c9efaae1c01aca8b68564aee585ef00af90367236c2c55eb7623d"
+    },
+    {
+      "path": "reader-tests.txt",
+      "sha256": "f7f97c26008ad9d28e1d8bc004a851c3a333c56d89a7664a72a10f329595682a"
+    },
+    {
+      "path": "reader-types-final.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "reader-types.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "regression-after.txt",
+      "sha256": "da97fb04c81669c1573df9570498ecb4b9f34a51e42e796baf47d18dd693c7f8"
+    },
+    {
+      "path": "regression-before-explicit.txt",
+      "sha256": "cae1f673315b63ba3c1fa2bb7de0ea019a72548275c92b58986c9bcdfdd6f1e9"
+    },
+    {
+      "path": "regression-before.txt",
+      "sha256": "5e746f9c293a7cfcedd7996ba36ef69508f76eb8bd304b547670adcc08deb507"
+    },
+    {
+      "path": "system-thread-instructions.log",
+      "sha256": "8dd98abeacc932dc74e7bb7b50c59b62a8cb6a26842d226fb96a25351ba0c34f"
+    },
+    {
+      "path": "verified-source/benchmark_thread_creation.c",
+      "sha256": "702c7a2c19447f1fe2114b0b6f3d6e9f993f49d374449b6f3ad69136dbaeb6e2"
+    },
+    {
+      "path": "verified-source/benchmark_thread_creation.py",
+      "sha256": "6a2d00e04d3440bc52f61ccc475d347fb09bcafb89dbfd95f686329ed82fbad2"
+    },
+    {
+      "path": "verified-source/capture_live_contract.py",
+      "sha256": "ca93a5daff62c6633385cb38d750e04c13d5077e3fbc9cd4f09e57d4634ae9b8"
+    },
+    {
+      "path": "verified-source/capture_tablet_stroke.py",
+      "sha256": "9c6ced09d6ba81df54764f1b4d8d87b6ae5162d1d775959d4baa6bf2e41f2dbb"
+    },
+    {
+      "path": "verified-source/check_record_tablet_stroke.py",
+      "sha256": "95eb384e8acda87b35164b4ded23d3d3d4d5ad26ba6ecfd998119b824f8f6183"
+    },
+    {
+      "path": "verified-source/check_workqueue_native.py",
+      "sha256": "023f0c0def1345e6cec0dcc7bb4c27b49ae24833101b757750349a6eb638ac88"
+    },
+    {
+      "path": "verified-source/check_workqueue_recovery.py",
+      "sha256": "1a26edefe2f46a748a16d7840187e2868fb59bf05f090b382c748067bdf73fab"
+    },
+    {
+      "path": "verified-source/live-replay.test.ts",
+      "sha256": "617d1877d56c4b0c628e1aa1541d41c0138a5b5b1512e8e05f3b576a39e33e0c"
+    },
+    {
+      "path": "verified-source/reader.ts",
+      "sha256": "499756e0be7bd201a8a593e25f6b5dbb3ba289693cd4919a5f388146b686e2ed"
+    },
+    {
+      "path": "verified-source/record_tablet_stroke.py",
+      "sha256": "8c893aae014ba21597298b3586d40b90b133c7831ccc8aa32f19265ed0f95e93"
+    }
+  ],
+  "complete_native_tablet_recovery_observed": false
+}

@@ -1,0 +1,29 @@
+(lldb) process attach --pid 21351
+Process 21351 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = signal SIGSTOP
+    frame #0: 0x000000018120b7d4 libsystem_pthread.dylib`pthread_attr_setdetachstate + 20
+libsystem_pthread.dylib`pthread_attr_setdetachstate:
+->  0x18120b7d4 <+20>: ldr    x9, [x8]
+    0x18120b7d8 <+24>: mov    w10, #0x4441              ; =17473 
+    0x18120b7dc <+28>: movk   w10, #0x5448, lsl #16
+    0x18120b7e0 <+32>: cmp    x9, x10
+Target 0: (CLIP STUDIO PAINT) stopped.
+Executable binary set to "/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT".
+Architecture set to: arm64-apple-macosx-.
+(lldb) script import sys; sys.dont_write_bytecode=True; sys.path.insert(0,'/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-capture'); import capture_post_correction as post; post.run(lldb.debugger,21351,'/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/post-mouse-manual-20261010T180110Z/pid-21351.jsonl',timeout_seconds=30,device="mouse",metadata={'inputOperator': 'human mouse stroke', 'requestedPostStrength': 5, 'requestedBezierCurve': False, 'settingsConfirmation': 'user confirmed; UI automation unavailable', 'purpose': 'one before/after post-correction wrapper pair', 'parallelResearchPids': [21351, 21626]})
+CSP post-correction capture active; one correction operation requested.
+Process 21351 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = signal SIGSTOP
+    frame #0: 0x00000001811cbc34 libsystem_kernel.dylib`mach_msg2_trap + 8
+libsystem_kernel.dylib`mach_msg2_trap:
+->  0x1811cbc34 <+8>: ret    
+
+libsystem_kernel.dylib`macx_swapon:
+    0x1811cbc38 <+0>: mov    x16, #-0x30               ; =-48 
+    0x1811cbc3c <+4>: svc    #0x80
+    0x1811cbc40 <+8>: ret    
+Target 0: (CLIP STUDIO PAINT) stopped.
+Process 21351 detached
+CSP post capture saved: /Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/post-mouse-manual-20261010T180110Z/pid-21351.jsonl; complete=False; pairs=0; wholeCurveEquivalence=not_evaluated
+{'output_path': '/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/post-mouse-manual-20261010T180110Z/pid-21351.jsonl', 'capture_complete': False, 'cleanup_errors': []}
+(lldb) quit

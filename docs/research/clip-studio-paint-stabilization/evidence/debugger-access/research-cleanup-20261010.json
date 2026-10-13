@@ -1,0 +1,2288 @@
+{
+  "utc": "2026-10-10T19:58:32.060557+00:00",
+  "state": "complete",
+  "authorization": "User approved removing the audited research duplicates, superseded drafts and generated files.",
+  "scope": "/Users/adoll/Applications/CSP Research/research-files",
+  "archiveBytesRemoved": 1225957393,
+  "temporaryBytesRemoved": 0,
+  "archiveFilesRemoved": 176,
+  "temporaryFilesRemoved": 0,
+  "temporaryCopiesKept": [],
+  "removals": [
+    {
+      "source": "/private/tmp/csp-arm64-numeric-probe",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-arm64-numeric-probe",
+      "bytes": 33624,
+      "sha256": "eb8de068476b6589e31edfbe2d8de367f7dc8c486531e0b6c13f067fa9eaa900",
+      "relativePath": "csp-arm64-numeric-probe",
+      "reason": "Compiled arithmetic probe; current C source retained in repository evidence.",
+      "retainedEquivalent": null,
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-cleanroom/csp_arm64",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-cleanroom/csp_arm64",
+      "bytes": 90229232,
+      "sha256": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+      "relativePath": "csp-cleanroom/csp_arm64",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/Applications/CSP Research/original-arm64",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-cleanroom/strings.txt",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-cleanroom/strings.txt",
+      "bytes": 4625636,
+      "sha256": "b0b30e4a0d09ef28d569e6b106830117f7be03512ca121ea1e0401cc42d1572f",
+      "relativePath": "csp-cleanroom/strings.txt",
+      "reason": "Generated executable strings cache; pinned original image retained.",
+      "retainedEquivalent": null,
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-cleanroom/text.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-cleanroom/text.asm",
+      "bytes": 1118350702,
+      "sha256": "bac7b5d416b3a4f399770d33ce7e854f0080aa010a3c32f8fdde8543d30f8f4a",
+      "relativePath": "csp-cleanroom/text.asm",
+      "reason": "Full executable disassembly cache; pinned original image retained.",
+      "retainedEquivalent": null,
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-cleanroom/text.err",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-cleanroom/text.err",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "relativePath": "csp-cleanroom/text.err",
+      "reason": "Empty disassembler error output.",
+      "retainedEquivalent": null,
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-complete-capture-contract.md",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-complete-capture-contract.md",
+      "bytes": 10587,
+      "sha256": "dfe14590fd7335a18cb8bcdf16ab07686a21ba6dd9a79f1f7d8b662597528c2d",
+      "relativePath": "csp-complete-capture-contract.md",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/csp-complete-capture-contract.md",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-complete-capture-refs.txt",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-complete-capture-refs.txt",
+      "bytes": 627,
+      "sha256": "8746d688605c466d870c12129c2f125c4ed978e5ed290ac8f1c872e591b28ec3",
+      "relativePath": "csp-complete-capture-refs.txt",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/complete-capture-refs.txt",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-durable/pixels-output.txt",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-durable/pixels-output.txt",
+      "bytes": 1951,
+      "sha256": "58b442327db03f88d8570d4a173d2ed561f6f85787dabab92da4e5e6e267f223",
+      "relativePath": "csp-croquis-replay-durable/pixels-output.txt",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/croquis-replay/results/pixels.json",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-durable/pixels.bundle.js",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-durable/pixels.bundle.js",
+      "bytes": 117574,
+      "sha256": "7b20f2e6f4ef0b168ba47faf8667cc20e481409f8327d0228efdcaf1fb19d930",
+      "relativePath": "csp-croquis-replay-durable/pixels.bundle.js",
+      "reason": "Generated browser bundle; current source and results retained.",
+      "retainedEquivalent": null,
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-durable/summary.csv",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-durable/summary.csv",
+      "bytes": 17307,
+      "sha256": "3ca08695fb705e8ecde6ccaff224ad67ff1a9f43d30894804214899cdd857741",
+      "relativePath": "csp-croquis-replay-durable/summary.csv",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/croquis-replay/results/summary.csv",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-spike/batch-results.json",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-spike/batch-results.json",
+      "bytes": 127063,
+      "sha256": "3e42b13c0ec61ce791cb704703b663611fa82aa35b6c936ab446c890aae170df",
+      "relativePath": "csp-croquis-replay-spike/batch-results.json",
+      "reason": "Exact duplicate within archive; one distinct copy retained.",
+      "retainedEquivalent": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-durable/batch-results.json",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-spike/fixtures.json",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-spike/fixtures.json",
+      "bytes": 797557,
+      "sha256": "2d807a0ebdba62f7cdd9eeaa925125b2fd4d9305ff65885595c07bf4b26e5c5f",
+      "relativePath": "csp-croquis-replay-spike/fixtures.json",
+      "reason": "Exact duplicate within archive; one distinct copy retained.",
+      "retainedEquivalent": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-durable/fixtures.json",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-spike/pixels-output.txt",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-spike/pixels-output.txt",
+      "bytes": 1951,
+      "sha256": "58b442327db03f88d8570d4a173d2ed561f6f85787dabab92da4e5e6e267f223",
+      "relativePath": "csp-croquis-replay-spike/pixels-output.txt",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/croquis-replay/results/pixels.json",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-spike/pixels.bundle.js",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-spike/pixels.bundle.js",
+      "bytes": 116965,
+      "sha256": "1b90ee6fcb2877a224a6173e01a3d0915b728d0ed44c9d52522bd7dfee219f5e",
+      "relativePath": "csp-croquis-replay-spike/pixels.bundle.js",
+      "reason": "Generated browser bundle; current source and results retained.",
+      "retainedEquivalent": null,
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-spike/pixels.json",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-spike/pixels.json",
+      "bytes": 1950,
+      "sha256": "8ce9a9c9a1dd2b5460efc05c691382004bb88d9f2e3576ae1025b1a98933049f",
+      "relativePath": "csp-croquis-replay-spike/pixels.json",
+      "reason": "Exact duplicate within archive; one distinct copy retained.",
+      "retainedEquivalent": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-durable/pixels.json",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-spike/samples.csv",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-spike/samples.csv",
+      "bytes": 6921788,
+      "sha256": "420fd11fe4f8879ac42303d2f7d1019bb096f9dfc76e8a44c6bb09c538ea1f34",
+      "relativePath": "csp-croquis-replay-spike/samples.csv",
+      "reason": "Exact duplicate within archive; one distinct copy retained.",
+      "retainedEquivalent": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-durable/samples.csv",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-spike/summary.json",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-spike/summary.json",
+      "bytes": 67021,
+      "sha256": "8d90c3849e43f6c46267e71f4a6a0efc7d41ece391d2b11de14f1ef301f64e8e",
+      "relativePath": "csp-croquis-replay-spike/summary.json",
+      "reason": "Exact duplicate within archive; one distinct copy retained.",
+      "retainedEquivalent": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-durable/summary.json",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-handoff-croquis/source-evidence.txt",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-handoff-croquis/source-evidence.txt",
+      "bytes": 90115,
+      "sha256": "35705f7e1f78356f9559f4961d6d8074688324b02c046576c00a07ec08e75aab",
+      "relativePath": "csp-handoff-croquis/source-evidence.txt",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/croquis-source.txt",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-handoff-live/arm64-numeric-probe",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-handoff-live/arm64-numeric-probe",
+      "bytes": 33616,
+      "sha256": "5c903f6b6902d3bc0219165d4a40f4164ea8afd0fdb8137bcce68c323fe85406",
+      "relativePath": "csp-handoff-live/arm64-numeric-probe",
+      "reason": "Compiled arithmetic probe; current C source retained in repository evidence.",
+      "retainedEquivalent": null,
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-handoff-live/arm64-numeric-probe.c",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-handoff-live/arm64-numeric-probe.c",
+      "bytes": 500,
+      "sha256": "55e5da55ee9bcd825cd7877561d23a2e1796df1c23cf70aa963eb9986994a79e",
+      "relativePath": "csp-handoff-live/arm64-numeric-probe.c",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/arm64-numeric-probe.c",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-handoff-post/evidence/1021944a8.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-handoff-post/evidence/1021944a8.asm",
+      "bytes": 991,
+      "sha256": "ec5687fb7450f528c9e6939b07bf67a821050d250fed2e9369c6f24d3cc502ea",
+      "relativePath": "csp-handoff-post/evidence/1021944a8.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/1021944a8.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-handoff-post/evidence/102889450.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-handoff-post/evidence/102889450.asm",
+      "bytes": 592,
+      "sha256": "14a09da08588be8fed64d236d2b55a1bb3cde1c56d652b2da440817bad977e5c",
+      "relativePath": "csp-handoff-post/evidence/102889450.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/102889450.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-handoff-post/evidence/102889768.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-handoff-post/evidence/102889768.asm",
+      "bytes": 1441,
+      "sha256": "5acefec55e66af48c1ad0e81c73e69c6c2cca3c4c08ab36d7b2cb0d57c5a0f88",
+      "relativePath": "csp-handoff-post/evidence/102889768.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/102889768.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-handoff-post/evidence/102891ca0.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-handoff-post/evidence/102891ca0.asm",
+      "bytes": 1712,
+      "sha256": "b8380c74d11f40c7bc57558f0f7c484899762808c9c65355d73316e5ac6df7a3",
+      "relativePath": "csp-handoff-post/evidence/102891ca0.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/102891ca0.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-handoff-post/verify-post.py",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-handoff-post/verify-post.py",
+      "bytes": 651,
+      "sha256": "f1f3ed93371dc7af636df81b6b5259c58ac6ebf53311b62ddb276cce181a5f25",
+      "relativePath": "csp-handoff-post/verify-post.py",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/verify-post.py",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-is-tablet-event.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-is-tablet-event.asm",
+      "bytes": 721,
+      "sha256": "6f573f6d90688782dcd90b1adbdb9712563154912188303183d4416d27975c2e",
+      "relativePath": "csp-is-tablet-event.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/is-tablet-event.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-analysis/settings-to-queue.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-analysis/settings-to-queue.asm",
+      "bytes": 10746,
+      "sha256": "67dcfe941e8058706b8b76ae0cd600809c4a0fd70a35e17820ded5bd6ae1c917",
+      "relativePath": "csp-live-analysis/settings-to-queue.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/live/settings-to-queue.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-reproduced/constants.txt",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-reproduced/constants.txt",
+      "bytes": 1099,
+      "sha256": "0e6c20516d20aa3dbf5f3ff7f630ab5a3c76ff7e51faa1a85e82fb66dc35686a",
+      "relativePath": "csp-live-contract-reproduced/constants.txt",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/constants.txt",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-reproduced/correct-pressure.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-reproduced/correct-pressure.asm",
+      "bytes": 2244,
+      "sha256": "a4efc4d8f053a2fbfd6f17e29fa67b443bd6868a1beb498f379d81979983cb4c",
+      "relativePath": "csp-live-contract-reproduced/correct-pressure.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/correct-pressure.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-reproduced/device-type.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-reproduced/device-type.asm",
+      "bytes": 157,
+      "sha256": "b638a122945472684c613c4d51d14f0dd6dc0b99b62b44b7cbe26eaf661f3319",
+      "relativePath": "csp-live-contract-reproduced/device-type.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/device-type.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-reproduced/dispatch-producer.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-reproduced/dispatch-producer.asm",
+      "bytes": 974,
+      "sha256": "acd77fb2358b03d7a1e7e7e181479a686fe262ea882770850c34c8a33c6fbc3c",
+      "relativePath": "csp-live-contract-reproduced/dispatch-producer.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/dispatch-producer.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-reproduced/event-to-packet-selectors.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-reproduced/event-to-packet-selectors.asm",
+      "bytes": 9063,
+      "sha256": "fecf583e34c1752168f508ed115d9c1bdb8b0d7527cb2357b88964c2de0ae339",
+      "relativePath": "csp-live-contract-reproduced/event-to-packet-selectors.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/event-to-packet-selectors.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-reproduced/event-to-packet.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-reproduced/event-to-packet.asm",
+      "bytes": 8577,
+      "sha256": "9e8d4b29310550d9809f11dbb3f8255d9caea2374fec206344f903f3833e0e3e",
+      "relativePath": "csp-live-contract-reproduced/event-to-packet.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/event-to-packet.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-reproduced/fallback-clock.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-reproduced/fallback-clock.asm",
+      "bytes": 1148,
+      "sha256": "f42e3f2b700c11b69f48d108e63c3528951c1c8c7c5ea624e87b79f200275802",
+      "relativePath": "csp-live-contract-reproduced/fallback-clock.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/fallback-clock.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-reproduced/fallback-timestamp.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-reproduced/fallback-timestamp.asm",
+      "bytes": 754,
+      "sha256": "a5316d5543a830796f56cf51ccf815d449682cdf78fdffaae68ae913b58efebf",
+      "relativePath": "csp-live-contract-reproduced/fallback-timestamp.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/fallback-timestamp.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-reproduced/indirect-symbols.txt",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-reproduced/indirect-symbols.txt",
+      "bytes": 182,
+      "sha256": "ce587e35f5652857bb1523af6d9af6ba8f4ecfdb888b698c0551080b0a1e61dd",
+      "relativePath": "csp-live-contract-reproduced/indirect-symbols.txt",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/indirect-symbols.txt",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-reproduced/interval-settings.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-reproduced/interval-settings.asm",
+      "bytes": 3316,
+      "sha256": "eb6cf41e344e70a04661f59fe653ecbde9a14879ad6a965658779174a3b504ea",
+      "relativePath": "csp-live-contract-reproduced/interval-settings.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/interval-settings.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-reproduced/interval-writer.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-reproduced/interval-writer.asm",
+      "bytes": 1217,
+      "sha256": "4792f99fc1392f76a8ffc816f3f776706a0b5a5ec982981f7392ab2807336fd7",
+      "relativePath": "csp-live-contract-reproduced/interval-writer.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/interval-writer.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-reproduced/mac-packet-producer-selectors.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-reproduced/mac-packet-producer-selectors.asm",
+      "bytes": 7796,
+      "sha256": "b2edb2f455d5b9124774b42e7d422e9acfc885bc5614cf850d45874b1c96ab76",
+      "relativePath": "csp-live-contract-reproduced/mac-packet-producer-selectors.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/mac-packet-producer-selectors.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-reproduced/mac-packet-producer.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-reproduced/mac-packet-producer.asm",
+      "bytes": 7260,
+      "sha256": "ec08f2c0b164d07053ef06faa6fd98185fe563878bbab5b8d5a4e170b0173a5f",
+      "relativePath": "csp-live-contract-reproduced/mac-packet-producer.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/mac-packet-producer.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-reproduced/objc-relevant-metadata.txt",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-reproduced/objc-relevant-metadata.txt",
+      "bytes": 3212,
+      "sha256": "600b61aa933f12a5a38e732c00a84496415ef896757813f801e275c65697acc6",
+      "relativePath": "csp-live-contract-reproduced/objc-relevant-metadata.txt",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/objc-relevant-metadata.txt",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-reproduced/other-packet-producer.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-reproduced/other-packet-producer.asm",
+      "bytes": 5337,
+      "sha256": "000eff41c48d1efa2e8547317574cd47274884a953c3082f951b8ddfc64cf8a7",
+      "relativePath": "csp-live-contract-reproduced/other-packet-producer.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/other-packet-producer.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-reproduced/output-callback.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-reproduced/output-callback.asm",
+      "bytes": 18275,
+      "sha256": "8eb7657f0e717ffe6b42e23381a220e87ad6a2315bf7eaf248883b68101b3350",
+      "relativePath": "csp-live-contract-reproduced/output-callback.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/output-callback.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-reproduced/platform-version-selectors.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-reproduced/platform-version-selectors.asm",
+      "bytes": 1336,
+      "sha256": "b7f4e7fd47a07a8003a3829062008e62008c141052fef5dfa67b2c9128f17be4",
+      "relativePath": "csp-live-contract-reproduced/platform-version-selectors.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/platform-version-selectors.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-reproduced/platform-version.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-reproduced/platform-version.asm",
+      "bytes": 1281,
+      "sha256": "bf7541648ca0a7b745b5410d6a02158a442aab6cca7677630607fbeefea80dca",
+      "relativePath": "csp-live-contract-reproduced/platform-version.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/platform-version.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/constants.txt",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/constants.txt",
+      "bytes": 1099,
+      "sha256": "0e6c20516d20aa3dbf5f3ff7f630ab5a3c76ff7e51faa1a85e82fb66dc35686a",
+      "relativePath": "csp-live-contract-spike/constants.txt",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/constants.txt",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/correct-pressure.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/correct-pressure.asm",
+      "bytes": 2244,
+      "sha256": "a4efc4d8f053a2fbfd6f17e29fa67b443bd6868a1beb498f379d81979983cb4c",
+      "relativePath": "csp-live-contract-spike/correct-pressure.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/correct-pressure.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/device-type.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/device-type.asm",
+      "bytes": 157,
+      "sha256": "b638a122945472684c613c4d51d14f0dd6dc0b99b62b44b7cbe26eaf661f3319",
+      "relativePath": "csp-live-contract-spike/device-type.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/device-type.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/dispatch-producer.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/dispatch-producer.asm",
+      "bytes": 974,
+      "sha256": "acd77fb2358b03d7a1e7e7e181479a686fe262ea882770850c34c8a33c6fbc3c",
+      "relativePath": "csp-live-contract-spike/dispatch-producer.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/dispatch-producer.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/dummy-delegate-refs.txt",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/dummy-delegate-refs.txt",
+      "bytes": 203,
+      "sha256": "2ae8f922cb59df7ca0161756255fa2790eba933865adef9b22b8f03ac214eaae",
+      "relativePath": "csp-live-contract-spike/dummy-delegate-refs.txt",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/startup/dummy-delegate-refs.txt",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/dummy-open-files.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/dummy-open-files.asm",
+      "bytes": 377,
+      "sha256": "67299d3af33c2e56920c8c4724c5cba585591f7fd6bfa4362d33caaffcc8de76",
+      "relativePath": "csp-live-contract-spike/dummy-open-files.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/startup/dummy-open-files.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/event-to-packet-selectors.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/event-to-packet-selectors.asm",
+      "bytes": 9063,
+      "sha256": "fecf583e34c1752168f508ed115d9c1bdb8b0d7527cb2357b88964c2de0ae339",
+      "relativePath": "csp-live-contract-spike/event-to-packet-selectors.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/event-to-packet-selectors.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/event-to-packet.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/event-to-packet.asm",
+      "bytes": 8577,
+      "sha256": "9e8d4b29310550d9809f11dbb3f8255d9caea2374fec206344f903f3833e0e3e",
+      "relativePath": "csp-live-contract-spike/event-to-packet.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/event-to-packet.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/fallback-clock.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/fallback-clock.asm",
+      "bytes": 1148,
+      "sha256": "f42e3f2b700c11b69f48d108e63c3528951c1c8c7c5ea624e87b79f200275802",
+      "relativePath": "csp-live-contract-spike/fallback-clock.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/fallback-clock.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/fallback-timestamp.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/fallback-timestamp.asm",
+      "bytes": 754,
+      "sha256": "a5316d5543a830796f56cf51ccf815d449682cdf78fdffaae68ae913b58efebf",
+      "relativePath": "csp-live-contract-spike/fallback-timestamp.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/fallback-timestamp.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/interval-option-refs.txt",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/interval-option-refs.txt",
+      "bytes": 193,
+      "sha256": "cdccabf127596ca1125e638dad19acf88cafbc984c81f93b4a925bcfb8f14c40",
+      "relativePath": "csp-live-contract-spike/interval-option-refs.txt",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/interval-option-refs.txt",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/interval-settings.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/interval-settings.asm",
+      "bytes": 3316,
+      "sha256": "eb6cf41e344e70a04661f59fe653ecbde9a14879ad6a965658779174a3b504ea",
+      "relativePath": "csp-live-contract-spike/interval-settings.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/interval-settings.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/interval-writer.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/interval-writer.asm",
+      "bytes": 1217,
+      "sha256": "4792f99fc1392f76a8ffc816f3f776706a0b5a5ec982981f7392ab2807336fd7",
+      "relativePath": "csp-live-contract-spike/interval-writer.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/interval-writer.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/launch-delegate-selection-selectors.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/launch-delegate-selection-selectors.asm",
+      "bytes": 7083,
+      "sha256": "ec7dc115de36b9eba2407e307c4663e5ebbd2d30a17a1dd3d1d19e8762d2180b",
+      "relativePath": "csp-live-contract-spike/launch-delegate-selection-selectors.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/startup/launch-delegate-selection-selectors.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/launch-delegate-selection.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/launch-delegate-selection.asm",
+      "bytes": 6545,
+      "sha256": "a852ea232e14b86bf005241dd7e96792cf0e4db0a6317974945ee94938aabe5c",
+      "relativePath": "csp-live-contract-spike/launch-delegate-selection.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/startup/launch-delegate-selection.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/launch-handler-selectors.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/launch-handler-selectors.asm",
+      "bytes": 5676,
+      "sha256": "4fb51672c7ff303ea07b97ec39ce4f543f505cbae2e57e9dc8b0740e126db293",
+      "relativePath": "csp-live-contract-spike/launch-handler-selectors.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/startup/launch-handler-selectors.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/launch-handler.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/launch-handler.asm",
+      "bytes": 5077,
+      "sha256": "604ddddd5dd5e0a07f895b3bbbb744cd22834f0f49e7d9a32bb0748375db0606",
+      "relativePath": "csp-live-contract-spike/launch-handler.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/startup/launch-handler.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/mac-packet-producer-selectors.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/mac-packet-producer-selectors.asm",
+      "bytes": 7796,
+      "sha256": "b2edb2f455d5b9124774b42e7d422e9acfc885bc5614cf850d45874b1c96ab76",
+      "relativePath": "csp-live-contract-spike/mac-packet-producer-selectors.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/mac-packet-producer-selectors.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/mac-packet-producer.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/mac-packet-producer.asm",
+      "bytes": 7260,
+      "sha256": "ec08f2c0b164d07053ef06faa6fd98185fe563878bbab5b8d5a4e170b0173a5f",
+      "relativePath": "csp-live-contract-spike/mac-packet-producer.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/mac-packet-producer.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/objc-relevant-metadata.txt",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/objc-relevant-metadata.txt",
+      "bytes": 3212,
+      "sha256": "600b61aa933f12a5a38e732c00a84496415ef896757813f801e275c65697acc6",
+      "relativePath": "csp-live-contract-spike/objc-relevant-metadata.txt",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/objc-relevant-metadata.txt",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/other-packet-producer.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/other-packet-producer.asm",
+      "bytes": 5337,
+      "sha256": "000eff41c48d1efa2e8547317574cd47274884a953c3082f951b8ddfc64cf8a7",
+      "relativePath": "csp-live-contract-spike/other-packet-producer.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/other-packet-producer.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/output-callback.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/output-callback.asm",
+      "bytes": 18275,
+      "sha256": "8eb7657f0e717ffe6b42e23381a220e87ad6a2315bf7eaf248883b68101b3350",
+      "relativePath": "csp-live-contract-spike/output-callback.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/output-callback.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/platform-version-selectors.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/platform-version-selectors.asm",
+      "bytes": 1336,
+      "sha256": "b7f4e7fd47a07a8003a3829062008e62008c141052fef5dfa67b2c9128f17be4",
+      "relativePath": "csp-live-contract-spike/platform-version-selectors.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/platform-version-selectors.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/platform-version.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/platform-version.asm",
+      "bytes": 1281,
+      "sha256": "bf7541648ca0a7b745b5410d6a02158a442aab6cca7677630607fbeefea80dca",
+      "relativePath": "csp-live-contract-spike/platform-version.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/platform-version.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/producer-refs.txt",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/producer-refs.txt",
+      "bytes": 606,
+      "sha256": "992b4fafb72636b8133d57492fb0adad05aa7adcd146eef795d71d31473e4712",
+      "relativePath": "csp-live-contract-spike/producer-refs.txt",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/producer-refs.txt",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/verification.txt",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/verification.txt",
+      "bytes": 856,
+      "sha256": "cf168dcfee7722f070b1c9b96908cfbd64b66d1aa1ead3d0b69e8020163eee0e",
+      "relativePath": "csp-live-contract-spike/verification.txt",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/evidence/verification.txt",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-two-queue-configuration.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-two-queue-configuration.asm",
+      "bytes": 4907,
+      "sha256": "167e2d53f20fb7b81f9f3e51584b622a12c9419d5d6fbf5845e87b27dc0ba6c3",
+      "relativePath": "csp-live-two-queue-configuration.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/live-two-queue-configuration.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-mouse-queue.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-mouse-queue.asm",
+      "bytes": 19549,
+      "sha256": "de6375c7d0bf361e12d3fbdfad6ba50ba84730942250eaec0218aca4bcd59fff",
+      "relativePath": "csp-mouse-queue.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/csp-mouse-queue.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-mouse-route/README.md",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-mouse-route/README.md",
+      "bytes": 8563,
+      "sha256": "8c75f3095801853b8d92a254a0e555884b246756fa2217524b208cf1eeb48563",
+      "relativePath": "csp-mouse-route/README.md",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/README.md",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-mouse-route/SHA256SUMS",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-mouse-route/SHA256SUMS",
+      "bytes": 1698,
+      "sha256": "97df8f76c539ad178cce3c1390b5cb5725795e758fe2e19a024aa5f8be7ae2e6",
+      "relativePath": "csp-mouse-route/SHA256SUMS",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/SHA256SUMS",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-mouse-route/complete-capture-contract.md",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-mouse-route/complete-capture-contract.md",
+      "bytes": 10880,
+      "sha256": "8a0ce5657ef34670b41741110e3bd2279f3dd706e305c21ecb2c49c35b42ce03",
+      "relativePath": "csp-mouse-route/complete-capture-contract.md",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/complete-capture-contract.md",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-mouse-route/evidence/brush-gesture-configuration.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-mouse-route/evidence/brush-gesture-configuration.asm",
+      "bytes": 38179,
+      "sha256": "06104ef354a54a7f096d23590990c51730526c44997f3bf9ac9b3d0882cadedb",
+      "relativePath": "csp-mouse-route/evidence/brush-gesture-configuration.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/brush-gesture-configuration.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-mouse-route/evidence/brush-tool-gesture-configuration.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-mouse-route/evidence/brush-tool-gesture-configuration.asm",
+      "bytes": 40853,
+      "sha256": "b7dcfe4da25d5e6b776adc3a95ecff6d5c48c307632f7f36b84f4877e44d7762",
+      "relativePath": "csp-mouse-route/evidence/brush-tool-gesture-configuration.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/brush-tool-gesture-configuration.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-mouse-route/evidence/complete-capture-refs.txt",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-mouse-route/evidence/complete-capture-refs.txt",
+      "bytes": 627,
+      "sha256": "8746d688605c466d870c12129c2f125c4ed978e5ed290ac8f1c872e591b28ec3",
+      "relativePath": "csp-mouse-route/evidence/complete-capture-refs.txt",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/complete-capture-refs.txt",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-mouse-route/evidence/gesture-initialization.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-mouse-route/evidence/gesture-initialization.asm",
+      "bytes": 9400,
+      "sha256": "b113aed5d29f580ad4f72108442f17cd6a08315cc91e2bfbaa8f9423c978d76f",
+      "relativePath": "csp-mouse-route/evidence/gesture-initialization.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/gesture-initialization.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-mouse-route/evidence/is-tablet-event.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-mouse-route/evidence/is-tablet-event.asm",
+      "bytes": 721,
+      "sha256": "6f573f6d90688782dcd90b1adbdb9712563154912188303183d4416d27975c2e",
+      "relativePath": "csp-mouse-route/evidence/is-tablet-event.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/is-tablet-event.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-mouse-route/evidence/live-two-queue-configuration.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-mouse-route/evidence/live-two-queue-configuration.asm",
+      "bytes": 4907,
+      "sha256": "167e2d53f20fb7b81f9f3e51584b622a12c9419d5d6fbf5845e87b27dc0ba6c3",
+      "relativePath": "csp-mouse-route/evidence/live-two-queue-configuration.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/live-two-queue-configuration.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-mouse-route/evidence/mouse-dispatch.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-mouse-route/evidence/mouse-dispatch.asm",
+      "bytes": 38550,
+      "sha256": "e97488b54158b6f87cd689b2914ef317213ec4b4353be366b20d74d06cdf7e31",
+      "relativePath": "csp-mouse-route/evidence/mouse-dispatch.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/mouse-dispatch.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-mouse-route/evidence/mouse-queue.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-mouse-route/evidence/mouse-queue.asm",
+      "bytes": 19420,
+      "sha256": "b88873b7373e81990838223b2ba9f57ef2388ab0c07577735828d8a997984707",
+      "relativePath": "csp-mouse-route/evidence/mouse-queue.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/mouse-queue.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-mouse-route/evidence/mouse-send-event-selectors.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-mouse-route/evidence/mouse-send-event-selectors.asm",
+      "bytes": 20205,
+      "sha256": "2b7747980ea7d5ea9da55155dba9be60e24f2aeb7c33a7c1becf38dea2875632",
+      "relativePath": "csp-mouse-route/evidence/mouse-send-event-selectors.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/mouse-send-event-selectors.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-mouse-route/evidence/native-pen-type.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-mouse-route/evidence/native-pen-type.asm",
+      "bytes": 2620,
+      "sha256": "e920e68e8296ec33e80fbbd3f72e40406904a2fc17b3d495fe14e0495615e746",
+      "relativePath": "csp-mouse-route/evidence/native-pen-type.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/native-pen-type.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-mouse-route/evidence/native-touch-events.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-mouse-route/evidence/native-touch-events.asm",
+      "bytes": 10533,
+      "sha256": "96986cff68d0c0c2dee5170f61ad7ce6521c499ee4fea00160fe1afccbf6e15a",
+      "relativePath": "csp-mouse-route/evidence/native-touch-events.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/native-touch-events.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-mouse-route/evidence/native-window-create.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-mouse-route/evidence/native-window-create.asm",
+      "bytes": 6370,
+      "sha256": "2b2412cb727610062fc62093ef17a74130015169b958de776f2c5eb4ed959161",
+      "relativePath": "csp-mouse-route/evidence/native-window-create.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/native-window-create.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-mouse-route/evidence/queue-memory-functions.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-mouse-route/evidence/queue-memory-functions.asm",
+      "bytes": 6257,
+      "sha256": "15c3040daeffd5ec7b3572b3b53e77a90df0902f973f82e39a5dfd611c65b792",
+      "relativePath": "csp-mouse-route/evidence/queue-memory-functions.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/queue-memory-functions.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-mouse-route/evidence/view-mouse-events-selectors.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-mouse-route/evidence/view-mouse-events-selectors.asm",
+      "bytes": 39688,
+      "sha256": "07273527859ce9728f60ccf0b7fcf555a16921275df4f919b8781f87179d9a11",
+      "relativePath": "csp-mouse-route/evidence/view-mouse-events-selectors.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/view-mouse-events-selectors.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-mouse-route/evidence/window-callback-installation.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-mouse-route/evidence/window-callback-installation.asm",
+      "bytes": 6720,
+      "sha256": "785ade807a9dd55660bc2876a53edf2ba1a80c4d5f336359c452492bec20d309",
+      "relativePath": "csp-mouse-route/evidence/window-callback-installation.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/window-callback-installation.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-mouse-send-event-selectors.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-mouse-send-event-selectors.asm",
+      "bytes": 20205,
+      "sha256": "2b7747980ea7d5ea9da55155dba9be60e24f2aeb7c33a7c1becf38dea2875632",
+      "relativePath": "csp-mouse-send-event-selectors.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/mouse-send-event-selectors.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-native-pen-type.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-native-pen-type.asm",
+      "bytes": 2620,
+      "sha256": "e920e68e8296ec33e80fbbd3f72e40406904a2fc17b3d495fe14e0495615e746",
+      "relativePath": "csp-native-pen-type.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/native-pen-type.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-native-touch-events.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-native-touch-events.asm",
+      "bytes": 10533,
+      "sha256": "96986cff68d0c0c2dee5170f61ad7ce6521c499ee4fea00160fe1afccbf6e15a",
+      "relativePath": "csp-native-touch-events.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/native-touch-events.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-native-window-create.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-native-window-create.asm",
+      "bytes": 6370,
+      "sha256": "2b2412cb727610062fc62093ef17a74130015169b958de776f2c5eb4ed959161",
+      "relativePath": "csp-native-window-create.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/native-window-create.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/10212824c.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/10212824c.asm",
+      "bytes": 1765,
+      "sha256": "3df5e9ea974c77ac9bf34cd507a6a2c27630e38fefdbbe5846f0322055929d38",
+      "relativePath": "csp-post-contract-spike/evidence/10212824c.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/10212824c.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/10212830c.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/10212830c.asm",
+      "bytes": 1207,
+      "sha256": "3b818ea816880fb7925861b6840877af36800e6a8bd3ad5a90a13e32af029db7",
+      "relativePath": "csp-post-contract-spike/evidence/10212830c.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/10212830c.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/102128838.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/102128838.asm",
+      "bytes": 85,
+      "sha256": "d3e4bb86565b079739578488ac0a571e6c4c19d4efba9635e69fcdfa66fcb94e",
+      "relativePath": "csp-post-contract-spike/evidence/102128838.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/102128838.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/1021288f0.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/1021288f0.asm",
+      "bytes": 85,
+      "sha256": "8af0e9284d215506849539b7dc07b33c3f7610ddcee56a90f0b653d55e09b5a8",
+      "relativePath": "csp-post-contract-spike/evidence/1021288f0.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/1021288f0.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/102128c7c.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/102128c7c.asm",
+      "bytes": 1491,
+      "sha256": "8b71923ce20990c07ad32ecc324d838f0bc13209190315f5f9a6ed6d3700e9c6",
+      "relativePath": "csp-post-contract-spike/evidence/102128c7c.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/102128c7c.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/102217e30.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/102217e30.asm",
+      "bytes": 355,
+      "sha256": "c311ec4ba7e41ee8f2d1fef0d54d1f26b4e9a5a96a04a2ecf19cb9865c897bff",
+      "relativePath": "csp-post-contract-spike/evidence/102217e30.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/102217e30.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/1027647c0.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/1027647c0.asm",
+      "bytes": 338,
+      "sha256": "3506835d4b77a96aa1ac3f76923e58c3dbe1ad2c903ce854ad891ffdbd31b5da",
+      "relativePath": "csp-post-contract-spike/evidence/1027647c0.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-capture-contract/evidence/bezier_constructor.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/1027653d4.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/1027653d4.asm",
+      "bytes": 1967,
+      "sha256": "81a5371d3cfa5b9fbb6403c25f7c96e8ea88584ca63bcc52acf828611944cff9",
+      "relativePath": "csp-post-contract-spike/evidence/1027653d4.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/1027653d4.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/102779bc8.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/102779bc8.asm",
+      "bytes": 1181,
+      "sha256": "5eeff4d6cf3baafe14c1dc695e27952ada457d1fafa58d6a07a7ceef41a86ed3",
+      "relativePath": "csp-post-contract-spike/evidence/102779bc8.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/102779bc8.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/10277eb98.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/10277eb98.asm",
+      "bytes": 844,
+      "sha256": "36b278455200521b03b54b280bda5e241ef55373b0e9b909d5ecb3a854b16abe",
+      "relativePath": "csp-post-contract-spike/evidence/10277eb98.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-capture-contract/evidence/bezier_pool.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/10277ec48.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/10277ec48.asm",
+      "bytes": 844,
+      "sha256": "42f26f3a0124a95bde2c27397287d7f6302e218ede6bdb6523c892b63df4f502",
+      "relativePath": "csp-post-contract-spike/evidence/10277ec48.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-capture-contract/evidence/spline_pool.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/10277f17c.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/10277f17c.asm",
+      "bytes": 419,
+      "sha256": "d325752439eff9d57d42eba9dd912e211d3ed9e14007a04a9e4f5afba4cca378",
+      "relativePath": "csp-post-contract-spike/evidence/10277f17c.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-capture-contract/evidence/allocate_bezier.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/10277f2bc.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/10277f2bc.asm",
+      "bytes": 419,
+      "sha256": "fae2cba87d173cb50d35ac54cbb36629675f0f55b73b77512d071f2df43bb97a",
+      "relativePath": "csp-post-contract-spike/evidence/10277f2bc.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-capture-contract/evidence/allocate_spline.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/102781714.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/102781714.asm",
+      "bytes": 824,
+      "sha256": "47917eda7019a0220ed2073de035d246ce91a7a8f0d3a52e0dd6f53f4266dd26",
+      "relativePath": "csp-post-contract-spike/evidence/102781714.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-capture-contract/evidence/path_initialize.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/102781770.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/102781770.asm",
+      "bytes": 845,
+      "sha256": "e08c176814b5598143b517e4e63e2c3a84ba568dbd15831ef1d8955dfd1e90bd",
+      "relativePath": "csp-post-contract-spike/evidence/102781770.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-capture-contract/evidence/append_node.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/102783f4c.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/102783f4c.asm",
+      "bytes": 1227,
+      "sha256": "8f4c8c32cdca1a700085732188d4ec0149c2121d86746b9cf2e99f7c562ae248",
+      "relativePath": "csp-post-contract-spike/evidence/102783f4c.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/102783f4c.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/102788840.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/102788840.asm",
+      "bytes": 296,
+      "sha256": "1822ded5008d25bdde4a976fbaf83103744f42ddc7e9a58eaf09f8ec419200d8",
+      "relativePath": "csp-post-contract-spike/evidence/102788840.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-capture-contract/evidence/spline_constructor.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/1027888dc.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/1027888dc.asm",
+      "bytes": 2683,
+      "sha256": "58c9572fe147c9fed7113cb1ce6eb0e9caaacb053e92aa46cb134f273eda3086",
+      "relativePath": "csp-post-contract-spike/evidence/1027888dc.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/1027888dc.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/102789114.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/102789114.asm",
+      "bytes": 2722,
+      "sha256": "ca9a834023ca8bda2b8223280140433c2db005c25cd9274bb341c0dbe6f95f22",
+      "relativePath": "csp-post-contract-spike/evidence/102789114.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/102789114.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/102789248.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/102789248.asm",
+      "bytes": 3239,
+      "sha256": "a2de67a9f1cc52b1cbead8634e36f6a67516804d49559020ef11f0f4cb7fc41e",
+      "relativePath": "csp-post-contract-spike/evidence/102789248.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/102789248.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/1027893b0.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/1027893b0.asm",
+      "bytes": 3276,
+      "sha256": "6708514ebc61ebdddb2976b61e3d55b1806302d3e16cb7beee53e40ae188bacc",
+      "relativePath": "csp-post-contract-spike/evidence/1027893b0.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/1027893b0.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/1028889ac.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/1028889ac.asm",
+      "bytes": 103901,
+      "sha256": "5b2f0e9bfb3267db413aa2e2982de0f74a3b6b54b60f7adaa4571f687cb7bd32",
+      "relativePath": "csp-post-contract-spike/evidence/1028889ac.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/1028889ac.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/10288cd3c.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/10288cd3c.asm",
+      "bytes": 3910,
+      "sha256": "58aeaabdb8e2fe876c54b16912c1417009bb5c689c4796123d1a0204647dbfa3",
+      "relativePath": "csp-post-contract-spike/evidence/10288cd3c.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/10288cd3c.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/10288d8ac.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/10288d8ac.asm",
+      "bytes": 38179,
+      "sha256": "06104ef354a54a7f096d23590990c51730526c44997f3bf9ac9b3d0882cadedb",
+      "relativePath": "csp-post-contract-spike/evidence/10288d8ac.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/brush-gesture-configuration.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/1028911f0.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/1028911f0.asm",
+      "bytes": 4443,
+      "sha256": "be9f00e1a70540948b86c5399a2809052f11375f7000bc4715f053103fe555d7",
+      "relativePath": "csp-post-contract-spike/evidence/1028911f0.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/1028911f0.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/10289148c.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/10289148c.asm",
+      "bytes": 60500,
+      "sha256": "8c0b467c9fc8bff01741df96403e7ded3caa5cd68a8351fae7a9e7064e6502a5",
+      "relativePath": "csp-post-contract-spike/evidence/10289148c.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-capture-contract/evidence/finalizer.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/1028ebd40.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/1028ebd40.asm",
+      "bytes": 6063,
+      "sha256": "27aac59a07cd95efe00e2f7c19a34bcb1fd9558551b00f457f40e76b853e3436",
+      "relativePath": "csp-post-contract-spike/evidence/1028ebd40.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/1028ebd40.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/1028ebfe4.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/1028ebfe4.asm",
+      "bytes": 11364,
+      "sha256": "612b7e947d30aee475377c1e01b27fd4781db0f22fec2cc48287e6b450e275f7",
+      "relativePath": "csp-post-contract-spike/evidence/1028ebfe4.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/1028ebfe4.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/1028ec4e0.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/1028ec4e0.asm",
+      "bytes": 926,
+      "sha256": "e87a5ca5ccf010f502c48ce8516d3072c50d72cedcebc2891a915669e344dfc1",
+      "relativePath": "csp-post-contract-spike/evidence/1028ec4e0.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/1028ec4e0.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/1028ec548.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/1028ec548.asm",
+      "bytes": 5579,
+      "sha256": "9bae81d92304d5c12ecbb8d4aa4413221f2d86f545613d2b8ea73a639fae31f6",
+      "relativePath": "csp-post-contract-spike/evidence/1028ec548.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/1028ec548.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/1028ec8d0.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/1028ec8d0.asm",
+      "bytes": 2148,
+      "sha256": "cde21bf49ba8d936890a570431b8dee51fbd46d883db65983f0e902529ebb1bc",
+      "relativePath": "csp-post-contract-spike/evidence/1028ec8d0.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/1028ec8d0.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/1028ef25c.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/1028ef25c.asm",
+      "bytes": 4207,
+      "sha256": "9ed1878fad349415c5290f37e8fd2d703e0f330a0280d199c314f4f1b935fcd9",
+      "relativePath": "csp-post-contract-spike/evidence/1028ef25c.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/1028ef25c.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/1028f2344.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/1028f2344.asm",
+      "bytes": 4359,
+      "sha256": "7b7838e2322bdbf4e4884d36774cd533e2fdac9d60e4e10d3ef6a897710d9683",
+      "relativePath": "csp-post-contract-spike/evidence/1028f2344.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/1028f2344.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/1028f25b0.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/1028f25b0.asm",
+      "bytes": 4347,
+      "sha256": "049bc0643fae93d352c0b4e9a9500ded3e079e0cd36c8fdad20797a1584ab2b5",
+      "relativePath": "csp-post-contract-spike/evidence/1028f25b0.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/1028f25b0.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/102e1ca68.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/102e1ca68.asm",
+      "bytes": 24628,
+      "sha256": "08a7c121e2f6a28454bb6560517972c6dd695a21e88831852b415be1f0d7180c",
+      "relativePath": "csp-post-contract-spike/evidence/102e1ca68.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/102e1ca68.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/102e1dad0.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/102e1dad0.asm",
+      "bytes": 63976,
+      "sha256": "b0edd041ecfc68c6e4ec68a59f59247587dc6d44ba3cb81e9e764f698afd5b40",
+      "relativePath": "csp-post-contract-spike/evidence/102e1dad0.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/102e1dad0.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/102e1f800.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/102e1f800.asm",
+      "bytes": 975,
+      "sha256": "039fb9555d2ed818c1389eccfb983749a55495e10e2400184ef5efb58b3898f0",
+      "relativePath": "csp-post-contract-spike/evidence/102e1f800.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/102e1f800.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/102e229a8.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/102e229a8.asm",
+      "bytes": 40853,
+      "sha256": "b7dcfe4da25d5e6b776adc3a95ecff6d5c48c307632f7f36b84f4877e44d7762",
+      "relativePath": "csp-post-contract-spike/evidence/102e229a8.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/brush-tool-gesture-configuration.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/1035a01c0.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/1035a01c0.asm",
+      "bytes": 3240,
+      "sha256": "32ed671cf26573de91959ee392dcbb183118230f58a67edc86ddf352bb1fa05b",
+      "relativePath": "csp-post-contract-spike/evidence/1035a01c0.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/1035a01c0.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-recorder-host-crosscheck.jsonl",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-recorder-host-crosscheck.jsonl",
+      "bytes": 3653,
+      "sha256": "83b416598df6370c0b00b25d7d1d52cbc19ed4cabc75e885bc280202abb5d6d7",
+      "relativePath": "csp-post-recorder-host-crosscheck.jsonl",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/post-preflight/post-recorder-host-crosscheck.jsonl",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-recorder-host-crosscheck.report.json",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-recorder-host-crosscheck.report.json",
+      "bytes": 9016,
+      "sha256": "71ff8ca6ed40551e03608cebb166ef2a318b599308a141610f7bbae8d67076a4",
+      "relativePath": "csp-post-recorder-host-crosscheck.report.json",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/post-preflight/post-recorder-host-crosscheck.report.json",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-queue-memory-functions.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-queue-memory-functions.asm",
+      "bytes": 6257,
+      "sha256": "15c3040daeffd5ec7b3572b3b53e77a90df0902f973f82e39a5dfd611c65b792",
+      "relativePath": "csp-queue-memory-functions.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/queue-memory-functions.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-resource-analysis/correction-labels.json",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-resource-analysis/correction-labels.json",
+      "bytes": 2709,
+      "sha256": "df60d358598517d4c7dc1d13ff1b2ae951f1d5a3aa285266b65f4092c2d7c59d",
+      "relativePath": "csp-resource-analysis/correction-labels.json",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/correction-labels.json",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-tablet-capture-independent-audit.md",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-tablet-capture-independent-audit.md",
+      "bytes": 5192,
+      "sha256": "b26762945a4f3baa7390dd76b3a302d7ef9bfd9afb6b965fa69780f5bda83cf7",
+      "relativePath": "csp-tablet-capture-independent-audit.md",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/tablet-preflight/independent-audit.md",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-vector-analysis/10214de74.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-vector-analysis/10214de74.asm",
+      "bytes": 29,
+      "sha256": "b5ab1efffd3c187ae14e1b54660bd47b939c0947aedd55eaf6e84997ff3c92fc",
+      "relativePath": "csp-vector-analysis/10214de74.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/10214de74.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-vector-analysis/102193940.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-vector-analysis/102193940.asm",
+      "bytes": 4064,
+      "sha256": "5844f53b710fb64dd8181b16bc5f715651355938eba945b1b71f64121fe32fab",
+      "relativePath": "csp-vector-analysis/102193940.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/102193940.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-vector-analysis/102217d1c.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-vector-analysis/102217d1c.asm",
+      "bytes": 1544,
+      "sha256": "19aa1cdae4ade7190df6dd6b914939aed7675eb9050651d56496fc8c712be228",
+      "relativePath": "csp-vector-analysis/102217d1c.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/102217d1c.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-vector-analysis/10276af54.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-vector-analysis/10276af54.asm",
+      "bytes": 1439,
+      "sha256": "c9bb5ee30202a626ce2a64d3e38b2eddc855586525ea46b49824f6dcc33028b1",
+      "relativePath": "csp-vector-analysis/10276af54.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/10276af54.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-vector-analysis/10276b138.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-vector-analysis/10276b138.asm",
+      "bytes": 770,
+      "sha256": "7915df0b09b5371ea166eb3d506d5a411d6cd00276554483156b34cc784984ab",
+      "relativePath": "csp-vector-analysis/10276b138.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/10276b138.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-vector-analysis/10276b190.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-vector-analysis/10276b190.asm",
+      "bytes": 584,
+      "sha256": "1845ed350b0d8b2ee1c71b756da2bdc820581cafad4ebcd8b975988d737fad46",
+      "relativePath": "csp-vector-analysis/10276b190.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/10276b190.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-vector-analysis/10276b5e4.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-vector-analysis/10276b5e4.asm",
+      "bytes": 2431,
+      "sha256": "cd8bb86f8a4ae47a2142782ddcf7e33d062b16d15a3eca470395c9766b060902",
+      "relativePath": "csp-vector-analysis/10276b5e4.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/10276b5e4.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-vector-analysis/10276ca3c.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-vector-analysis/10276ca3c.asm",
+      "bytes": 1925,
+      "sha256": "de0e9aa41a68af8970c1b1430357ed56de1e742ecd33c65088103dfb7b75dcbd",
+      "relativePath": "csp-vector-analysis/10276ca3c.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/10276ca3c.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-vector-analysis/10276cb14.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-vector-analysis/10276cb14.asm",
+      "bytes": 7938,
+      "sha256": "5c0679c33d3d4c9a1c5fba70de9e439e496fc14ae6fa023d6717079675cec212",
+      "relativePath": "csp-vector-analysis/10276cb14.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/10276cb14.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-vector-analysis/10276e06c.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-vector-analysis/10276e06c.asm",
+      "bytes": 3487,
+      "sha256": "b938c216e432d1f0958834e43e2fcc13a4f1b6f0829242a3b4e046b2c9280ef5",
+      "relativePath": "csp-vector-analysis/10276e06c.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/10276e06c.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-vector-analysis/102781838.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-vector-analysis/102781838.asm",
+      "bytes": 2272,
+      "sha256": "429a719ad78da7b76aef7048eb9cf4e2584d232ab98fccc7e4c70f28ee0dcb1f",
+      "relativePath": "csp-vector-analysis/102781838.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/102781838.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-vector-analysis/102785dd4.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-vector-analysis/102785dd4.asm",
+      "bytes": 895,
+      "sha256": "43479450fd5c6e788e41addaf26b8be4ba409f6f9c0aa2f7d0f12fc178861282",
+      "relativePath": "csp-vector-analysis/102785dd4.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/102785dd4.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-vector-analysis/102785e94.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-vector-analysis/102785e94.asm",
+      "bytes": 4406,
+      "sha256": "99b51a95af31ab404fd74c4b8c44c04a396dce7b76ce422cc6b04b0a4340c452",
+      "relativePath": "csp-vector-analysis/102785e94.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/102785e94.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-vector-analysis/102786e10.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-vector-analysis/102786e10.asm",
+      "bytes": 1164,
+      "sha256": "c91d6929582f1e1eb9f7e5277dca958ea21e72339c002329d20f4813574b9e1d",
+      "relativePath": "csp-vector-analysis/102786e10.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/102786e10.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-vector-analysis/1027877f8.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-vector-analysis/1027877f8.asm",
+      "bytes": 2174,
+      "sha256": "f0711a5e1aad5ccef42917a33ac280029ef924e16a3ec4ad17935115afa48d2e",
+      "relativePath": "csp-vector-analysis/1027877f8.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/1027877f8.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-vector-analysis/1028e1308.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-vector-analysis/1028e1308.asm",
+      "bytes": 5746,
+      "sha256": "95a6536c47c52b4428a863aa7ae768c6ad330894518e1968303243921267b891",
+      "relativePath": "csp-vector-analysis/1028e1308.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/1028e1308.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-vector-analysis/1028ed064.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-vector-analysis/1028ed064.asm",
+      "bytes": 2960,
+      "sha256": "f67cdf7fe1421c8ec8852178b756db2286286578a77bc0e5ecdcdb52bded7e37",
+      "relativePath": "csp-vector-analysis/1028ed064.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/1028ed064.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-vector-analysis/102991b84.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-vector-analysis/102991b84.asm",
+      "bytes": 1490,
+      "sha256": "8001b68b1ae82635b0f66940f06ccad7bc8bb66dbfe1a8caf0ce5242d88b8504",
+      "relativePath": "csp-vector-analysis/102991b84.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/102991b84.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-vector-analysis/102992930.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-vector-analysis/102992930.asm",
+      "bytes": 1583,
+      "sha256": "b7e2838ba80ccb776d8c11e50c8e8c50d815d711a913b0da67e905fd4e653ae7",
+      "relativePath": "csp-vector-analysis/102992930.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/102992930.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-vector-analysis/10359b240.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-vector-analysis/10359b240.asm",
+      "bytes": 7131,
+      "sha256": "e595587e77aaf55b3a6e42d63773edd445061d73bbe45e908a91e70f3139cce6",
+      "relativePath": "csp-vector-analysis/10359b240.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/10359b240.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-vector-analysis/10359dcac.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-vector-analysis/10359dcac.asm",
+      "bytes": 3451,
+      "sha256": "3cfa59ae4e8bbbf8c67d0af1dd84264a2918fc7dc5ba9b7faa57bfcdabdcf3ad",
+      "relativePath": "csp-vector-analysis/10359dcac.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/10359dcac.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-vector-analysis/region.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-vector-analysis/region.asm",
+      "bytes": 322409,
+      "sha256": "2ba14165972ce095674070e3ee34a5f3e181ab635ef30815dbc7214b4f9ed85e",
+      "relativePath": "csp-vector-analysis/region.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/post/region.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-vector-analysis/starts.txt",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-vector-analysis/starts.txt",
+      "bytes": 2859971,
+      "sha256": "40214d570d3febe9d5054e89fc899ad21d8da5f4c6f35e0587dac49a48beb4ea",
+      "relativePath": "csp-vector-analysis/starts.txt",
+      "reason": "Generated executable function-start index; pinned original image retained.",
+      "retainedEquivalent": null,
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-view-mouse-events-selectors.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-view-mouse-events-selectors.asm",
+      "bytes": 39688,
+      "sha256": "07273527859ce9728f60ccf0b7fcf555a16921275df4f919b8781f87179d9a11",
+      "relativePath": "csp-view-mouse-events-selectors.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/view-mouse-events-selectors.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-window-callback-installation.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-window-callback-installation.asm",
+      "bytes": 6720,
+      "sha256": "785ade807a9dd55660bc2876a53edf2ba1a80c4d5f336359c452492bec20d309",
+      "relativePath": "csp-window-callback-installation.asm",
+      "reason": "Exact duplicate of retained file.",
+      "retainedEquivalent": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/evidence/window-callback-installation.asm",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-handoff-live/live-analysis.md",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-handoff-live/live-analysis.md",
+      "bytes": 25091,
+      "sha256": "f9f9b3d0e54240558e5e5f106d29fea03117b4b6c6bc3a3c61ab3f8095fbda6d",
+      "relativePath": "csp-handoff-live/live-analysis.md",
+      "reason": "Independent comparison found draft superseded by the current research document.",
+      "retainedEquivalent": null,
+      "retainedReference": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/live-analysis.md",
+      "retainedReferenceSha256": "8ef5834b4e1e0c5f821ca23df56c864ba402262862faeb97acd7a07069cea753",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-handoff-post/post-analysis.md",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-handoff-post/post-analysis.md",
+      "bytes": 20516,
+      "sha256": "02b50689f537194a34ca719d984ce15d37f0332e925411a8f16faaea34c8fe46",
+      "relativePath": "csp-handoff-post/post-analysis.md",
+      "reason": "Independent comparison found draft superseded by the current research document.",
+      "retainedEquivalent": null,
+      "retainedReference": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-analysis.md",
+      "retainedReferenceSha256": "5ecb1c6ac0b0be5c3aa3c7f0df06ae88d568846e9cfd88647acbab1242db8a79",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-handoff-croquis/findings.md",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-handoff-croquis/findings.md",
+      "bytes": 28471,
+      "sha256": "39bcf8301a4fbbea826778fdcce35531b11734b8a2a67a7c6356839d1a4cc9b8",
+      "relativePath": "csp-handoff-croquis/findings.md",
+      "reason": "Independent comparison found draft superseded by the current research document.",
+      "retainedEquivalent": null,
+      "retainedReference": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/croquis-integration.md",
+      "retainedReferenceSha256": "69cb648a18f0937d2a7e760c146f9a30d128e16974373f8e56f0c7572cc94fe5",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/RESULTS.md",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/RESULTS.md",
+      "bytes": 10280,
+      "sha256": "41f2760404fe3607b1ac0fc45c697f04d6875ff04a2e256ec60173d1b643137b",
+      "relativePath": "csp-live-contract-spike/RESULTS.md",
+      "reason": "Independent comparison found draft superseded by the current research document.",
+      "retainedEquivalent": null,
+      "retainedReference": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-contract/README.md",
+      "retainedReferenceSha256": "dfffcea81d255f086b6063163253950466bbb92f5c40ddd8471b2109be1d1e22",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/findings.md",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/findings.md",
+      "bytes": 13101,
+      "sha256": "0f450ca359dbd4b80f62e01a2ac311f28695968c8beaf1fe9f5ccf487d507ed1",
+      "relativePath": "csp-post-contract-spike/findings.md",
+      "reason": "Independent comparison found draft superseded by the current research document.",
+      "retainedEquivalent": null,
+      "retainedReference": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-contract/findings.md",
+      "retainedReferenceSha256": "a286c461858af651222f74ba201274caad717c524d0f6294032cb94c877ab594",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-spike/README.md",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-spike/README.md",
+      "bytes": 7415,
+      "sha256": "f4795ffc6c7562723948a5a338dc20a58d319a75244353e56080dd2ea53e3262",
+      "relativePath": "csp-croquis-replay-spike/README.md",
+      "reason": "Independent comparison found draft superseded by the current research document.",
+      "retainedEquivalent": null,
+      "retainedReference": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/croquis-replay/README.md",
+      "retainedReferenceSha256": "433cce93ecdb6ed12ce0a0482e0b479e36c448ddd9240bac178e14fdc23af8d3",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-live-analysis/findings.md",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-analysis/findings.md",
+      "bytes": 8256,
+      "sha256": "79327aa720dfa498febb77634cc1a45d58ea9153b46533ab199b9e48815b4b7a",
+      "relativePath": "csp-live-analysis/findings.md",
+      "reason": "Independent comparison found draft superseded by the current research document.",
+      "retainedEquivalent": null,
+      "retainedReference": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/live-analysis.md",
+      "retainedReferenceSha256": "8ef5834b4e1e0c5f821ca23df56c864ba402262862faeb97acd7a07069cea753",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-vector-analysis/findings.md",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-vector-analysis/findings.md",
+      "bytes": 10925,
+      "sha256": "3cade93b592b0ac33099b1b09cfc706dc903437f6296412f52b7e0ba89925ded",
+      "relativePath": "csp-vector-analysis/findings.md",
+      "reason": "Independent comparison found draft superseded by the current research document.",
+      "retainedEquivalent": null,
+      "retainedReference": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-analysis.md",
+      "retainedReferenceSha256": "5ecb1c6ac0b0be5c3aa3c7f0df06ae88d568846e9cfd88647acbab1242db8a79",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-handoff-live/live-reference.ts",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-handoff-live/live-reference.ts",
+      "bytes": 17290,
+      "sha256": "27588de7eec1e23aaec8eb86b30cb96cba306ed3ac100bcb4d2df8643cce9a83",
+      "relativePath": "csp-handoff-live/live-reference.ts",
+      "reason": "Independent read-only formatting normalization produced no differences from the current source/test.",
+      "retainedEquivalent": null,
+      "retainedReference": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/live-reference.ts",
+      "retainedReferenceSha256": "2cc18473317bdcc9876bdac1a73b9e3be0bee526919866a0e4d69393c5da74b0",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-handoff-live/reference.test.ts",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-handoff-live/reference.test.ts",
+      "bytes": 10901,
+      "sha256": "4459914d50feb0193393d2bf6f5535dd3137607b7631f988ad1893287a657217",
+      "relativePath": "csp-handoff-live/reference.test.ts",
+      "reason": "Independent read-only formatting normalization produced no differences from the current source/test.",
+      "retainedEquivalent": null,
+      "retainedReference": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/live-reference.test.ts",
+      "retainedReferenceSha256": "9c8d478b8ec6dd0ccd3a105eff8b96d3051f882bd9704f19607ee532f3a5e5a5",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-handoff-post/post-reference.ts",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-handoff-post/post-reference.ts",
+      "bytes": 11140,
+      "sha256": "180f77c6dbe32caad9655ec6af61f5e995092f337daef4f30285e5b3ab08c913",
+      "relativePath": "csp-handoff-post/post-reference.ts",
+      "reason": "Independent read-only formatting normalization produced no differences from the current source/test.",
+      "retainedEquivalent": null,
+      "retainedReference": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-reference.ts",
+      "retainedReferenceSha256": "8a7899fd95ff45cb27748d1b68cbd5aad57572ccbe0b8409c1ad6d25b0a05edf",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    },
+    {
+      "source": "/private/tmp/csp-handoff-post/post-reference.test.ts",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-handoff-post/post-reference.test.ts",
+      "bytes": 5314,
+      "sha256": "a8aff0b2aca6f416edf09ece887a2e394a72bf4bf6434a3b4d46faab181b8d80",
+      "relativePath": "csp-handoff-post/post-reference.test.ts",
+      "reason": "Independent read-only formatting normalization produced no differences from the current source/test.",
+      "retainedEquivalent": null,
+      "retainedReference": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-reference.test.ts",
+      "retainedReferenceSha256": "e4c0dd064e1389224e60ed7184c290492e80e945f79aae5007f2f91529415774",
+      "archiveRemoved": true,
+      "temporarySourceRemoved": false
+    }
+  ],
+  "protectedFiles": {
+    "/Users/adoll/Applications/CSP Research/original-arm64": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+    "/Users/adoll/Applications/CSP Research/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT": "8abb910ca33a20c6e8dc334fb735a029f6e22378dd4eeaf1c351735acd222544",
+    "/Users/adoll/Applications/CSP Research/research-files/csp-cleanroom/EditImageTool.todb": "77be8d59105121bc0c8c335acbe0d646292328b28cac70600ce886658d5199d6"
+  },
+  "retainedArchiveFiles": 51,
+  "retainedArchiveBytes": 11315737,
+  "retainedFiles": [
+    {
+      "source": "/private/tmp/csp-brush-gesture-configuration.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-brush-gesture-configuration.asm",
+      "bytes": 38429,
+      "sha256": "a3d2a5a7dfedf0c1d941bd73c16195ad33a00597c5f5062f2b637ad93b51a452"
+    },
+    {
+      "source": "/private/tmp/csp-brush-tool-gesture-configuration.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-brush-tool-gesture-configuration.asm",
+      "bytes": 41381,
+      "sha256": "214409ed196d857db837a9d1affbc6775dd24022acd8700266ee0a81387fdd1b"
+    },
+    {
+      "source": "/private/tmp/csp-cleanroom/EditImageTool.todb",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-cleanroom/EditImageTool.todb",
+      "bytes": 1149952,
+      "sha256": "77be8d59105121bc0c8c335acbe0d646292328b28cac70600ce886658d5199d6"
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-durable/batch-results.json",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-durable/batch-results.json",
+      "bytes": 127063,
+      "sha256": "3e42b13c0ec61ce791cb704703b663611fa82aa35b6c936ab446c890aae170df"
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-durable/fixtures.json",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-durable/fixtures.json",
+      "bytes": 797557,
+      "sha256": "2d807a0ebdba62f7cdd9eeaa925125b2fd4d9305ff65885595c07bf4b26e5c5f"
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-durable/pixels.json",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-durable/pixels.json",
+      "bytes": 1950,
+      "sha256": "8ce9a9c9a1dd2b5460efc05c691382004bb88d9f2e3576ae1025b1a98933049f"
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-durable/provenance.json",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-durable/provenance.json",
+      "bytes": 1462,
+      "sha256": "d3ecd84b0b515c8feffba5d695cbf3944e768edd2dbf324abf8afd85166dfe3d"
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-durable/replay-output.txt",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-durable/replay-output.txt",
+      "bytes": 1494,
+      "sha256": "d8eee760e9c2a8ec9ce468a353d3526069512a6528807d9fa54bff75add40de6"
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-durable/samples.csv",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-durable/samples.csv",
+      "bytes": 6921788,
+      "sha256": "420fd11fe4f8879ac42303d2f7d1019bb096f9dfc76e8a44c6bb09c538ea1f34"
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-durable/summary.json",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-durable/summary.json",
+      "bytes": 67021,
+      "sha256": "8d90c3849e43f6c46267e71f4a6a0efc7d41ece391d2b11de14f1ef301f64e8e"
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-durable/validation.json",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-durable/validation.json",
+      "bytes": 415,
+      "sha256": "54172d974826108ff1a277f5be900d9169d99fab116e49288bac648e3a3c7785"
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-spike/pixels.cjs",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-spike/pixels.cjs",
+      "bytes": 1226,
+      "sha256": "d36afc46a53c89bd1996321e4a9630c2b01734c969a10504e3901c805cf88883"
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-spike/pixels.ts",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-spike/pixels.ts",
+      "bytes": 3580,
+      "sha256": "597e51551560ef247d5201c78b9be423d5965994e0133781ed99efbdd4bc4b6b"
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-spike/provenance.json",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-spike/provenance.json",
+      "bytes": 1228,
+      "sha256": "7eff8145b065476eae4f644edbe7610ed968f2221dcf8cd648ae6e9f4ca43aea"
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-spike/replay-output.txt",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-spike/replay-output.txt",
+      "bytes": 1428,
+      "sha256": "c57f45288d75bb90a6fb66a2a8c03d15d953188780cf76de03ee4b369d8d907d"
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-spike/replay.mts",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-spike/replay.mts",
+      "bytes": 9224,
+      "sha256": "f223b6a3b3ac44b394e1a412dab97b0d1bf92918311677d9c7fe57f2501a3292"
+    },
+    {
+      "source": "/private/tmp/csp-croquis-replay-spike/summary.csv",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-croquis-replay-spike/summary.csv",
+      "bytes": 17091,
+      "sha256": "a2f1ad046ed5cdb588794b7444d291f913da68c05bbaea8e04bc8f62405c7e35"
+    },
+    {
+      "source": "/private/tmp/csp-gesture-initialization.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-gesture-initialization.asm",
+      "bytes": 9422,
+      "sha256": "ad106b334cfca169547b71919a421ba361496dd6f9daed8edd19d50518ac9aac"
+    },
+    {
+      "source": "/private/tmp/csp-handoff-live/verification.txt",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-handoff-live/verification.txt",
+      "bytes": 2895,
+      "sha256": "dba7e804a17d8e04289926421feac9944f485986c62d13eaaffe5e7cea4ab463"
+    },
+    {
+      "source": "/private/tmp/csp-live-analysis/digitizer-averaging.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-analysis/digitizer-averaging.asm",
+      "bytes": 30742,
+      "sha256": "2ebbecb055423d1b6415352d031ed45b700d109775a97a347d1711c44597ac52"
+    },
+    {
+      "source": "/private/tmp/csp-live-analysis/digitizer-queue.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-analysis/digitizer-queue.asm",
+      "bytes": 15456,
+      "sha256": "a8f5ec276f16617c144863b7fd09f3a15dbdc93cfb627b16d97707734829dbcc"
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/annotate_selectors.py",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/annotate_selectors.py",
+      "bytes": 941,
+      "sha256": "89ca94868a60ddbec74efd611c692bc0ddae802c88757763dc782599963267b4"
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/indirect-symbols.txt",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/indirect-symbols.txt",
+      "bytes": 540985,
+      "sha256": "a5335823ed385087ef2ecbcc9ee5eccdbe2d6c0c4778d02df450befd623e2d3d"
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/launch-exit-findings.md",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/launch-exit-findings.md",
+      "bytes": 3951,
+      "sha256": "4ffb05eda1531db1e26f098a02e7962c20912392148051da1e646d2cd3249132"
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/objc-metadata.txt",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/objc-metadata.txt",
+      "bytes": 732589,
+      "sha256": "66270d35fc8c07c901b25e7dc75b754e9078de13d441eaeb9fc503cf9f2305d1"
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/target-refs.txt",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/target-refs.txt",
+      "bytes": 48171,
+      "sha256": "9e9c51f9203cce04661f50fdaa7781f3890ef5180b77776b317d058f26edb732"
+    },
+    {
+      "source": "/private/tmp/csp-live-contract-spike/trace_refs.py",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-live-contract-spike/trace_refs.py",
+      "bytes": 1768,
+      "sha256": "ff43829849514cb2aeac3a30f6fa86957eb05dbc11b18eac60997688a52edb24"
+    },
+    {
+      "source": "/private/tmp/csp-mouse-dispatch.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-mouse-dispatch.asm",
+      "bytes": 38645,
+      "sha256": "eb05bf620e3c76d5e056ef1f469af6ca7ef84297f22c10c43f8b74a772a7eef8"
+    },
+    {
+      "source": "/private/tmp/csp-mouse-route-and-isolated-probe.md",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-mouse-route-and-isolated-probe.md",
+      "bytes": 8343,
+      "sha256": "5e03d12f96887c9e5cd9792fd40751e7379f0f5774794905f689265bf143a87d"
+    },
+    {
+      "source": "/private/tmp/csp-mouse-send-event.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-mouse-send-event.asm",
+      "bytes": 17764,
+      "sha256": "ecaa0c2a4ea58b56199eed63af54497ded49b1cda21bd9704d6cde3b2fef312c"
+    },
+    {
+      "source": "/private/tmp/csp-offline-synthetic-20261010-v2.jsonl",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-offline-synthetic-20261010-v2.jsonl",
+      "bytes": 22600,
+      "sha256": "8a7e40a4b51bc8e2a30829402696324012aba3fa3464ab08d88eeb9161ac4318"
+    },
+    {
+      "source": "/private/tmp/csp-offline-synthetic-20261010.jsonl",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-offline-synthetic-20261010.jsonl",
+      "bytes": 22600,
+      "sha256": "8e47bfd3c0e2a72d7293fcb6721156a956e657445f1c68928d1bb94a99a2bea2"
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/1021285ac.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/1021285ac.asm",
+      "bytes": 2982,
+      "sha256": "2d07c6082b2c575d2aa7446893568c6498e8cb66a0134ec59b7df6622920ff33"
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/1021288c8.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/1021288c8.asm",
+      "bytes": 85,
+      "sha256": "2e0feb17f9849e8011f70cd9eace6c84daa96021dc92a0e3980a66e4c0ec8532"
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/10276b1ec.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/10276b1ec.asm",
+      "bytes": 86,
+      "sha256": "bca04315ba260784b30d4bcb2c69de36784b3c05d4a9416b882dd2eca8a5d5f8"
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/102780c84.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/102780c84.asm",
+      "bytes": 11991,
+      "sha256": "c8526b058a9973658759905d70eb734f022b8225f52102e58d1152f9c8545f93"
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/1028a0050.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/1028a0050.asm",
+      "bytes": 32386,
+      "sha256": "a91559cbac0cfc7e5db5d6789b76e4182d7b6726f388a43bd95525f2297d22d9"
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/1028ec814.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/1028ec814.asm",
+      "bytes": 1672,
+      "sha256": "1794419422a06b4e63a70962542b97a28fa8372af0120a568b9e6330542e2311"
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/1028ed1ec.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/1028ed1ec.asm",
+      "bytes": 7223,
+      "sha256": "3e840ade1b3431e62ad593032c16346e0da17a4c1f69f6b9de080b7bced1632a"
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/1028eefb8.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/1028eefb8.asm",
+      "bytes": 5975,
+      "sha256": "7e3462c99a69cf7951e177bbc48fa6df3ca95782243b9afabde4f734a7c76a56"
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/102e25160.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/102e25160.asm",
+      "bytes": 4594,
+      "sha256": "f7c59294a16fc2dff6eccd91eb1fea0b019877a4191df037e8e6036a275a2608"
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/102e35ff4.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/102e35ff4.asm",
+      "bytes": 10862,
+      "sha256": "ca87ea666a89005df1624feeed93d2e57414b4f0c3aeebb7c69c4517beff59be"
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/evidence/constants-and-vtables.txt",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/evidence/constants-and-vtables.txt",
+      "bytes": 6888,
+      "sha256": "d94a88532de6786891b9132d8c5b02472993c40a203b139add193b4af577d63e"
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/extract.py",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/extract.py",
+      "bytes": 963,
+      "sha256": "9e9213ba78708bc11a1e7749fad1fa6b9cc3c410c68880d531424a5ab3c7a132"
+    },
+    {
+      "source": "/private/tmp/csp-post-contract-spike/verify_evidence.py",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-contract-spike/verify_evidence.py",
+      "bytes": 1896,
+      "sha256": "f7cdd669a16dd96e783c81c5e4d55d7657a12d990ae24a9d79b2ab3afbb65373"
+    },
+    {
+      "source": "/private/tmp/csp-post-host-checks.txt",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-host-checks.txt",
+      "bytes": 937,
+      "sha256": "ce9b4e3fe010527b80ac3b98d35f0ab9201df3ebffeefa94e405f3a847e62d70"
+    },
+    {
+      "source": "/private/tmp/csp-post-recorder-host-crosscheck.py",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-post-recorder-host-crosscheck.py",
+      "bytes": 1158,
+      "sha256": "53cbcfd0dc2de5e956dd30611c9995bad7e00e7c7d1d10f68492022caea0aaf8"
+    },
+    {
+      "source": "/private/tmp/csp-resource-analysis/english-labels.json",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-resource-analysis/english-labels.json",
+      "bytes": 508770,
+      "sha256": "23a8ca27aa4d114741e4fc98dbdd4896ef371345f5c5f4aa94182b06cb6633de"
+    },
+    {
+      "source": "/private/tmp/csp-resource-analysis/nontext-leaves.json",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-resource-analysis/nontext-leaves.json",
+      "bytes": 1376,
+      "sha256": "99cbae70dda01c61801ac384110f65f7501198da7da8fac5e9add897548a9ca8"
+    },
+    {
+      "source": "/private/tmp/csp-tablet-max-history-check.py",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-tablet-max-history-check.py",
+      "bytes": 1374,
+      "sha256": "a86e9562cdad9bd9d2d56e8e47198124cd0410c8539ba207f00ccdf153b74727"
+    },
+    {
+      "source": "/private/tmp/csp-view-mouse-events.asm",
+      "destination": "/Users/adoll/Applications/CSP Research/research-files/csp-view-mouse-events.asm",
+      "bytes": 35358,
+      "sha256": "451c63b5e13f783cd619a7b7df94e8d1513eae9ba1149210eae5911a35286c0e"
+    }
+  ]
+}

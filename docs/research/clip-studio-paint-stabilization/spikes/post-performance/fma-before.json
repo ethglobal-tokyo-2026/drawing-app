@@ -1,0 +1,9 @@
+{
+  "seed": "19f131ad",
+  "cases": 122744,
+  "milliseconds": 145.56929200000002,
+  "inputSha256": "c14877efed1697a528f31663ffc84efa7e0af95a431532beac2d6c548a49b781",
+  "expectedSha256": "7d76e5c02cbfb8a00968a5c1bb846af1e34dd76901e14020df9e6d5ee48257b6",
+  "implementationSha256": "f08af99e8b3ad726b030d803d17090a5133c3f5bd2b3b195106ce74d0b6c3ca4",
+  "failures": []
+}

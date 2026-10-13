@@ -1,0 +1,147 @@
+{
+  "originalSha256": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+  "scope": "Static original instructions only; no CSP execution or debugger attachment.",
+  "quadraticVtable": "0x104a527b0",
+  "virtualTargets": {
+    "0x28": "0x102764880",
+    "0x30": "0x102764984",
+    "0x38": "0x1027649d8",
+    "0x40": "0x102764a44",
+    "0x48": "0x102764ac8"
+  },
+  "functions": [
+    {
+      "address": "0x1028ebd40",
+      "endExclusive": "0x1028ebfe4",
+      "bytesSha256": "39f66a83e6700e84fdd3b80090056df29e0b09f2ca2be82462cff3783d1bbc85",
+      "file": "1028ebd40.asm",
+      "assemblySha256": "27aac59a07cd95efe00e2f7c19a34bcb1fd9558551b00f457f40e76b853e3436"
+    },
+    {
+      "address": "0x1028ec4e0",
+      "endExclusive": "0x1028ec548",
+      "bytesSha256": "fab51d663ab7b57278eaa72ca9537625b0bb5986db350a7b33ccb90537d09bd0",
+      "file": "1028ec4e0.asm",
+      "assemblySha256": "e87a5ca5ccf010f502c48ce8516d3072c50d72cedcebc2891a915669e344dfc1"
+    },
+    {
+      "address": "0x1028ec548",
+      "endExclusive": "0x1028ec7c4",
+      "bytesSha256": "f155a60b4a7e2d15040a973453b9e04d576337e1a7880a1bceed93e8ae6ab5e5",
+      "file": "1028ec548.asm",
+      "assemblySha256": "9bae81d92304d5c12ecbb8d4aa4413221f2d86f545613d2b8ea73a639fae31f6"
+    },
+    {
+      "address": "0x1028ec8d0",
+      "endExclusive": "0x1028ec9c4",
+      "bytesSha256": "f3d6adb42dcc27a2493463d4b2e1b731067f4b2b3bc5a3def93478f95a7850ad",
+      "file": "1028ec8d0.asm",
+      "assemblySha256": "cde21bf49ba8d936890a570431b8dee51fbd46d883db65983f0e902529ebb1bc"
+    },
+    {
+      "address": "0x102781770",
+      "endExclusive": "0x1027817d0",
+      "bytesSha256": "c4321088628063964cabcec163be2220b527c0f7521f36062d60f8acf87740f8",
+      "file": "102781770.asm",
+      "assemblySha256": "e08c176814b5598143b517e4e63e2c3a84ba568dbd15831ef1d8955dfd1e90bd"
+    },
+    {
+      "address": "0x1027819bc",
+      "endExclusive": "0x102781a0c",
+      "bytesSha256": "70e4256fde9134f496d42b1ae7a832f73d361d09abaf8ffc70f0aee6190d299a",
+      "file": "1027819bc.asm",
+      "assemblySha256": "360ce77d9fde2bc590d41c42064a68afcb82a9febb22ef4acc0e3ba0adb7ee7e"
+    },
+    {
+      "address": "0x1027647c0",
+      "endExclusive": "0x1027647e4",
+      "bytesSha256": "0ba524ae324541bab2b954725ee8b915b92f02e35b3e25d63fb7948d946820a9",
+      "file": "1027647c0.asm",
+      "assemblySha256": "3506835d4b77a96aa1ac3f76923e58c3dbe1ad2c903ce854ad891ffdbd31b5da"
+    },
+    {
+      "address": "0x10276ae48",
+      "endExclusive": "0x10276ae98",
+      "bytesSha256": "1b8ed1bcaf3f532a3e968743234866aeb9388a71c956bf25d3346c1e5889e18a",
+      "file": "10276ae48.asm",
+      "assemblySha256": "ba0ee2a7b02cf0a0420c1432af5a48584c22e62980443c151a061ef41c0d8fc8"
+    },
+    {
+      "address": "0x102764880",
+      "endExclusive": "0x1027648e8",
+      "bytesSha256": "1e21feb8c944eca795210f2bbe3ccc58b6374b0d576a43df61b4e730d3313cc9",
+      "file": "102764880.asm",
+      "assemblySha256": "158e7f75cbdaa1468b2e2e5d9e257a2396c2b4c0f3785063bd62565d0d5f323a"
+    },
+    {
+      "address": "0x1027648e8",
+      "endExclusive": "0x102764984",
+      "bytesSha256": "624f6d0aaf1f94e5ed98362d22737e85601f8d47a375397d059bd18694f83647",
+      "file": "1027648e8.asm",
+      "assemblySha256": "1359c768166cfb2741419c8a4034a2a7b6c8415ea5a0fe17fc0c23fd64bcae8e"
+    },
+    {
+      "address": "0x102764984",
+      "endExclusive": "0x1027649d8",
+      "bytesSha256": "dacb6a66d481b5c3034014aae78f21b0abb4f058294c73fecc55f469de17d3a2",
+      "file": "102764984.asm",
+      "assemblySha256": "c709453fb009e9dc9441ececba40ac048c221e006a8c894a595e776e3a0b2571"
+    },
+    {
+      "address": "0x1027649d8",
+      "endExclusive": "0x102764a44",
+      "bytesSha256": "2be26357cab66d38dfae5588caba7fbf45335865e9bd86caff604fcb395abaf6",
+      "file": "1027649d8.asm",
+      "assemblySha256": "180c55b6207dadbc0ba60d9fb962a317e04bfe23202b91c2ca8cbfd3da69fb8b"
+    },
+    {
+      "address": "0x102764a44",
+      "endExclusive": "0x102764ac8",
+      "bytesSha256": "68db9555ebf7ef73533654113ee027777a650f9677d331fa12f9a1fbb6dd2a3d",
+      "file": "102764a44.asm",
+      "assemblySha256": "0646d31d59db061cbedddeb2330897ad2ca0f5a2124ca5cdcd9686e15c9f68ea"
+    },
+    {
+      "address": "0x102764ac8",
+      "endExclusive": "0x102764b28",
+      "bytesSha256": "19d49efff5e0522107df4d75982d25d2101020eb248d57036f44565bd58cb8a4",
+      "file": "102764ac8.asm",
+      "assemblySha256": "ecf7db8f4e885af4ec42bb42b5f24e9ca4c98837929f527f6ca98f6c1f2d9678"
+    },
+    {
+      "address": "0x10276b190",
+      "endExclusive": "0x10276b1d4",
+      "bytesSha256": "a31ae07d6dc059aad18e24b0a332d583a0dc6e3ea190bc168703c919cd8c7be7",
+      "file": "10276b190.asm",
+      "assemblySha256": "9f4f71dc1f903417647df9f9575185f74207171d9887aee099b310a2739a9349"
+    },
+    {
+      "address": "0x102217f00",
+      "endExclusive": "0x102217f70",
+      "bytesSha256": "c35710d70841c78701db3a311e80300f8803be5ae4a2c78b5e2260fbdf80a18b",
+      "file": "102217f00.asm",
+      "assemblySha256": "43b86db1c962b9ab9a747adfa79e72361014dca67085f85b410d3b1ef9481741"
+    },
+    {
+      "address": "0x1027878ec",
+      "endExclusive": "0x102787a1c",
+      "bytesSha256": "ada84944610fac8e380101ef3a838c39ac906172c03e41e2e98cef024dacc281",
+      "file": "1027878ec.asm",
+      "assemblySha256": "925f2bf1e43ea7952c4d42e91a7e645bc73c57c81868078ebafd593c22a378a6"
+    },
+    {
+      "address": "0x10276b2c4",
+      "endExclusive": "0x10276b5e4",
+      "bytesSha256": "06df40cdf915a1937658e4e514592a2498faa7f8647b7817d0c552b44ecd4cd6",
+      "file": "10276b2c4.asm",
+      "assemblySha256": "4e8218dd644eba25bfc47496d5f0d850c11468b2b7727e0053ac744bd9d4712b"
+    },
+    {
+      "address": "0x102779bc8",
+      "endExclusive": "0x102779c48",
+      "bytesSha256": "0eeeaa23085b2ca019e855c3b4158cc625f033663223a6a03b20d63844d65c52",
+      "file": "102779bc8.asm",
+      "assemblySha256": "5eeff4d6cf3baafe14c1dc695e27952ada457d1fafa58d6a07a7ceef41a86ed3"
+    }
+  ]
+}

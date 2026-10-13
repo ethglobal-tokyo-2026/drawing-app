@@ -168,10 +168,10 @@ const SPRING = {
   /** The slider under a finger. */
   finger: { w: 44, z: 1 },
   opening: { w: 17, z: 0.6 },
-  /** Shutting is quicker and bouncier: it springs home and knocks the top stop. */
-  shutting: { w: 23, z: 0.5 },
-  /** The mouth follows a little behind the slider and overshoots when it stops. */
-  mouth: { w: 24, z: 0.46 },
+  /** The chain closes without reopening on a large rebound; the pull carries the stop's knock. */
+  shutting: { w: 23, z: 0.85 },
+  /** The fabric follows the slider and settles before a returning sheet lands on the stack. */
+  mouth: { w: 28, z: 0.85 },
   spread: { w: 12, z: 0.9 },
   /** The pull in a hand, or under a mouse, lifting to where it's held. */
   hold: { w: 26, z: 0.7 },
@@ -198,6 +198,8 @@ const TICK = { stutter: 26, swing: 9, buzzMs: 3 };
 const SPREAD_AT = 0.97;
 /** Before it spreads, the mouth opens this wide for each px unzipped. */
 const MOUTH_PER_PX = 0.42;
+/** The fabric cannot stay wide as the slider leaves less tape unzipped. */
+const MOUTH_WIDTH_PER_PX = 0.65;
 /** The mouth's hold goes a little past wide open at most. */
 const RELAX_MAX = 1.2;
 /**
@@ -253,8 +255,7 @@ const MOTION_MIN = 0.7;
 const GRAVITY_SMOOTHING = 0.9;
 
 let uid = 0;
-/** An ease from nothing to the full span that starts at slope `m0`, in spans, and arrives flat: a gentle
- * start makes the V at the slider, a steep one the tight corner of a mouth spread flat. */
+/** An ease from nothing to the full span that starts at slope `m0`, in spans, and arrives flat. */
 const hermite = (t: number, m0: number) => {
   const u = clamp(t, 0, 1);
   return m0 * u + (3 - 2 * m0) * u * u + (m0 - 2) * u * u * u;
@@ -275,8 +276,6 @@ interface MouthShape {
   F: number;
   Ts: number;
   Te: number;
-  ms: number;
-  me: number;
   G: number;
   /** How far apart the parted rows lie where nothing holds them open. */
   lie: number;
@@ -287,8 +286,6 @@ const blankShape = (): MouthShape => ({
   F: 0,
   Ts: 1,
   Te: 1,
-  ms: 0.8,
-  me: 1.2,
   G: 0,
   lie: 0,
 });
@@ -296,8 +293,7 @@ const blankShape = (): MouthShape => ({
 /** How far the left row stands off the chain at a place on the track. */
 function gapOf(m: MouthShape, a: number): number {
   if (a >= m.sM || a <= CORNER) return 0;
-  const held =
-    a < m.F ? m.G * hermite((m.F - a) / m.Ts, m.ms) * hermite((a - CORNER) / m.Te, m.me) : 0;
+  const held = a < m.F ? m.G * hermite((m.F - a) / m.Ts, 0) * hermite((a - CORNER) / m.Te, 0) : 0;
   const lying = m.lie * hermite((m.sM - a) / LIE.run, 1) * hermite((a - CORNER) / LIE.run, 1);
   return Math.max(held, lying);
 }
@@ -547,9 +543,8 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
   };
 
   const shape = blankShape();
-  /* The mouth this frame: a V from the slider and a rounder corner under the top stops, both squaring
-   * up as it spreads flat; past its foot the parted rows lie together. `Ts`/`Te` are how far each
-   * curve reaches, `ms`/`me` how steeply each starts. */
+  /* The mouth's rounded shoulders leave the sewn top and the slider along the chain, then bend
+   * toward the board. Spread flat, their shorter curves leave the stack room between them. */
   function fillShape(
     into: MouthShape,
     p: number,
@@ -563,8 +558,8 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     const F = Math.min(sM, S1 - SHOULDER - short);
     const len = Math.max(0, F - CORNER);
     // Spread, its foot squares up tight, leaving the stack room above a pull hanging off the far stop.
-    let Ts = lerp(clamp(0.55 * len, 26, 150), 44, spread);
-    let Te = lerp(clamp(0.3 * len, 12, 72), 40, spread);
+    let Ts = lerp(clamp(0.55 * len, 26, 150), 40, spread);
+    let Te = lerp(clamp(0.3 * len, 12, 72), 56, spread);
     if (Ts + Te > len && len > 0) {
       const k = len / (Ts + Te);
       Ts *= k;
@@ -575,9 +570,9 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     into.F = F;
     into.Ts = Math.max(1, Ts);
     into.Te = Math.max(1, Te);
-    into.ms = lerp(0.8, 2.4, spread);
-    into.me = lerp(1.2, 2.2, spread);
-    into.G = G;
+    // The width spring trails the slider. Bound the drawn width too, so that lag cannot stretch a
+    // short run of tape into a broad wedge as the slider reaches the top stop.
+    into.G = Math.min(G, MOUTH_WIDTH_PER_PX * Math.max(0, S - S0));
     into.lie = LIE.gap * clamp((S - S0) / LIE.run, 0, 1);
   }
   const setShape = () => fillShape(shape, st.p, st.spread, st.G, st.stut, o.mouthShort);

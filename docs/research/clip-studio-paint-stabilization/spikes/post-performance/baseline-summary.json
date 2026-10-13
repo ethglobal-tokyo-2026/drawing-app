@@ -1,0 +1,242 @@
+[
+  {
+    "microseconds": 4661988,
+    "functionName": "decode",
+    "scriptId": "141",
+    "url": "file:///Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/canvas/stabilization/binary64.ts",
+    "lineNumber": 3,
+    "columnNumber": 15
+  },
+  {
+    "microseconds": 1663955,
+    "functionName": "fma64",
+    "scriptId": "141",
+    "url": "file:///Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/canvas/stabilization/binary64.ts",
+    "lineNumber": 17,
+    "columnNumber": 21
+  },
+  {
+    "microseconds": 273164,
+    "functionName": "decode",
+    "scriptId": "141",
+    "url": "file:///Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/canvas/stabilization/binary64.ts",
+    "lineNumber": 3,
+    "columnNumber": 15
+  },
+  {
+    "microseconds": 226703,
+    "functionName": "squaredDistance",
+    "scriptId": "144",
+    "url": "file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-sampling.ts",
+    "lineNumber": 11,
+    "columnNumber": 24
+  },
+  {
+    "microseconds": 225714,
+    "functionName": "(garbage collector)",
+    "scriptId": "0",
+    "url": "",
+    "lineNumber": -1,
+    "columnNumber": -1
+  },
+  {
+    "microseconds": 186456,
+    "functionName": "decode",
+    "scriptId": "141",
+    "url": "file:///Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/canvas/stabilization/binary64.ts",
+    "lineNumber": 3,
+    "columnNumber": 15
+  },
+  {
+    "microseconds": 177295,
+    "functionName": "(program)",
+    "scriptId": "0",
+    "url": "",
+    "lineNumber": -1,
+    "columnNumber": -1
+  },
+  {
+    "microseconds": 158838,
+    "functionName": "decode",
+    "scriptId": "141",
+    "url": "file:///Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/canvas/stabilization/binary64.ts",
+    "lineNumber": 3,
+    "columnNumber": 15
+  },
+  {
+    "microseconds": 84877,
+    "functionName": "fma64",
+    "scriptId": "141",
+    "url": "file:///Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/canvas/stabilization/binary64.ts",
+    "lineNumber": 17,
+    "columnNumber": 21
+  },
+  {
+    "microseconds": 82915,
+    "functionName": "decode",
+    "scriptId": "141",
+    "url": "file:///Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/canvas/stabilization/binary64.ts",
+    "lineNumber": 3,
+    "columnNumber": 15
+  },
+  {
+    "microseconds": 78795,
+    "functionName": "fma64",
+    "scriptId": "141",
+    "url": "file:///Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/canvas/stabilization/binary64.ts",
+    "lineNumber": 17,
+    "columnNumber": 21
+  },
+  {
+    "microseconds": 78253,
+    "functionName": "nearestSampleDistance",
+    "scriptId": "144",
+    "url": "file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-sampling.ts",
+    "lineNumber": 58,
+    "columnNumber": 37
+  },
+  {
+    "microseconds": 67749,
+    "functionName": "fma64",
+    "scriptId": "141",
+    "url": "file:///Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/canvas/stabilization/binary64.ts",
+    "lineNumber": 17,
+    "columnNumber": 21
+  },
+  {
+    "microseconds": 21127,
+    "functionName": "candidateDecision",
+    "scriptId": "140",
+    "url": "file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-pipeline.ts",
+    "lineNumber": 292,
+    "columnNumber": 28
+  },
+  {
+    "microseconds": 19334,
+    "functionName": "fma64",
+    "scriptId": "141",
+    "url": "file:///Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/canvas/stabilization/binary64.ts",
+    "lineNumber": 17,
+    "columnNumber": 21
+  },
+  {
+    "microseconds": 13666,
+    "functionName": "__require",
+    "scriptId": "88",
+    "url": "node:internal/deps/amaro/dist/index",
+    "lineNumber": 7,
+    "columnNumber": 48
+  },
+  {
+    "microseconds": 11208,
+    "functionName": "decode",
+    "scriptId": "141",
+    "url": "file:///Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/canvas/stabilization/binary64.ts",
+    "lineNumber": 3,
+    "columnNumber": 15
+  },
+  {
+    "microseconds": 10001,
+    "functionName": "fma64",
+    "scriptId": "141",
+    "url": "file:///Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/canvas/stabilization/binary64.ts",
+    "lineNumber": 17,
+    "columnNumber": 21
+  },
+  {
+    "microseconds": 8834,
+    "functionName": "segmentDistance",
+    "scriptId": "144",
+    "url": "file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-sampling.ts",
+    "lineNumber": 32,
+    "columnNumber": 24
+  },
+  {
+    "microseconds": 7458,
+    "functionName": "weightedPoint",
+    "scriptId": "142",
+    "url": "file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-quadratic.ts",
+    "lineNumber": 17,
+    "columnNumber": 22
+  },
+  {
+    "microseconds": 6376,
+    "functionName": "removalPass",
+    "scriptId": "140",
+    "url": "file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-pipeline.ts",
+    "lineNumber": 360,
+    "columnNumber": 22
+  },
+  {
+    "microseconds": 6251,
+    "functionName": "evaluateSpline",
+    "scriptId": "146",
+    "url": "file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-spline.ts",
+    "lineNumber": 18,
+    "columnNumber": 30
+  },
+  {
+    "microseconds": 6127,
+    "functionName": "decode",
+    "scriptId": "141",
+    "url": "file:///Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/canvas/stabilization/binary64.ts",
+    "lineNumber": 3,
+    "columnNumber": 15
+  },
+  {
+    "microseconds": 5042,
+    "functionName": "wrappedFn",
+    "scriptId": "7",
+    "url": "node:internal/errors",
+    "lineNumber": 537,
+    "columnNumber": 20
+  },
+  {
+    "microseconds": 5000,
+    "functionName": "decode",
+    "scriptId": "141",
+    "url": "file:///Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/canvas/stabilization/binary64.ts",
+    "lineNumber": 3,
+    "columnNumber": 15
+  },
+  {
+    "microseconds": 4500,
+    "functionName": "Module",
+    "scriptId": "0",
+    "url": "",
+    "lineNumber": -1,
+    "columnNumber": -1
+  },
+  {
+    "microseconds": 3958,
+    "functionName": "sampleSpline",
+    "scriptId": "146",
+    "url": "file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-spline.ts",
+    "lineNumber": 90,
+    "columnNumber": 28
+  },
+  {
+    "microseconds": 3917,
+    "functionName": "fma64",
+    "scriptId": "141",
+    "url": "file:///Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/canvas/stabilization/binary64.ts",
+    "lineNumber": 17,
+    "columnNumber": 21
+  },
+  {
+    "microseconds": 3874,
+    "functionName": "decode",
+    "scriptId": "141",
+    "url": "file:///Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/canvas/stabilization/binary64.ts",
+    "lineNumber": 3,
+    "columnNumber": 15
+  },
+  {
+    "microseconds": 3834,
+    "functionName": "runOrdinaryPostBeforeEndpoints",
+    "scriptId": "140",
+    "url": "file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-pipeline.ts",
+    "lineNumber": 105,
+    "columnNumber": 46
+  }
+]

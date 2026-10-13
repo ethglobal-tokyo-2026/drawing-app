@@ -1,5 +1,21 @@
 # Live-input capture preparation and checks
 
+2026-10-11 update: complete native strokes at S20/T0 and S0/T0 now match all compared fields across 311 and 115 included calls respectively, through release and source return. The latest capture recovered once from the verified background-thread stop and detached cleanly. Recording still caused substantial delay; **no repeat of this baseline is needed**. See [capture preparation](../../capture-preparation.md) for the results and limits. The dated preflight/failure accounts below describe earlier work; raw summaries remain unchanged.
+
+## Start a recording locally
+
+Use the command below only for a named additional capture after assessing the existing evidence. The recorder handles the narrowly verified workqueue-start exception, but its three ordinary stops per pen input make it unsuitable for measuring natural latency or pen feel. The latest complete recording's [diagnosis](../../evidence/debugger-access/tablet-manual-20261011T181326.241155Z-172e5259/latency-diagnosis.json) quantifies that overhead.
+
+With the persistent research copy open on a disposable canvas, run:
+
+```sh
+python3 /Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-capture/record_tablet_stroke.py
+```
+
+Switch to the research canvas with the pen lifted. The launcher prints and speaks **Recording now** only after the recorder's active marker appears. Draw one continuous small curve in about half a second, then lift immediately even if displayed ink lags. Keep the pen lifted until recording ends. Avoid a preliminary tap: the recorder takes the first qualifying stroke. The capture budget is 30 seconds including cleanup, with an independent 45-second debugger guard. The launcher announces when recording ends and saves complete logs, raw data, helper snapshots, and an independent process check under a unique `evidence/debugger-access/tablet-manual-*` directory. It reports incomplete captures as failures even when LLDB exits successfully and surfaces any narrowly accepted workqueue-step recovery as a warning. It does not configure the brush or run the formula comparison. `--silent` uses printed cues only.
+
+The launcher passed eight host-only checks. Its start cue was exercised in two live attempts; both captures timed out, and both independently resumed. The longer failure speech exceeded its audio wait and has been shortened; the full error remains in the terminal and saved logs. The recorder's revised release check passed 30 host checks. It accepts only the observed normal final release boundary where an idle queue's H becomes exactly its initial window I and all other common bytes remain identical. The return record labels this an observed reset with an unresolved writer. The matching reader checks passed 51 tests. This does not change the older raw recordings or establish a complete positive-stabilization match.
+
 2026-10-09 local session (final capture UTC 2026-10-10): **complete native mouse-route recording passed**, including down, drag, up, and the up callback's return on the same thread and stack. Detachment was acknowledged and observed, with no cleanup errors and a 7.738-second total. The saved raw packets were decoded independently afterward. The canvas displayed the stroke, and a separate OS check found the research process in state `S`. Tablet entry/exit pairing remains unvalidated.
 
 The original helper supports the first input/output contract check described in [runtime capture](../../runtime-capture.md). It does not record a complete stroke replay or establish natural drawing latency. **Ordinary mouse input uses a separate native route.** Its packet layout and release pressure also differ from the digitizer path. A visible mouse stroke does not prove that the recovered tablet filter ran. See the [complete-capture investigation and assembly](../../evidence/debugger-access/mouse-route/csp-complete-capture-contract.md).
@@ -42,7 +58,17 @@ The capture is bounded to 512 ingestion calls, 2,048 source events, and a reques
 (lldb) script tablet.run(lldb.debugger, PID, "/absolute/path/to/new-tablet-stroke.jsonl", timeout_seconds=30, max_calls=512, research_executable="/absolute/path/to/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT", original_arm64="/absolute/path/to/original-arm64")
 ```
 
-For the later hardware check, wait for the recorder's active cue, make one short contact/move/lift, and leave the pen hovering briefly so native deferred ending can finish. Check the saved summary before drawing anything else. A complete recording can be reused for repeated numerical comparison of that case; different settings and device behaviors may still need additional recordings. Natural feel and latency require a separate uninstrumented check. The recorder does not yet compare the captured stream against a complete reconstructed queue automatically.
+For the later hardware check, wait for the recorder's active cue, make one short contact/move/lift, and leave the pen hovering briefly so native deferred ending can finish. Check the saved summary before drawing anything else. A complete recording can be reused for repeated numerical comparison of that case; different settings and device behaviors may still need additional recordings. Natural feel and latency require a separate uninstrumented check. The [offline live replay tool](../live-replay/README.md) now compares the saved stream with a stateful reconstruction, including suppressed calls and terminal output. Its synthetic tests do not establish native equality.
+
+## Prepared post-correction recorder
+
+[capture_post_correction.py](capture_post_correction.py) observes one wrapper invocation at `0x1028ed064` and its normal epilogue at `0x1028ed144`. It retains full source/final path allocations and known node allocations, raw wrapper arguments, floating registers and thread/stack/holder pairing. The original path is captured before CSP can replace or free it. Node class follows path type flags and verified vtables; node attribute flags are a separate domain.
+
+[Eight host checks](check_post_correction.py) and an independent recorder-to-analyzer synthetic check passed. A [live no-input preflight](../../evidence/debugger-access/post-preflight/verification.md) verified all `0x11c` wrapper bytes and both hardware probes, then detached cleanly on the expected deadline. After automated window access failed, a [manual mouse recording](../../evidence/debugger-access/post-mouse-manual-20261010T184049Z/README.md) captured one valid native pair with clean detach: 99 source nodes became eight spline nodes, at actual `k=40` after the user selected the fifth indicator bar. Indicator position and numeric value must be recorded separately.
+
+The recorder writes `csp-post-capture/v1`, consumed by the [post analyzer](../post-replay/README.md). A normal paired return verifies an observed wrapper operation, not final rendering, active simplification, a particular device, or reconstructed whole-curve equality. Full raw headers retain endpoint pointers, but referenced external endpoint objects are not recursively copied. The 4,096-node recording limit rejects larger paths without truncation. Missing/unknown allocations, bad links, pairing errors or timeouts remain incomplete records. Shared hardware-only and cleanup limits below apply.
+
+See [capture-preparation.md](../../capture-preparation.md) for exact commands, settings coverage and the two-stroke initial tablet procedure. The post recorder and four-probe live tablet recorder currently run in separate sessions.
 
 ## First attempt: retained observations
 
@@ -94,7 +120,7 @@ Use the LLDB session that already controls the approved research-copy process. T
 
 The output filename must not exist. The selected-process expression can be replaced with an explicit positive integer PID. If reusing an LLDB session that imported an earlier helper version, run `script import importlib; importlib.reload(capture)` before invoking it.
 
-`research_executable` and `original_arm64` are explicit keyword arguments. When omitted, `CSP_RESEARCH_EXECUTABLE` and `CSP_ORIGINAL_ARM64` supply them. As a local convenience only, absent arguments/environment variables fall back to the research copy and original image under `/private/tmp/csp-debug-research-20261009/`. Missing files produce explicit errors. The helper and host checks have no dependency on the temporary analysis scripts, and neither executable is included in this directory.
+`research_executable` and `original_arm64` are explicit keyword arguments. When omitted, `CSP_RESEARCH_EXECUTABLE` and `CSP_ORIGINAL_ARM64` supply them. As a local convenience only, absent arguments/environment variables fall back to the research copy and original image under `Path.home() / 'Applications/CSP Research'`: on this Mac, `/Users/adoll/Applications/CSP Research/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT` and `/Users/adoll/Applications/CSP Research/original-arm64`. Missing files produce explicit errors. The helper and host checks have no dependency on temporary analysis scripts, and neither executable is included in this directory.
 
 ## Capture and cleanup limits
 

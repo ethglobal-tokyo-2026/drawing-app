@@ -1,0 +1,13 @@
+✔ constructor configuration applies mode-two reduction after the lower clamp (0.850833ms)
+✔ response uses the retained scalar and node bit12 bypasses only the main response (0.342792ms)
+✔ response curves preserve extrapolation and quadratic inverse selection (0.285042ms)
+✔ configured short endpoints retain one node for coincident taps (0.932958ms)
+✔ native evaluator and curve outputs match all retained instruction oracle cases (10.405583ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 193.503208

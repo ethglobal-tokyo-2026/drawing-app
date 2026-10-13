@@ -1,0 +1,33 @@
+✔ saved native S0 stroke matches through release (125.335792ms)
+✖ saved native S20 stroke matches through release (155.8585ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 1
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 480.908208
+
+✖ failing tests:
+
+test at docs/research/clip-studio-paint-stabilization/spikes/live-replay/native-replay.test.ts:16:3
+✖ saved native S20 stroke matches through release (155.8585ms)
+  AssertionError [ERR_ASSERTION]: {"callId":59,"field":"queue.processed_y","numeric":{"expected":559.9259998096244,"actual":559.9259998096245,"expectedBits":"0x40817f6872969383","actualBits":"0x40817f6872969384","exact":false,"absoluteError":1.1368683772161603e-13,"ulpDistance":"1"}}
+  
+  16 !== 0
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-replay/native-replay.test.ts:23:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 16,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

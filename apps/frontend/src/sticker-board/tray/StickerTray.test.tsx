@@ -29,6 +29,8 @@ import { countVisit, visitsSoFar } from "./trayVisits";
 import { inLanguage, stubResizeObservers } from "../../ui/testing";
 import { fakeContext2d } from "../timelapse/testCanvas";
 import { context2d } from "../../sticker-creation/canvas/context2d";
+import { useBoardGestures } from "../useBoardGestures";
+import { fieldOf } from "../placement";
 
 vi.mock("../../sticker-creation/canvas/context2d", async () => {
   const { fakeContext2d } = await import("../timelapse/testCanvas");
@@ -517,6 +519,128 @@ describe("StickerTray", () => {
     const tapped = hereOn();
     tap(tapped, 100, 200);
     expect(place).toHaveBeenCalledExactlyOnceWith(tapped?.getAttribute("data-id"), undefined);
+  });
+
+  it("keeps a pulled-out sheet over the board through board taps until its return button is used", async () => {
+    endAnimationsAtOnce();
+    const stickers = [sticker("a", 1, false), sticker("b", 2, false)];
+    function BoardWithTray() {
+      useBoardGestures({
+        stage: { current: board },
+        stickers,
+        field: fieldOf(390, 657),
+        size: { W: 390, H: 657, U: 390 },
+        layout: "phone",
+        selected: null,
+        reduced: true,
+        tray,
+        onSelect: () => {},
+        onOpen: () => {},
+        onCommit: () => {},
+        onRemove: () => {},
+      });
+      return (
+        <StickerTray
+          ref={tray}
+          board={board}
+          stickers={stickers}
+          ownerId="me"
+          api={api}
+          onSeen={() => {}}
+          onProblem={() => {}}
+          onProblemGone={() => {}}
+        />
+      );
+    }
+    act(() => root.render(<BoardWithTray />));
+    await openTray();
+    const pulled = await pullOut();
+    expect(pulled).not.toBeNull();
+
+    pointer(board, "pointerdown", 50, 500);
+    pointer(board, "pointerup", 50, 500);
+    await act(async () => {});
+    expect(pulledSheet()).toBe(pulled);
+    expect(tray.current?.isOpen).toBe(true);
+
+    act(() => pulled?.querySelector<HTMLButtonElement>(".tray__x")?.click());
+    await act(async () => {});
+    expect(pulledSheet()).toBeNull();
+    expect(frontSheet()?.querySelectorAll(".tray__slot")).toHaveLength(2);
+
+    pointer(board, "pointerdown", 50, 500);
+    pointer(board, "pointerup", 50, 500);
+    expect(tray.current?.isOpen).toBe(false);
+  });
+
+  it("lands a returning sheet at the stack's open position after the mouth was sagged to a crack", async () => {
+    const motion = holdAnimations();
+    const stickers = manyStickers(30);
+    render(stickers);
+    await openTray();
+    const pulled = await pullOut();
+    await motion.finishAll();
+    const f = pulled?.querySelector<HTMLElement>(".tray__sheet")?.dataset.f;
+    expect(f).toBeDefined();
+    motion.animate();
+    await letTheMouthSettle();
+
+    act(() => pulled?.querySelector<HTMLButtonElement>(".tray__x")?.click());
+    const flight = motion.asked.findLast((asked) => asked.el === pulled);
+    if (!flight || !Array.isArray(flight.frames))
+      throw new Error("The returning sheet has no sequence of animation keyframes");
+    const destination = String(flight.frames.at(-1)?.transform);
+    const pose = /translate\(([-\d.]+)px,([-\d.]+)px\).*scale\(([-\d.]+)\)/.exec(destination);
+    expect(pose).not.toBeNull();
+
+    // A refresh during the return must not draw a second copy into the tray early.
+    render(stickers.map((s, i) => ({ ...s, seenAt: i + 1 })));
+    const duplicate = board.querySelector(`.tray__stack .tray__sheet[data-f="${f}"]`);
+    await letTheMouthSettle();
+    await motion.finishAll();
+    expect(frontSheet()?.getAttribute("data-f")).toBe(f);
+
+    // Compose the actual stack and window translations; the column is 205px wide on this phone.
+    const stack = /translate\(([-\d.]+)px,([-\d.]+)px\)/.exec(stackEl()?.style.transform ?? "");
+    const window = /translate\(([-\d.]+)px,([-\d.]+)px\)/.exec(
+      board.querySelector<HTMLElement>(".tray__w1")?.style.transform ?? "",
+    );
+    const sheetH = Number.parseFloat(
+      board.querySelector<HTMLElement>(".tray")?.style.getPropertyValue("--sheet-h") ?? "",
+    );
+    const scale = Number(pose?.[3]);
+    const returnedLeft = Number(pose?.[1]) + 78 * (1 - scale);
+    const returnedTop = Number(pose?.[2]) + sheetH * 0.4 * (1 - scale);
+    expect(returnedLeft).toBeCloseTo(390 - 205 + Number(window?.[1]) + Number(stack?.[1]), 0);
+    expect(returnedTop).toBeCloseTo(72 + Number(stack?.[2]), 0);
+    expect(scale).toBeCloseTo(Number(stackEl()?.style.getPropertyValue("--scale") || "1"), 2);
+    expect(duplicate).toBeNull();
+  });
+
+  it("keeps the sheet in flight when Escape closes the tray while it is being moved back over it", async () => {
+    const motion = holdAnimations();
+    render(manyStickers(30));
+    await openTray();
+    const pulled = await pullOut();
+    await motion.finishAll();
+    if (!pulled) throw new Error("The sheet wasn't pulled out");
+    const f = pulled.querySelector<HTMLElement>(".tray__sheet")?.dataset.f;
+    motion.animate();
+
+    pointer(pulled.querySelector(".tray__paper"), "pointerdown", 100, 200);
+    pointer(pulled, "pointermove", 400, 200);
+    const first = motion.asked.length;
+    press(board.querySelector(".tray"), "Escape");
+    // A superseded flight completing cannot remove the paper that the active flight is returning.
+    const flights = motion.asked.slice(first).filter((asked) => asked.el === pulled);
+    for (const flight of flights.slice(0, -1)) flight.a.finish();
+    await act(async () => {});
+    expect(pulledSheet()).toBe(pulled);
+    expect(board.querySelector(`.tray__stack .tray__sheet[data-f="${f}"]`)).toBeNull();
+
+    await motion.finishAll();
+    expect(pulledSheet()).toBeNull();
+    expect(frontSheet()?.getAttribute("data-f")).toBe(f);
   });
 
   it("ignores a second finger on the pulled-out sheet while a sticker is peeled from the stack", async () => {
@@ -1304,31 +1428,30 @@ describe("StickerTray", () => {
       const observers = stubResizeObservers();
       await openOn(666, 60);
       spreadSheets();
-      const firstSheet = board
-        .querySelector('.tray__cell .tray__slot[data-id="s0"]')
-        ?.closest<HTMLElement>(".tray__cell");
-      if (!firstSheet) throw new Error("The first sticker isn't in the spread");
-      await act(async () => firstSheet.click());
+      const phoneWidths = new Map(
+        [...board.querySelectorAll<HTMLElement>(".tray__spread .tray__slot")].map((slot) => [
+          slot.dataset.id,
+          parseFloat(slot.style.width),
+        ]),
+      );
+      await act(async () => void tray.current?.escape());
       const width = () => {
-        const slot = slotOf("s0");
-        if (!(slot instanceof HTMLElement)) throw new Error("The first sticker isn't on its sheet");
-        expect(slot.querySelector<HTMLElement>(".tray__fit")?.style.width).toBe(slot.style.width);
-        return parseFloat(slot.style.width);
+        const slot = hereOn();
+        if (!(slot instanceof HTMLElement)) throw new Error("The front sheet has no sticker");
+        const phone = phoneWidths.get(slot.dataset.id);
+        if (phone === undefined) throw new Error("The sticker has no recorded phone size");
+        return { now: parseFloat(slot.style.width), phone };
       };
-      const phone = width();
-      const sheetNumbers = () =>
-        [...(stackEl()?.querySelectorAll<HTMLElement>(".tray__sheet") ?? [])].map(
-          (sheet) => sheet.dataset.f,
-        );
-      const phoneSheets = sheetNumbers();
+      const phoneSheets = sheetCount();
       act(() => {
         large = true;
         screen.dispatchEvent(new Event("change"));
         const col = board.querySelector(".tray__col");
         if (col) observers.resize(col);
       });
-      expect(width()).toBeCloseTo(phone * 1.25, 0);
-      expect(sheetNumbers()).not.toEqual(phoneSheets);
+      const enlarged = width();
+      expect(enlarged.now).toBeCloseTo(enlarged.phone * 1.25, 0);
+      expect(sheetCount()).toBeGreaterThan(phoneSheets);
       const { stackFoot, mouthFoot } = openStack(666);
       expect(stackFoot).toBeLessThanOrEqual(mouthFoot);
 
@@ -1338,8 +1461,9 @@ describe("StickerTray", () => {
         const col = board.querySelector(".tray__col");
         if (col) observers.resize(col);
       });
-      expect(width()).toBe(phone);
-      expect(sheetNumbers()).toEqual(phoneSheets);
+      const restored = width();
+      expect(restored.now).toBe(restored.phone);
+      expect(sheetCount()).toBe(phoneSheets);
     });
 
     it.each([

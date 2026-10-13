@@ -18,7 +18,7 @@ import type { SheetDisplay } from "../layers/sheetDisplay";
 import { previewWidth, StrokeBuilder, type PenPressure } from "./brush";
 import { CanvasUnavailableError } from "./canvasUnavailable";
 import { FILL_GAP } from "./fill";
-import { isPalm, TapRecognizer, YOUNG_MS, YOUNG_PX, type TapGesture } from "./gestures";
+import { isPalm, isStylus, TapRecognizer, YOUNG_MS, YOUNG_PX, type TapGesture } from "./gestures";
 import { FillGestureController } from "./fillGesture";
 import { FillWorkerService } from "./fill-worker/service";
 import { FillError } from "./fill-worker/errors";
@@ -233,12 +233,6 @@ type PointerRole = { pointerType: string } &
   );
 
 const swallowed = (pointerType: string): PointerRole => ({ pointerType, kind: "swallowed" });
-
-/**
- * WebKit marks an Apple Pencil's touch, which lib.dom's Touch leaves out; another browser may not
- * list a stylus among the touches at all, so only this mark ends a pen stroke.
- */
-const isStylus = (touch: Touch) => "touchType" in touch && touch.touchType === "stylus";
 
 const frontOf = (state: LayerState): Layer => state.layers[state.layers.length - 1];
 

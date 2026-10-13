@@ -1,0 +1,9 @@
+{
+  "scope": "Static excerpt of ordinary finalizer caller; no CSP execution.",
+  "originalSha256": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+  "start": "0x102890810",
+  "endExclusive": "0x1028908d4",
+  "file": "terminal-caller-102890810.asm",
+  "bytesSha256": "7e4122db57e3f96947504d43431553c34445f149af7032ff1e68a61bfaafbcab",
+  "assemblySha256": "d12a602fc6e43694fcb77416ee739a848228e3de3f8e8ac91798c2064a45fad5"
+}

@@ -1,0 +1,8 @@
+(lldb) script import sys; sys.dont_write_bytecode=True; sys.path.insert(0,'/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-capture'); import check_capture_helper; check_capture_helper.run_checks(); import capture_live_contract as c; e,o=c.configured_paths(); assert e.is_file() and o.is_file(); assert str(e).startswith("/Users/adoll/Applications/CSP Research/"); assert len(c.original_instructions()) == 528; print("PASS: persistent paths and pinned original instructions"); print("PERSISTENT_PATH_CHECKS_COMPLETE")
+PASS: host-only suppression/emission, saved-pointer reuse, bounded common queue snapshots, thread and SP pairing guards
+PASS: event-driven stops ignore restarted events, reject foreign/terminal events, and respect deadlines without polling public state
+PASS: host-only delayed detach event, stale current state, matching process identity, and unobserved acknowledgement
+PASS: explicit executable/reference path configuration without temporary files
+No target behavior was tested.
+PASS: persistent paths and pinned original instructions
+PERSISTENT_PATH_CHECKS_COMPLETE

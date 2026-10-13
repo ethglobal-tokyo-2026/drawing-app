@@ -1,0 +1,23 @@
+{
+  "purpose": "User-requested retry of automated post-correction mouse capture",
+  "date": "2026-10-10",
+  "attempts": [
+    {"target": "/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app", "requested_timeout_ms": 10000, "reported_elapsed_seconds": 5.1686, "result": "Computer Use server error -10005: timeoutReached"},
+    {"target": "jp.co.celsys.CLIPSTUDIOPAINT", "requested_timeout_ms": 10000, "reported_elapsed_seconds": 6.1558, "result": "Computer Use server error -10005: cgWindowNotFound"},
+    {"target": "/Applications/CLIP STUDIO 1.5/App/CLIP STUDIO PAINT.app", "requested_timeout_ms": 10000, "reported_elapsed_seconds": 0.0118, "result": "Computer Use server error -10005: cgWindowNotFound"},
+    {"action": "Reset automation JavaScript session", "result": "js kernel reset"},
+    {"target": "/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app", "requested_timeout_ms": 10000, "reported_elapsed_seconds": 5.4309, "result": "Computer Use server error -10005: timeoutReached"}
+  ],
+  "process_inspection": [
+    {"pid": 1713, "state": "S", "executable": "/Applications/CLIP STUDIO 1.5/App/CLIP STUDIO PAINT.app/Contents/MacOS/CLIP STUDIO PAINT"},
+    {"pid": 21626, "state": "S", "executable": "/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT"}
+  ],
+  "app_inventory": {"bundle_id": "jp.co.celsys.CLIPSTUDIOPAINT", "isRunning": true},
+  "capture_started": false,
+  "debugger_attached_this_retry": false,
+  "input_sent": false,
+  "settings_changed": false,
+  "processes_terminated": false,
+  "root_cause_established": false,
+  "next_step": "Operator makes CSP canvas visible on unlocked desktop; then recheck window identity before capture. Two running copies may cause selection ambiguity, but causation is unverified."
+}

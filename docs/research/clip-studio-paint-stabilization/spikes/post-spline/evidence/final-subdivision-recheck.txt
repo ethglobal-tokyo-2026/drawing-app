@@ -1,0 +1,2 @@
+{"status":"complete","sourceNodes":99,"subdividedNodes":304,"insertedNodes":205,"rejectedSplits":0,"newlyExplainedPositions":4,"unmatchedOutputPositions":0,"elapsedMilliseconds":8772.86375}
+Repeated report matches all saved fields, positions, controls, membership checks and input hash; elapsed time excluded.

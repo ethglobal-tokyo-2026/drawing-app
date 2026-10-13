@@ -1,0 +1,33 @@
+{
+  "imageSha256": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+  "functions": [
+    {
+      "start": "0x10359fc40",
+      "end": "0x10359fd24",
+      "codeSha256": "222f6d98cb54ddaaf0506285f1e88d3639a560a0179ead300a45b7eaf630fcb8",
+      "file": "endpoint-10359fc40.asm",
+      "assemblySha256": "f8c6e3a137234615fa7c2063f0bd79bfe4dd762802f50d616650acbc8663fafb"
+    },
+    {
+      "start": "0x10359fe88",
+      "end": "0x10359ff9c",
+      "codeSha256": "dae970e9447cec2452790c1f95ebb649463980e1796f18013bd8902d967d81ec",
+      "file": "endpoint-10359fe88.asm",
+      "assemblySha256": "370b33b0b93c64a667b14efe2224b3c7878fcb824f9e14af04d6751877191cbb"
+    },
+    {
+      "start": "0x102788b10",
+      "end": "0x102788b84",
+      "codeSha256": "603577a3d87c993087c38278879691dc964257c12d4ead580ac7484e25c7b686",
+      "file": "endpoint-102788b10.asm",
+      "assemblySha256": "6162183ed3bc6dfef8a3e2aac232662462682bf2b31ee90bc73731581ed6aeae"
+    },
+    {
+      "start": "0x102787db0",
+      "end": "0x102787f94",
+      "codeSha256": "0de1b49a57f76e1cdf08589576fe8625a19b4e9503602aa703933deee810adb3",
+      "file": "endpoint-102787db0.asm",
+      "assemblySha256": "d02310ddf6348e5d4b8495b240b6c7cc3ebb48387d9ac846466809f92e1de722"
+    }
+  ]
+}

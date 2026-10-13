@@ -1,0 +1,25 @@
+{
+  "command": [
+    "node",
+    "--test",
+    "docs/research/clip-studio-paint-stabilization/binary64.test.ts",
+    "docs/research/clip-studio-paint-stabilization/live-reference.test.ts",
+    "docs/research/clip-studio-paint-stabilization/post-endpoints.test.ts",
+    "docs/research/clip-studio-paint-stabilization/post-evaluator.test.ts",
+    "docs/research/clip-studio-paint-stabilization/post-input.test.ts",
+    "docs/research/clip-studio-paint-stabilization/post-pipeline.test.ts",
+    "docs/research/clip-studio-paint-stabilization/post-quadratic.test.ts",
+    "docs/research/clip-studio-paint-stabilization/post-reference.test.ts",
+    "docs/research/clip-studio-paint-stabilization/post-sampling.test.ts",
+    "docs/research/clip-studio-paint-stabilization/post-source.test.ts",
+    "docs/research/clip-studio-paint-stabilization/post-spline-context.test.ts",
+    "docs/research/clip-studio-paint-stabilization/post-spline-length.test.ts",
+    "docs/research/clip-studio-paint-stabilization/post-spline.test.ts",
+    "docs/research/clip-studio-paint-stabilization/reference-invariants.test.ts",
+    "docs/research/clip-studio-paint-stabilization/spikes/live-replay/live-replay.test.ts",
+    "docs/research/clip-studio-paint-stabilization/spikes/live-replay/native-replay.test.ts",
+    "docs/research/clip-studio-paint-stabilization/spikes/post-replay/analyze.test.ts"
+  ],
+  "exitCode": 0,
+  "seconds": 2.02
+}

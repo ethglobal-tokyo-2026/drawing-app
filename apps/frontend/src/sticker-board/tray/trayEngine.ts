@@ -58,6 +58,8 @@ export { ICONS } from "./trayModel";
 
 export interface TrayEngine {
   readonly isOpen: boolean;
+  /** A sheet is out over the board or returning to the tray. */
+  readonly hasPulledSheet: boolean;
   open: () => Promise<boolean>;
   close: () => Promise<boolean>;
   /** Rereads the stickers, after one is sealed, placed, removed or given. */
@@ -583,6 +585,9 @@ export function createTrayEngine(
   return {
     get isOpen() {
       return zip.isOpen;
+    },
+    get hasPulledSheet() {
+      return ui.pulled !== null;
     },
     open: () => zip.open(),
     close: () => zip.close(),

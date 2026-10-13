@@ -129,12 +129,21 @@ def check_capture_stop_events():
     class Listener:
         def __init__(self, process, events):
             self.process, self.events = process, list(events)
+            self.waits = []
+            self.before_return = None
 
         def GetNextEventForBroadcasterWithType(self, broadcaster, mask, event):
+            raise AssertionError('Capture repeatedly polled events instead of waiting for notification')
+
+        def WaitForEventForBroadcasterWithType(self, timeout, broadcaster, mask, event):
+            assert timeout == 1, 'Capture event wait must remain bounded to one second'
+            self.waits.append(timeout)
             assert broadcaster == 'own-process-broadcaster' and mask == 1
             if not self.events:
                 raise AssertionError('No qualifying stop was returned')
             pending = self.events.pop(0)
+            if self.before_return:
+                self.before_return()
             if pending is None:
                 return False
             event.process, event.state, event.restarted, self.process.stop_id = pending
@@ -156,11 +165,16 @@ def check_capture_stop_events():
     def invoke(events, last_stop=10):
         test = HostCapture()
         test.process, test.listener = own, Listener(own, events)
+        original_sleep = capture.time.sleep
+        def no_polling_sleep(seconds):
+            raise AssertionError('Capture added a polling sleep instead of waiting for notification')
         try:
             capture.lldb = fake_lldb
+            capture.time.sleep = no_polling_sleep
             return test.wait_capture_stop(last_stop), test
         finally:
             capture.lldb = real_lldb
+            capture.time.sleep = original_sleep
 
     stop, test = invoke([
         None,
@@ -170,6 +184,7 @@ def check_capture_stop_events():
         (own, real_lldb.eStateStopped, False, 12),
     ])
     assert stop == 12
+    assert test.listener.waits == [1] * 5
     rows = [json.loads(line) for line in test.output.getvalue().splitlines()]
     assert sum(row['kind'] == 'capture_state_event' for row in rows) == 4
     assert sum(row['kind'] == 'capture_restarted_stop' for row in rows) == 1
@@ -198,7 +213,22 @@ def check_capture_stop_events():
         raise AssertionError('Expired capture continued waiting')
     finally:
         capture.lldb = real_lldb
-    print('PASS: event-driven stops ignore restarted events, reject foreign/terminal events, and respect deadlines without polling public state')
+    for pending in (None, (own, real_lldb.eStateStopped, False, 12)):
+        test = HostCapture()
+        test.process, test.listener = own, Listener(own, [pending])
+        test.listener.before_return = test.expired.set
+        try:
+            capture.lldb = fake_lldb
+            test.wait_capture_stop(10)
+        except capture.CaptureError as error:
+            assert 'capture_deadline_reached' in str(error)
+        else:
+            raise AssertionError('Capture accepted a wait that returned after its deadline')
+        finally:
+            capture.lldb = real_lldb
+        assert test.listener.waits == [1]
+        assert not test.output.getvalue(), 'Expired wait processed an event before checking its deadline'
+    print('PASS: bounded notification waits have no polling sleep, ignore restarted events, reject foreign/terminal events, and check deadlines before and after waiting')
 
 
 def check_detach_observation():

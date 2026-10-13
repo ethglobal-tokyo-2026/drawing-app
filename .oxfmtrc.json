@@ -1,4 +1,15 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": ["contracts/sui-payment-contract/**", "packages/db/drizzle/meta/**"]
+  "ignorePatterns": [
+    "contracts/sui-payment-contract/**",
+    "packages/db/drizzle/meta/**",
+    "docs/research/**/evidence/**",
+    "docs/research/clip-studio-paint-stabilization/spikes/croquis-replay/results*/**",
+    "docs/research/clip-studio-paint-stabilization/spikes/post-performance/*.json",
+    "docs/research/clip-studio-paint-stabilization/spikes/croquis-post-correction/integration-review.md",
+    "docs/research/clip-studio-paint-stabilization/spikes/post-capture-contract/README.md",
+    "docs/research/clip-studio-paint-stabilization/spikes/post-spline/README.md",
+    "docs/research/clip-studio-paint-stabilization/spikes/post-joined/scripts/compare-attribute-distance.mjs",
+    "docs/research/clip-studio-paint-stabilization/spikes/post-joined/scripts/production-smoke.mjs"
+  ]
 }

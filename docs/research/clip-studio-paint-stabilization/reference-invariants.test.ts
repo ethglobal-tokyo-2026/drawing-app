@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { averageFractionalHistory, adjustFastWindow } from "./live-reference.ts";
-import type { Sample } from "./live-reference.ts";
+import {
+  averageFractionalHistory,
+  adjustFastWindow,
+} from "../../../apps/frontend/src/sticker-creation/canvas/stabilization/arithmetic.ts";
+import type { Sample } from "../../../apps/frontend/src/sticker-creation/canvas/stabilization/arithmetic.ts";
 import { cornerPredicate, quadraticToCubic } from "./post-reference.ts";
 
 function close(actual: number, expected: number, tolerance = 1e-12): void {

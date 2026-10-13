@@ -1,0 +1,31 @@
+{
+  "schema": "csp-post-report/v1",
+  "provenance": "runtime",
+  "device": "unknown",
+  "integrity": {
+    "status": "invalid",
+    "errors": [
+      "Record 9: Recorder error: CaptureError: capture_deadline_reached",
+      "Capture incomplete: CaptureError: capture_deadline_reached",
+      "Capture contains no wrapper entry",
+      "Capture contains no complete valid before/after pair"
+    ],
+    "warnings": [],
+    "entries": 0,
+    "pairs": 0
+  },
+  "arithmeticSummary": {
+    "matches": 0,
+    "mismatches": 0,
+    "derivedOnly": 0
+  },
+  "calls": [],
+  "coverage": {
+    "captureIntegrity": "evaluated",
+    "capturedFieldDeltas": "not-evaluated",
+    "helperArithmetic": "only explicitly captured helper inputs/results can match or mismatch",
+    "renderedOutput": "not-evaluated",
+    "wholeCurveEquivalence": "not-evaluated",
+    "tabletValidation": "not-evaluated"
+  }
+}

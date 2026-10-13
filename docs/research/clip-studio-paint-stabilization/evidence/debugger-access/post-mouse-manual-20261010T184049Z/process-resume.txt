@@ -1,0 +1,9 @@
+Independent OS process check after both debugger children exited:
+21351 S    /private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT
+21626 S    /private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT
+
+The check exited 0. Both debugger children and the bounded parent exited 0.
+PID 21351 recorded one complete pair and detached after 1.716997875 seconds.
+PID 21626 recorded zero entries and detached after 27.11103525 seconds.
+Neither recorder reported cleanup errors, cleanup warnings or total-budget overruns.
+Raw summaries retain resumeIndependentlyVerified=false because this check happened externally afterward.

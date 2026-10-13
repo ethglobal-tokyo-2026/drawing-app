@@ -1,0 +1,12 @@
+{
+  "command": [
+    "pnpm",
+    "--filter",
+    "frontend",
+    "test",
+    "--maxWorkers=2"
+  ],
+  "exitCode": 0,
+  "elapsedSeconds": 103.49,
+  "report": "docs/research/clip-studio-paint-stabilization/spikes/post-joined/evidence/frontend-tests-speed-20261011.txt"
+}

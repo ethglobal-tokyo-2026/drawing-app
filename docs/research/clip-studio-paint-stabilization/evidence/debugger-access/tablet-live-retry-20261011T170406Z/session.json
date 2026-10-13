@@ -1,0 +1,22 @@
+{
+  "pid": 3101,
+  "operator_report": "Previous window missed; no stroke attempted. Retry same research canvas.",
+  "requested_settings": {
+    "stabilization_numeric": 20,
+    "speed_stabilization": false,
+    "post_correction": false,
+    "taper_numeric": 0
+  },
+  "recorder_snapshot": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/tablet-live-s20-curve-20261011T165932Z/recorder-snapshot",
+  "command": [
+    "/usr/bin/xcrun",
+    "lldb",
+    "--batch",
+    "-o",
+    "process attach --pid 3101",
+    "-o",
+    "script import sys; sys.dont_write_bytecode=True; sys.path.insert(0, '/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/tablet-live-s20-curve-20261011T165932Z/recorder-snapshot'); import capture_tablet_stroke as tablet; tablet.run(lldb.debugger, 3101, '/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/tablet-live-retry-20261011T170406Z/tablet.jsonl', timeout_seconds=30, max_calls=512)",
+    "-o",
+    "quit"
+  ]
+}

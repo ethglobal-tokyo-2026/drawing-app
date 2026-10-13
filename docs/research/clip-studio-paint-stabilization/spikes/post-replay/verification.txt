@@ -1,0 +1,118 @@
+2026-10-10 — post-replay offline comparison verification
+Node v24.21.0. Research-only host checks; no CSP attachment or device input in this subtask.
+
+$ node --experimental-strip-types --test docs/research/clip-studio-paint-stabilization/spikes/post-replay/analyze.test.ts
+✔ actual geometry change is measured without claiming reconstructed output or node correspondence (3.31025ms)
+✔ new addresses alone do not turn identical retained output into observed correction (0.738792ms)
+✔ rejects malformed raw bytes, inconsistent counters, broken links and owners (1.116375ms)
+✔ missing return and drift cannot become valid paired captures (0.706292ms)
+✔ sequence reuse and foreign builds fail with retained diagnostics (0.484083ms)
+✔ entry arguments derive exact bounded arithmetic without claiming observed core execution (0.563083ms)
+✔ helper observations compare exact captured inputs with an independently captured result (0.928917ms)
+✔ unknown helper names and nonfinite values cannot imply arithmetic validation (0.618333ms)
+✔ closed-path accessor flags do not excuse a circular raw chain (0.35025ms)
+✔ unclean detach and incorrect terminal counts suppress field comparisons (0.626041ms)
+✔ alternate selector cannot borrow the ordinary core arithmetic (0.19975ms)
+✔ runtime helper comparison requires a captured supported FPCR (0.594375ms)
+✔ CLI persists valid reports and failure reports and exits nonzero for malformed captures (224.2495ms)
+✔ scalar and flag mutations are visible even when positions and node counts are unchanged (0.69475ms)
+✔ node flags remain independent from the class selected by path flags (0.234292ms)
+✔ settings arithmetic needs original reader inputs and compares exact returned bits (0.393208ms)
+✔ stored controls and endpoint data cannot disappear behind equal anchor positions (0.265375ms)
+✔ finite scalar inputs with overflowing intermediate bounds are not reported as helper agreement (0.227541ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 317.270417
+exit 0
+
+$ node --experimental-strip-types docs/research/clip-studio-paint-stabilization/post-reference.test.ts
+FMA: 1005 binary64 cases agree bit-for-bit with Python math.fma.
+Settings, uint32 square overflow, f32 limits, pass schedule, caller cap, and segment tolerance cases pass.
+Corner degeneracy, straight, obtuse, deviation threshold, and inclusive boundary cases pass.
+Scalar float-slack boundaries, interpolation acceptance, strict distance boundary, and cubic control cases pass.
+exit 0
+
+$ node --experimental-strip-types docs/research/clip-studio-paint-stabilization/reference-invariants.test.ts
+✔ fractional averaging preserves a constant position and pressure with padded history (0.8385ms)
+✔ constant-speed lag equals the first moment of the fractional history weights (0.213084ms)
+✔ fractional averaging commutes with translation and uniform coordinate scaling (0.114917ms)
+✔ fast adjustment depends on packet distance while the stale threshold is not crossed (0.518709ms)
+✔ corner classification survives rotation and translation (0.98825ms)
+✔ corner classification has the expected dimensional scaling (0.15925ms)
+✔ recovered quadratic-to-cubic controls represent the same parametric curve (0.086833ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6.528958
+exit 0
+
+$ node node_modules/typescript/bin/tsc --noEmit --strict --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --allowImportingTsExtensions --typeRoots apps/frontend/node_modules/@types --types node docs/research/clip-studio-paint-stabilization/spikes/post-replay/*.ts
+exit 0
+
+Saved fixture reproducibility check (analyzeText of each JSONL, exact report JSON comparison):
+synthetic-correction: checked-in report reproduced exactly; changed; helper matches=0
+synthetic-identity: checked-in report reproduced exactly; identity; helper matches=0
+exit 0
+
+Scope: 18 comparison tests, 7 reference invariant tests, 1,005 independent Python FMA values plus existing post arithmetic cases; strict TypeScript includes tests and fixture generator. No production application suite was run because no application code is imported or changed by this spike.
+
+Observed development failures and resolution: initial empty analyzer failed all 9 initial cases as expected; newly added FPCR, endpoint-data, scalar intermediate-overflow, terminal-summary, exclusive-output and oversized-header cases each failed before their fix. First TypeScript invocation lacked Node type roots; corrected to the existing frontend @types location. Expanded strict checking found test report-union access without narrowing; explicit assertions resolved it. All final checks above passed.
+
+Independent read-only review found the recorder's incorrect node-flag type check (reported to its owner), possible output alias overwrite (fixed with exclusive creation and hard-link regression), oversized header acceptance (fixed and tested), and a comment overstating retained diagnostics (corrected to retained errors). No remaining offline-review finding was deferred.
+
+Limits: checked-in cases are synthetic; zero runtime helper matches are present in those reports. Full curve equivalence, rendered output, device pressure provenance, and tablet validation remain not evaluated.
+
+Final check after formatting and removing redundant control arrays from the delta summary (full stored controls remain in decodedSnapshots):
+$ node --experimental-strip-types --test docs/research/clip-studio-paint-stabilization/spikes/post-replay/analyze.test.ts
+✔ actual geometry change is measured without claiming reconstructed output or node correspondence (3.272833ms)
+✔ new addresses alone do not turn identical retained output into observed correction (0.6355ms)
+✔ rejects malformed raw bytes, inconsistent counters, broken links and owners (1.78775ms)
+✔ missing return and drift cannot become valid paired captures (0.7695ms)
+✔ sequence reuse and foreign builds fail with retained diagnostics (0.323417ms)
+✔ entry arguments derive exact bounded arithmetic without claiming observed core execution (0.452125ms)
+✔ helper observations compare exact captured inputs with an independently captured result (1.450334ms)
+✔ unknown helper names and nonfinite values cannot imply arithmetic validation (0.7115ms)
+✔ closed-path accessor flags do not excuse a circular raw chain (0.688667ms)
+✔ unclean detach and incorrect terminal counts suppress field comparisons (0.631459ms)
+✔ alternate selector cannot borrow the ordinary core arithmetic (0.180167ms)
+✔ runtime helper comparison requires a captured supported FPCR (0.388541ms)
+✔ CLI persists valid reports and failure reports and exits nonzero for malformed captures (245.068292ms)
+✔ scalar and flag mutations are visible even when positions and node counts are unchanged (0.812ms)
+✔ node flags remain independent from the class selected by path flags (0.213666ms)
+✔ settings arithmetic needs original reader inputs and compares exact returned bits (0.429583ms)
+✔ stored controls and endpoint data cannot disappear behind equal anchor positions (0.273625ms)
+✔ finite scalar inputs with overflowing intermediate bounds are not reported as helper agreement (0.17325ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 333.249625
+exit 0
+
+$ node node_modules/typescript/bin/tsc --noEmit --strict --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --allowImportingTsExtensions --typeRoots apps/frontend/node_modules/@types --types node docs/research/clip-studio-paint-stabilization/spikes/post-replay/*.ts
+exit 0
+
+$ node_modules/.bin/oxfmt --check docs/research/clip-studio-paint-stabilization/spikes/post-replay
+Checking formatting...
+
+All matched files use the correct format.
+Finished in 118ms on 10 files using 18 threads.
+exit 0
+
+
+Fixture reproduction rechecked after formatting:
+synthetic-correction: checked-in report reproduced exactly; changed; helper matches=0
+synthetic-identity: checked-in report reproduced exactly; identity; helper matches=0
+exit 0

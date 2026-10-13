@@ -1,0 +1,30 @@
+{
+  "debugger.txt": {
+    "bytes": 200831,
+    "sha256": "e0e153822a22dc1c08f8264fee6a27da2c87e61448e0b1063255a00f638cdfd7"
+  },
+  "recorder-snapshot/capture_live_contract.py": {
+    "bytes": 30902,
+    "sha256": "c209dee94267d08d404e9fadcd07877950ce6f6272041f27d92903336357e655"
+  },
+  "recorder-snapshot/capture_tablet_stroke.py": {
+    "bytes": 38196,
+    "sha256": "07ce8ff76e8de6043963957ca86b5bc55498a9744194f37495684cc6ac4960a6"
+  },
+  "runner-result.json": {
+    "bytes": 127,
+    "sha256": "aef46953b393749c04014e10baea3e2174b430dc3f283b7b2850e20f485fb54f"
+  },
+  "session-outcome.json": {
+    "bytes": 243,
+    "sha256": "e10f59c5ce80449a887135856fb75caccdbd7245a26f13aee86b4aae67212f4e"
+  },
+  "session.json": {
+    "bytes": 1410,
+    "sha256": "857534dc500c3e830f80fec941f9872fe9c61d506cdf832e034141056ac1b3e9"
+  },
+  "tablet.jsonl": {
+    "bytes": 1409931,
+    "sha256": "c62a3c434bf550e710874f63c37f66b0958dcc7a615407b6622f66db8f695325"
+  }
+}

@@ -1,0 +1,92 @@
+$ env -u NO_COLOR playwright test pencil.e2e.ts --grep 'post correction'
+[WebServer] Sticker chain mode is mock; nothing is minted or given on Sui
+[WebServer] The chat menu and the giver's messages are off under DEV_SIGN_IN=on
+[WebServer] ⚠ DEV_SIGN_IN=on: anyone can sign in as anyone. The REST API trusts dev access tokens without asking LINE.
+
+Running 4 tests using 2 workers
+
+[WebServer] 5:51:15 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 5:51:15 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+  ✓  2 [chromium] › e2e/pencil.e2e.ts:305:1 › Japanese post correction controls fit the phone panel (4.1s)
+  ✓  1 [chromium] › e2e/pencil.e2e.ts:209:1 › post correction runs after pen lift and commits one replayable stroke (5.5s)
+[WebServer] 5:51:21 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 5:51:21 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 5:51:21 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 5:51:21 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+  ✓  4 [webkit] › e2e/pencil.e2e.ts:305:1 › Japanese post correction controls fit the phone panel (5.3s)
+[WebServer] 5:52:01 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 5:52:01 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+  ✘  3 [webkit] › e2e/pencil.e2e.ts:209:1 › post correction runs after pen lift and commits one replayable stroke (1.0m)
+
+
+  1) [webkit] › e2e/pencil.e2e.ts:209:1 › post correction runs after pen lift and commits one replayable stroke 
+
+    Test timeout of 60000ms exceeded.
+
+    Error: locator.hover: Test timeout of 60000ms exceeded.
+    Call log:
+      - waiting for getByLabel(/^Canvas(?:$|[,、])/)
+        - locator resolved to <div role="img" class="ink-layers" aria-label="Canvas"></div>
+      - attempting hover action
+        2 × waiting for element to be visible and stable
+          - element is not visible
+        - retrying hover action
+        - waiting 20ms
+        2 × waiting for element to be visible and stable
+          - element is not visible
+        - retrying hover action
+          - waiting 100ms
+        72 × waiting for element to be visible and stable
+           - element is not visible
+         - retrying hover action
+           - waiting 500ms
+      - element was detached from the DOM, retrying
+        - locator resolved to <div role="img" class="ink-layers" aria-label="Canvas"></div>
+      - attempting hover action
+        2 × waiting for element to be visible and stable
+          - element is not visible
+        - retrying hover action
+        - waiting 20ms
+        2 × waiting for element to be visible and stable
+          - element is not visible
+        - retrying hover action
+          - waiting 100ms
+        33 × waiting for element to be visible and stable
+           - element is not visible
+         - retrying hover action
+           - waiting 500ms
+
+
+      44 |   const sheet = canvas(page, language);
+      45 |   // Waits until nothing covers the paper, as the suite's own strokes do.
+    > 46 |   await sheet.hover();
+         |               ^
+      47 |   const box = await sheet.boundingBox();
+      48 |   if (!box) throw new Error("The sheet isn't on screen");
+      49 |   return box;
+        at openSheet (/Users/adoll/projects/drawing-app/apps/frontend/e2e/pencil.e2e.ts:46:15)
+        at /Users/adoll/projects/drawing-app/apps/frontend/e2e/pencil.e2e.ts:228:15
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../data/e2e-results/pencil.e2e.ts-post-correct-5a183-mmits-one-replayable-stroke-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../data/e2e-results/pencil.e2e.ts-post-correct-5a183-mmits-one-replayable-stroke-webkit/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../data/e2e-results/pencil.e2e.ts-post-correct-5a183-mmits-one-replayable-stroke-webkit/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace ../../data/e2e-results/pencil.e2e.ts-post-correct-5a183-mmits-one-replayable-stroke-webkit/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [webkit] › e2e/pencil.e2e.ts:209:1 › post correction runs after pen lift and commits one replayable stroke 
+  3 passed (1.1m)
+[ELIFECYCLE] Command failed with exit code 1.
+Error: ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL
+
+  × "pnpm recursive run" failed in /Users/adoll/projects/drawing-app/apps/
+  │ frontend
+

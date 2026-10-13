@@ -1,0 +1,23 @@
+✔ unknown evaluator is unnecessary for geometry when both first segments exceed travel limit (2.048125ms)
+✔ unknown configuration fails before mutation when geometry needs its result (0.404083ms)
+✔ travel-limit equality does not justify ignoring an unknown evaluator (0.122375ms)
+✔ tiny spans are removed head first with the absent evaluator's native value one (0.212916ms)
+✔ zero amount retains short segments when evaluator values are constant (0.242125ms)
+✔ after a kept span, a later short span can be removed beyond cumulative 0.5 (0.192083ms)
+✔ a next-node corner permits deletion beyond cumulative 0.5 (0.111833ms)
+✔ configured evaluator receives native parameter and clamps finite values below one (0.116375ms)
+✔ constructor configuration applies mode-two reduction after the lower clamp (0.996916ms)
+✔ response uses the retained scalar and node bit12 bypasses only the main response (0.267584ms)
+✔ response curves preserve extrapolation and quadratic inverse selection (0.244959ms)
+✔ configured short endpoints retain one node for coincident taps (1.155458ms)
+✔ retained scale variation changes short-endpoint decisions even at zero amount (0.341417ms)
+✔ unsupported decoded controls and unretained scalar doubles fail explicitly (0.387208ms)
+✔ native evaluator and curve outputs match all retained instruction oracle cases (18.821208ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 269.599

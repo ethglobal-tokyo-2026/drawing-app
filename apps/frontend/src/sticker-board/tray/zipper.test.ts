@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { COL, GMAX, TRACK_INSETS, chainAtFor } from "./trayModel";
 import { createZipper, RELEASE, releaseOpens, type Zipper } from "./zipper";
 import { context2d } from "../../sticker-creation/canvas/context2d";
+import { STOP } from "./zipperArt";
 
 vi.mock("../../sticker-creation/canvas/context2d", async () => {
   const { fakeContext2d } = await import("../timelapse/testCanvas");
@@ -77,6 +78,42 @@ afterEach(() => {
 });
 
 describe("the Zipper", () => {
+  it("rounds away from the sewn top stop instead of leaving it at a sharp angle", async () => {
+    await openSettled();
+    const shape = zip.geometry();
+    const nearStop = shape.gap(STOP + 0.1) / 0.1;
+    expect(nearStop).toBeLessThan(1);
+    // The round shoulder still leaves the folder tabs and sheets their full-open room.
+    expect(zip.openWindow()?.top).toBeLessThan(72);
+    expect(shape.gap(150)).toBeCloseTo(GMAX, 0);
+  });
+
+  it("narrows with the closing slider before the remaining tape can flatten into a wedge", async () => {
+    const rest = zip.geometry().sM;
+    await openSettled();
+    const frames: { height: number; width: number }[] = [];
+    zip.on("frame", (shape) => {
+      if (zip.isOpen) return;
+      let width = 0;
+      for (let a = STOP; a < shape.sM; a += 1) width = Math.max(width, shape.gap(a));
+      frames.push({ height: Math.max(0, shape.sM - rest), width });
+    });
+    void zip.close();
+    await vi.advanceTimersByTimeAsync(400);
+    expect(frames.length).toBeGreaterThan(10);
+    for (const frame of frames) expect(frame.width).toBeLessThanOrEqual(frame.height * 0.7 + 1);
+  });
+
+  it("reopens steadily enough for a returning sheet to meet the stack without a sideways jump", async () => {
+    await openSettled();
+    zip.relax(0.12);
+    await vi.advanceTimersByTimeAsync(2000);
+    zip.relax(1);
+    // A normal sheet return lasts 320 ms; the mouth must have reached its landing position then.
+    await vi.advanceTimersByTimeAsync(320);
+    expect(Math.abs(zip.geometry().G - GMAX)).toBeLessThan(0.5);
+  });
+
   it("keeps the tray operable after canvas refusal and retries its artwork on the next opening", async () => {
     zip.destroy();
     const failure = new Error("Canvas allocation refused");

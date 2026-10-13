@@ -1,0 +1,186 @@
+$ env -u NO_COLOR playwright test pencil.e2e.ts
+[WebServer] Sticker chain mode is mock; nothing is minted or given on Sui
+[WebServer] The chat menu and the giver's messages are off under DEV_SIGN_IN=on
+[WebServer] ⚠ DEV_SIGN_IN=on: anyone can sign in as anyone. The REST API trusts dev access tokens without asking LINE.
+
+Running 16 tests using 2 workers
+
+  ✓   2 [chromium] › e2e/pencil.e2e.ts:111:1 › a hovering pen rings where it will land, as wide as the stroke it draws, and the ring goes as it lands or leaves (4.1s)
+  ✓   1 [chromium] › e2e/pencil.e2e.ts:86:1 › a pen's first stroke brings the Pencil only tile; fingers then only tap, until the tile lets them draw (6.1s)
+  ✓   4 [chromium] › e2e/pencil.e2e.ts:170:1 › at Smooth, a pen's line trails its nib, stays still without new packets, and finishes on release (3.8s)
+  ✓   3 [chromium] › e2e/pencil.e2e.ts:142:1 › pen pressure: a pen whose pressure never moves draws by speed; then strokes widen as they press harder, and start as light as they land (6.7s)
+[WebServer] 5:50:00 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 5:50:00 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+  ✘   5 [chromium] › e2e/pencil.e2e.ts:208:1 › post correction runs after pen lift and commits one replayable stroke (4.0s)
+  ✓   7 [chromium] › e2e/pencil.e2e.ts:331:1 › once a pen has drawn here, a palm never draws, and a resting palm doesn't hold up two-finger undo (5.4s)
+[WebServer] 5:50:09 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 5:50:09 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 5:50:11 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 5:50:11 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+  ✘   6 [chromium] › e2e/pencil.e2e.ts:304:1 › Japanese post correction controls fit the phone panel (16.7s)
+  ✓   8 [chromium] › e2e/pencil.e2e.ts:361:1 › Settings shows Input and Pen pressure once a pen has drawn on the device, and Try it takes the pen (11.0s)
+  ✓   9 [webkit] › e2e/pencil.e2e.ts:86:1 › a pen's first stroke brings the Pencil only tile; fingers then only tap, until the tile lets them draw (5.1s)
+  ✓  10 [webkit] › e2e/pencil.e2e.ts:111:1 › a hovering pen rings where it will land, as wide as the stroke it draws, and the ring goes as it lands or leaves (3.9s)
+  ✓  12 [webkit] › e2e/pencil.e2e.ts:170:1 › at Smooth, a pen's line trails its nib, stays still without new packets, and finishes on release (3.8s)
+  ✓  11 [webkit] › e2e/pencil.e2e.ts:142:1 › pen pressure: a pen whose pressure never moves draws by speed; then strokes widen as they press harder, and start as light as they land (6.8s)
+[WebServer] 5:50:30 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 5:50:30 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+  ✘  13 [webkit] › e2e/pencil.e2e.ts:208:1 › post correction runs after pen lift and commits one replayable stroke (4.2s)
+  ✓  15 [webkit] › e2e/pencil.e2e.ts:331:1 › once a pen has drawn here, a palm never draws, and a resting palm doesn't hold up two-finger undo (4.6s)
+[WebServer] 5:50:38 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 5:50:38 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 5:50:39 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 5:50:39 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+  ✘  14 [webkit] › e2e/pencil.e2e.ts:304:1 › Japanese post correction controls fit the phone panel (16.4s)
+  ✓  16 [webkit] › e2e/pencil.e2e.ts:361:1 › Settings shows Input and Pen pressure once a pen has drawn on the device, and Try it takes the pen (12.7s)
+
+
+  1) [chromium] › e2e/pencil.e2e.ts:208:1 › post correction runs after pen lift and commits one replayable stroke 
+
+    Error: locator.evaluateAll: IndexSizeError: Failed to execute 'getImageData' on 'CanvasRenderingContext2D': The source width is 0.
+        at eval (eval at evaluate (:368:30), <anonymous>:6:30)
+        at Array.map (<anonymous>)
+        at eval (eval at evaluate (:368:30), <anonymous>:2:33)
+        at UtilityScript.evaluate (<anonymous>:370:16)
+        at UtilityScript.<anonymous> (<anonymous>:1:44)
+        at eval (eval at evaluate (:368:30), <anonymous>:6:30)
+        at eval (eval at evaluate (:368:30), <anonymous>:2:33)
+        at UtilityScript.evaluate (<anonymous>:370:16)
+        at UtilityScript.<anonymous> (<anonymous>:1:44)
+        at committedInkDigest (/Users/adoll/projects/drawing-app/apps/frontend/e2e/pencil.e2e.ts:59:45)
+        at /Users/adoll/projects/drawing-app/apps/frontend/e2e/pencil.e2e.ts:267:31
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../data/e2e-results/pencil.e2e.ts-post-correct-5a183-mmits-one-replayable-stroke-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../data/e2e-results/pencil.e2e.ts-post-correct-5a183-mmits-one-replayable-stroke-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../data/e2e-results/pencil.e2e.ts-post-correct-5a183-mmits-one-replayable-stroke-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace ../../data/e2e-results/pencil.e2e.ts-post-correct-5a183-mmits-one-replayable-stroke-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › e2e/pencil.e2e.ts:304:1 › Japanese post correction controls fit the phone panel ──
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('region', { name: 'シールボード' })
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('region', { name: 'シールボード' }) with timeout 15000ms
+      - waiting for getByRole('region', { name: 'シールボード' })
+
+
+       at helpers.ts:139
+
+      137 |   await expect(
+      138 |     page.getByRole("region", { name: say(stickerBoard.board.label, language) }),
+    > 139 |   ).toBeVisible();
+          |     ^
+      140 |   return name;
+      141 | }
+      142 |
+        at signIn (/Users/adoll/projects/drawing-app/apps/frontend/e2e/helpers.ts:139:5)
+        at /Users/adoll/projects/drawing-app/apps/frontend/e2e/pencil.e2e.ts:307:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../data/e2e-results/pencil.e2e.ts-Japanese-pos-11a59-ontrols-fit-the-phone-panel-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../data/e2e-results/pencil.e2e.ts-Japanese-pos-11a59-ontrols-fit-the-phone-panel-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../data/e2e-results/pencil.e2e.ts-Japanese-pos-11a59-ontrols-fit-the-phone-panel-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace ../../data/e2e-results/pencil.e2e.ts-Japanese-pos-11a59-ontrols-fit-the-phone-panel-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [webkit] › e2e/pencil.e2e.ts:208:1 › post correction runs after pen lift and commits one replayable stroke 
+
+    Error: locator.evaluateAll: IndexSizeError: The index is not in the allowed range.
+
+      57 | /** Exact committed pixel comparison, kept inside the browser to avoid transferring image data. */
+      58 | async function committedInkDigest(page: Page) {
+    > 59 |   return page.locator(".ink-layers canvas").evaluateAll(async (canvases) => {
+         |                                             ^
+      60 |     return Promise.all(
+      61 |       canvases.map(async (element) => {
+      62 |         const canvas = element as HTMLCanvasElement;
+        at committedInkDigest (/Users/adoll/projects/drawing-app/apps/frontend/e2e/pencil.e2e.ts:59:45)
+        at /Users/adoll/projects/drawing-app/apps/frontend/e2e/pencil.e2e.ts:267:31
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../data/e2e-results/pencil.e2e.ts-post-correct-5a183-mmits-one-replayable-stroke-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../data/e2e-results/pencil.e2e.ts-post-correct-5a183-mmits-one-replayable-stroke-webkit/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../data/e2e-results/pencil.e2e.ts-post-correct-5a183-mmits-one-replayable-stroke-webkit/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace ../../data/e2e-results/pencil.e2e.ts-post-correct-5a183-mmits-one-replayable-stroke-webkit/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [webkit] › e2e/pencil.e2e.ts:304:1 › Japanese post correction controls fit the phone panel ────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('region', { name: 'シールボード' })
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('region', { name: 'シールボード' }) with timeout 15000ms
+      - waiting for getByRole('region', { name: 'シールボード' })
+
+
+       at helpers.ts:139
+
+      137 |   await expect(
+      138 |     page.getByRole("region", { name: say(stickerBoard.board.label, language) }),
+    > 139 |   ).toBeVisible();
+          |     ^
+      140 |   return name;
+      141 | }
+      142 |
+        at signIn (/Users/adoll/projects/drawing-app/apps/frontend/e2e/helpers.ts:139:5)
+        at /Users/adoll/projects/drawing-app/apps/frontend/e2e/pencil.e2e.ts:307:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../data/e2e-results/pencil.e2e.ts-Japanese-pos-11a59-ontrols-fit-the-phone-panel-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../data/e2e-results/pencil.e2e.ts-Japanese-pos-11a59-ontrols-fit-the-phone-panel-webkit/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../data/e2e-results/pencil.e2e.ts-Japanese-pos-11a59-ontrols-fit-the-phone-panel-webkit/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace ../../data/e2e-results/pencil.e2e.ts-Japanese-pos-11a59-ontrols-fit-the-phone-panel-webkit/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4 failed
+    [chromium] › e2e/pencil.e2e.ts:208:1 › post correction runs after pen lift and commits one replayable stroke 
+    [chromium] › e2e/pencil.e2e.ts:304:1 › Japanese post correction controls fit the phone panel ───
+    [webkit] › e2e/pencil.e2e.ts:208:1 › post correction runs after pen lift and commits one replayable stroke 
+    [webkit] › e2e/pencil.e2e.ts:304:1 › Japanese post correction controls fit the phone panel ─────
+  12 passed (1.1m)
+[ELIFECYCLE] Command failed with exit code 1.
+Error: ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL
+
+  × "pnpm recursive run" failed in /Users/adoll/projects/drawing-app/apps/
+  │ frontend
+

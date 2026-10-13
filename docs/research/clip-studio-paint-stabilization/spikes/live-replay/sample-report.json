@@ -1,0 +1,962 @@
+{
+  "schemaVersion": 1,
+  "status": "exact_match",
+  "fixtureOrigin": "synthetic",
+  "inputSha256": "8a7e40a4b51bc8e2a30829402696324012aba3fa3464ab08d88eeb9161ac4318",
+  "nativeRuntimeValidated": false,
+  "arithmetic": "Existing live-reference.ts binary64 operations with separate multiply and add; FPCR must be zero",
+  "comparisonPolicy": "Exact binary64 bits and exact integer/control fields; absolute and ULP errors are diagnostic, never acceptance tolerances",
+  "comparedQueueRanges": [
+    "+0x00..+0x07 immutable vtable",
+    "+0x30..+0xeb captured common arithmetic/state/configuration and padding"
+  ],
+  "callCount": 3,
+  "mismatchCount": 0,
+  "firstDifference": null,
+  "captureRecordCounts": {
+    "metadata": 1,
+    "instruction_verification": 3,
+    "initial_state": 1,
+    "entry_pairing": 3,
+    "entry": 3,
+    "entry_contract": 3,
+    "exit": 3,
+    "native_dispatch": 1,
+    "native_source_pairing": 1,
+    "terminal_wrapper_complete": 1,
+    "native_source_return": 1,
+    "summary": 1
+  },
+  "excludedCalls": [],
+  "observedCompletion": {
+    "nativeReleaseReturned": true,
+    "finalSourceReturned": true,
+    "finalPairId": 3,
+    "terminalWrapperRecords": 1,
+    "sourceReturnRecords": 1
+  },
+  "limitations": [
+    "This is a saved-file arithmetic comparison, not validation of natural event timing, rendering, post-correction, latency, or pen feel.",
+    "JavaScript reference arithmetic is unfused. Native FMADD/FMLA/FMSUB can differ; every differing bit is reported without a tolerance pass or automatic FMA attribution.",
+    "Exact match means only equality of compared captured fields to this bounded reference for this file; it does not prove native runtime equivalence.",
+    "Deque allocation addresses, front index and allocator metadata at +0x08..+0x2f are observed but not predicted. Record order/count are modeled from initial history and every ingestion.",
+    "Only the captured common 236-byte prefix is available; digitizer-only cached packet fields +0xec..+0xff, out-of-line history after begin, and FPSR side effects are not predicted.",
+    "Wrapper changes are recorded before/after snapshots with static attribution, not independently observed individual writes. Only those explicit supported changes are applied.",
+    "Saved completion, debugger cleanup, image identity and instruction-verification assertions are checked for consistency; the offline reader cannot independently authenticate them.",
+    "Calls before the confirmed begin and gesture-queue calls are paired and validated, then explicitly listed as outside the digitizer fixture; their arithmetic is not replayed."
+  ],
+  "calls": [
+    {
+      "callId": 1,
+      "caller": "digitizer_normal",
+      "entryLine": 7,
+      "exitLine": 9,
+      "input": {
+        "x": 4,
+        "y": 8,
+        "pressure": 0.5,
+        "timestamp": "100",
+        "phase": 2,
+        "catchUp": false,
+        "gating": true,
+        "interval": "10",
+        "bypass": false
+      },
+      "wrapperMutations": [],
+      "predicted": {
+        "emitted": true,
+        "phase": 2,
+        "output": {
+          "x": 4,
+          "y": 8,
+          "pressure": 0.5
+        },
+        "state": 1,
+        "windowH": 0
+      },
+      "captured": {
+        "emitted": true,
+        "phase": 2,
+        "state": 1,
+        "windowH": 0,
+        "output": {
+          "x": 4,
+          "y": 8,
+          "pressure": 0.5
+        }
+      },
+      "numeric": {
+        "entry": {
+          "window_H": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "distance_scale": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "maximum_pressure_decline": {
+            "expected": 1,
+            "actual": 1,
+            "expectedBits": "0x3ff0000000000000",
+            "actualBits": "0x3ff0000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "processed_x": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "processed_y": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "previous_processed_x": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "previous_processed_y": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "processed_pressure": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "input_x": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "input_y": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "stored_input_pressure": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "older_stored_input_pressure": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          }
+        },
+        "exit": {
+          "window_H": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "distance_scale": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "maximum_pressure_decline": {
+            "expected": 1,
+            "actual": 1,
+            "expectedBits": "0x3ff0000000000000",
+            "actualBits": "0x3ff0000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "processed_x": {
+            "expected": 4,
+            "actual": 4,
+            "expectedBits": "0x4010000000000000",
+            "actualBits": "0x4010000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "processed_y": {
+            "expected": 8,
+            "actual": 8,
+            "expectedBits": "0x4020000000000000",
+            "actualBits": "0x4020000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "previous_processed_x": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "previous_processed_y": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "processed_pressure": {
+            "expected": 0.5,
+            "actual": 0.5,
+            "expectedBits": "0x3fe0000000000000",
+            "actualBits": "0x3fe0000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "input_x": {
+            "expected": 4,
+            "actual": 4,
+            "expectedBits": "0x4010000000000000",
+            "actualBits": "0x4010000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "input_y": {
+            "expected": 8,
+            "actual": 8,
+            "expectedBits": "0x4020000000000000",
+            "actualBits": "0x4020000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "stored_input_pressure": {
+            "expected": 0.5,
+            "actual": 0.5,
+            "expectedBits": "0x3fe0000000000000",
+            "actualBits": "0x3fe0000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "older_stored_input_pressure": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          }
+        },
+        "output": {
+          "x": {
+            "expected": 4,
+            "actual": 4,
+            "expectedBits": "0x4010000000000000",
+            "actualBits": "0x4010000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "y": {
+            "expected": 8,
+            "actual": 8,
+            "expectedBits": "0x4020000000000000",
+            "actualBits": "0x4020000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "pressure": {
+            "expected": 0.5,
+            "actual": 0.5,
+            "expectedBits": "0x3fe0000000000000",
+            "actualBits": "0x3fe0000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          }
+        }
+      },
+      "differences": [],
+      "unmodeledDeque": {
+        "entryBytes": "00000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "exitBytes": "00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "floatingPointStatusObserved": {
+        "entryFPSR": "0x00000000",
+        "exitFPSR": "0x00000000",
+        "modeled": false
+      }
+    },
+    {
+      "callId": 2,
+      "caller": "digitizer_normal",
+      "entryLine": 11,
+      "exitLine": 13,
+      "input": {
+        "x": 8,
+        "y": 8,
+        "pressure": 0.5,
+        "timestamp": "105",
+        "phase": 1,
+        "catchUp": false,
+        "gating": true,
+        "interval": "10",
+        "bypass": false
+      },
+      "wrapperMutations": [],
+      "predicted": {
+        "emitted": false,
+        "phase": 1,
+        "state": 1,
+        "windowH": 0
+      },
+      "captured": {
+        "emitted": false,
+        "phase": 1,
+        "state": 1,
+        "windowH": 0
+      },
+      "numeric": {
+        "entry": {
+          "window_H": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "distance_scale": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "maximum_pressure_decline": {
+            "expected": 1,
+            "actual": 1,
+            "expectedBits": "0x3ff0000000000000",
+            "actualBits": "0x3ff0000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "processed_x": {
+            "expected": 4,
+            "actual": 4,
+            "expectedBits": "0x4010000000000000",
+            "actualBits": "0x4010000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "processed_y": {
+            "expected": 8,
+            "actual": 8,
+            "expectedBits": "0x4020000000000000",
+            "actualBits": "0x4020000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "previous_processed_x": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "previous_processed_y": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "processed_pressure": {
+            "expected": 0.5,
+            "actual": 0.5,
+            "expectedBits": "0x3fe0000000000000",
+            "actualBits": "0x3fe0000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "input_x": {
+            "expected": 4,
+            "actual": 4,
+            "expectedBits": "0x4010000000000000",
+            "actualBits": "0x4010000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "input_y": {
+            "expected": 8,
+            "actual": 8,
+            "expectedBits": "0x4020000000000000",
+            "actualBits": "0x4020000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "stored_input_pressure": {
+            "expected": 0.5,
+            "actual": 0.5,
+            "expectedBits": "0x3fe0000000000000",
+            "actualBits": "0x3fe0000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "older_stored_input_pressure": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          }
+        },
+        "exit": {
+          "window_H": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "distance_scale": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "maximum_pressure_decline": {
+            "expected": 1,
+            "actual": 1,
+            "expectedBits": "0x3ff0000000000000",
+            "actualBits": "0x3ff0000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "processed_x": {
+            "expected": 8,
+            "actual": 8,
+            "expectedBits": "0x4020000000000000",
+            "actualBits": "0x4020000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "processed_y": {
+            "expected": 8,
+            "actual": 8,
+            "expectedBits": "0x4020000000000000",
+            "actualBits": "0x4020000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "previous_processed_x": {
+            "expected": 4,
+            "actual": 4,
+            "expectedBits": "0x4010000000000000",
+            "actualBits": "0x4010000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "previous_processed_y": {
+            "expected": 8,
+            "actual": 8,
+            "expectedBits": "0x4020000000000000",
+            "actualBits": "0x4020000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "processed_pressure": {
+            "expected": 0.5,
+            "actual": 0.5,
+            "expectedBits": "0x3fe0000000000000",
+            "actualBits": "0x3fe0000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "input_x": {
+            "expected": 8,
+            "actual": 8,
+            "expectedBits": "0x4020000000000000",
+            "actualBits": "0x4020000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "input_y": {
+            "expected": 8,
+            "actual": 8,
+            "expectedBits": "0x4020000000000000",
+            "actualBits": "0x4020000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "stored_input_pressure": {
+            "expected": 0.5,
+            "actual": 0.5,
+            "expectedBits": "0x3fe0000000000000",
+            "actualBits": "0x3fe0000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "older_stored_input_pressure": {
+            "expected": 0.5,
+            "actual": 0.5,
+            "expectedBits": "0x3fe0000000000000",
+            "actualBits": "0x3fe0000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          }
+        },
+        "output": {}
+      },
+      "differences": [],
+      "unmodeledDeque": {
+        "entryBytes": "00000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "exitBytes": "00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "floatingPointStatusObserved": {
+        "entryFPSR": "0x00000000",
+        "exitFPSR": "0x00000000",
+        "modeled": false
+      }
+    },
+    {
+      "callId": 3,
+      "caller": "digitizer_flush",
+      "entryLine": 17,
+      "exitLine": 19,
+      "input": {
+        "x": 8,
+        "y": 8,
+        "pressure": 0,
+        "timestamp": "105",
+        "phase": 1,
+        "catchUp": false,
+        "gating": false,
+        "interval": "10",
+        "bypass": false
+      },
+      "wrapperMutations": [
+        {
+          "offset": "0x88",
+          "beforeBytes": "01000000",
+          "afterBytes": "02000000"
+        },
+        {
+          "offset": "0xe0",
+          "beforeBytes": "01000000",
+          "afterBytes": "00000000"
+        }
+      ],
+      "predicted": {
+        "emitted": true,
+        "phase": 3,
+        "output": {
+          "x": 8,
+          "y": 8,
+          "pressure": 0
+        },
+        "state": 0,
+        "windowH": 0
+      },
+      "captured": {
+        "emitted": true,
+        "phase": 3,
+        "state": 0,
+        "windowH": 0,
+        "output": {
+          "x": 8,
+          "y": 8,
+          "pressure": 0
+        }
+      },
+      "numeric": {
+        "entry": {
+          "window_H": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "distance_scale": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "maximum_pressure_decline": {
+            "expected": 1,
+            "actual": 1,
+            "expectedBits": "0x3ff0000000000000",
+            "actualBits": "0x3ff0000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "processed_x": {
+            "expected": 8,
+            "actual": 8,
+            "expectedBits": "0x4020000000000000",
+            "actualBits": "0x4020000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "processed_y": {
+            "expected": 8,
+            "actual": 8,
+            "expectedBits": "0x4020000000000000",
+            "actualBits": "0x4020000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "previous_processed_x": {
+            "expected": 4,
+            "actual": 4,
+            "expectedBits": "0x4010000000000000",
+            "actualBits": "0x4010000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "previous_processed_y": {
+            "expected": 8,
+            "actual": 8,
+            "expectedBits": "0x4020000000000000",
+            "actualBits": "0x4020000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "processed_pressure": {
+            "expected": 0.5,
+            "actual": 0.5,
+            "expectedBits": "0x3fe0000000000000",
+            "actualBits": "0x3fe0000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "input_x": {
+            "expected": 8,
+            "actual": 8,
+            "expectedBits": "0x4020000000000000",
+            "actualBits": "0x4020000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "input_y": {
+            "expected": 8,
+            "actual": 8,
+            "expectedBits": "0x4020000000000000",
+            "actualBits": "0x4020000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "stored_input_pressure": {
+            "expected": 0.5,
+            "actual": 0.5,
+            "expectedBits": "0x3fe0000000000000",
+            "actualBits": "0x3fe0000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "older_stored_input_pressure": {
+            "expected": 0.5,
+            "actual": 0.5,
+            "expectedBits": "0x3fe0000000000000",
+            "actualBits": "0x3fe0000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          }
+        },
+        "exit": {
+          "window_H": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "distance_scale": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "maximum_pressure_decline": {
+            "expected": 1,
+            "actual": 1,
+            "expectedBits": "0x3ff0000000000000",
+            "actualBits": "0x3ff0000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "processed_x": {
+            "expected": 8,
+            "actual": 8,
+            "expectedBits": "0x4020000000000000",
+            "actualBits": "0x4020000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "processed_y": {
+            "expected": 8,
+            "actual": 8,
+            "expectedBits": "0x4020000000000000",
+            "actualBits": "0x4020000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "previous_processed_x": {
+            "expected": 8,
+            "actual": 8,
+            "expectedBits": "0x4020000000000000",
+            "actualBits": "0x4020000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "previous_processed_y": {
+            "expected": 8,
+            "actual": 8,
+            "expectedBits": "0x4020000000000000",
+            "actualBits": "0x4020000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "processed_pressure": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "input_x": {
+            "expected": 8,
+            "actual": 8,
+            "expectedBits": "0x4020000000000000",
+            "actualBits": "0x4020000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "input_y": {
+            "expected": 8,
+            "actual": 8,
+            "expectedBits": "0x4020000000000000",
+            "actualBits": "0x4020000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "stored_input_pressure": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "older_stored_input_pressure": {
+            "expected": 0.5,
+            "actual": 0.5,
+            "expectedBits": "0x3fe0000000000000",
+            "actualBits": "0x3fe0000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          }
+        },
+        "output": {
+          "x": {
+            "expected": 8,
+            "actual": 8,
+            "expectedBits": "0x4020000000000000",
+            "actualBits": "0x4020000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "y": {
+            "expected": 8,
+            "actual": 8,
+            "expectedBits": "0x4020000000000000",
+            "actualBits": "0x4020000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          },
+          "pressure": {
+            "expected": 0,
+            "actual": 0,
+            "expectedBits": "0x0000000000000000",
+            "actualBits": "0x0000000000000000",
+            "exact": true,
+            "absoluteError": 0,
+            "ulpDistance": "0"
+          }
+        }
+      },
+      "differences": [],
+      "unmodeledDeque": {
+        "entryBytes": "00000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "exitBytes": "00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "floatingPointStatusObserved": {
+        "entryFPSR": "0x00000000",
+        "exitFPSR": "0x00000000",
+        "modeled": false
+      }
+    }
+  ],
+  "terminalComparisons": [
+    {
+      "line": 20,
+      "callId": 3,
+      "numeric": {
+        "x": {
+          "expected": 8,
+          "actual": 8,
+          "expectedBits": "0x4020000000000000",
+          "actualBits": "0x4020000000000000",
+          "exact": true,
+          "absoluteError": 0,
+          "ulpDistance": "0"
+        },
+        "y": {
+          "expected": 8,
+          "actual": 8,
+          "expectedBits": "0x4020000000000000",
+          "actualBits": "0x4020000000000000",
+          "exact": true,
+          "absoluteError": 0,
+          "ulpDistance": "0"
+        },
+        "pressure": {
+          "expected": 0,
+          "actual": 0,
+          "expectedBits": "0x0000000000000000",
+          "actualBits": "0x0000000000000000",
+          "exact": true,
+          "absoluteError": 0,
+          "ulpDistance": "0"
+        }
+      },
+      "differences": []
+    }
+  ]
+}

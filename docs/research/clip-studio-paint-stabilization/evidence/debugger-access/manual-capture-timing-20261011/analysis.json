@@ -1,0 +1,170 @@
+{
+  "created_utc": "2026-10-11T17:22:56.755007+00:00",
+  "scope": "Saved-file diagnosis and partial arithmetic comparison; never certifies a complete stroke.",
+  "timing_measurement_source_sha256": "4d50b6c0c6cdf2f719b5f32480041ffb0430dd87e938678a2af8ec21b8618c0a",
+  "timing_assumptions": [
+    "Host time is elapsed_seconds recorded by the debugger helper, not independently measured application execution time.",
+    "Native x2 timestamps are interpreted as milliseconds using the recovered normal macOS event producer. Alternate/fallback producer clocks are not independently calibrated in these captures.",
+    "Repeated integer timestamps alone do not mean repeated events: all included input (x,y,pressure) tuples are distinct.",
+    "Running/stopped intervals describe when the recorder logged events, not exact CPU run/pause time. They combine debugger scheduling, event polling and target resume/trap costs."
+  ],
+  "interpretation": "Sustained processing of distinct positive-pressure positions through both deadlines supports substantial capture-induced backlog; saved logs contain no native release event. This is not a proof that a release was queued, and does not identify the share of polling versus breakpoint round-trip overhead.",
+  "comparisons": [
+    {
+      "folder": "tablet-manual-20261011T171306.937948Z-8cdfbb39",
+      "raw_capture": "evidence/debugger-access/tablet-manual-20261011T171306.937948Z-8cdfbb39/tablet.jsonl",
+      "raw_sha256": "457dc2855e5e8a3eb667abd6233d8df2b67b74c522312a9377f236781533bc5f",
+      "raw_bytes": 4659114,
+      "report": "evidence/debugger-access/tablet-manual-20261011T171306.937948Z-8cdfbb39/diagnostic-ingestions.json",
+      "report_sha256": "02fdf3539b7b5a2818e98a9b9303923052665463ee6ff99d7f37eb53be4395b6",
+      "fixture_complete": false,
+      "replay_status": "diagnostic_ingestion_comparison_only",
+      "raw_entry_exit_records_compared": 398,
+      "recorder_confirmed_included_pairs": 398,
+      "unconfirmed_included_raw_pairs": [],
+      "included_first_call_id": 25,
+      "included_last_call_id": 422,
+      "native_configuration": {
+        "distance_scale": 0.0,
+        "fast_motion": 0,
+        "initial_window": 2,
+        "maximum_pressure_decline": 1.0,
+        "retain_at_zero": 0,
+        "slow_motion": 0,
+        "slow_numerator": 200,
+        "slow_threshold": 25,
+        "stabilization": 20,
+        "taper": 0
+      },
+      "initial_history_records": 16,
+      "numeric_comparisons": 10746,
+      "numeric_mismatch_count": 8,
+      "nonnumeric_mismatch_count": 0,
+      "max_numeric_ulp_distance": 1,
+      "max_numeric_absolute_error": 2.2737367544323206e-13,
+      "output_mismatch_origins": [
+        {
+          "callId": 48,
+          "stage": "output",
+          "field": "pressure",
+          "expected": 0.20118278446923146,
+          "actual": 0.20118278446923143,
+          "expectedBits": "0x3fc9c05b83e822ed",
+          "actualBits": "0x3fc9c05b83e822ec",
+          "exact": false,
+          "absoluteError": 2.7755575615628914e-17,
+          "ulpDistance": "1"
+        },
+        {
+          "callId": 83,
+          "stage": "output",
+          "field": "x",
+          "expected": -1537.0097854688156,
+          "actual": -1537.0097854688154,
+          "expectedBits": "0xc098040a0533b228",
+          "actualBits": "0xc098040a0533b227",
+          "exact": false,
+          "absoluteError": 2.2737367544323206e-13,
+          "ulpDistance": "1"
+        }
+      ],
+      "host_to_input_duration_ratio_assuming_ms": 11.52938867370892,
+      "new_capture_needed_to_investigate_these_numeric_mismatches": false
+    },
+    {
+      "folder": "tablet-manual-20261011T171422.944399Z-33211c35",
+      "raw_capture": "evidence/debugger-access/tablet-manual-20261011T171422.944399Z-33211c35/tablet.jsonl",
+      "raw_sha256": "944b7d16933eaef5d787493de2ed7f61ed6c95faa2236761440ca755a6723947",
+      "raw_bytes": 4116078,
+      "report": "evidence/debugger-access/tablet-manual-20261011T171422.944399Z-33211c35/diagnostic-ingestions.json",
+      "report_sha256": "d5fa956c33fc2d50f156b0193fb1ea94fb64530bc0edcc0b8aef298fbdc162a0",
+      "fixture_complete": false,
+      "replay_status": "diagnostic_ingestion_comparison_only",
+      "raw_entry_exit_records_compared": 327,
+      "recorder_confirmed_included_pairs": 326,
+      "unconfirmed_included_raw_pairs": [
+        372
+      ],
+      "included_first_call_id": 46,
+      "included_last_call_id": 372,
+      "native_configuration": {
+        "distance_scale": 0.0,
+        "fast_motion": 0,
+        "initial_window": 2,
+        "maximum_pressure_decline": 1.0,
+        "retain_at_zero": 0,
+        "slow_motion": 0,
+        "slow_numerator": 200,
+        "slow_threshold": 25,
+        "stabilization": 20,
+        "taper": 0
+      },
+      "initial_history_records": 42,
+      "numeric_comparisons": 8829,
+      "numeric_mismatch_count": 14,
+      "nonnumeric_mismatch_count": 0,
+      "max_numeric_ulp_distance": 2,
+      "max_numeric_absolute_error": 5.684341886080802e-14,
+      "output_mismatch_origins": [
+        {
+          "callId": 68,
+          "stage": "output",
+          "field": "pressure",
+          "expected": 0.3411764800548553,
+          "actual": 0.3411764800548554,
+          "expectedBits": "0x3fd5d5d5dfffffff",
+          "actualBits": "0x3fd5d5d5e0000001",
+          "exact": false,
+          "absoluteError": 1.1102230246251565e-16,
+          "ulpDistance": "2"
+        },
+        {
+          "callId": 77,
+          "stage": "output",
+          "field": "pressure",
+          "expected": 0.3461196607523215,
+          "actual": 0.3461196607523214,
+          "expectedBits": "0x3fd626d313dbc3f6",
+          "actualBits": "0x3fd626d313dbc3f5",
+          "exact": false,
+          "absoluteError": 5.551115123125783e-17,
+          "ulpDistance": "1"
+        },
+        {
+          "callId": 79,
+          "stage": "output",
+          "field": "pressure",
+          "expected": 0.34836450604818475,
+          "actual": 0.3483645060481847,
+          "expectedBits": "0x3fd64b9aa4241aff",
+          "actualBits": "0x3fd64b9aa4241afe",
+          "exact": false,
+          "absoluteError": 5.551115123125783e-17,
+          "ulpDistance": "1"
+        },
+        {
+          "callId": 95,
+          "stage": "output",
+          "field": "y",
+          "expected": 361.2759850709093,
+          "actual": 361.27598507090926,
+          "expectedBits": "0x4076946a6f525bd6",
+          "actualBits": "0x4076946a6f525bd5",
+          "exact": false,
+          "absoluteError": 5.684341886080802e-14,
+          "ulpDistance": "1"
+        }
+      ],
+      "host_to_input_duration_ratio_assuming_ms": 11.664917888374488,
+      "new_capture_needed_to_investigate_these_numeric_mismatches": false
+    }
+  ],
+  "limitations": [
+    "Both original summaries remain incomplete. No raw capture was altered.",
+    "The existing diagnostic comparator does not invoke the complete-capture reader or validate every source/cleanup invariant.",
+    "Latest call 372 has raw entry and exit snapshots but the deadline interrupted the post-exit singleton check before pairing completion. Its arithmetic is diagnostic only; it is not counted as a recorder-confirmed pair.",
+    "The comparator keeps its predicted arithmetic state across calls and does not reseed from native exits. Repeated difference records include propagation into later state snapshots.",
+    "Small numeric mismatches remain failures of exact agreement. Their arithmetic cause has not been established.",
+    "No pen feel, rendered output, release completion, post correction, or other settings are established by these partial recordings."
+  ]
+}

@@ -1,0 +1,4 @@
+(lldb) script exec('import sys\nsys.dont_write_bytecode=True\nsys.path.insert(0,\'/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/tablet-manual-20261011T173815.294680Z-bf864636/recorder\')\nsys.path.append(\'/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-capture\')\nimport check_workqueue_recovery as test\nrecorder=test.HostTabletLoop([[test.owned(),test.secondary()]])\ntry:\n    recorder.capture({})\nexcept test.shared.CaptureError as error:\n    assert "Unexpected stop reason/data on thread 2" in str(error),str(error)\n    assert recorder.delivered==[]\n    print(str(error))\n    print("OLD_CAPTURE_ABORT_REPRODUCED")\nelse:\n    raise AssertionError("Old capture unexpectedly accepted the secondary event")\n')
+CSP tablet capture active; waiting for one new pen stroke. Instrumented capture <=30s.
+Unexpected stop reason/data on thread 2
+OLD_CAPTURE_ABORT_REPRODUCED

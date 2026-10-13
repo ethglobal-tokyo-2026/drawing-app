@@ -1,0 +1,14 @@
+$ vitest run --maxWorkers=2
+
+ RUN  v5.0.1 /Users/adoll/projects/drawing-app/apps/frontend
+
+
+ Test Files  253 passed (253)
+      Tests  2545 passed (2545)
+   Start at  19:15:35
+   Duration  259.92s (import 53%, environment 24%, tests 15%, transform 6%, setup 1%, worker 1%)
+
+     Import  988 modules were evaluated 2743 times · 237.64s total, 53% of tracked time
+             ~57.09s faster with isolate: false — shared modules are evaluated once per worker instead of once per file
+             learn more: https://vitest.dev/guide/improving-performance#test-isolation
+

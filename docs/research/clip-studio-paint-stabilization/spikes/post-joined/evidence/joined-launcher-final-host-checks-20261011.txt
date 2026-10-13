@@ -1,0 +1,14 @@
+test_armed_cue_emits_once_after_marker (__main__.LauncherTests.test_armed_cue_emits_once_after_marker) ... ok
+test_complete_requires_source_pair_and_clean_detach (__main__.LauncherTests.test_complete_requires_source_pair_and_clean_detach) ... ok
+test_errors_missing_and_duplicate_summaries_cannot_succeed (__main__.LauncherTests.test_errors_missing_and_duplicate_summaries_cannot_succeed) ... ok
+test_exit_between_poll_and_timeout_check_does_not_report_a_kill (__main__.LauncherTests.test_exit_between_poll_and_timeout_check_does_not_report_a_kill) ... ok
+test_late_arming_gets_a_separate_capture_and_cleanup_window (__main__.LauncherTests.test_late_arming_gets_a_separate_capture_and_cleanup_window) ... ok
+test_marker_arriving_after_setup_deadline_does_not_extend_it_or_speak (__main__.LauncherTests.test_marker_arriving_after_setup_deadline_does_not_extend_it_or_speak) ... ok
+test_no_early_cue_before_armed_marker (__main__.LauncherTests.test_no_early_cue_before_armed_marker) ... ok
+test_post_arm_timeout_has_its_own_finite_limit (__main__.LauncherTests.test_post_arm_timeout_has_its_own_finite_limit) ... ok
+test_setup_timeout_is_bounded_without_a_cue (__main__.LauncherTests.test_setup_timeout_is_bounded_without_a_cue) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.009s
+
+OK

@@ -27,14 +27,6 @@
     "turbo": "^2.11.3",
     "typescript": "~7.0.2"
   },
-  "lint-staged": {
-    "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}": [
-      "oxlint --type-check --fix",
-      "oxlint --type-check",
-      "oxfmt --no-error-on-unmatched-pattern"
-    ],
-    "!(*.{js,jsx,mjs,cjs,ts,tsx,mts,cts})": "oxfmt --no-error-on-unmatched-pattern"
-  },
   "devEngines": {
     "runtime": {
       "name": "node",

@@ -2,7 +2,11 @@
 
 This handoff describes Clip Studio Paint 5.1.4 ARM64, image SHA256 `6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd`. Addresses are virtual addresses in that image. Descriptive function names are analysis labels; the class names `PWVectorSmooth` and `PWVectorSampleBezier` are established through RTTI. This is static analysis, not a comparison of rendered strokes against a running CSP process.
 
-**2026-10-09 update:** The [post-correction data contract spike](spikes/post-contract/findings.md) resolves ordinary output type `0x80` as `PWVectorSplineCurve`, traces both node-scalar writers, and establishes the spline sampler's 5–256-point schedule. The full six-point evaluator, its measurement and neighbor-adjustment helpers, and the original device-scalar producer remain open. The linked report includes retained assembly, data bytes, and a self-contained verification command. These findings describe future CSP reconstruction requirements; Croquis's current stabilizer is disposable.
+**2026-10-11 update:** The [complete ordinary post replay](spikes/post-pipeline/README.md) now assembles source-node import, subdivision, correspondence, sampling, removal and endpoints. It independently predicts the saved 99-to-eight-node result, matching every compared coordinate/scalar bit and retained flag/endpoint field. The [geometry foundation](spikes/post-spline/README.md) contributes 1,614 native cases, source sampling/projection adds 717, and spline length adds 110. The uncaptured endpoint evaluator cannot affect this fixture's geometry: independently predicted first/last segment lengths exceed the captured travel limit before any deletion decision. Other evaluator-dependent endpoints, closed paths, alternate classes and upstream setting/device semantics remain outside that claim.
+
+**Later on 2026-10-11:** [Source construction](spikes/post-source/README.md), [movement/record construction](spikes/post-input/README.md), and [configured endpoint evaluation](spikes/post-evaluator/README.md) now provide executable reconstructions with 520, 6,240, and 680 native instruction cases. Short endpoints can use explicit decoded evaluator settings, including native constructor defaults; those defaults are not claimed to be the uncaptured saved brush configuration. The native endpoint parameter is half the brush's unit-converted size, optionally adjusted by view scale. The [production integration report](spikes/croquis-post-correction/README.md) identifies Croquis's explicit profile and supported scope. The closed/alternate paths and full native event-to-rendered-pixel chain remain outside the equivalence claim.
+
+The earlier [post-correction data contract spike](spikes/post-contract/findings.md) resolves ordinary output type `0x80` as `PWVectorSplineCurve`, traces both node-scalar writers, and establishes the sampler's 5–256-point schedule. Its missing pure spline helpers are superseded by the new foundation. The external coordinate-factor/document-ratio objects and all upstream brush/device transformations are not established end to end; the input report distinguishes them from the exact recovered movement formula.
 
 `post-reference.ts` implements the recovered arithmetic. It deliberately does not implement a stroke simplifier, Ramer–Douglas–Peucker procedure, curve fitter, or invented substitute for unresolved CSP path operations. Using these helpers inside another algorithm does not make that algorithm equivalent to CSP.
 
@@ -180,7 +184,7 @@ if mode != 1: return true
 perform scalar test described below
 ```
 
-Distance is Euclidean, not squared. `0x10359b3b4` first finds the nearest sampled vertex by squared distance (strict improvements only), then computes point-to-segment distance only on that vertex's preceding and following segments. It does not scan every segment for the globally nearest projection. `0x102193940` handles endpoint projection cases and interior cross-product distance. The [data contract spike](spikes/post-contract/findings.md#ordinary-spline-replacement-samples) identifies the ordinary spline sampler `0x102789114`, density argument `4.0`, and count `n+1`, where `n` is the truncated measure/density ratio clamped to 4–255. Its six-point evaluator `0x10359f580`, measurement `0x10359fd24`, and outer-neighbor adjustment `0x10359f8d4` still require reconstruction for full geometry equivalence.
+Distance is Euclidean, not squared. `0x10359b3b4` first finds the nearest sampled vertex by squared distance (strict improvements only), then computes point-to-segment distance only on that vertex's preceding and following segments. It does not scan every segment for the globally nearest projection. `0x102193940` handles endpoint projection cases and interior cross-product distance. The [data contract spike](spikes/post-contract/findings.md#ordinary-spline-replacement-samples) identifies the ordinary spline sampler `0x102789114`, density argument `4.0`, and count `n+1`, where `n` is the truncated measure/density ratio clamped to 4–255. Its six-point evaluator `0x10359f580`, measurement `0x10359fd24`, and outer-neighbor adjustment `0x10359f8d4` are now implemented in [post-spline.ts](post-spline.ts), with context selection in [post-spline-context.ts](post-spline-context.ts).
 
 After acceptance, `0x1027883ac` transfers the candidate's correspondence entries to its preceding node, removes the old entries, and invokes `0x10276e06c(candidate,1)`. That helper adjusts neighboring segment data before `0x102781838` relinks nodes and decrements the path node count. Merely deleting a coordinate from an array does not reproduce it.
 
@@ -206,7 +210,7 @@ atLeast(value,bound) = value > bound OR insideSlack(value,bound)
 atMost(value,bound) = value < bound OR insideSlack(value,bound)
 ```
 
-Mode 1 first checks that both replacement endpoint scalar values are within `[lower,upper]` using those helpers. If either fails, `0x10359b240` finds a parameter `t` for the first source sample relative to the sampled replacement. It uses the nearest sampled vertex and only neighboring segments; the parameter is `(segmentIndex + projectedFraction)/(sampleCount-1)`, capped above at 1. It is not an arc-length fraction and not an input-time fraction. The scalar fallback is `float32(fma64(double(a), 1-t, t*double(b)))`, then the same bound checks. The implementation accepts `t` as an explicit parameter because the full replacement evaluator and neighbor adjustment remain unreconstructed, even though the sample-count schedule is known.
+Mode 1 first checks that both replacement endpoint scalar values are within `[lower,upper]` using those helpers. If either fails, `0x10359b240` finds a parameter `t` for the first source sample relative to the sampled replacement. It uses the nearest sampled vertex and only neighboring segments; the parameter is `(segmentIndex + projectedFraction)/(sampleCount-1)`, capped above at 1. It is not an arc-length fraction and not an input-time fraction. The scalar fallback is `float32(fma64(double(a), 1-t, t*double(b)))`, then the same bound checks. `post-sampling.ts` implements that projection, and `post-pipeline.ts` assembles it with replacement sampling, source correspondence and candidate traversal.
 
 Near-coincident cleanup at `0x102787c9c` requires the candidate and its preceding node to have bit 0, requires a next node, and applies any region restriction. It removes the candidate only if squared distance is strictly less than 1 and its float `+0x44` satisfies the ratio/floor bounds constructed from its preceding node's scalar. The numeric helper is provided; graph/flag preconditions remain caller responsibilities.
 
@@ -218,24 +222,24 @@ Near-coincident cleanup at `0x102787c9c` requires the candidate and its precedin
 
 These conversion formulas are in shared code. In the ordinary smoother branch, constructor defaults and wrapper state select output type bits `0x80`, now identified as `PWVectorSplineCurve` by allocation and RTTI. In `0x102787500`, the mask clears source type bits `0xf0`, then selects `0x80`. Accordingly `0x1027876dc` skips the control conversion block because `targetFlags & 0x60` is zero. The ordinary branch also skips the final `0x102787f94` cleanup gated by output type bits `0x60`. The separate `PWVectorSampleBezier` branch receives one-tenth the positional tolerance and requires source path bit `0x20`; it is not a toggle around the arithmetic above and is not implemented by this handoff.
 
-Endpoint processing `0x102787db0` uses path virtual methods at vtable `+0x88` and `+0x98`, an optional evaluator `0x1024c497c`, accumulated segment lengths, and additional node/control modifications. Only its `min(k*0.05,1)` input is implemented. Omitting that endpoint routine means full output equivalence is still absent.
+Endpoint processing `0x102787db0` uses path virtual methods at vtable `+0x88` and `+0x98`, an optional evaluator `0x1024c497c`, and accumulated segment lengths. `post-endpoints.ts` now reconstructs both traversals, exact spline lengths, deletion conditions and link repair. It explicitly requires evaluator data when the predicted geometry reaches an evaluator-dependent deletion decision. The saved case exits before that point at both ends; it is not evidence for uncaptured evaluator side effects.
 
-## What is needed before claiming equivalence
+## Coverage beyond the reproduced ordinary case
 
 1. Resolve source-type selection for each actual brush configuration, relevant path/node flags, coordinate units, and original device producers into wrapper `+0xc8/+0x88`. The traced chain includes source type `0x20` (`PWVectorBezierCurve`) and output type `0x80` (`PWVectorSplineCurve`); it does not establish every tool's source path.
-2. Implement the clone/conversion/resampling decision in `0x102787500`, including any `0x10277f8c8` conversion. Sampler wrappers and the spline target/count schedule are identified; reconstruct six-point evaluator `0x10359f580`, measurement `0x10359fd24`, neighbor adjustment `0x10359f8d4`, and any applicable source sampler.
-3. Reproduce correspondence multimap updates, adjacency accessors with endpoint behavior, replacement controls, and mutation helpers; an array-only approximation is insufficient.
-4. Reproduce both endpoint passes and any applicable final segment cleanup or path-close operation.
+2. Extend clone/conversion/resampling beyond the explicitly supported ordinary open quadratic input. The captured input's subdivision, scalar interpolation, clone constructors and source correspondence are now implemented.
+3. Validate source associations and candidate decisions against additional native cases. The current reconstruction transfers all associations during deletion and samples the corresponding original source spans; its final match does not independently expose CSP's intermediate multimap.
+4. Recover evaluator configuration for short endpoint cases and reconstruct any applicable alternate segment cleanup or path-close operation. Both ordinary open endpoint traversals are implemented.
 5. Trace setting IDs to UI labels, fallback input, caller-cap object conditions, scalar response/startup settings, movement/time initializer settings and time units, and alternate-class selection for the actual tool under study. The node-scalar writers are established; their remaining upstream device and configuration gaps are explicit in the linked spike.
-6. Capture deterministic input/output cases from CSP, including setting/zoom changes, pressure/scalar variation, corners, very short segments, and selector482. Compare geometry, controls, node flags, scalar samples, and rendered output. The present checks validate arithmetic and assembly interpretation, not whole-stroke equivalence.
+6. Add native cases for setting/zoom changes, scalar variation, corners, very short segments, and selector482. Compare geometry, controls, flags, scalars and rendered output. The present complete replay validates one retained geometric result, not all configurations or pixels.
 
 ## Verification
 
 The source compiles under the workspace TypeScript compiler with strict checking:
 
 ```text
-cd /private/tmp/csp-handoff-post
-node /Users/adoll/projects/drawing-app/node_modules/typescript/bin/tsc --noEmit --strict --target ES2022 --module ESNext post-reference.ts
+cd /Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization
+node /Users/adoll/projects/drawing-app/node_modules/typescript/bin/tsc --noEmit --strict --target ES2022 --module ESNext --allowImportingTsExtensions post-reference.ts
 exit 0; no output
 ```
 

@@ -1,0 +1,5 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     'docs/research/clip-studio-paint-stabilization/evidence/debugger-access/stop-wait-benchmark-20261011/benchmark_stop_wait'
+relocations:     []
+...

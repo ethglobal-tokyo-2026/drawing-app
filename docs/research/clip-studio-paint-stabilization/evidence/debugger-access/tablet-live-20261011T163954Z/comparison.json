@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "status": "incomplete_capture",
+  "nativeRuntimeValidated": false,
+  "error": "capture is incomplete: [\"No confirmed phase-2/state-0 begin with complete initial history and phase-2/state-1 output.\",\"Neither an end input nor terminal-wrapper completion was observed.\",\"No final emitted phase-3/state-0 pair was captured.\",\"Native release source has not been observed returning to its caller.\",\"The native source handler producing the final phase has not returned.\",\"CaptureError: capture_deadline_reached\"]",
+  "limitations": [
+    "This is a saved-file arithmetic comparison, not validation of natural event timing, rendering, post-correction, latency, or pen feel.",
+    "JavaScript reference arithmetic is unfused. Native FMADD/FMLA/FMSUB can differ; every differing bit is reported without a tolerance pass or automatic FMA attribution.",
+    "Exact match means only equality of compared captured fields to this bounded reference for this file; it does not prove native runtime equivalence.",
+    "Deque allocation addresses, front index and allocator metadata at +0x08..+0x2f are observed but not predicted. Record order/count are modeled from initial history and every ingestion.",
+    "Only the captured common 236-byte prefix is available; digitizer-only cached packet fields +0xec..+0xff, out-of-line history after begin, and FPSR side effects are not predicted.",
+    "Wrapper changes are recorded before/after snapshots with static attribution, not independently observed individual writes. Only those explicit supported changes are applied.",
+    "Saved completion, debugger cleanup, image identity and instruction-verification assertions are checked for consistency; the offline reader cannot independently authenticate them.",
+    "Calls before the confirmed begin and gesture-queue calls are paired and validated, then explicitly listed as outside the digitizer fixture; their arithmetic is not replayed."
+  ]
+}

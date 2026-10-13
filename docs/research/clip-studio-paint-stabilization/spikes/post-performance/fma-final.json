@@ -1,0 +1,10 @@
+{
+  "seed": "19f131ad",
+  "cases": 202744,
+  "milliseconds": 94.92979100000002,
+  "inputSha256": "937999e5ce4baafe9d53229bfd3aeb6a8f6ccb915b0c1c20a09b2ef3d0bb1607",
+  "expectedSha256": "4bf7b40293fe6310f08be53be898daca4d4f35bfb1cb41bece754b63660e2fe1",
+  "implementationSha256": "0399555ada69d27a21b58af52647695bf28c32f1b03a83b95a326fe08c85dea3",
+  "generatorSha256": "63c22925584444d7eba0f4da3cb5edc3ebe41a7b76e2d21dda5858540b81904e",
+  "failures": []
+}

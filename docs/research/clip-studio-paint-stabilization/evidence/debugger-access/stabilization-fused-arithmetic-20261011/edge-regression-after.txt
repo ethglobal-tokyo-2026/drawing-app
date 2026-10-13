@@ -1,0 +1,13 @@
+✔ an infinite addend dominates finite multiplicands before product rounding (0.459875ms)
+✔ nonfinite intermediate operands preserve IEEE results without modeling NaN payloads (0.111917ms)
+✔ slow diagonal fusion preserves the integer target at a truncation boundary (1.688ms)
+✔ signed integer conversion has a single zero representation (0.106167ms)
+✔ finite fast-mode coordinates can overflow distance while retaining finite output (1.530375ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 91.9255

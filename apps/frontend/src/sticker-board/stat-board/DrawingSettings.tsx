@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "../../i18n/react";
 import {
   DRAWING_HANDS,
@@ -7,11 +7,13 @@ import {
   type DrawingHand,
 } from "../../sticker-creation/drawingSettings";
 import { ErrorLine } from "../../ui/ErrorLine";
+import { keepPointerIndicators, usePointerIndicators } from "../../ui/pointerIndicatorsSetting";
+import { Switch } from "../../ui/Switch";
 import { ChoiceRow } from "./ChoiceRow";
 import { PencilSettings } from "./PencilSettings";
 
 /**
- * Settings' Drawing group: the drawing screen's settings, kept on this device rather than your
+ * Settings' Drawing group: drawing and pointer settings, kept on this device rather than your
  * account, since each suits a device and the hand that draws on it. A change applies at once; one the
  * device couldn't keep says so and lasts until Croquis closes.
  * Once a pen has drawn on the device, the Pencil rows follow (`PencilSettings`).
@@ -19,6 +21,8 @@ import { PencilSettings } from "./PencilSettings";
 export function DrawingSettings() {
   const { t } = useTranslation();
   const hand = useDrawingHand();
+  const pointerIndicators = usePointerIndicators();
+  const pointerHelpId = useId();
   // Whether the device kept the last change; null until something changes.
   const [kept, setKept] = useState<boolean | null>(null);
   const handName = (each: DrawingHand) => t(($) => $.stickerBoard.settings.drawing.hand[each]);
@@ -34,6 +38,17 @@ export function DrawingSettings() {
         nameOf={handName}
         onChoose={(each) => setKept(keepDrawingHand(each))}
       />
+      <label className="settings-note__option">
+        <span>{t(($) => $.stickerBoard.settings.drawing.pointerIndicators.label)}</span>
+        <Switch
+          checked={pointerIndicators}
+          aria-describedby={pointerHelpId}
+          onChange={(enabled) => setKept(keepPointerIndicators(enabled))}
+        />
+      </label>
+      <p className="fine" id={pointerHelpId}>
+        {t(($) => $.stickerBoard.settings.drawing.pointerIndicators.help)}
+      </p>
       <PencilSettings onKept={setKept} />
       {kept === false && (
         <ErrorLine className="settings-note__problem">

@@ -1,0 +1,14 @@
+{
+  "checked_at": "2026-10-11T16:44:51.003301+00:00",
+  "processes": [
+    "  852 Ss   /Library/PrivilegedHelperTools/com.wacom.UpdateHelper.app/Contents/MacOS/com.wacom.UpdateHelper",
+    " 4059 S    /Library/PrivilegedHelperTools/com.wacom.DataStoreMgr.app/Contents/MacOS/com.wacom.DataStoreMgr",
+    " 4067 S    /Library/PrivilegedHelperTools/Wacom_IOManager.app/Contents/MacOS/Wacom_IOManager",
+    "49423 S    /Users/adoll/Applications/CSP Research/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT",
+    "62024 S    /Applications/Wacom Tablet.localized/.Tablet/TabletDriver.app/Contents/MacOS/TabletDriver",
+    "62032 S    /Applications/Wacom Tablet.localized/.Tablet/WacomTouchDriver.app/Contents/MacOS/WacomTouchDriver",
+    "62038 S    /Applications/Wacom Tablet.localized/.Tablet/WacomTabletDriver.app/Contents/MacOS/WacomTabletDriver"
+  ],
+  "user_report": "Pen was not responding; user had tried restarting driver. Cause not yet established.",
+  "capture_result": "Zero digitizer source events and ingestion calls; timeout; clean detach; incomplete capture."
+}

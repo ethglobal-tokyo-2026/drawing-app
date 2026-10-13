@@ -1,0 +1,271 @@
+{
+  "startedAt": "2026-10-12T01:06:04.283Z",
+  "limitation": "Synthetic headless desktop browser measurements; no physical iPhone or Apple Pencil validation.",
+  "worktree": "/Users/adoll/.codex/worktrees/drag-fill-spike/drawing-app",
+  "url": "http://127.0.0.1:5297/docs/research/drag-fill-spike/index.html",
+  "settings": {
+    "cases": ["blank", "grid", "tenLayers", "tenLayersReleasedScratch", "heldLayer", "noOp"],
+    "coldRuns": 1,
+    "warmups": 2,
+    "measuredRuns": 20,
+    "callTimeoutMs": 60000,
+    "caseTimeoutMs": 120000,
+    "verifyOnly": true
+  },
+  "browsers": [
+    {
+      "name": "chromium",
+      "version": "155.0.8059.12",
+      "platform": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.8059.12 Safari/537.36",
+        "platform": "MacIntel",
+        "hardwareConcurrency": 18,
+        "deviceMemory": 32,
+        "devicePixelRatio": 1,
+        "viewport": {
+          "width": 1280,
+          "height": 900
+        }
+      },
+      "verification": {
+        "cases": [
+          {
+            "name": "blank",
+            "changedRegions": 1,
+            "exactSelectedPixels": true,
+            "exactCompositePixels": true
+          },
+          {
+            "name": "grid",
+            "changedRegions": 100,
+            "exactSelectedPixels": true,
+            "exactCompositePixels": true
+          },
+          {
+            "name": "tenLayers",
+            "changedRegions": 1,
+            "exactSelectedPixels": true,
+            "exactCompositePixels": true
+          },
+          {
+            "name": "tenLayersReleasedScratch",
+            "changedRegions": 1,
+            "exactSelectedPixels": true,
+            "exactCompositePixels": true
+          },
+          {
+            "name": "heldLayer",
+            "changedRegions": 1,
+            "exactSelectedPixels": true,
+            "exactCompositePixels": true
+          },
+          {
+            "name": "noOp",
+            "changedRegions": 0,
+            "exactSelectedPixels": true,
+            "exactCompositePixels": true
+          }
+        ],
+        "failures": [],
+        "limitation": "Known center seeds exercise a sequential queue; no production pointer interpolation, history, sealing, or touch rollback controller is implemented."
+      },
+      "wetPreviewVerification": {
+        "cases": [
+          {
+            "name": "partialOpacity",
+            "previewDifference": 0,
+            "unchangedDifference": 0,
+            "canceledDifference": 0,
+            "canceledDisplayDifference": 0,
+            "acceptedDifference": 0,
+            "acceptedDisplayDifference": 0,
+            "copiesBefore": 0,
+            "previewCopies": 0,
+            "changed": true
+          },
+          {
+            "name": "locked",
+            "previewDifference": 0,
+            "unchangedDifference": 0,
+            "canceledDifference": 0,
+            "canceledDisplayDifference": 0,
+            "acceptedDifference": 0,
+            "acceptedDisplayDifference": 0,
+            "copiesBefore": 0,
+            "previewCopies": 0,
+            "changed": true
+          },
+          {
+            "name": "selectedClipped",
+            "previewDifference": 0,
+            "unchangedDifference": 0,
+            "canceledDifference": 0,
+            "canceledDisplayDifference": 0,
+            "acceptedDifference": 0,
+            "acceptedDisplayDifference": 0,
+            "copiesBefore": 0,
+            "previewCopies": 0,
+            "changed": true
+          },
+          {
+            "name": "baseWithClippedAbove",
+            "previewDifference": 0,
+            "unchangedDifference": 0,
+            "canceledDifference": 0,
+            "canceledDisplayDifference": 0,
+            "acceptedDifference": 0,
+            "acceptedDisplayDifference": 0,
+            "copiesBefore": 0,
+            "previewCopies": 0,
+            "changed": true
+          },
+          {
+            "name": "blank",
+            "previewDifference": 0,
+            "unchangedDifference": 0,
+            "canceledDifference": 0,
+            "canceledDisplayDifference": 0,
+            "acceptedDifference": 0,
+            "acceptedDisplayDifference": 0,
+            "copiesBefore": 0,
+            "previewCopies": 0,
+            "changed": true
+          }
+        ],
+        "failures": []
+      },
+      "cases": [],
+      "consoleErrors": [],
+      "pageErrors": [],
+      "failures": []
+    },
+    {
+      "name": "webkit",
+      "version": "26.6",
+      "platform": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Safari/605.1.15",
+        "platform": "MacIntel",
+        "hardwareConcurrency": 8,
+        "deviceMemory": null,
+        "devicePixelRatio": 1,
+        "viewport": {
+          "width": 1280,
+          "height": 900
+        }
+      },
+      "verification": {
+        "cases": [
+          {
+            "name": "blank",
+            "changedRegions": 1,
+            "exactSelectedPixels": true,
+            "exactCompositePixels": true
+          },
+          {
+            "name": "grid",
+            "changedRegions": 100,
+            "exactSelectedPixels": true,
+            "exactCompositePixels": true
+          },
+          {
+            "name": "tenLayers",
+            "changedRegions": 1,
+            "exactSelectedPixels": true,
+            "exactCompositePixels": true
+          },
+          {
+            "name": "tenLayersReleasedScratch",
+            "changedRegions": 1,
+            "exactSelectedPixels": true,
+            "exactCompositePixels": true
+          },
+          {
+            "name": "heldLayer",
+            "changedRegions": 1,
+            "exactSelectedPixels": true,
+            "exactCompositePixels": true
+          },
+          {
+            "name": "noOp",
+            "changedRegions": 0,
+            "exactSelectedPixels": true,
+            "exactCompositePixels": true
+          }
+        ],
+        "failures": [],
+        "limitation": "Known center seeds exercise a sequential queue; no production pointer interpolation, history, sealing, or touch rollback controller is implemented."
+      },
+      "wetPreviewVerification": {
+        "cases": [
+          {
+            "name": "partialOpacity",
+            "previewDifference": 0,
+            "unchangedDifference": 0,
+            "canceledDifference": 0,
+            "canceledDisplayDifference": 0,
+            "acceptedDifference": 0,
+            "acceptedDisplayDifference": 0,
+            "copiesBefore": 0,
+            "previewCopies": 0,
+            "changed": true
+          },
+          {
+            "name": "locked",
+            "previewDifference": 0,
+            "unchangedDifference": 0,
+            "canceledDifference": 0,
+            "canceledDisplayDifference": 0,
+            "acceptedDifference": 0,
+            "acceptedDisplayDifference": 0,
+            "copiesBefore": 0,
+            "previewCopies": 0,
+            "changed": true
+          },
+          {
+            "name": "selectedClipped",
+            "previewDifference": 0,
+            "unchangedDifference": 0,
+            "canceledDifference": 0,
+            "canceledDisplayDifference": 0,
+            "acceptedDifference": 0,
+            "acceptedDisplayDifference": 0,
+            "copiesBefore": 0,
+            "previewCopies": 0,
+            "changed": true
+          },
+          {
+            "name": "baseWithClippedAbove",
+            "previewDifference": 0,
+            "unchangedDifference": 0,
+            "canceledDifference": 0,
+            "canceledDisplayDifference": 0,
+            "acceptedDifference": 0,
+            "acceptedDisplayDifference": 0,
+            "copiesBefore": 0,
+            "previewCopies": 0,
+            "changed": true
+          },
+          {
+            "name": "blank",
+            "previewDifference": 0,
+            "unchangedDifference": 0,
+            "canceledDifference": 0,
+            "canceledDisplayDifference": 0,
+            "acceptedDifference": 0,
+            "acceptedDisplayDifference": 0,
+            "copiesBefore": 0,
+            "previewCopies": 0,
+            "changed": true
+          }
+        ],
+        "failures": []
+      },
+      "cases": [],
+      "consoleErrors": [],
+      "pageErrors": [],
+      "failures": []
+    }
+  ],
+  "failures": [],
+  "finishedAt": "2026-10-12T01:06:09.781Z"
+}

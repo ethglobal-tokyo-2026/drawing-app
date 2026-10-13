@@ -14,6 +14,9 @@ export const PALM_CONTACT_PX = 80;
 /** Whether a contact this size, in CSS px, is a palm. */
 export const isPalm = (width: number, height: number) => Math.max(width, height) >= PALM_CONTACT_PX;
 
+/** WebKit marks a Pencil touch with touchType, which lib.dom's Touch leaves out. */
+export const isStylus = (touch: Touch) => "touchType" in touch && touch.touchType === "stylus";
+
 /** What a touch that just landed should do. */
 export type TouchDown =
   /** Draw with it: it's the only finger down. */

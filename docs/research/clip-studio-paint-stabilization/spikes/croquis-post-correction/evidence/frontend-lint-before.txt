@@ -1,0 +1,8 @@
+$ oxlint --type-check
+e2e/pencil.e2e.ts:62:24: error typescript(no-unsafe-type-assertion): Unsafe type assertion: type 'HTMLCanvasElement' is more narrow than the original type.
+[ELIFECYCLE] Command failed with exit code 1.
+Error: ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL
+
+  × "pnpm recursive run" failed in /Users/adoll/projects/drawing-app/apps/
+  │ frontend
+

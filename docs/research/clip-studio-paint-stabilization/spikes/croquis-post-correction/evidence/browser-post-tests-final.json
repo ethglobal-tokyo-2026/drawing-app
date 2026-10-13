@@ -1,0 +1,16 @@
+{
+  "command": [
+    "pnpm",
+    "--filter",
+    "frontend",
+    "test:e2e",
+    "pencil.e2e.ts",
+    "--grep",
+    "post correction"
+  ],
+  "environment": {
+    "E2E_WORKERS": "2"
+  },
+  "exitCode": 1,
+  "seconds": 69.51
+}

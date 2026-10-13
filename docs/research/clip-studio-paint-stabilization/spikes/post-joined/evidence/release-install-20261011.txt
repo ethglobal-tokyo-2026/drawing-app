@@ -1,0 +1,32 @@
+Scope: all 5 workspace projects
+✓ Lockfile passes supply-chain policies (verified 1d ago)
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages are cloned from the content-addressable store to the virtual store.
+  Content-addressable store is at: /Users/adoll/Library/pnpm/store/v11
+  Virtual store is at:             node_modules/.pnpm
+Progress: resolved 104, reused 104, downloaded 0, added 69
+Progress: resolved 149, reused 149, downloaded 0, added 114
+Progress: resolved 258, reused 258, downloaded 0, added 223
+Progress: resolved 398, reused 398, downloaded 0, added 363
+Progress: resolved 471, reused 471, downloaded 0, added 436
+Progress: resolved 577, reused 577, downloaded 0, added 542
+Progress: resolved 745, reused 745, downloaded 0, added 745
+Packages: +745
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 745, reused 745, downloaded 0, added 745, done
+. prepare$ husky
+. prepare: Done
+
+devDependencies:
++ husky 9.1.7
++ knip 6.37.0
++ lint-staged 17.5.1
++ node 24.21.0
++ oxfmt 0.70.0
++ oxlint 1.85.0
++ oxlint-tsgolint 7.0.2002
++ turbo 2.11.3
++ typescript 7.0.2
+
+Done in 11s using pnpm v12.6.0

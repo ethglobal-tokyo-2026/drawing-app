@@ -1,0 +1,654 @@
+{
+  "schema": "csp-joined-post-replay/v1",
+  "inputSha256": "f0da0df84703a0cccd2df5c731bcc592641368c03f3b6f18bc981822ac235b38",
+  "provenance": "runtime",
+  "status": "match",
+  "scope": "Observed primary brush constructor inputs → constructed records → quadratic source → corrected path. Browser acquisition, native event generation and rendered pixels are not evaluated.",
+  "upstream": {
+    "schema": "csp-joined-upstream-replay/v1",
+    "inputSha256": "f0da0df84703a0cccd2df5c731bcc592641368c03f3b6f18bc981822ac235b38",
+    "provenance": "runtime",
+    "status": "match",
+    "records": {
+      "status": "match",
+      "compared": 4,
+      "differences": []
+    },
+    "movement": {
+      "status": "match",
+      "compared": 3,
+      "differences": []
+    },
+    "configuration": {
+      "enabled": true,
+      "deviceType": 1,
+      "window": 20,
+      "platform": 2,
+      "magnificationFraction": 0.33333251953125,
+      "coordinateFactor": 1,
+      "documentRatio": 1
+    },
+    "errors": [],
+    "scope": "Observed primary direct brush constructor inputs → constructed records and modeled movement state. Browser acquisition, event generation, reflection getters, generated/reused source calls, allocator addresses and rendered pixels are excluded.",
+    "wholeFeatureEquivalence": "not-established"
+  },
+  "source": {
+    "status": "match",
+    "recordCount": 4,
+    "callers": [
+      "0x10288ad38",
+      "0x10288e2d8",
+      "0x10288e2d8",
+      "0x102891848"
+    ],
+    "configuration": {
+      "deferFirstNode": false,
+      "fadeScalar54": null,
+      "cornerDetection": null
+    },
+    "endpointResolution": {
+      "inputBrush": "0x757547b800",
+      "observedEvaluator": "0x75767c9000",
+      "status": "observed-resolver-output",
+      "cacheOrCopySelection": "not-replayed"
+    },
+    "differenceCount": 0,
+    "differences": [],
+    "predictedNodes": [
+      {
+        "point": {
+          "x": 333.703939235625,
+          "y": 334.59456640875
+        },
+        "scalars": [
+          1,
+          1,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "flags": 0,
+        "control": {
+          "x": 333.703939235625,
+          "y": 334.59456640875
+        },
+        "endpointDataHex": "000000000000000000000000"
+      },
+      {
+        "point": {
+          "x": 333.703939235625,
+          "y": 334.59456640875
+        },
+        "scalars": [
+          1,
+          1,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "flags": 0,
+        "control": {
+          "x": 333.703939235625,
+          "y": 334.59456640875
+        },
+        "endpointDataHex": "000000000000000000000000"
+      },
+      {
+        "point": {
+          "x": 335.7547254895312,
+          "y": 334.59456640875
+        },
+        "scalars": [
+          1,
+          1,
+          0.0068359375,
+          0,
+          1,
+          1,
+          1
+        ],
+        "flags": 0,
+        "control": {
+          "x": 337.8055117434375,
+          "y": 334.59456640875
+        },
+        "endpointDataHex": "000000000000000000000000"
+      },
+      {
+        "point": {
+          "x": 337.8055117434375,
+          "y": 334.59456640875
+        },
+        "scalars": [
+          1,
+          1,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "flags": 0,
+        "control": {
+          "x": 0,
+          "y": 0
+        },
+        "endpointDataHex": "000000000000000000000000"
+      }
+    ]
+  },
+  "post": {
+    "schema": "csp-post-pipeline-replay/v1",
+    "stage": "complete-ordinary-open-correction",
+    "inputSha256": "f0da0df84703a0cccd2df5c731bcc592641368c03f3b6f18bc981822ac235b38",
+    "status": "match",
+    "scope": "Ordered positions, seven retained binary32 scalars, node flags, endpoint data, adjacency and path type flags for ordinary open quadratic input with zero node flags and zero angle scalar. Endpoint geometry with unknown evaluator requires independently established travel-limit exits. Native allocation addresses, caches, rendering and evaluator side effects are outside this comparison.",
+    "captureIntegrity": {
+      "status": "valid",
+      "errors": [],
+      "warnings": [
+        "Call 1: no independent configuration fingerprint; unchanged copied wrapper arguments cannot establish absence of UI-setting drift"
+      ],
+      "entries": 1,
+      "pairs": 1
+    },
+    "arguments": {
+      "closedMode": 0,
+      "flag480": 1,
+      "k": 40,
+      "lengthScaleBits": "40080003d70adaba",
+      "selector482": 0,
+      "toleranceBits": "407e0004cccd9168"
+    },
+    "pathParameter": 7.5,
+    "endpointEvaluator": {
+      "configurationCaptured": true,
+      "configuration": {
+        "main": {
+          "flags": 17,
+          "minimum": 0.09999999403953552,
+          "input1Minimum": 0,
+          "input1Maximum": 1,
+          "input2Minimum": 0,
+          "randomMinimum": 0,
+          "input4Minimum": 0,
+          "curves": [
+            [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 0.3,
+                "y": 0.5636363636363636
+              },
+              {
+                "x": 0.6727272727272727,
+                "y": 0.9090909090909091
+              },
+              {
+                "x": 1,
+                "y": 1
+              }
+            ],
+            null,
+            null
+          ]
+        },
+        "secondary": {
+          "flags": 0,
+          "minimum": 0,
+          "input1Minimum": 0,
+          "input1Maximum": 1,
+          "input2Minimum": 0,
+          "randomMinimum": 0,
+          "input4Minimum": 0,
+          "curves": [
+            null,
+            null,
+            null
+          ]
+        },
+        "secondaryEnabled": false,
+        "secondaryBase": 1,
+        "brushFlag4": false,
+        "adjustmentMode": 1
+      }
+    },
+    "limits": {
+      "maximumNodes": 10000,
+      "maximumSourceChecks": 1000000,
+      "deadlineMilliseconds": 60000
+    },
+    "sourceCount": 4,
+    "subdividedSourceCount": 4,
+    "resultCount": 2,
+    "expectedCount": 2,
+    "differenceCount": 0,
+    "differences": [],
+    "subdivision": {
+      "threshold": 30.000073242366312,
+      "lengthCalls": 3,
+      "insertedNodes": 0,
+      "rejections": []
+    },
+    "sourceChecks": 6,
+    "passes": [
+      {
+        "stage": "source-subdivision-and-clone",
+        "before": 4,
+        "after": 4,
+        "remainingIds": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "flags": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "decisions": []
+      },
+      {
+        "stage": "initial-removal-1",
+        "tolerance": 480.001171877861,
+        "before": 4,
+        "after": 3,
+        "remainingIds": [
+          0,
+          2,
+          3
+        ],
+        "flags": [
+          0,
+          0,
+          0
+        ],
+        "decisions": [
+          {
+            "candidateId": 1,
+            "accepted": true,
+            "reason": "all-source-checks-accepted"
+          },
+          {
+            "candidateId": 3,
+            "accepted": false,
+            "reason": "open-endpoint"
+          }
+        ]
+      },
+      {
+        "stage": "initial-removal-2",
+        "tolerance": 480.001171877861,
+        "before": 3,
+        "after": 2,
+        "remainingIds": [
+          0,
+          3
+        ],
+        "flags": [
+          0,
+          0
+        ],
+        "decisions": [
+          {
+            "candidateId": 2,
+            "accepted": true,
+            "reason": "all-source-checks-accepted"
+          }
+        ]
+      },
+      {
+        "stage": "corner-classification",
+        "tolerance": 480.001171877861,
+        "before": 2,
+        "after": 2,
+        "remainingIds": [
+          0,
+          3
+        ],
+        "flags": [
+          0,
+          0
+        ],
+        "decisions": []
+      },
+      {
+        "stage": "additional-removal-1",
+        "tolerance": 477.001171877861,
+        "before": 2,
+        "after": 2,
+        "remainingIds": [
+          0,
+          3
+        ],
+        "flags": [
+          0,
+          0
+        ],
+        "decisions": [
+          {
+            "candidateId": 3,
+            "accepted": false,
+            "reason": "open-endpoint"
+          }
+        ]
+      },
+      {
+        "stage": "near-coincident-cleanup",
+        "before": 2,
+        "after": 2,
+        "remainingIds": [
+          0,
+          3
+        ],
+        "flags": [
+          0,
+          0
+        ],
+        "decisions": []
+      }
+    ],
+    "endpointPasses": [
+      {
+        "direction": "head",
+        "reason": "end",
+        "cumulativeLength": 4.101572507812477,
+        "travelLimit": 7.5,
+        "removed": 0,
+        "evaluatorGeometryIndependent": false,
+        "decisions": [
+          {
+            "x": 333.703939235625,
+            "y": 334.59456640875,
+            "segmentLength": 4.101572507812477,
+            "cumulativeLength": 4.101572507812477,
+            "threshold": 7.125,
+            "removed": false
+          }
+        ],
+        "firstSegmentLength": 4.101572507812477
+      },
+      {
+        "direction": "tail",
+        "reason": "end",
+        "cumulativeLength": 4.101572507812477,
+        "travelLimit": 7.5,
+        "removed": 0,
+        "evaluatorGeometryIndependent": false,
+        "decisions": [
+          {
+            "x": 337.8055117434375,
+            "y": 334.59456640875,
+            "segmentLength": 4.101572507812477,
+            "cumulativeLength": 4.101572507812477,
+            "threshold": 7.125,
+            "removed": false
+          }
+        ],
+        "firstSegmentLength": 4.101572507812477
+      }
+    ],
+    "preEndpointNodes": [
+      {
+        "id": 0,
+        "point": {
+          "x": 333.703939235625,
+          "y": 334.59456640875
+        },
+        "flags": 0,
+        "scalars": [
+          1,
+          1,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "endpointDataHex": "000000000000000000000000",
+        "sourceIndices": [
+          0,
+          1,
+          2
+        ]
+      },
+      {
+        "id": 3,
+        "point": {
+          "x": 337.8055117434375,
+          "y": 334.59456640875
+        },
+        "flags": 0,
+        "scalars": [
+          1,
+          1,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "endpointDataHex": "000000000000000000000000",
+        "sourceIndices": [
+          3
+        ]
+      }
+    ],
+    "predictedNodes": [
+      {
+        "id": 0,
+        "className": "PWVectorSplineCurve",
+        "point": {
+          "x": 333.703939235625,
+          "y": 334.59456640875
+        },
+        "positionBits": {
+          "x": "4074db4355c9b617",
+          "y": "4074e98358110e1a"
+        },
+        "flags": 0,
+        "scalarBits": [
+          "3f800000",
+          "3f800000",
+          "00000000",
+          "00000000",
+          "3f800000",
+          "3f800000",
+          "3f800000"
+        ],
+        "endpointDataHex": "000000000000000000000000",
+        "sourceIndices": [
+          0,
+          1,
+          2
+        ],
+        "previousId": null,
+        "nextId": 3
+      },
+      {
+        "id": 3,
+        "className": "PWVectorSplineCurve",
+        "point": {
+          "x": 337.8055117434375,
+          "y": 334.59456640875
+        },
+        "positionBits": {
+          "x": "40751ce3604829ba",
+          "y": "4074e98358110e1a"
+        },
+        "flags": 0,
+        "scalarBits": [
+          "3f800000",
+          "3f800000",
+          "00000000",
+          "00000000",
+          "3f800000",
+          "3f800000",
+          "3f800000"
+        ],
+        "endpointDataHex": "000000000000000000000000",
+        "sourceIndices": [
+          3
+        ],
+        "previousId": 0,
+        "nextId": null
+      }
+    ],
+    "sourceNodes": [
+      {
+        "id": 0,
+        "className": "PWVectorBezierCurve",
+        "point": {
+          "x": 333.703939235625,
+          "y": 334.59456640875
+        },
+        "positionBits": {
+          "x": "4074db4355c9b617",
+          "y": "4074e98358110e1a"
+        },
+        "flags": 0,
+        "scalarBits": [
+          "3f800000",
+          "3f800000",
+          "00000000",
+          "00000000",
+          "3f800000",
+          "3f800000",
+          "3f800000"
+        ],
+        "endpointDataHex": "000000000000000000000000",
+        "sourceIndices": [
+          0
+        ],
+        "previousId": null,
+        "nextId": 1,
+        "control": {
+          "x": 333.703939235625,
+          "y": 334.59456640875
+        },
+        "controlBits": {
+          "x": "4074db4355c9b617",
+          "y": "4074e98358110e1a"
+        }
+      },
+      {
+        "id": 1,
+        "className": "PWVectorBezierCurve",
+        "point": {
+          "x": 333.703939235625,
+          "y": 334.59456640875
+        },
+        "positionBits": {
+          "x": "4074db4355c9b617",
+          "y": "4074e98358110e1a"
+        },
+        "flags": 0,
+        "scalarBits": [
+          "3f800000",
+          "3f800000",
+          "00000000",
+          "00000000",
+          "3f800000",
+          "3f800000",
+          "3f800000"
+        ],
+        "endpointDataHex": "000000000000000000000000",
+        "sourceIndices": [
+          1
+        ],
+        "previousId": 0,
+        "nextId": 2,
+        "control": {
+          "x": 333.703939235625,
+          "y": 334.59456640875
+        },
+        "controlBits": {
+          "x": "4074db4355c9b617",
+          "y": "4074e98358110e1a"
+        }
+      },
+      {
+        "id": 2,
+        "className": "PWVectorBezierCurve",
+        "point": {
+          "x": 335.7547254895312,
+          "y": 334.59456640875
+        },
+        "positionBits": {
+          "x": "4074fc135b08efe8",
+          "y": "4074e98358110e1a"
+        },
+        "flags": 0,
+        "scalarBits": [
+          "3f800000",
+          "3f800000",
+          "3be00000",
+          "00000000",
+          "3f800000",
+          "3f800000",
+          "3f800000"
+        ],
+        "endpointDataHex": "000000000000000000000000",
+        "sourceIndices": [
+          2
+        ],
+        "previousId": 1,
+        "nextId": 3,
+        "control": {
+          "x": 337.8055117434375,
+          "y": 334.59456640875
+        },
+        "controlBits": {
+          "x": "40751ce3604829ba",
+          "y": "4074e98358110e1a"
+        }
+      },
+      {
+        "id": 3,
+        "className": "PWVectorBezierCurve",
+        "point": {
+          "x": 337.8055117434375,
+          "y": 334.59456640875
+        },
+        "positionBits": {
+          "x": "40751ce3604829ba",
+          "y": "4074e98358110e1a"
+        },
+        "flags": 0,
+        "scalarBits": [
+          "3f800000",
+          "3f800000",
+          "00000000",
+          "00000000",
+          "3f800000",
+          "3f800000",
+          "3f800000"
+        ],
+        "endpointDataHex": "000000000000000000000000",
+        "sourceIndices": [
+          3
+        ],
+        "previousId": 2,
+        "nextId": null,
+        "control": {
+          "x": 0,
+          "y": 0
+        },
+        "controlBits": {
+          "x": "0000000000000000",
+          "y": "0000000000000000"
+        }
+      }
+    ],
+    "elapsedMilliseconds": 1.466583
+  },
+  "wholeFeatureEquivalence": "not-established"
+}

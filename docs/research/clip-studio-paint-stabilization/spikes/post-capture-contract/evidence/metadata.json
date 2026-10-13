@@ -1,0 +1,419 @@
+{
+  "imageData": [
+    {
+      "name": "base_pool_constants",
+      "address": "0x10454dae0",
+      "byteCount": 16,
+      "sha256": "8b8e95a1c638e2570ea7c4740facb193f384250a04b1412a4a4fa4f15ae465a1",
+      "bytesHex": "78000000000000002000000000000000",
+      "u64": [
+        "0x78",
+        "0x20"
+      ]
+    },
+    {
+      "name": "bezier_pool_constants",
+      "address": "0x10454daf0",
+      "byteCount": 16,
+      "sha256": "1631eba7c63183279e090a279770c7c7d7292f2959053aa6824d641b5bd3fd2f",
+      "bytesHex": "88000000000000000001000000000000",
+      "u64": [
+        "0x88",
+        "0x100"
+      ]
+    },
+    {
+      "name": "cubic_pool_constants",
+      "address": "0x104484f90",
+      "byteCount": 16,
+      "sha256": "3852f28294f346d03a56a8c69d8c35778932105a47a8080336a78e5206b375cf",
+      "bytesHex": "98000000000000002000000000000000",
+      "u64": [
+        "0x98",
+        "0x20"
+      ]
+    },
+    {
+      "name": "spline_pool_constants",
+      "address": "0x10454db10",
+      "byteCount": 16,
+      "sha256": "069da0496ec98d452c9d024d0ee7f50e949ee7c66b056ac7d7952d3c604a30ff",
+      "bytesHex": "78000000000000000001000000000000",
+      "u64": [
+        "0x78",
+        "0x100"
+      ]
+    },
+    {
+      "name": "stroke_pool_constants",
+      "address": "0x10454db20",
+      "byteCount": 16,
+      "sha256": "e143b13ad35a400993a9841ffccf032b59f2ae935fcc5c233ff3053156afa3bc",
+      "bytesHex": "a8000000000000004000000000000000",
+      "u64": [
+        "0xa8",
+        "0x40"
+      ]
+    },
+    {
+      "name": "stroke_vtable",
+      "address": "0x104a53a68",
+      "byteCount": 176,
+      "sha256": "fd8e45c7e412cfea7f80ef51f069d1acc408c790a5452ebaae82d0ad71e99b86",
+      "bytesHex": "0000000000000000983ba5040100000010977802010000004097780201000000441578020100000054157802010000004816780201000000501678020100000058167802010000005c167802010000006816780201000000741678020100000084167802010000009816780201000000a816780201000000bc16780201000000cc16780201000000d416780201000000dc16780201000000909778020100000098977802010000007497780201000000",
+      "allocationSize": 168,
+      "addressPoint": "0x104a53a78"
+    },
+    {
+      "name": "stroke_typeinfo",
+      "address": "0x104a53b98",
+      "byteCount": 16,
+      "sha256": "b8e360ee669b4a2ebbae69ef6515ab779fd8c455be958bb61bd45c845ee7e4cf",
+      "bytesHex": "10000000000000004fdf540401000000"
+    },
+    {
+      "name": "stroke_type_name",
+      "address": "0x10454df4f",
+      "byteCount": 33,
+      "sha256": "c0f03b4f010b78080b4da73f2b3cc2143ccca9fda89e12cb9efd91f38bbbd560",
+      "bytesHex": "4e3132506c616e657377616c6b657231345057566563746f725374726f6b654500"
+    },
+    {
+      "name": "base_vtable",
+      "address": "0x104a52b50",
+      "byteCount": 176,
+      "sha256": "bf7d8b5326479b9bdb44913fd83a7eb8083efb211bf50f0294bb4ffebd396893",
+      "bytesHex": "0000000000000000982ca50401000000ecae760201000000f0ae760201000000d4b1760201000000dcb1760201000000e4b1760201000000ecb1760201000000f4b1760201000000fcb176020100000028b276020100000030b276020100000034b27602010000009cb27602010000008ce2760201000000b8e2760201000000dce276020100000004e376020100000030e37602010000006ce376020100000084e3760201000000bce3760201000000",
+      "allocationSize": 120,
+      "addressPoint": "0x104a52b60"
+    },
+    {
+      "name": "base_typeinfo",
+      "address": "0x104a52c98",
+      "byteCount": 16,
+      "sha256": "95c5855838cfb9d8c0eb31b901b32d3b3addbfa8f14e3b44ad0eededed97a210",
+      "bytesHex": "100000000000000050d7540401000000"
+    },
+    {
+      "name": "base_type_name",
+      "address": "0x10454d750",
+      "byteCount": 32,
+      "sha256": "445be72ea7e2faa4ac1a99761a5f124c04f1dadbf66f3b394284637a5c5d6d2e",
+      "bytesHex": "4e3132506c616e657377616c6b657231335057566563746f7243757276654500"
+    },
+    {
+      "name": "bezier_vtable",
+      "address": "0x104a527a0",
+      "byteCount": 176,
+      "sha256": "bd2e9af455597894c0b1ff88c4580edd037115e4677eb24a474bed98debca8df",
+      "bytesHex": "0000000000000000e828a50401000000e847760201000000ec4776020100000000487602010000001c48760201000000344876020100000080487602010000008449760201000000d849760201000000444a760201000000c84a760201000000284b7602010000006c4c7602010000004c4d760201000000b44d760201000000c84d760201000000e44d760201000000f84d7602010000000c4e760201000000284e760201000000844e760201000000",
+      "allocationSize": 136,
+      "addressPoint": "0x104a527b0"
+    },
+    {
+      "name": "bezier_typeinfo",
+      "address": "0x104a528e8",
+      "byteCount": 16,
+      "sha256": "ec151db55fd1f17054f29e7606ad5a2af71b9c0574856f04af8bd21ee0498581",
+      "bytesHex": "100000000000000030d6540401000000"
+    },
+    {
+      "name": "bezier_type_name",
+      "address": "0x10454d630",
+      "byteCount": 38,
+      "sha256": "5f9ed2c3a1f9240157334a8de2054822c59109aeaffef93286c89f02d37931ad",
+      "bytesHex": "4e3132506c616e657377616c6b657231395057566563746f7242657a69657243757276654500"
+    },
+    {
+      "name": "cubic_vtable",
+      "address": "0x104a529f0",
+      "byteCount": 176,
+      "sha256": "5636466bf8434efe0a6074dbe87628ef004394151f40daea5631f955108d61ab",
+      "bytesHex": "0000000000000000382ba50401000000449976020100000048997602010000005c997602010000007c99760201000000a899760201000000ecb1760201000000f4b1760201000000fcb176020100000028b276020100000030b2760201000000b89a760201000000349b760201000000ac9c760201000000249d760201000000589d760201000000949d760201000000ac9d7602010000003c9e760201000000789e760201000000e89e760201000000",
+      "allocationSize": 152,
+      "addressPoint": "0x104a52a00"
+    },
+    {
+      "name": "cubic_typeinfo",
+      "address": "0x104a52b38",
+      "byteCount": 16,
+      "sha256": "0d8dc521a1d529e02feda6e4aff3fec15911238a885069c2119161eaf000e905",
+      "bytesHex": "10000000000000001cd7540401000000"
+    },
+    {
+      "name": "cubic_type_name",
+      "address": "0x10454d71c",
+      "byteCount": 43,
+      "sha256": "bd94621c59637e8d23782094e3e49d76c7779a0a29450ede0e621b8a2ad3d569",
+      "bytesHex": "4e3132506c616e657377616c6b657232345057566563746f72437562696342657a69657243757276654500"
+    },
+    {
+      "name": "spline_vtable",
+      "address": "0x104a53908",
+      "byteCount": 176,
+      "sha256": "36ae64b099672283afbb378419e648251e2c9f4d025cb5f33b9277fee8bbdb2b",
+      "bytesHex": "0000000000000000503aa5040100000064887802010000006888780201000000d4b1760201000000dcb1760201000000e4b1760201000000ecb1760201000000f4b1760201000000fcb176020100000028b276020100000030b276020100000034b27602010000009cb27602010000007c887802010000001c8a7802010000008c8a780201000000108b780201000000848b780201000000f48b780201000000788c780201000000fc8c780201000000",
+      "allocationSize": 120,
+      "addressPoint": "0x104a53918"
+    },
+    {
+      "name": "spline_typeinfo",
+      "address": "0x104a53a50",
+      "byteCount": 16,
+      "sha256": "e099d8eb0c1a54892b3a0cd02a41dd3d00cbb63f908a87978ee38c66882b591b",
+      "bytesHex": "100000000000000029df540401000000"
+    },
+    {
+      "name": "spline_type_name",
+      "address": "0x10454df29",
+      "byteCount": 38,
+      "sha256": "a2f29b78f615f4b829afe720ed82e64b355556546c490f34857cc7309dafd25b",
+      "bytesHex": "4e3132506c616e657377616c6b657231395057566563746f7253706c696e6543757276654500"
+    }
+  ],
+  "resource": {
+    "path": "/Applications/CLIP STUDIO 1.5/App/CLIP STUDIO PAINT.app/Contents/Resources/english/E79C2AC5-BC3F-4838-9E87-F49B629F84B5",
+    "sha256": "6bbf25aa8b1808977be5a362df3e46549d0971d7acefd4df23e8eb83d388172c",
+    "byteCount": 315737,
+    "records": [
+      {
+        "name": "resource_top_count",
+        "fileOffset": 0,
+        "byteCount": 4,
+        "bytesHex": "00000003",
+        "sha256": "88185d128d9922e0e6bcd32b07b6c7f20f27968eab447a1d8d1cdf250f79f7d3"
+      },
+      {
+        "name": "resource_top_selected_entry",
+        "fileOffset": 4,
+        "byteCount": 12,
+        "bytesHex": "00000001000000280004c073",
+        "sha256": "b451e01084d9ff8802446ed7f6f2810448b846179821dfe2c053e48e2ee3bdce"
+      },
+      {
+        "name": "group_24_count",
+        "fileOffset": 40,
+        "byteCount": 4,
+        "bytesHex": "00000043",
+        "sha256": "ad286c64373644140ff927b256b8415467b5d27645ff997010b15519d022631b"
+      },
+      {
+        "name": "group_24_selected_entry",
+        "fileOffset": 320,
+        "byteCount": 12,
+        "bytesHex": "000000180002710a000033b8",
+        "sha256": "9324b6b0664ab124a8419f9d7fcf273dfd3415c87988e5d4ee02a9e6c103eb6e"
+      },
+      {
+        "name": "subgroup_1_count",
+        "fileOffset": 160010,
+        "byteCount": 4,
+        "bytesHex": "00000001",
+        "sha256": "b40711a88c7039756fb8a73827eabe2c0fe5a0346ca7e0a104adc0fc764f528d"
+      },
+      {
+        "name": "subgroup_1_selected_entry",
+        "fileOffset": 160014,
+        "byteCount": 12,
+        "bytesHex": "000000010002711a000033a8",
+        "sha256": "b0eb4d673e896bf80367ffbb6c2097bf4833ea66679c80e434e5009bbcecc1ee"
+      },
+      {
+        "name": "label_132_count",
+        "fileOffset": 160026,
+        "byteCount": 4,
+        "bytesHex": "0000012c",
+        "sha256": "c76ccd9646b7f5ca83f4ad48eedb212e5be3032afce250a0f98af8d133604079"
+      },
+      {
+        "name": "label_132_selected_entry",
+        "fileOffset": 161602,
+        "byteCount": 12,
+        "bytesHex": "000000840002917400000013",
+        "sha256": "fcb4953e9c450fa69f1b89bbc7bcdd1195faa3ea31c13559bd7759176ff2ae06"
+      },
+      {
+        "name": "label_132_text",
+        "fileOffset": 168308,
+        "byteCount": 19,
+        "bytesHex": "0000000f506f737420636f7272656374696f6e",
+        "sha256": "a9210771b1be81d4a5ef5c1ed2431f92707b92a049873c40d49183cf79795e64",
+        "text": "Post correction",
+        "resourceKey": "0x180084"
+      },
+      {
+        "name": "label_133_count",
+        "fileOffset": 160026,
+        "byteCount": 4,
+        "bytesHex": "0000012c",
+        "sha256": "c76ccd9646b7f5ca83f4ad48eedb212e5be3032afce250a0f98af8d133604079"
+      },
+      {
+        "name": "label_133_selected_entry",
+        "fileOffset": 161614,
+        "byteCount": 12,
+        "bytesHex": "000000850002918700000041",
+        "sha256": "c803391137cc2c026e34874f9cbc9729650e50cce1c21992dd94fae231e2b98d"
+      },
+      {
+        "name": "label_133_text",
+        "fileOffset": 168327,
+        "byteCount": 65,
+        "bytesHex": "0000003d4368616e6765207768657468657220746f206d616b65206c696e6520736d6f6f7468657220616e6420646567726565206f6620636f7272656374696f6e",
+        "sha256": "b8071545e77caf707889b6abc4ca38289a46f70b36aa5b7aa7d7dd64d13924f2",
+        "text": "Change whether to make line smoother and degree of correction",
+        "resourceKey": "0x180085"
+      },
+      {
+        "name": "label_134_count",
+        "fileOffset": 160026,
+        "byteCount": 4,
+        "bytesHex": "0000012c",
+        "sha256": "c76ccd9646b7f5ca83f4ad48eedb212e5be3032afce250a0f98af8d133604079"
+      },
+      {
+        "name": "label_134_selected_entry",
+        "fileOffset": 161626,
+        "byteCount": 12,
+        "bytesHex": "00000086000291c800000013",
+        "sha256": "79d349ec5f69fe1700b08eb419cb96aa1b1ce4c3ea6335983f6627451604471e"
+      },
+      {
+        "name": "label_134_text",
+        "fileOffset": 168392,
+        "byteCount": 19,
+        "bytesHex": "0000000f41646a757374206279207370656564",
+        "sha256": "908be27b6d5678edd3420aff019c43bad860afe23d96e1d65bb6adf52d2ec1eb",
+        "text": "Adjust by speed",
+        "resourceKey": "0x180086"
+      },
+      {
+        "name": "label_135_count",
+        "fileOffset": 160026,
+        "byteCount": 4,
+        "bytesHex": "0000012c",
+        "sha256": "c76ccd9646b7f5ca83f4ad48eedb212e5be3032afce250a0f98af8d133604079"
+      },
+      {
+        "name": "label_135_selected_entry",
+        "fileOffset": 161638,
+        "byteCount": 12,
+        "bytesHex": "00000087000291db00000042",
+        "sha256": "0e65a325ccee0f0c1b53d5e6a763037c7b45732c5b1941e1a0ce75fd0eba588a"
+      },
+      {
+        "name": "label_135_text",
+        "fileOffset": 168411,
+        "byteCount": 66,
+        "bytesHex": "0000003e446567726565206f6620706f737420636f7272656374696f6e206368616e676573206163636f7264696e672076656c6f63697479206f66207374726f6b65",
+        "sha256": "536b98e50ea4b09bf06a4f2d74e82fc10145f71bfb9d949bba9e123ecf922062",
+        "text": "Degree of post correction changes according velocity of stroke",
+        "resourceKey": "0x180087"
+      },
+      {
+        "name": "label_136_count",
+        "fileOffset": 160026,
+        "byteCount": 4,
+        "bytesHex": "0000012c",
+        "sha256": "c76ccd9646b7f5ca83f4ad48eedb212e5be3032afce250a0f98af8d133604079"
+      },
+      {
+        "name": "label_136_selected_entry",
+        "fileOffset": 161650,
+        "byteCount": 12,
+        "bytesHex": "000000880002921d00000013",
+        "sha256": "b40981a71eb74b81eb7611303a81ffb93d945c669a91841a813a5c5437ed4db1"
+      },
+      {
+        "name": "label_136_text",
+        "fileOffset": 168477,
+        "byteCount": 19,
+        "bytesHex": "0000000f41646a757374206279207363616c65",
+        "sha256": "a3287b9adc888ecf1e316684681fec88405e6ea09c5408d26bbbe2c214f6eb8b",
+        "text": "Adjust by scale",
+        "resourceKey": "0x180088"
+      },
+      {
+        "name": "label_137_count",
+        "fileOffset": 160026,
+        "byteCount": 4,
+        "bytesHex": "0000012c",
+        "sha256": "c76ccd9646b7f5ca83f4ad48eedb212e5be3032afce250a0f98af8d133604079"
+      },
+      {
+        "name": "label_137_selected_entry",
+        "fileOffset": 161662,
+        "byteCount": 12,
+        "bytesHex": "00000089000292300000003a",
+        "sha256": "cde901af6b289391b14b8cee813d16c4e2a501e85ff1a7cc5427172f0c7fb76c"
+      },
+      {
+        "name": "label_137_text",
+        "fileOffset": 168496,
+        "byteCount": 58,
+        "bytesHex": "00000036537472656e677468206f6620636f7272656374696f6e20646570656e6473206f6e2063616e766173206d61676e696669636174696f6e",
+        "sha256": "f9a54fac4a877db599de844afaf1f48ab475b7047d279d4e3acdc34f8d2a3d81",
+        "text": "Strength of correction depends on canvas magnification",
+        "resourceKey": "0x180089"
+      },
+      {
+        "name": "label_138_count",
+        "fileOffset": 160026,
+        "byteCount": 4,
+        "bytesHex": "0000012c",
+        "sha256": "c76ccd9646b7f5ca83f4ad48eedb212e5be3032afce250a0f98af8d133604079"
+      },
+      {
+        "name": "label_138_selected_entry",
+        "fileOffset": 161674,
+        "byteCount": 12,
+        "bytesHex": "0000008a0002926a00000010",
+        "sha256": "ae0ee13f7cb150fb5dc1fbdbfc56c24069f3dd85dfa325cff9ae4ad2570e4e2c"
+      },
+      {
+        "name": "label_138_text",
+        "fileOffset": 168554,
+        "byteCount": 16,
+        "bytesHex": "0000000c42657a696572206375727665",
+        "sha256": "ebd62837cdb622abc89acc8607c361d065aa759e6caf7cc1635bc93918ba5ade",
+        "text": "Bezier curve",
+        "resourceKey": "0x18008a"
+      },
+      {
+        "name": "label_139_count",
+        "fileOffset": 160026,
+        "byteCount": 4,
+        "bytesHex": "0000012c",
+        "sha256": "c76ccd9646b7f5ca83f4ad48eedb212e5be3032afce250a0f98af8d133604079"
+      },
+      {
+        "name": "label_139_selected_entry",
+        "fileOffset": 161686,
+        "byteCount": 12,
+        "bytesHex": "0000008b0002927a00000038",
+        "sha256": "7324108fbb0f4d3cef782aafea2b0dabbd87e3c854c52f3f554d953174473c8a"
+      },
+      {
+        "name": "label_139_text",
+        "fileOffset": 168570,
+        "byteCount": 56,
+        "bytesHex": "000000344c696e6520616674657220636f7272656374696f6e206265636f6d6573207175616472617469632062657a696572206375727665",
+        "sha256": "3574f12ec8f3b7e7e38a4fd3dbd01f8765d9febc2eeda2f271fea6e389c4ff70",
+        "text": "Line after correction becomes quadratic bezier curve",
+        "resourceKey": "0x18008b"
+      }
+    ]
+  },
+  "directCalls": {
+    "wrapper": [
+      "0x102891d58"
+    ],
+    "finalizer": [
+      "0x1028908d0",
+      "0x102893e68",
+      "0x102894974",
+      "0x102895a90"
+    ]
+  },
+  "directCallMethod": "Scanned every __text instruction for ARM64 BL imm26 resolving to the target; indirect calls remain unresolved."
+}

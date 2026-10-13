@@ -1,0 +1,239 @@
+{
+  "createdUtc": "2026-10-11T22:56:45.160903+00:00",
+  "purpose": "Local preparation verification; not a native joined comparison or deployment.",
+  "frontendTests": {
+    "passed": 2541,
+    "files": 252
+  },
+  "researchTests": {
+    "passed": 259
+  },
+  "frontendTypeAwareLint": "passed",
+  "frontendProductionBuild": "passed",
+  "joinedLauncherHostTests": {
+    "passed": 9,
+    "nativeAttachment": false
+  },
+  "nativeJoinedComparison": "pending_manual_mouse_stroke",
+  "deployed": false,
+  "testReports": [
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-joined/evidence/frontend-tests-speed-20261011.txt",
+      "sha256": "ee6aa8d3276ed1b48e872e323283cf3e768d75309e09b56adfa25578ef9abe26"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-joined/evidence/research-0-20261011T225404.526922Z.txt",
+      "sha256": "5307008e5a021bd1c475a5e692d739802910f522ad4c7f33219fb4b2c110a0d1"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-joined/evidence/frontend-checks-0-20261011T225404.448841Z.txt",
+      "sha256": "20ba7bc2462c4ef2ee7b74e4947f8dace77bd811cdebf7fc9b96ad7ca34ffa48"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-joined/evidence/frontend-checks-1-20261011T225409.513405Z.txt",
+      "sha256": "f256eb4d5112fb1f8c29586e554edba4f75c9b210cd478371e78ebbee6949d42"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-joined/evidence/joined-launcher-final-host-checks-20261011.txt",
+      "sha256": "30ea8c5a4818520bdda3a8ee1392b2bbc90a33ab97b7356fb9a7ea012f0e700f"
+    }
+  ],
+  "sourceHashes": [
+    {
+      "path": "apps/frontend/src/i18n/strings/stickerCreation.ts",
+      "sha256": "c647bd06bc447f575b4e555c9811e790d87e91370f25650065d53a6db7ceb7e6"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/DrawingScreen.tsx",
+      "sha256": "f7d5f8d97c265dfc2d177dd4f5e89c7d418035b0b9856164ce650f9b37d9c111"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/inkEngine.ts",
+      "sha256": "8a21946de6cd4b9f4cdf16e28509f5ff14225e7878611a7340d197f4a8744c0f"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/core.test.ts",
+      "sha256": "2ba7398b3d16278cd08222f83566057f0dc899f1da9406c32bd6e6ea1e962b2c"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/core.ts",
+      "sha256": "9e52c98392f0e729a9594b42b15c5342ba516adc4973d93c79c20eb85d747793"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/endpoints.ts",
+      "sha256": "6172e3a97def942e199fdf5640964a4ee0593bc145874463e061ab1b9b3ac1fc"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/errors.ts",
+      "sha256": "6d2861c15f4c50c015c1e039a044fb38142ed06e0f57f3bacaf41ed9a4a30d82"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/evaluator.ts",
+      "sha256": "8a777d4d8e7c2eb6d6052ddeed3bcafc545f1e9003f0277d21706886f938676d"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/input-table.ts",
+      "sha256": "e24b40576c687d99e722c8f8f13f47fb45dd387b3929d91671a252e80237a587"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/input.ts",
+      "sha256": "b89a67b7bb0d687e72874b9f9b51d29e7c3b3eadcfa041e866cb09000af30815"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/pipeline.ts",
+      "sha256": "ec1971eebd80d569f5b75238ec7a3ba3547a8ffe58453afbdf2ddb7808d3e4ce"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/protocol.ts",
+      "sha256": "7f86571d0e715aeb80cdbac276584db49702ae0900bbb641f27a6d74d4254861"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/quadratic.ts",
+      "sha256": "b3be50f8568369dfcca4940b809a60cda34783f1ce3020aa169db83449c7bd64"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/reference.ts",
+      "sha256": "f906aa3be2bb0bbe2d2c463eac52cad6406c7716384bc65c5df86e3e62b19fe4"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/sampling.ts",
+      "sha256": "9cf39aa51b104e2657f43706fa01d56b1786f883cabb02bfaeb72eea2960f32a"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/service.test.ts",
+      "sha256": "1f1c14d3a4845ce6a1d60eae1e80632b9b0616bdd95d8487b5ca362d297e50b4"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/service.ts",
+      "sha256": "10c6cabaade2b540159966e9baf96aa1770911abb81543dd1dedb8e89cdb86b6"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/settings.ts",
+      "sha256": "d59c0ee68de0544f8f13954df2f9a2aa4bde29b8430d06ef8216947e3cc33bd1"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/source.ts",
+      "sha256": "9517f8e124276129fdc19c04e206d03b789059bf29f510ea81365de7a852ee8a"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/spline-context.ts",
+      "sha256": "7c43e68539549ae8ff9e2961c151f93baa674e06eb335d1cdfe8e251b7d09f02"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/spline-length.ts",
+      "sha256": "d5c8999011d5d5c395f6375e415184b996c8d6f099f1c70c91f5589e82485df6"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/spline.ts",
+      "sha256": "a60359dcf677d24f5a6ccfa466ec798ac787e92953e9fe35db147f58d64e9884"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/validation.ts",
+      "sha256": "16bc33dd98b3efe1efd096a7566e7e81c110db20104e8c39638acaa2deee38cd"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/worker.ts",
+      "sha256": "9614faaed72c84aaede4d5b425da65333bfb49e7acd9ef9395272e9f074d0f91"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/stabilization/arithmetic.ts",
+      "sha256": "40e6bc7ece073c7e27fc244b16ed5e6e13693c6f2c9482f7c47f5112f7f35d5e"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/stabilization/binary64.ts",
+      "sha256": "0399555ada69d27a21b58af52647695bf28c32f1b03a83b95a326fe08c85dea3"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/stabilization/queue.test.ts",
+      "sha256": "ee74de32573c45c99e5e2254727483bf963eb689212d9334813ef6213e6dc573"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/stabilization/queue.ts",
+      "sha256": "0b5f89c67ca9cbe9bce8ef82cfa780f16ced76f0b62de59a035bbde528834232"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/stabilizer.ts",
+      "sha256": "bea957fd7ba78cf37e11533136eb2e2c033f62216dbf70e6bc23731481009ac4"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/session/keptSession.ts",
+      "sha256": "f6e147bd11baf23f93cc273195c1cd9022b7e72a89aaa669e7ca624abd5088df"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/tools/SmoothingBar.css",
+      "sha256": "91d5eb05e4b4f1deb99b0f8aae8938dd5e04364f3747d55c60ccd3c77000767f"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/tools/SmoothingBar.tsx",
+      "sha256": "a49a7cfacf71a31d541127c265f7a68e586eec43c69d37ac3304c686ab45e09d"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/live-capture/capture_joined_post.py",
+      "sha256": "0a3c99dd760a3805cd634c17efd8348f27a1cf8c9501c0f0844ec20a6f90c920"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/live-capture/capture_live_contract.py",
+      "sha256": "ca93a5daff62c6633385cb38d750e04c13d5077e3fbc9cd4f09e57d4634ae9b8"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/live-capture/capture_post_correction.py",
+      "sha256": "1840032ba2b30ec5da1356e143c51a8528a9ed342393d0aebd39929252c01a44"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/live-capture/check_record_joined_post.py",
+      "sha256": "191c903a805680840767d668d1d5e159637e956b063a4c23ca9e990e792d6c94"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/live-capture/post_evaluator_capture.py",
+      "sha256": "ebf20e8500538f296729a2d03a55db6b6bddaea0501fd5797e8bd6c7cb1aa399"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/live-capture/record_joined_post.py",
+      "sha256": "c07ce4cfe8647d9936fa9343c908ce211ae64fc48cb4ba59d7620f3b8e2f573c"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/live-capture/record_tablet_stroke.py",
+      "sha256": "8c893aae014ba21597298b3586d40b90b133c7831ccc8aa32f19265ed0f95e93"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-joined/evaluator.test.ts",
+      "sha256": "6241af79519e528924736214d5452069330896cc8a394864bcab2a0aa8606c28"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-joined/evaluator.ts",
+      "sha256": "4c0f533342c6ac567b4b5b81b6d48b703c456c03abd1404ad4e7db9c3981654d"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-joined/replay.test.ts",
+      "sha256": "e1c8ba3fd30910f44e3776f000d8381962350743c7e749c403624e5b87db51e7"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-joined/replay.ts",
+      "sha256": "3c8a63d81f567be6e8a69144438af307715a29bbf61546ba7a2e718f4d084393"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-joined/source-fixture.ts",
+      "sha256": "1a4111498eff6d684480abece0bd21b507e7b1506551c33c93a6f8b280bb2ee9"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-joined/source-replay.test.ts",
+      "sha256": "cec39a9d518e446eafc77ee9dec4d8a6ea1808892f80b6b84c3d5ce5a2449195"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-joined/source-replay.ts",
+      "sha256": "c29c5d40f859077db318631a81e9b8373b33a9473b7d99fdb1d4499c2688f1ff"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-joined/upstream-fixture.ts",
+      "sha256": "f86cbbeaec73d7c97a6e57ed69b3da94ff8b764f5868be0558dbaf08e7a1d21f"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-joined/upstream-replay.test.ts",
+      "sha256": "da19a422454a74147e0efabea5b866550e5d00b5bcde1df760cc597ed3a80840"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-joined/upstream-replay.ts",
+      "sha256": "dc878946b4ad8b6ed9d41be457942473aa68a245fc383530d90ca57dd89b62a0"
+    }
+  ]
+}

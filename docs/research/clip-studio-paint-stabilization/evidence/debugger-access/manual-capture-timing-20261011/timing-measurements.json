@@ -1,0 +1,648 @@
+[
+  {
+    "folder": "tablet-manual-20261011T171306.937948Z-8cdfbb39",
+    "summary": {
+      "elapsed_seconds": 27.008035708,
+      "entries": 422,
+      "paired_calls": 422,
+      "confirmed_begin": true,
+      "input_end_seen": false,
+      "native_release_seen": false,
+      "fixture_complete": false,
+      "cleanup_errors": [],
+      "detach_request_succeeded": true,
+      "detached_state_observed": true,
+      "unmatched_entries": []
+    },
+    "all_input": {
+      "entry_count": 422,
+      "first": [
+        1,
+        0.376951,
+        77580848,
+        1,
+        0.0,
+        -1164.640625,
+        39.14453125
+      ],
+      "last": [
+        422,
+        26.974779,
+        77585823,
+        1,
+        0.5058823823928833,
+        -1630.625,
+        553.96875
+      ],
+      "host_span_seconds": 26.597828584,
+      "input_timestamp_span_ticks": 4975,
+      "unique_timestamps": 245,
+      "delta_timestamp_ticks": {
+        "n": 421,
+        "min": 0,
+        "median": 1,
+        "p90": 12,
+        "max": 925,
+        "sum": 4975
+      },
+      "timestamp_regressions": 0,
+      "repeated_timestamp_transitions": 177,
+      "unique_xyz_pressure": 410,
+      "identical_xyz_pressure_transitions": 12,
+      "pressure_range": [
+        0.0,
+        0.5529412031173706
+      ],
+      "zero_pressure_count": 24,
+      "native_xy_distance": 1906.1673663866443
+    },
+    "included_stroke": {
+      "entry_count": 398,
+      "first": [
+        25,
+        2.417182,
+        77583693,
+        2,
+        0.12156862765550613,
+        -1280.76953125,
+        230.10546875
+      ],
+      "last": [
+        422,
+        26.974779,
+        77585823,
+        1,
+        0.5058823823928833,
+        -1630.625,
+        553.96875
+      ],
+      "host_span_seconds": 24.557597875,
+      "input_timestamp_span_ticks": 2130,
+      "unique_timestamps": 234,
+      "delta_timestamp_ticks": {
+        "n": 397,
+        "min": 0,
+        "median": 1,
+        "p90": 9,
+        "max": 145,
+        "sum": 2130
+      },
+      "timestamp_regressions": 0,
+      "repeated_timestamp_transitions": 164,
+      "unique_xyz_pressure": 398,
+      "identical_xyz_pressure_transitions": 0,
+      "pressure_range": [
+        0.12156862765550613,
+        0.5529412031173706
+      ],
+      "zero_pressure_count": 0,
+      "native_xy_distance": 1613.901193233599
+    },
+    "excluded_before_begin": 24,
+    "native_event_kinds": {
+      "1": 421,
+      "3": 1,
+      "2": 1,
+      "4": 1
+    },
+    "input_phases": {
+      "1": 421,
+      "2": 1
+    },
+    "entry_spacing_host_seconds": {
+      "n": 421,
+      "min": 0.05638075000000242,
+      "median": 0.06079195799999937,
+      "p90": 0.06802029099999984,
+      "max": 0.13658195899999992,
+      "sum": 26.597828584
+    },
+    "stop_spacing_host_seconds": {
+      "n": 1267,
+      "min": 0.01750595799999921,
+      "median": 0.020176415999999975,
+      "p90": 0.023367542000002572,
+      "max": 0.09507833300000001,
+      "sum": 26.654327709000004
+    },
+    "entry_to_exit_host_seconds": {
+      "n": 422,
+      "min": 0.017603041000000985,
+      "median": 0.01997887499999962,
+      "p90": 0.021441249999995193,
+      "max": 0.029483832999998683,
+      "sum": 8.59713025900001
+    },
+    "progress_samples": [
+      [
+        50,
+        4.026803,
+        77584087,
+        1,
+        0.24313725531101227,
+        -1476.5546875,
+        268.7421875
+      ],
+      [
+        100,
+        7.16688,
+        77584241,
+        1,
+        0.4470588266849518,
+        -1563.5078125,
+        438.62890625
+      ],
+      [
+        150,
+        10.287129,
+        77584523,
+        1,
+        0.4588235318660736,
+        -1526.14453125,
+        599.48046875
+      ],
+      [
+        200,
+        13.364714,
+        77584775,
+        1,
+        0.45098039507865906,
+        -1423.802734375,
+        759.1875
+      ],
+      [
+        250,
+        16.445477,
+        77585015,
+        1,
+        0.4156862795352936,
+        -1457.234375,
+        880.12890625
+      ],
+      [
+        300,
+        19.520973,
+        77585306,
+        1,
+        0.43921568989753723,
+        -1607.59375,
+        953.45703125
+      ],
+      [
+        350,
+        22.554961,
+        77585479,
+        1,
+        0.5490196347236633,
+        -1756.16015625,
+        864.46875
+      ],
+      [
+        400,
+        25.601259,
+        77585721,
+        1,
+        0.5176470875740051,
+        -1712.20703125,
+        620.359375
+      ]
+    ],
+    "last_ten_inputs": [
+      [
+        413,
+        26.418741,
+        77585791,
+        1,
+        0.5137255191802979,
+        -1667.546875,
+        577.33203125
+      ],
+      [
+        414,
+        26.477483,
+        77585792,
+        1,
+        0.5098039507865906,
+        -1663.1953125,
+        573.95703125
+      ],
+      [
+        415,
+        26.537231,
+        77585792,
+        1,
+        0.5098039507865906,
+        -1658.78125,
+        570.7734375
+      ],
+      [
+        416,
+        26.597721,
+        77585792,
+        1,
+        0.5098039507865906,
+        -1654.171875,
+        567.58984375
+      ],
+      [
+        417,
+        26.658984,
+        77585797,
+        1,
+        0.5098039507865906,
+        -1649.5,
+        564.6015625
+      ],
+      [
+        418,
+        26.722238,
+        77585806,
+        1,
+        0.5098039507865906,
+        -1644.703125,
+        561.671875
+      ],
+      [
+        419,
+        26.784969,
+        77585811,
+        1,
+        0.5058823823928833,
+        -1639.96875,
+        559.0
+      ],
+      [
+        420,
+        26.851428,
+        77585812,
+        1,
+        0.5058823823928833,
+        -1635.16796875,
+        556.390625
+      ],
+      [
+        421,
+        26.914579,
+        77585817,
+        1,
+        0.5058823823928833,
+        -1632.896484375,
+        555.1796875
+      ],
+      [
+        422,
+        26.974779,
+        77585823,
+        1,
+        0.5058823823928833,
+        -1630.625,
+        553.96875
+      ]
+    ],
+    "last_error": {
+      "elapsed_seconds": 27.004988040999997,
+      "error": "CaptureError: capture_deadline_reached",
+      "kind": "capture_error",
+      "traceback": "Traceback (most recent call last):\n  File \"/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/tablet-manual-20261011T171306.937948Z-8cdfbb39/recorder/capture_tablet_stroke.py\", line 617, in run\n    recorder.capture(expected)\n  File \"/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/tablet-manual-20261011T171306.937948Z-8cdfbb39/recorder/capture_tablet_stroke.py\", line 532, in capture\n    last_stop = self.wait_capture_stop(last_stop)\n  File \"/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/tablet-manual-20261011T171306.937948Z-8cdfbb39/recorder/capture_live_contract.py\", line 224, in wait_capture_stop\n    self.budget()\n  File \"/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/tablet-manual-20261011T171306.937948Z-8cdfbb39/recorder/capture_live_contract.py\", line 145, in budget\n    require(not self.expired.is_set() and time.monotonic() < self.capture_deadline,\n  File \"/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/tablet-manual-20261011T171306.937948Z-8cdfbb39/recorder/capture_live_contract.py\", line 46, in require\n    raise CaptureError(message)\ncapture_live_contract.CaptureError: capture_deadline_reached\n"
+    },
+    "state_event_intervals": {
+      "reported_running_until_stop": {
+        "intervals": 1268,
+        "sum_seconds": 23.43091324699995,
+        "median_seconds": 0.017942562500000037,
+        "max_seconds": 0.21820920799999932
+      },
+      "reported_stopped_until_running": {
+        "intervals": 1268,
+        "sum_seconds": 3.443874961000046,
+        "median_seconds": 0.0021063334999986694,
+        "max_seconds": 0.012544500000000625
+      }
+    }
+  },
+  {
+    "folder": "tablet-manual-20261011T171422.944399Z-33211c35",
+    "summary": {
+      "elapsed_seconds": 27.144077,
+      "entries": 372,
+      "paired_calls": 371,
+      "confirmed_begin": true,
+      "input_end_seen": false,
+      "native_release_seen": false,
+      "fixture_complete": false,
+      "cleanup_errors": [],
+      "detach_request_succeeded": true,
+      "detached_state_observed": true,
+      "unmatched_entries": [
+        {
+          "call_id": 372,
+          "caller_family": "digitizer_normal",
+          "fpcr": 0,
+          "ignored_queue": false,
+          "output": 6169471168,
+          "phase": 6169471212,
+          "queue": 518407150848,
+          "sp": 6169471168,
+          "thread_id": 9595875,
+          "x30": 4331741236
+        }
+      ]
+    },
+    "all_input": {
+      "entry_count": 372,
+      "first": [
+        1,
+        0.309447,
+        77655698,
+        1,
+        0.019607843831181526,
+        -1371.625,
+        55.94921875
+      ],
+      "last": [
+        372,
+        26.75023,
+        77662655,
+        1,
+        0.45098039507865906,
+        -1982.01953125,
+        322.65625
+      ],
+      "host_span_seconds": 26.440783584000002,
+      "input_timestamp_span_ticks": 6957,
+      "unique_timestamps": 156,
+      "delta_timestamp_ticks": {
+        "n": 371,
+        "min": 0,
+        "median": 0,
+        "p90": 39,
+        "max": 1378,
+        "sum": 6957
+      },
+      "timestamp_regressions": 0,
+      "repeated_timestamp_transitions": 216,
+      "unique_xyz_pressure": 350,
+      "identical_xyz_pressure_transitions": 22,
+      "pressure_range": [
+        0.0,
+        0.6784313917160034
+      ],
+      "zero_pressure_count": 44,
+      "native_xy_distance": 2517.5793420747086
+    },
+    "included_stroke": {
+      "entry_count": 327,
+      "first": [
+        46,
+        4.07363,
+        77660711,
+        2,
+        0.04313725605607033,
+        -1620.8359375,
+        262.375
+      ],
+      "last": [
+        372,
+        26.75023,
+        77662655,
+        1,
+        0.45098039507865906,
+        -1982.01953125,
+        322.65625
+      ],
+      "host_span_seconds": 22.676600375000003,
+      "input_timestamp_span_ticks": 1944,
+      "unique_timestamps": 133,
+      "delta_timestamp_ticks": {
+        "n": 326,
+        "min": 0,
+        "median": 0.0,
+        "p90": 15,
+        "max": 151,
+        "sum": 1944
+      },
+      "timestamp_regressions": 0,
+      "repeated_timestamp_transitions": 194,
+      "unique_xyz_pressure": 327,
+      "identical_xyz_pressure_transitions": 0,
+      "pressure_range": [
+        0.04313725605607033,
+        0.6784313917160034
+      ],
+      "zero_pressure_count": 0,
+      "native_xy_distance": 2016.4874608100147
+    },
+    "excluded_before_begin": 45,
+    "native_event_kinds": {
+      "1": 371,
+      "3": 1,
+      "2": 1,
+      "4": 1
+    },
+    "input_phases": {
+      "1": 371,
+      "2": 1
+    },
+    "entry_spacing_host_seconds": {
+      "n": 371,
+      "min": 0.05652812499999982,
+      "median": 0.0655369580000027,
+      "p90": 0.0789037920000002,
+      "max": 0.4960817499999983,
+      "sum": 26.440783584000002
+    },
+    "stop_spacing_host_seconds": {
+      "n": 1117,
+      "min": 0.017652583000000277,
+      "median": 0.020671874999999673,
+      "p90": 0.027055750000002377,
+      "max": 0.3759931669999972,
+      "sum": 26.501411083
+    },
+    "entry_to_exit_host_seconds": {
+      "n": 372,
+      "min": 0.01760041700000059,
+      "median": 0.02032808299999722,
+      "p90": 0.025963250000000215,
+      "max": 0.20586887500000017,
+      "sum": 8.242820910999974
+    },
+    "progress_samples": [
+      [
+        50,
+        4.370208,
+        77660983,
+        1,
+        0.3450980484485626,
+        -1785.166015625,
+        276.060546875
+      ],
+      [
+        100,
+        8.350729,
+        77661506,
+        1,
+        0.364705890417099,
+        -1929.171875,
+        397.63671875
+      ],
+      [
+        150,
+        11.531471,
+        77661604,
+        1,
+        0.4431372582912445,
+        -1757.76171875,
+        561.41796875
+      ],
+      [
+        200,
+        14.719279,
+        77661859,
+        1,
+        0.6235294342041016,
+        -1793.20703125,
+        843.3359375
+      ],
+      [
+        250,
+        17.944646,
+        77662129,
+        1,
+        0.6627451181411743,
+        -2149.78515625,
+        836.65234375
+      ],
+      [
+        300,
+        21.35764,
+        77662295,
+        1,
+        0.6235294342041016,
+        -2206.21875,
+        488.91796875
+      ],
+      [
+        350,
+        24.615815,
+        77662554,
+        1,
+        0.49803921580314636,
+        -2015.93359375,
+        295.03125
+      ]
+    ],
+    "last_ten_inputs": [
+      [
+        363,
+        25.456194,
+        77662607,
+        1,
+        0.45490196347236633,
+        -1994.8828125,
+        304.703125
+      ],
+      [
+        364,
+        25.532323,
+        77662607,
+        1,
+        0.45490196347236633,
+        -1993.15234375,
+        306.61328125
+      ],
+      [
+        365,
+        25.591832,
+        77662608,
+        1,
+        0.45490196347236633,
+        -1991.4921875,
+        308.5859375
+      ],
+      [
+        366,
+        25.657383,
+        77662608,
+        1,
+        0.45098039507865906,
+        -1989.76171875,
+        310.6875
+      ],
+      [
+        367,
+        25.727486,
+        77662611,
+        1,
+        0.45098039507865906,
+        -1988.1640625,
+        312.8515625
+      ],
+      [
+        368,
+        25.828426,
+        77662612,
+        1,
+        0.45098039507865906,
+        -1986.5625,
+        315.08203125
+      ],
+      [
+        369,
+        25.897882,
+        77662621,
+        1,
+        0.45098039507865906,
+        -1985.02734375,
+        317.5625
+      ],
+      [
+        370,
+        25.965213,
+        77662638,
+        1,
+        0.45098039507865906,
+        -1984.259765625,
+        318.8046875
+      ],
+      [
+        371,
+        26.461295,
+        77662655,
+        1,
+        0.45098039507865906,
+        -1983.4921875,
+        320.046875
+      ],
+      [
+        372,
+        26.75023,
+        77662655,
+        1,
+        0.45098039507865906,
+        -1982.01953125,
+        322.65625
+      ]
+    ],
+    "last_error": {
+      "elapsed_seconds": 27.141361125,
+      "error": "CaptureError: capture_deadline_reached",
+      "kind": "capture_error",
+      "traceback": "Traceback (most recent call last):\n  File \"/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/tablet-manual-20261011T171422.944399Z-33211c35/recorder/capture_tablet_stroke.py\", line 617, in run\n    recorder.capture(expected)\n  File \"/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/tablet-manual-20261011T171422.944399Z-33211c35/recorder/capture_tablet_stroke.py\", line 549, in capture\n    callback(thread)\n  File \"/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/tablet-manual-20261011T171422.944399Z-33211c35/recorder/capture_tablet_stroke.py\", line 388, in exit\n    self.check_singleton()\n  File \"/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/tablet-manual-20261011T171422.944399Z-33211c35/recorder/capture_tablet_stroke.py\", line 270, in check_singleton\n    shared.require(self.singleton(shared.QUEUE_GLOBAL) == self.digitizer_queue,\n  File \"/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/tablet-manual-20261011T171422.944399Z-33211c35/recorder/capture_tablet_stroke.py\", line 267, in singleton\n    return struct.unpack('<Q', self.memory(self.load_address(file_address), 8))[0]\n  File \"/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/tablet-manual-20261011T171422.944399Z-33211c35/recorder/capture_live_contract.py\", line 149, in memory\n    self.budget()\n  File \"/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/tablet-manual-20261011T171422.944399Z-33211c35/recorder/capture_live_contract.py\", line 145, in budget\n    require(not self.expired.is_set() and time.monotonic() < self.capture_deadline,\n  File \"/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/tablet-manual-20261011T171422.944399Z-33211c35/recorder/capture_live_contract.py\", line 46, in require\n    raise CaptureError(message)\ncapture_live_contract.CaptureError: capture_deadline_reached\n"
+    },
+    "state_event_intervals": {
+      "reported_running_until_stop": {
+        "intervals": 1118,
+        "sum_seconds": 22.06712699599994,
+        "median_seconds": 0.018172707999999815,
+        "max_seconds": 0.15070516699999992
+      },
+      "reported_stopped_until_running": {
+        "intervals": 1117,
+        "sum_seconds": 4.585005546000062,
+        "median_seconds": 0.0021977909999986167,
+        "max_seconds": 0.4296387079999988
+      }
+    }
+  }
+]

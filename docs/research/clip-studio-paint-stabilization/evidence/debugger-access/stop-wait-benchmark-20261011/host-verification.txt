@@ -1,0 +1,52 @@
+(lldb) script import sys; sys.dont_write_bytecode=True; sys.path.insert(0,"docs/research/clip-studio-paint-stabilization/spikes/live-capture"); import check_capture_helper, check_tablet_stroke, check_post_correction, check_mouse_route; check_capture_helper.run_checks(); check_tablet_stroke.run_checks(); check_post_correction.run_checks(); check_mouse_route.run_checks(); import check_tablet_max_history; print("ALL_HOST_CHECKS_PASSED")
+PASS: host-only suppression/emission, saved-pointer reuse, bounded common queue snapshots, thread and SP pairing guards
+PASS: bounded notification waits have no polling sleep, ignore restarted events, reject foreign/terminal events, and check deadlines before and after waiting
+PASS: host-only delayed detach event, stale current state, matching process identity, and unobserved acknowledgement
+PASS: explicit executable/reference path configuration without temporary files
+No target behavior was tested.
+PASS: test_captured_hover_history_allows_begin_without_new_proximity_event
+PASS: test_config_reset_missing_pair_and_unexplained_state_changes_fail
+PASS: test_early_pressure_end_is_provisional_until_idle_continuation_and_release_return
+PASS: test_flush_requires_terminal_wrapper_completion
+PASS: test_hover_is_recorded_outside_fixture
+PASS: test_incomplete_history_and_failed_begin_cannot_be_certified
+PASS: test_input_phase_3_without_native_release_return_cannot_finish
+PASS: test_invalid_initial_history_and_history_count_mismatch_fail
+PASS: test_new_active_segment_after_early_pressure_end_is_rejected
+PASS: test_nonfinite_inputs_are_rejected_before_including_call
+PASS: test_normal_release_return_accepts_only_window_reset_to_initial_window
+PASS: test_normal_wrapper_flags_are_explicitly_recorded
+PASS: test_prefeed_can_complete_after_native_release_before_phase_3_input
+PASS: test_release_before_begin_does_not_certify_unrelated_pressure_end
+PASS: test_release_is_not_completion_until_final_emitted_phase
+PASS: test_release_window_reset_does_not_allow_other_mutations
+PASS: test_second_begin_or_nested_digitizer_call_is_rejected
+PASS: test_suppressed_call_is_saved_but_never_completes
+PASS: test_terminal_must_match_last_flush_result
+PASS: test_window_reset_before_final_phase_remains_rejected
+PASS: test_adapter_native_release_certifies_prefeed_without_phase_3_input
+PASS: test_adapter_reads_output_only_when_emitted_and_uses_saved_pointers
+PASS: test_adapter_records_ignored_gesture_pair_without_claiming_digitizer_start
+PASS: test_adapter_rejects_unknown_caller_changed_singleton_and_fpcr
+PASS: test_adapter_saves_caller_and_floating_point_mode_with_begin_pair
+PASS: test_adapter_terminal_preserves_final_wrapper_packet
+PASS: test_call_limit_is_failure_not_completion
+PASS: test_deque_extraction_crosses_blocks_and_preserves_oldest_first_bytes
+PASS: test_loaded_instruction_mismatch_is_recorded_and_rejected
+PASS: test_native_source_return_requires_thread_stack_and_verified_instruction
+test_closed_flag_does_not_follow_an_invented_ring (check_post_correction.PostTests) ... ok
+test_complete_graph_preserves_every_allocated_byte (check_post_correction.PostTests) ... ok
+test_count_limit_fails_without_silent_truncation (check_post_correction.PostTests) ... ok
+test_invalid_graph_is_rejected_and_partial_bytes_are_retained (check_post_correction.PostTests) ... ok
+test_pairing_rejects_wrong_thread_stack_holder_and_return_pointer (check_post_correction.PostTests) ... ok
+test_path_type_checks_vtable_without_constraining_node_flags (check_post_correction.PostTests) ... ok
+test_source_replacement_never_rereads_freed_source (check_post_correction.PostTests) ... ok
+test_unfinished_or_invalid_entry_cannot_complete (check_post_correction.PostTests) ... No target behavior, event timing, physical pen input, or pen feel was tested.
+PASS: 8 post capture host checks
+PASS: decoded packet, ordered mouse sequence, equal timestamps, and required up callback return
+PASS: click-only, missing down, timestamp regression, identity and packet-kind rejection
+PASS: final-return thread/SP pairing and event limit cannot certify incomplete capture
+No target behavior or native digitizer filter was tested.
+PASS: all 1000 initial history records extracted exactly across nine blocks; ten bounded host reads.
+No CSP process or native device was accessed.
+ALL_HOST_CHECKS_PASSED

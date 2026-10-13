@@ -1,0 +1,46 @@
+{
+  "brush-settings-after-capture.png": {
+    "bytes": 95444,
+    "sha256": "f9a623c2e9c4de00953669d7fca85055333b22019676f8f40c43ee58fef2a939"
+  },
+  "comparison-validated.json": {
+    "bytes": 1112558,
+    "sha256": "bfe8c3056c5e579cb4e5bf0ade2c277e80724ddd3b77733937c758201aab0767"
+  },
+  "comparison.json": {
+    "bytes": 1571,
+    "sha256": "f63a6313744428d584c712771e37b6a693ea4a6827520ea90909accba6761751"
+  },
+  "debugger.txt": {
+    "bytes": 214163,
+    "sha256": "3768091c8c76a5af8661e639729a3d7faa22ec5f8b1f9a17224e89cca4b40ede"
+  },
+  "diagnostic-ingestions.json": {
+    "bytes": 959447,
+    "sha256": "a69a31917783a9b7814b9dc53261cf6fb5663399ba59c65cf3401bf8c1626bdb"
+  },
+  "independent-observations.json": {
+    "bytes": 2155,
+    "sha256": "963b96c3c76e37cdd912ced3988e6869a4744889594ff1ee2457f313e7fb9ebc"
+  },
+  "operator-confirmation.json": {
+    "bytes": 1060,
+    "sha256": "7349cc96aa6e7609f9d4375a1f5a85dee0d4ea34d3282fa36e7b7219ef98d264"
+  },
+  "process-resume.json": {
+    "bytes": 197,
+    "sha256": "013f387f0e407ddc4d6911ac67080702ac3fd85763274ee6ee7a4f4d1b9f3855"
+  },
+  "runner-result.json": {
+    "bytes": 126,
+    "sha256": "6c1223655f5a4bcffbb77ed8d8a780d2ae296964d3cc6309bfe256dcef872a2d"
+  },
+  "session.json": {
+    "bytes": 1020,
+    "sha256": "20a4015212c0bfaa33b202356097aa2398c219e0d57266c37640035febad1378"
+  },
+  "tablet.jsonl": {
+    "bytes": 1916616,
+    "sha256": "cf3bb7c761de415dea8286c9a3b1249c26b91adcc7ed529ec6043f3e2464876a"
+  }
+}

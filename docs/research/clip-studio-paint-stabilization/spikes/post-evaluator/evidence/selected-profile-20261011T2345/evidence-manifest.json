@@ -1,0 +1,75 @@
+{
+  "schema": "selected-profile-evidence-manifest/v1",
+  "createdAt": "2026-10-11T23:17:33.312305+00:00",
+  "scope": "Local standalone original-instruction evidence; no native UI pressure capture",
+  "files": {
+    "10219455c.asm": {
+      "bytes": 575,
+      "sha256": "6c2c4fa1dcf33fa8c4139394e9b3c4dcacbc82d8c59275eae24ca681cb2d8172"
+    },
+    "1024a9bb4.asm": {
+      "bytes": 158,
+      "sha256": "8096130aa029533f048f4ff4302e5837baee6f70a99d26f0135a16776177fd8d"
+    },
+    "1024af6f0.asm": {
+      "bytes": 566,
+      "sha256": "55db463456de5d755c942ed0e8b65ba812e71b38d2aed7602df2562a67f50f0f"
+    },
+    "1024aff24.asm": {
+      "bytes": 2842,
+      "sha256": "d22f63809c1e6757955d5853f8220e13d1f7092111ec7df2387b0d4e79e5e087"
+    },
+    "1024c497c.asm": {
+      "bytes": 3136,
+      "sha256": "243c3b18427388604459ac8efeb38f633820f1da145c8d835a42fd343b838f29"
+    },
+    "10359b494.asm": {
+      "bytes": 1356,
+      "sha256": "f92d06dca90abc442d51ff37fe65f6e23b1e8d89e188645c0e4076d4a1c5dbe3"
+    },
+    "10359cf18.asm": {
+      "bytes": 2716,
+      "sha256": "9028709e8909d92724c37e265628e7b0678b595baa61ca839299a9b3e67dd9bb"
+    },
+    "10359de0c.asm": {
+      "bytes": 4302,
+      "sha256": "d3c4a8031802bd265f1b955e85354e02ab8710f0962320b20f1771f597cc5ee1"
+    },
+    "README.md": {
+      "bytes": 3143,
+      "sha256": "2be776677c8af00ee668cb0e19dacb1b8870f36cba05f650543421c7a03ccf48"
+    },
+    "compare.mts": {
+      "bytes": 3393,
+      "sha256": "9e3906d9f86a098ac85ccf07026b96284b9187f268c912e13d2b1a502ff47e20"
+    },
+    "comparison.json": {
+      "bytes": 284394,
+      "sha256": "2491244af0ff68b93c79758b9eee83728c7952e97d450f7ce3dfcedafdadba5d"
+    },
+    "inputs.json": {
+      "bytes": 2145622,
+      "sha256": "fa64cb5963f8929bf89c8e1a535cf6dcaf83072d458b5dedf88d371201013359"
+    },
+    "native-vectors.json": {
+      "bytes": 2212017,
+      "sha256": "565423f100a6df41096ab71c8e24482c5014482be40e27d91e7ced9099c6ef50"
+    },
+    "native.S": {
+      "bytes": 71061,
+      "sha256": "f4f9cdfa2bc390be444052967fb33fbc41e0bf4790afc37543808e829d9c0bcf"
+    },
+    "native.c": {
+      "bytes": 1970,
+      "sha256": "71b6357bb108ab068868eafecf88347d96300ba21a72b6a21bd4208eb103c66c"
+    },
+    "prepare.mts": {
+      "bytes": 4383,
+      "sha256": "6bd4ed7aad0a43b3d18a799a4d408f72cb0ce7eb9c53b89437d0115fadf4f4eb"
+    },
+    "run_native.py": {
+      "bytes": 1294,
+      "sha256": "11f89df03145514abe876ecadd8eb26abe382ff9d75d5e85b4a8fd96421f6f9d"
+    }
+  }
+}

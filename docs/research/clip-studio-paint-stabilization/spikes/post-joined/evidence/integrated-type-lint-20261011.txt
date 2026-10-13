@@ -1,0 +1,6 @@
+$ tsc -b
+$ oxlint --type-check
+Checking formatting...
+
+All matched files use the correct format.
+Finished in 18ms on 5 files using 18 threads.

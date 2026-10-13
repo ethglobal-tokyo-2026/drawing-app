@@ -1,0 +1,11 @@
+{
+  "command": [
+    "pnpm",
+    "--filter",
+    "frontend",
+    "test",
+    "--maxWorkers=2"
+  ],
+  "exitCode": 1,
+  "seconds": 93.88832937499683
+}

@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-11T19:45:33.976Z",
+  "implementation": "Shared reconstructed CSP queue with browser release adapter; fixed-helper rows isolate only averaging arithmetic",
+  "node": "v24.21.0",
+  "source_audit_head": "ebe0d143f134d7e28cd2da386044a8327f0fe10b",
+  "initial_spike_head": "52493b5618ec22291b32caa8fd1f803c15384416",
+  "replay_head": "ba97e86f8dc2a08e94e3d83f3a7c156f82d1b55d",
+  "files": [
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/stabilizer.ts",
+      "sha256": "b6da01bbb1b0876814260abdd5f5a7ec2ee299244d1daf753f026906d305b543"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/brush.ts",
+      "sha256": "975f6295ec53c8f094bded8c74917cfb7d91e2d2a15e5ed7dd083669f25efa5f"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/strokeCurve.ts",
+      "sha256": "7cfd4c10db149a1846570dad0fe33137f85014710cd362e8f681052d20ddd6c3"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/inkEngine.ts",
+      "sha256": "ec6c304469c96bb93ae896782932defc6fc1163414ce198b7d2744ebcd748784"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/layers/layerInk.ts",
+      "sha256": "2e7d1082f02ddc6b6058a4e7a708c8a72db023e807208747e5124ed84d48e4a7"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/layers/layerHistory.ts",
+      "sha256": "c1a8b3b281b5fff1ea6fad6de13182fc5783d80c496719c27945f1f251958b4e"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/layers/sheetDisplay.ts",
+      "sha256": "aa6d98a22d5b99ec4bba2eeb93cf027777b3d8b5e9f8764e13b82a8466334503"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/paintStroke.ts",
+      "sha256": "6604f45c8d482ee080bb6a2d2ac1b52a7a101216637f27d98c018f8ca38e3a12"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/stabilization/arithmetic.ts",
+      "sha256": "40e6bc7ece073c7e27fc244b16ed5e6e13693c6f2c9482f7c47f5112f7f35d5e"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/stabilization/binary64.ts",
+      "sha256": "f08af99e8b3ad726b030d803d17090a5133c3f5bd2b3b195106ce74d0b6c3ca4"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/stabilization/queue.ts",
+      "sha256": "ca2edc1909e4f506b1cf28f83a723a3e52f994cba86d265949975b0aedb9b432"
+    }
+  ]
+}

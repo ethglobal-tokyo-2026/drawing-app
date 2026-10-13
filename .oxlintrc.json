@@ -1,5 +1,12 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
+  // Saved research captures and scripts keep the exact bytes recorded in their verification hashes.
+  "ignorePatterns": [
+    "docs/research/**/evidence/**",
+    "docs/research/clip-studio-paint-stabilization/spikes/croquis-replay/results*/**",
+    "docs/research/clip-studio-paint-stabilization/spikes/post-joined/scripts/compare-attribute-distance.mjs",
+    "docs/research/clip-studio-paint-stabilization/spikes/post-joined/scripts/production-smoke.mjs"
+  ],
   "plugins": ["react", "typescript", "oxc"],
   "options": { "typeAware": true },
   // oxlint defaults correctness to "warn", and lint-staged hides the output of passing tasks,

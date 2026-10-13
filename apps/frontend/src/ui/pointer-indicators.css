@@ -1,0 +1,73 @@
+/* The recording indicators stay above the app's sheets and never take a press. */
+.pointer-indicators {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-pointer-indicators);
+  pointer-events: none;
+}
+
+.pointer-indicators__cursor,
+.pointer-indicators__ripple {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 20px;
+  height: 20px;
+  margin: -10px;
+  pointer-events: none;
+}
+
+.pointer-indicators__cursor {
+  box-sizing: border-box;
+  border: 1.5px solid color-mix(in srgb, var(--blue) 75%, var(--canvas));
+  border-radius: 50%;
+}
+
+.pointer-indicators__cursor[data-contact] {
+  background: color-mix(in srgb, var(--blue) 18%, transparent);
+}
+
+.pointer-indicators__ripple::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--blue) 70%, var(--canvas));
+  border-radius: 50%;
+  animation:
+    pointer-indicators-ripple 420ms var(--ease-out) both,
+    pointer-indicators-fade 420ms linear both;
+}
+
+@keyframes pointer-indicators-ripple {
+  /* Growing the bounds keeps the stroke thin through the whole ripple. */
+  from {
+    inset: 2.5px;
+  }
+  to {
+    inset: -18px;
+  }
+}
+
+/* One position ring on the sheet while recording; the usual brush preview returns when off. */
+body:has(.pointer-indicators) .nib-ring {
+  visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pointer-indicators__ripple::after {
+    animation-name: pointer-indicators-fade;
+    animation-duration: 200ms;
+    animation-timing-function: linear;
+  }
+}
+
+@keyframes pointer-indicators-fade {
+  from,
+  25% {
+    opacity: 0.9;
+  }
+  to {
+    opacity: 0;
+  }
+}

@@ -465,7 +465,7 @@ export function ArtistBoard({ person, onBack }: Props) {
               r: peeked.placement.r,
             }}
             board={size}
-            knobBelow={false}
+            art={peeked}
             trayEdge={0}
             reduced={reduced}
             onDone={subjectsPeek.end}

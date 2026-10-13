@@ -1,0 +1,93 @@
+{
+  "scope": "fixed-window fractional-history arithmetic diagnosis only",
+  "python": "3.15.0 (main, Oct  9 2026, 11:16:41) [Clang 21.0.0 (clang-2100.3.34.2)]",
+  "script_sha256": "62315d138ba4c73778a3a59bdeb521a0e3332ff0d330e3843412b3665b56962d",
+  "captures": [
+    {
+      "capture": "tablet-manual-20261011T171306.937948Z-8cdfbb39",
+      "source_sha256": "457dc2855e5e8a3eb667abd6233d8df2b67b74c522312a9377f236781533bc5f",
+      "original_fixture_complete": false,
+      "original_stop_reason": "CaptureError: capture_deadline_reached",
+      "recorded_ingestion_pair_count": 398,
+      "nonfused_differences": [
+        {
+          "call_id": 48,
+          "field": "pressure",
+          "window": 13.262190625,
+          "fraction": 0.26219062500000057,
+          "sum_before_fraction": 2.615686312317848,
+          "older_sample_value": 0.20000000298023224,
+          "predicted_bits": "0x3fc9c05b83e822ed",
+          "actual_bits": "0x3fc9c05b83e822ec"
+        },
+        {
+          "call_id": 83,
+          "field": "x",
+          "window": 19.714878434348968,
+          "fraction": 0.714878434348968,
+          "sum_before_fraction": -29218.8671875,
+          "older_sample_value": -1515.07421875,
+          "predicted_bits": "0xc098040a0533b228",
+          "actual_bits": "0xc098040a0533b227"
+        }
+      ],
+      "fused_differences": []
+    },
+    {
+      "capture": "tablet-manual-20261011T171422.944399Z-33211c35",
+      "source_sha256": "944b7d16933eaef5d787493de2ed7f61ed6c95faa2236761440ca755a6723947",
+      "original_fixture_complete": false,
+      "original_stop_reason": "CaptureError: capture_deadline_reached",
+      "recorded_ingestion_pair_count": 327,
+      "nonfused_differences": [
+        {
+          "call_id": 68,
+          "field": "pressure",
+          "window": 12.8549375,
+          "fraction": 0.8549375000000001,
+          "sum_before_fraction": 4.094117760658264,
+          "older_sample_value": 0.34117648005485535,
+          "predicted_bits": "0x3fd5d5d5dfffffff",
+          "actual_bits": "0x3fd5d5d5e0000001"
+        },
+        {
+          "call_id": 77,
+          "field": "pressure",
+          "window": 15.86657916720495,
+          "fraction": 0.8665791672049501,
+          "sum_before_fraction": 5.196078568696976,
+          "older_sample_value": 0.34117648005485535,
+          "predicted_bits": "0x3fd626d313dbc3f6",
+          "actual_bits": "0x3fd626d313dbc3f5"
+        },
+        {
+          "call_id": 79,
+          "field": "pressure",
+          "window": 16.367087698402468,
+          "fraction": 0.367087698402468,
+          "sum_before_fraction": 5.576470732688904,
+          "older_sample_value": 0.34117648005485535,
+          "predicted_bits": "0x3fd64b9aa4241aff",
+          "actual_bits": "0x3fd64b9aa4241afe"
+        },
+        {
+          "call_id": 95,
+          "field": "y",
+          "window": 18.960931742542094,
+          "fraction": 0.960931742542094,
+          "sum_before_fraction": 6527.6015625,
+          "older_sample_value": 335.640625,
+          "predicted_bits": "0x4076946a6f525bd6",
+          "actual_bits": "0x4076946a6f525bd5"
+        }
+      ],
+      "fused_differences": []
+    }
+  ],
+  "limitations": [
+    "Both original captures remain incomplete and fail the complete-capture contract.",
+    "The latest final raw exit exists, but the recorder deadline interrupts its subsequent bookkeeping.",
+    "No target attachment, target replay, curve correction, pen-lift validation, or pen-feel test is performed.",
+    "No shared replay/reference implementation or raw evidence is modified."
+  ]
+}

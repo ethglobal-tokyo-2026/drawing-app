@@ -1,0 +1,17 @@
+✔ distance examines only the nearest vertex's adjacent segments (16.777625ms)
+✔ equally near vertices keep the first vertex (10.739333ms)
+✔ projection ties retain the following segment's parameter (1.764625ms)
+✔ preceding segments can improve distance and parameter (1.770209ms)
+✔ endpoint, interior, and degenerate projection arithmetic (64.505542ms)
+✔ one-sample distance is DBL_MAX while its parameter is positive zero (46.118125ms)
+✔ quadratic correction sampling uses four minimum intervals and exact final time (110.076542ms)
+✔ sampling truncates counts and applies ARM signed conversion before the bounds (261.093417ms)
+✔ all standalone native sampling and projection vectors match every output bit (1557.07875ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4698.5025

@@ -1,0 +1,25 @@
+{
+  "nativeFixtureSha256": "037832a0f3980fa87368cf6e8d24a8ee2157fb34f4ce32e5ae44aba6af009f78",
+  "sourceSha256": {
+    "arithmetic.ts": "40e6bc7ece073c7e27fc244b16ed5e6e13693c6f2c9482f7c47f5112f7f35d5e",
+    "queue.ts": "0b5f89c67ca9cbe9bce8ef82cfa780f16ced76f0b62de59a035bbde528834232"
+  },
+  "nativeComparison": {
+    "cases": 450,
+    "modes": {
+      "fixed": 144,
+      "fast": 144,
+      "slow": 162
+    },
+    "subunitSlow": 24,
+    "differences": []
+  },
+  "productionReachability": {
+    "sequences": 909,
+    "ingestions": 43632,
+    "belowOne": 928,
+    "failures": [],
+    "elapsedMilliseconds": 162.575833
+  },
+  "scope": "Original native window/configuration instructions only, with synthetic deque storage. Production probe exercises contact ingestion, not a native capture or browser release test."
+}

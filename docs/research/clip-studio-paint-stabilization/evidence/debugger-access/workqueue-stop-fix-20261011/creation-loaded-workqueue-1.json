@@ -1,0 +1,475 @@
+{
+  "mode": "workqueue",
+  "stops": [
+    {
+      "elapsed_seconds": 0.15986170899999985,
+      "stop_id": 14,
+      "threads": [
+        {
+          "thread_id": 10307165,
+          "first_seen": true,
+          "reason": 3,
+          "data": [
+            2,
+            1
+          ],
+          "pc": "0x19cf4e9e8",
+          "function": "__workq_kernreturn",
+          "module": "/usr/lib/system/libsystem_kernel.dylib",
+          "description": "breakpoint 2.1",
+          "registers": {
+            "x0": "0x0000000000000400",
+            "x1": "0x000000016b7673d8",
+            "x2": "0x0000000000000018",
+            "x3": "0x0000000000000000",
+            "sp": "0x000000016b7673d0",
+            "cpsr": "0x60000000"
+          },
+          "instruction_bytes_le": "011000d4"
+        }
+      ],
+      "samples_bytes_le": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "elapsed_seconds": 0.166607167,
+      "stop_id": 16,
+      "threads": [
+        {
+          "thread_id": 10307165,
+          "first_seen": false,
+          "reason": 3,
+          "data": [
+            2,
+            1
+          ],
+          "pc": "0x19cf4e9e8",
+          "function": "__workq_kernreturn",
+          "module": "/usr/lib/system/libsystem_kernel.dylib",
+          "description": "breakpoint 2.1",
+          "registers": {
+            "x0": "0x0000000000000020",
+            "x1": "0x0000000000000000",
+            "x2": "0x0000000000000001",
+            "x3": "0x00000000000010ff",
+            "sp": "0x000000016b767490",
+            "cpsr": "0x60000000"
+          },
+          "instruction_bytes_le": "011000d4"
+        }
+      ],
+      "samples_bytes_le": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "elapsed_seconds": 0.17494324999999966,
+      "stop_id": 19,
+      "threads": [
+        {
+          "thread_id": 10307165,
+          "first_seen": false,
+          "reason": 1,
+          "data": [],
+          "pc": "0x19cf50308",
+          "function": "__semwait_signal",
+          "module": "/usr/lib/system/libsystem_kernel.dylib",
+          "description": "",
+          "registers": {
+            "x0": "0x000000000000003c",
+            "x1": "0x0000000000000000",
+            "x2": "0x0000000000000001",
+            "x3": "0x0000000000000001",
+            "sp": "0x000000016b7674b0",
+            "cpsr": "0xa0000000"
+          },
+          "instruction_bytes_le": "03010054"
+        },
+        {
+          "thread_id": 10307276,
+          "first_seen": true,
+          "reason": 3,
+          "data": [
+            2,
+            1
+          ],
+          "pc": "0x19cf4e9e8",
+          "function": "__workq_kernreturn",
+          "module": "/usr/lib/system/libsystem_kernel.dylib",
+          "description": "breakpoint 2.1",
+          "registers": {
+            "x0": "0x0000000000000020",
+            "x1": "0x0000000000000000",
+            "x2": "0x0000000000000001",
+            "x3": "0x00000000000010ff",
+            "sp": "0x000000016b7eeeb0",
+            "cpsr": "0x60000000"
+          },
+          "instruction_bytes_le": "011000d4"
+        }
+      ],
+      "samples_bytes_le": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "elapsed_seconds": 0.18609370899999966,
+      "stop_id": 22,
+      "threads": [
+        {
+          "thread_id": 10307165,
+          "first_seen": false,
+          "reason": 1,
+          "data": [],
+          "pc": "0x19cf50308",
+          "function": "__semwait_signal",
+          "module": "/usr/lib/system/libsystem_kernel.dylib",
+          "description": "",
+          "registers": {
+            "x0": "0x0000000000001f03",
+            "x1": "0x0000000000000000",
+            "x2": "0x0000000000000001",
+            "x3": "0x0000000000000001",
+            "sp": "0x000000016b7674b0",
+            "cpsr": "0x80000000"
+          },
+          "instruction_bytes_le": "03010054"
+        },
+        {
+          "thread_id": 10307276,
+          "first_seen": false,
+          "reason": 1,
+          "data": [],
+          "pc": "0x19cf4cc20",
+          "function": "mach_msg2_trap",
+          "module": "/usr/lib/system/libsystem_kernel.dylib",
+          "description": "",
+          "registers": {
+            "x0": "0x0000000000000000",
+            "x1": "0x0000000200000003",
+            "x2": "0x0000002800001513",
+            "x3": "0x00001b0300000203",
+            "sp": "0x000000016b7eed70",
+            "cpsr": "0x80000000"
+          },
+          "instruction_bytes_le": "c0035fd6"
+        },
+        {
+          "thread_id": 10307279,
+          "first_seen": true,
+          "reason": 3,
+          "data": [
+            2,
+            1
+          ],
+          "pc": "0x19cf4e9e8",
+          "function": "__workq_kernreturn",
+          "module": "/usr/lib/system/libsystem_kernel.dylib",
+          "description": "breakpoint 2.1",
+          "registers": {
+            "x0": "0x0000000000000020",
+            "x1": "0x0000000000000000",
+            "x2": "0x0000000000000001",
+            "x3": "0x00000000000010ff",
+            "sp": "0x000000016b87aeb0",
+            "cpsr": "0x60000000"
+          },
+          "instruction_bytes_le": "011000d4"
+        }
+      ],
+      "samples_bytes_le": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "elapsed_seconds": 0.19672004199999993,
+      "stop_id": 25,
+      "threads": [
+        {
+          "thread_id": 10307165,
+          "first_seen": false,
+          "reason": 1,
+          "data": [],
+          "pc": "0x19cf50308",
+          "function": "__semwait_signal",
+          "module": "/usr/lib/system/libsystem_kernel.dylib",
+          "description": "",
+          "registers": {
+            "x0": "0x0000000000001f03",
+            "x1": "0x0000000000000000",
+            "x2": "0x0000000000000001",
+            "x3": "0x0000000000000001",
+            "sp": "0x000000016b7674b0",
+            "cpsr": "0x80000000"
+          },
+          "instruction_bytes_le": "03010054"
+        },
+        {
+          "thread_id": 10307276,
+          "first_seen": false,
+          "reason": 1,
+          "data": [],
+          "pc": "0x19cf4cc20",
+          "function": "mach_msg2_trap",
+          "module": "/usr/lib/system/libsystem_kernel.dylib",
+          "description": "",
+          "registers": {
+            "x0": "0x0000000000000000",
+            "x1": "0x0000000200000003",
+            "x2": "0x0000002800001513",
+            "x3": "0x00001b0300000203",
+            "sp": "0x000000016b7eed70",
+            "cpsr": "0x80000000"
+          },
+          "instruction_bytes_le": "c0035fd6"
+        },
+        {
+          "thread_id": 10307279,
+          "first_seen": false,
+          "reason": 1,
+          "data": [],
+          "pc": "0x19cf4e9ec",
+          "function": "__workq_kernreturn",
+          "module": "/usr/lib/system/libsystem_kernel.dylib",
+          "description": "",
+          "registers": {
+            "x0": "0x0000000000000000",
+            "x1": "0x0000000000000000",
+            "x2": "0x0000000000000001",
+            "x3": "0x00000000000010ff",
+            "sp": "0x000000016b87aeb0",
+            "cpsr": "0x40000000"
+          },
+          "instruction_bytes_le": "03010054"
+        },
+        {
+          "thread_id": 10307282,
+          "first_seen": true,
+          "reason": 3,
+          "data": [
+            2,
+            1
+          ],
+          "pc": "0x19cf4e9e8",
+          "function": "__workq_kernreturn",
+          "module": "/usr/lib/system/libsystem_kernel.dylib",
+          "description": "breakpoint 2.1",
+          "registers": {
+            "x0": "0x0000000000000020",
+            "x1": "0x0000000000000000",
+            "x2": "0x0000000000000001",
+            "x3": "0x00000000000010ff",
+            "sp": "0x000000016b906eb0",
+            "cpsr": "0x60000000"
+          },
+          "instruction_bytes_le": "011000d4"
+        }
+      ],
+      "samples_bytes_le": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "elapsed_seconds": 0.21221570899999964,
+      "stop_id": 28,
+      "threads": [
+        {
+          "thread_id": 10307165,
+          "first_seen": false,
+          "reason": 1,
+          "data": [],
+          "pc": "0x19cf4eaf4",
+          "function": "__ulock_wait",
+          "module": "/usr/lib/system/libsystem_kernel.dylib",
+          "description": "",
+          "registers": {
+            "x0": "0x0000000001000001",
+            "x1": "0x0000000104db8ae4",
+            "x2": "0x0000000000000000",
+            "x3": "0x00000000001e8480",
+            "sp": "0x000000016b767440",
+            "cpsr": "0x80000000"
+          },
+          "instruction_bytes_le": "03010054"
+        },
+        {
+          "thread_id": 10307276,
+          "first_seen": false,
+          "reason": 3,
+          "data": [
+            2,
+            1
+          ],
+          "pc": "0x19cf4e9e8",
+          "function": "__workq_kernreturn",
+          "module": "/usr/lib/system/libsystem_kernel.dylib",
+          "description": "breakpoint 2.1",
+          "registers": {
+            "x0": "0x0000000000000004",
+            "x1": "0x0000000000000000",
+            "x2": "0x0000000000000000",
+            "x3": "0x0000000000000000",
+            "sp": "0x000000016b7eefc0",
+            "cpsr": "0x80000000"
+          },
+          "instruction_bytes_le": "011000d4"
+        },
+        {
+          "thread_id": 10307279,
+          "first_seen": false,
+          "reason": 3,
+          "data": [
+            2,
+            1
+          ],
+          "pc": "0x19cf4e9e8",
+          "function": "__workq_kernreturn",
+          "module": "/usr/lib/system/libsystem_kernel.dylib",
+          "description": "breakpoint 2.1",
+          "registers": {
+            "x0": "0x0000000000000004",
+            "x1": "0x0000000000000000",
+            "x2": "0x0000000000000000",
+            "x3": "0x0000000000000000",
+            "sp": "0x000000016b87afc0",
+            "cpsr": "0x80000000"
+          },
+          "instruction_bytes_le": "011000d4"
+        },
+        {
+          "thread_id": 10307282,
+          "first_seen": false,
+          "reason": 3,
+          "data": [
+            2,
+            1
+          ],
+          "pc": "0x19cf4e9e8",
+          "function": "__workq_kernreturn",
+          "module": "/usr/lib/system/libsystem_kernel.dylib",
+          "description": "breakpoint 2.1",
+          "registers": {
+            "x0": "0x0000000000000004",
+            "x1": "0x0000000000000000",
+            "x2": "0x0000000000000000",
+            "x3": "0x0000000000000000",
+            "sp": "0x000000016b906fc0",
+            "cpsr": "0x80000000"
+          },
+          "instruction_bytes_le": "011000d4"
+        },
+        {
+          "thread_id": 10307284,
+          "first_seen": true,
+          "reason": 1,
+          "data": [],
+          "pc": "0x19cf4cb9c",
+          "function": "semaphore_wait_trap",
+          "module": "/usr/lib/system/libsystem_kernel.dylib",
+          "description": "",
+          "registers": {
+            "x0": "0x0000000000000000",
+            "x1": "0xffffffffffffffff",
+            "x2": "0x000000000000010c",
+            "x3": "0x0000000000244005",
+            "sp": "0x000000016b992e60",
+            "cpsr": "0x60000000"
+          },
+          "instruction_bytes_le": "c0035fd6"
+        }
+      ],
+      "samples_bytes_le": "0000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "events": [
+    {
+      "elapsed_seconds": 0.1556614169999997,
+      "state": 6,
+      "restarted": false
+    },
+    {
+      "elapsed_seconds": 0.1598520419999998,
+      "state": 5,
+      "restarted": false
+    },
+    {
+      "elapsed_seconds": 0.16156362499999988,
+      "state": 6,
+      "restarted": false
+    },
+    {
+      "elapsed_seconds": 0.1665950839999999,
+      "state": 5,
+      "restarted": false
+    },
+    {
+      "elapsed_seconds": 0.16778174999999962,
+      "state": 6,
+      "restarted": false
+    },
+    {
+      "elapsed_seconds": 0.17493395899999964,
+      "state": 5,
+      "restarted": false
+    },
+    {
+      "elapsed_seconds": 0.17688241699999985,
+      "state": 6,
+      "restarted": false
+    },
+    {
+      "elapsed_seconds": 0.18608554199999983,
+      "state": 5,
+      "restarted": false
+    },
+    {
+      "elapsed_seconds": 0.18832804199999975,
+      "state": 6,
+      "restarted": false
+    },
+    {
+      "elapsed_seconds": 0.1967023339999998,
+      "state": 5,
+      "restarted": false
+    },
+    {
+      "elapsed_seconds": 0.20006445900000003,
+      "state": 6,
+      "restarted": false
+    },
+    {
+      "elapsed_seconds": 0.21220745900000004,
+      "state": 5,
+      "restarted": false
+    },
+    {
+      "elapsed_seconds": 0.21747999999999967,
+      "state": 6,
+      "restarted": false
+    }
+  ],
+  "expected_retired_stops": 8,
+  "unexpected_stops_are_fatal": true,
+  "bootstrap_stops": [
+    {
+      "thread_id": 10307165,
+      "reason": 3,
+      "data": [
+        1,
+        1
+      ],
+      "pc": "0x1046985d0",
+      "function": "main"
+    }
+  ],
+  "probes": [
+    {
+      "label": "creation_syscall",
+      "address": "0x19cf4e9e8",
+      "breakpoint_id": 2
+    },
+    {
+      "label": "sample_retired",
+      "address": "0x104698598",
+      "breakpoint_id": 3
+    }
+  ],
+  "system_symbol": "__workq_kernreturn",
+  "system_instruction_bytes_le": "011000d4",
+  "retired_stops": 0,
+  "error": "RuntimeError('Creation experiment deadline exceeded')",
+  "elapsed_seconds": 20.2728775,
+  "cleanup_errors": [],
+  "kill_error": "success"
+}

@@ -1,0 +1,46 @@
+{
+  "schema": "csp-research-files/v1",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 2906,
+      "sha256": "888fc17de2f74f1a736f4b3cbb9dd3b9ea913add422ed7c926999bea07213077"
+    },
+    {
+      "path": "pid-21351-lldb.txt",
+      "bytes": 2526,
+      "sha256": "530c1dc5e4d7900f0f248aaed9003168a8c5e8e255e92a3afe7a6c832591468e"
+    },
+    {
+      "path": "pid-21351-report.json",
+      "bytes": 882,
+      "sha256": "b317b1e9d3390d2f0d9e9a48b82308062e0860814504544a20856cea9babc931"
+    },
+    {
+      "path": "pid-21351.jsonl",
+      "bytes": 4556,
+      "sha256": "a8abab9fc6507fe957287456e2d5758f33a0467fc20b05860e0f98be2eca4c74"
+    },
+    {
+      "path": "pid-21626-lldb.txt",
+      "bytes": 2522,
+      "sha256": "9367fb8ac106a99b05d037e508079ad2ce2694a2cc0823095544c2d4d610b88f"
+    },
+    {
+      "path": "pid-21626-report.json",
+      "bytes": 882,
+      "sha256": "b317b1e9d3390d2f0d9e9a48b82308062e0860814504544a20856cea9babc931"
+    },
+    {
+      "path": "pid-21626.jsonl",
+      "bytes": 4553,
+      "sha256": "8291d2b978abb5e7af075c8264b5dcc6c407b102fd202667eafe75111f72e846"
+    },
+    {
+      "path": "process-resume.txt",
+      "bytes": 375,
+      "sha256": "503aef657c8db28e5dc2b1fc6fdd775840d06c3f4927698387d81d6b35fc81a5"
+    }
+  ],
+  "scope": "Saved native capture evidence and analysis; manifest excludes itself."
+}

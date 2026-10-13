@@ -16,6 +16,8 @@ import { traySlots } from "./traySlots";
 /** What the board asks of its sticker tray, all in board pixels. */
 export interface StickerTrayHandle {
   readonly isOpen: boolean;
+  /** A sheet is out over the board or returning to the tray, so board taps leave it alone. */
+  readonly hasPulledSheet: boolean;
   open: () => Promise<boolean>;
   close: () => Promise<boolean>;
   /** Each move of a board sticker being dragged; null when the tray doesn't hold it. */
@@ -149,6 +151,9 @@ export const StickerTray = memo(function StickerTray({
     () => ({
       get isOpen() {
         return engine.current?.isOpen ?? false;
+      },
+      get hasPulledSheet() {
+        return engine.current?.hasPulledSheet ?? false;
       },
       open: () => engine.current?.open() ?? Promise.resolve(false),
       close: () => engine.current?.close() ?? Promise.resolve(false),

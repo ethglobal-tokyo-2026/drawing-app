@@ -1,9 +1,11 @@
 import type { KyotoSeikaSubject } from "@drawing-app/api/client";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "../i18n/react";
 import { SubjectThought } from "../kyoto-seika/SubjectThought";
 import { thoughtLayout } from "../kyoto-seika/thoughtLayout";
 import { knobBox, type Box } from "./placement";
 import { THOUGHT_INSET_PX, thoughtPlacement, type ThoughtSpot } from "./thoughtPlacement";
+import { outlineShape } from "./tray/sheetPacking";
 import "./thought-layer.css";
 
 /** What a peek keeps clear of besides the sticker's knob: its toolbar, the header's controls, the board's key and the tabs. */
@@ -13,9 +15,11 @@ interface Props {
   subjects: readonly [KyotoSeikaSubject, KyotoSeikaSubject];
   /** The selected sticker's center, size and turn, in board pixels. */
   sticker: { x: number; y: number; w: number; h: number; r: number };
+  /** The image's cut line, when the board has read it. */
+  art: { outline?: string; width: number; height: number };
   board: { W: number; H: number };
-  /** Whether its rotate knob hangs below it. */
-  knobBelow: boolean;
+  /** Whether its rotate knob hangs below it; absent on someone else's board. */
+  knobBelow?: boolean;
   /** How much of the board's right edge the sticker tray takes. */
   trayEdge: number;
   reduced: boolean;
@@ -29,6 +33,7 @@ interface Props {
 export function ThoughtLayer({
   subjects,
   sticker,
+  art,
   board,
   knobBelow,
   trayEdge,
@@ -37,12 +42,21 @@ export function ThoughtLayer({
 }: Props) {
   const layer = useRef<HTMLDivElement>(null);
   const [spot, setSpot] = useState<ThoughtSpot | null>(null);
+  const { i18n } = useTranslation();
+  const language = i18n.resolvedLanguage;
+  const cut = useMemo(
+    () =>
+      art.outline
+        ? outlineShape(art.outline, art.width, art.height).poly.map(([x, y]) => ({ x, y }))
+        : undefined,
+    [art.outline, art.width, art.height],
+  );
 
   const { x, y, w, h, r } = sticker;
   const { W, H } = board;
   // After the toolbar's own layout effect, which puts it beside the sticker.
   useLayoutEffect(() => {
-    const at = { x, y, w, h, r };
+    const at = { x, y, w, h, r, cut };
     const el = layer.current;
     const face = el?.parentElement;
     if (!el || !face) return;
@@ -59,7 +73,7 @@ export function ThoughtLayer({
       return r && r.width > 0 && r.height > 0 ? [onBoard(r)] : [];
     };
     const avoid = [
-      knobBox(at, knobBelow),
+      ...(knobBelow === undefined ? [] : [knobBox(at, knobBelow)]),
       ...CLEAR_OF.flatMap((selector) => shown(face.querySelector(selector))),
       ...shown(document.querySelector(".tabs")),
     ];
@@ -71,7 +85,7 @@ export function ThoughtLayer({
         avoid,
       }),
     );
-  }, [subjects, x, y, w, h, r, W, H, knobBelow, trayEdge]);
+  }, [subjects, x, y, w, h, r, cut, W, H, knobBelow, trayEdge, language]);
 
   return (
     <div ref={layer} className="thought-layer" aria-hidden="true">
@@ -81,6 +95,7 @@ export function ThoughtLayer({
           size="peek"
           toward={spot.toward}
           at={{ x: spot.left, y: spot.top }}
+          trails={spot.trails}
           reduced={reduced}
           onDone={onDone}
         />

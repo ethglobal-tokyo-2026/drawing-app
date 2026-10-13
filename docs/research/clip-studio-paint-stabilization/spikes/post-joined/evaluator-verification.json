@@ -1,0 +1,25 @@
+{
+  "scope": "Host contract and decoder verification; no live process or native configuration observation",
+  "createdUtc": "2026-10-11T22:33:47.043192+00:00",
+  "passed": {
+    "standalonePythonHostTests": 13,
+    "lldbHostRecorderTests": 11,
+    "typescriptDecoderReplayAnalyzerTests": 28,
+    "strictTypeScript": true
+  },
+  "syntheticMemoryFixture": "evaluator-memory-fixture.json",
+  "nativeProcessAccess": false,
+  "sha256": {
+    "live-capture/post_evaluator_capture.py": "ebf20e8500538f296729a2d03a55db6b6bddaea0501fd5797e8bd6c7cb1aa399",
+    "live-capture/check_post_evaluator_capture.py": "58e289ca0a330a3026b686a3c814f89274417f7ab474f9d6f99c4d75ccd89538",
+    "live-capture/capture_post_correction.py": "1840032ba2b30ec5da1356e143c51a8528a9ed342393d0aebd39929252c01a44",
+    "live-capture/check_post_correction.py": "043049e88725da4e117d387cad1bb298de2893e51e5826bab79639d47a0a34df",
+    "post-joined/evaluator.ts": "4c0f533342c6ac567b4b5b81b6d48b703c456c03abd1404ad4e7db9c3981654d",
+    "post-joined/evaluator.test.ts": "6241af79519e528924736214d5452069330896cc8a394864bcab2a0aa8606c28",
+    "post-joined/evaluator-memory-fixture.json": "b2a64882738e813ac978b4c282586b01b02974ce9a419eb74ccdbb3d5532b4da",
+    "post-joined/evaluator-snapshot.md": "b20f2a7db6742cb74b2e6dc5023e01324253e8ab8689e83731a75ebd882ebc01",
+    "post-pipeline/replay.ts": "e218d1778f8834da5906ac221a952e77d19c9481e1055a6b7bb5c23f72d82b21",
+    "post-pipeline/replay.test.ts": "4cbd3e448638eaa942d3f7edf29d5dd27a6a2ef6978ff4cb765cf9159b446ce1",
+    "post-replay/schema.ts": "cf431aacd5cce85ce0cfbda5ad75f09b31996d588f759e0bb4ed6eae09635db0"
+  }
+}

@@ -1,0 +1,8 @@
+{"name":"young second finger, no live contact","events":["draw","gesture",null,"undo"]}
+{"name":"young second finger, provisional Fill supplied","events":["draw","cancel-stroke",null,"undo"]}
+{"name":"27 px Fill then second finger, no live contact","events":["draw","gesture",null,"undo"]}
+{"name":"27 px Fill then second finger, accepted Fill supplied","events":["draw","ignore",null,null]}
+{"name":"stationary first finger, second at 261 ms","events":["draw","draw",null,null]}
+{"name":"three young fingers","events":["draw","cancel-stroke","gesture",null,null,"redo"]}
+{"name":"palm rests while two fingers tap","events":["ignore","draw","cancel-stroke",null,"undo",null]}
+{"name":"third finger after accepted Fill and ignored second","events":["draw","ignore","ignore",null,null,null]}

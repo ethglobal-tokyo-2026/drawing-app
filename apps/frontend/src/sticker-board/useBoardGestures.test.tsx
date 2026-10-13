@@ -42,6 +42,7 @@ const noTray: RefObject<StickerTrayHandle | null> = { current: null };
 const trayWith = (overrides: Partial<StickerTrayHandle>): RefObject<StickerTrayHandle | null> => ({
   current: {
     isOpen: false,
+    hasPulledSheet: false,
     open: () => Promise.resolve(false),
     close: () => Promise.resolve(false),
     boardDrag: () => null,

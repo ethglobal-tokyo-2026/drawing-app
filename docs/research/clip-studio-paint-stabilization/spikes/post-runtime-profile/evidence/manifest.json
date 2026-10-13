@@ -1,0 +1,457 @@
+{
+  "originalSha256": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+  "scope": "Static reads only. No launch, attachment, native call, or runtime-value observation.",
+  "commands": [
+    "python3 docs/research/clip-studio-paint-stabilization/spikes/post-runtime-profile/evidence/extract.py 0x102ce8894 0x1021bbe5c 0x1021bca90 0x1020c09dc 0x1031163b8 0x1021c7320 0x103116810 0x1021d574c 0x1020c05d8 0x1031164a8 0x1004dfec0 0x103116448 0x10311643c",
+    "python3 docs/research/clip-studio-paint-stabilization/spikes/post-runtime-profile/evidence/extract.py 0x102ce88a4 0x100652310 0x102194e64",
+    "python3 docs/research/clip-studio-paint-stabilization/spikes/post-runtime-profile/evidence/extract.py 0x102ce9998 0x102072aa4 0x10298f250 0x10298f350 0x10298f450",
+    "python3 docs/research/clip-studio-paint-stabilization/spikes/post-runtime-profile/evidence/extract.py 0x102ce889c 0x102ce87a8 0x102cf9f70 0x102cee2b8 0x102cef884 0x102ce7078 0x102cef024 0x102cec674 0x102ceda80 0x102ceb708 0x102ceac70",
+    "python3 docs/research/clip-studio-paint-stabilization/spikes/post-runtime-profile/evidence/extract.py 0x1021c73b8",
+    "python3 docs/research/clip-studio-paint-stabilization/spikes/post-runtime-profile/evidence/extract.py 0x102cef874 0x1020c0504 0x1020c0514 0x1020c0524 0x1020c055c 0x1020c0f6c 0x102992eb8 0x102992f64",
+    "python3 docs/research/clip-studio-paint-stabilization/spikes/post-runtime-profile/evidence/extract.py 0x102991b84 0x10214de74 0x10298d278 0x10003be50",
+    "python3 docs/research/clip-studio-paint-stabilization/spikes/post-runtime-profile/evidence/extract.py 0x1029981a0 0x10214dcd8 0x1028e11a4",
+    "python3 docs/research/clip-studio-paint-stabilization/spikes/post-runtime-profile/evidence/extract.py 0x1024a1268",
+    "python3 docs/research/clip-studio-paint-stabilization/spikes/post-runtime-profile/evidence/extract.py 0x1021c0e88 0x1029a42f8",
+    "python3 docs/research/clip-studio-paint-stabilization/spikes/post-runtime-profile/evidence/extract.py 0x1024a1630 0x1029a4378 0x1021ba99c",
+    "python3 docs/research/clip-studio-paint-stabilization/spikes/post-runtime-profile/evidence/extract.py 0x1024c553c 0x1024a1584",
+    "python3 docs/research/clip-studio-paint-stabilization/spikes/post-runtime-profile/evidence/extract.py 0x1024a1cd0 0x1024a1db8 0x1029a4afc",
+    "python3 docs/research/clip-studio-paint-stabilization/spikes/post-runtime-profile/evidence/extract.py 0x101dfb1d8 0x1020cbc14",
+    "python3 docs/research/clip-studio-paint-stabilization/spikes/post-runtime-profile/evidence/extract.py 0x102992930"
+  ],
+  "functions": [
+    {
+      "address": "0x10003be50",
+      "endExclusive": "0x10003becc",
+      "file": "10003be50.asm",
+      "bytesSha256": "f0cb5fb45f554f1cdee9000d71867a58f399f966637d68938a033d5d1381cdda",
+      "assemblySha256": "e57d013828f6078c88ff004f4fdfb5be0f724ebd647799129a076524d05efaf8"
+    },
+    {
+      "address": "0x1004dfec0",
+      "endExclusive": "0x1004dff7c",
+      "file": "1004dfec0.asm",
+      "bytesSha256": "30c9868b025e86edc87b2d7ddd2ecfff38ffd9e505a60be721433f3c1fb9ecbb",
+      "assemblySha256": "1f580b1dbbf9a6020d3bcfe3879589c1e44d55f9eafb6f1c1617c6c992973518"
+    },
+    {
+      "address": "0x100652310",
+      "endExclusive": "0x100652380",
+      "file": "100652310.asm",
+      "bytesSha256": "11f0742d66aeb2480caa7baa88a43a6296a337e1e3cabdcbd348fbf2f01693cb",
+      "assemblySha256": "d044a6af2c24c15317b681986b35c40634ae786518d5d34b6e7f84ca5ab6253b"
+    },
+    {
+      "address": "0x101dfb1d8",
+      "endExclusive": "0x101dfb24c",
+      "file": "101dfb1d8.asm",
+      "bytesSha256": "effd619a4a9c359f34cb551ba06a10ad7b3b17343bf7a17f731d53ea07936301",
+      "assemblySha256": "0a4de245ffe9ac3961b78e158c65fbb05ee206fceb8481945d9ca1be9d7376f1"
+    },
+    {
+      "address": "0x102072aa4",
+      "endExclusive": "0x102072aac",
+      "file": "102072aa4.asm",
+      "bytesSha256": "0becf359e148792c5ed24ca79a91209e5f15e0f015d2a0b9f4d69c2e82d59f3a",
+      "assemblySha256": "aa0c233fe2fc011b310f840720f8cedee8f7182e83ef959046bd32768724d624"
+    },
+    {
+      "address": "0x1020c0504",
+      "endExclusive": "0x1020c0514",
+      "file": "1020c0504.asm",
+      "bytesSha256": "6f6cede0fbccad563ffd6c46d4968294ae672a7a8b765a6056b009d48b6571af",
+      "assemblySha256": "ac8dd101672a5ad8c3a6587d164b10e5da652e1b3122c3ffb59721342a13c275"
+    },
+    {
+      "address": "0x1020c0514",
+      "endExclusive": "0x1020c0524",
+      "file": "1020c0514.asm",
+      "bytesSha256": "1c9f7c35cd808e569c227f8f014d9dad1080b6d7b0d4fce18c9b7af9fcf7ae01",
+      "assemblySha256": "c28e0cf806ca1edc3b9b41f482b121c3a4fd8fb5a9a1921d1597e15a05629b5a"
+    },
+    {
+      "address": "0x1020c0524",
+      "endExclusive": "0x1020c055c",
+      "file": "1020c0524.asm",
+      "bytesSha256": "6c8013a01ab352af49fcfb534d4fa1027843f3e31ff98c24eafde6d01f80e1f9",
+      "assemblySha256": "b9149f2b3ad7260dedddf456aeefa6745ec4845e5b82bc1cd0f70ae72a9b2882"
+    },
+    {
+      "address": "0x1020c055c",
+      "endExclusive": "0x1020c0590",
+      "file": "1020c055c.asm",
+      "bytesSha256": "3d4fff11b854fa925f4d233645beab263f0c8b910d0232f88b8bf2bdef329427",
+      "assemblySha256": "eff85cdc1ebd6e768290aaba7281917117c67ea96db58a49d316f2bdc3eb8cac"
+    },
+    {
+      "address": "0x1020c05d8",
+      "endExclusive": "0x1020c0828",
+      "file": "1020c05d8.asm",
+      "bytesSha256": "0ad6f1e00ef5e8ae771501c7c4c0625e1b73e089d9da8e38e3a8264fb4b9d540",
+      "assemblySha256": "b80a61a292882366f1021cbdb87cb10d5b0f05a4eb4dcb6cb240f2d9ceb2cbfd"
+    },
+    {
+      "address": "0x1020c09dc",
+      "endExclusive": "0x1020c0ab0",
+      "file": "1020c09dc.asm",
+      "bytesSha256": "1b5485f01d7bda18d5537d1a8c91e6cac0826313c82ed690c03960d383cecead",
+      "assemblySha256": "0ce130cea578f538934b14db885b0424154cadd80b0c3312e0d73c921f440c45"
+    },
+    {
+      "address": "0x1020c0f6c",
+      "endExclusive": "0x1020c1004",
+      "file": "1020c0f6c.asm",
+      "bytesSha256": "cea47b193fa4ccf7bfabd7b2d9c3f9328fc9d59c7a06353a5fed6f6de8395874",
+      "assemblySha256": "89be9f0e20454648bb7b28a1e6f90dfe310faabd72b7432b5684ece96a03df35"
+    },
+    {
+      "address": "0x1020cbc14",
+      "endExclusive": "0x1020cbc60",
+      "file": "1020cbc14.asm",
+      "bytesSha256": "99ebf0cd3bc96a4b5f692a576b09d16b5ee9966bba4d85ffb984c251074e32d4",
+      "assemblySha256": "f83693df30ea6054131728633d377c14b69591b1531b6623461fe2ce3661290e"
+    },
+    {
+      "address": "0x10214dcd8",
+      "endExclusive": "0x10214dd60",
+      "file": "10214dcd8.asm",
+      "bytesSha256": "49b91a2bb03b53d18dd138a9a4272710da5a949e47589872e39d854cf2b83f93",
+      "assemblySha256": "a9e68e079124a39408556cc7d5ad7091f4fd8ce703f0ad2467bb0c2064f88f5f"
+    },
+    {
+      "address": "0x10214de74",
+      "endExclusive": "0x10214de78",
+      "file": "10214de74.asm",
+      "bytesSha256": "0e9e43ff32fca94cab8b411435861cc01225a4a39f27d8b24bd396db91cbc49b",
+      "assemblySha256": "58b369788ff69b14eb3f7ea7928830f977967e839d1b017b82d42ea78edcee07"
+    },
+    {
+      "address": "0x102194e64",
+      "endExclusive": "0x102194e68",
+      "file": "102194e64.asm",
+      "bytesSha256": "76944184d89426b3385e765455755586150b69c1df1ca6c7280a8b85bec041db",
+      "assemblySha256": "c0b6402c2133fd7554e31e26e92954923b51735d48abbfa6972418cd36a0c010"
+    },
+    {
+      "address": "0x1021ba99c",
+      "endExclusive": "0x1021ba9b8",
+      "file": "1021ba99c.asm",
+      "bytesSha256": "4a2062ec5ef1b5d036468d557a0285d7be85031aaa58b6249b5e36f0f625be24",
+      "assemblySha256": "6beca7c60cf0540dcd26f5ed8239395a35fd0c4d92b3ff35df6e66a201d5436b"
+    },
+    {
+      "address": "0x1021bbe5c",
+      "endExclusive": "0x1021bc07c",
+      "file": "1021bbe5c.asm",
+      "bytesSha256": "5262dc53b9bcdaba716a2b727a3ce3727f633f89d15522140bd87a931b1a85e0",
+      "assemblySha256": "3a2a0839cb227cc2902790b4d2d65c66a34c1d7b72620d42f166dd20802c8e64"
+    },
+    {
+      "address": "0x1021bca90",
+      "endExclusive": "0x1021bcadc",
+      "file": "1021bca90.asm",
+      "bytesSha256": "ff03358647a131b0ea5ba8b77adf1f81065894e4e539e8186e371244608c5af5",
+      "assemblySha256": "4837e24cc0c5ab31717f8b11c855a9a1cd5d5d255fd2ed55d451503a0607cef8"
+    },
+    {
+      "address": "0x1021c0e88",
+      "endExclusive": "0x1021c0e90",
+      "file": "1021c0e88.asm",
+      "bytesSha256": "37ff0b5240a08beef5e2eb2287c30fa2d7b3edc69fa2213409bb6e19d419e6f2",
+      "assemblySha256": "45e349f2504c1ed2d33b41a7d848a0373509ebaaa95dad2890e586b035e1cefe"
+    },
+    {
+      "address": "0x1021c7320",
+      "endExclusive": "0x1021c73b8",
+      "file": "1021c7320.asm",
+      "bytesSha256": "b493563f4147aeed7f4632a746d3dbfc67d3a58f9d8d5414802beb945a9eab02",
+      "assemblySha256": "9a60f65c88260a500031be4650e0dca70c325e2dad0aad88fe13d75621411b21"
+    },
+    {
+      "address": "0x1021c73b8",
+      "endExclusive": "0x1021c73c0",
+      "file": "1021c73b8.asm",
+      "bytesSha256": "0ee99b39c4671627fce2d26caba624c93c937729dcc92455e987a9cc529f15e7",
+      "assemblySha256": "15e9a522ecdd8c0605e450b56d77a4ea841828052e5a5adac11218c1b1617f97"
+    },
+    {
+      "address": "0x1021d574c",
+      "endExclusive": "0x1021d577c",
+      "file": "1021d574c.asm",
+      "bytesSha256": "a9718eb58fe63833f4271c8d21d147f6477732098ed207fb33157f88d6a21d29",
+      "assemblySha256": "d071e6c77e0906344cc85a8362b643dc6f40839dd8a11e9f6cfec36275b04f99"
+    },
+    {
+      "address": "0x1024a1268",
+      "endExclusive": "0x1024a1584",
+      "file": "1024a1268.asm",
+      "bytesSha256": "c8d5d39a7bbbae276e9bceac38d146277e93137c53fc31b88b1f4fb1cb57971b",
+      "assemblySha256": "30979a2ccf39c9a8c137e4624545c22f979b19a0e080e5117e75f146e2fab41c"
+    },
+    {
+      "address": "0x1024a1584",
+      "endExclusive": "0x1024a1630",
+      "file": "1024a1584.asm",
+      "bytesSha256": "e2bb188174c58e5ebaaddbb9ec773653796deb150aeaf9dd00bb41b99abe471c",
+      "assemblySha256": "d89e13f4255cf20a19a5ab66966defa739e5cd9821db78b1d9e7a6f2188ee1b8"
+    },
+    {
+      "address": "0x1024a1630",
+      "endExclusive": "0x1024a1cd0",
+      "file": "1024a1630.asm",
+      "bytesSha256": "15c9801b29fc8673e7108f0f91547bec6803c277ee87315388a163e6dba3e90a",
+      "assemblySha256": "5161306e91a3b3b3bacb9d2cecab914a746bc8bdaa3c064a41e2d11aa0102710"
+    },
+    {
+      "address": "0x1024a1cd0",
+      "endExclusive": "0x1024a1db8",
+      "file": "1024a1cd0.asm",
+      "bytesSha256": "9d35d76b468d142df9090528bdb4f36f66df8ecafd597b7dbdaef4ca1a099e75",
+      "assemblySha256": "20d66c4062bfac619a984f9d4f76f9dca0616930e3da1d13f669a96cff311410"
+    },
+    {
+      "address": "0x1024a1db8",
+      "endExclusive": "0x1024a1f04",
+      "file": "1024a1db8.asm",
+      "bytesSha256": "9af5f5e599dbe964d8276a1ccab2f80d285d1258bbb6b6f2468b58e8671a45f8",
+      "assemblySha256": "4b964fc0651dd22c5cbbaff81ae11ee2cc7f0bbe6cd3e8f4a591fe6d375375ac"
+    },
+    {
+      "address": "0x1024c553c",
+      "endExclusive": "0x1024c5658",
+      "file": "1024c553c.asm",
+      "bytesSha256": "df9bc344fe933c2c7d105df86c63035bf5d93db43463a31654cdd92dbc4e85fe",
+      "assemblySha256": "d27a3fb4cb5d184c566d2ec574b5a6c09d1177c74c2c83dabbc3a6220d0c43dd"
+    },
+    {
+      "address": "0x1028e11a4",
+      "endExclusive": "0x1028e1308",
+      "file": "1028e11a4.asm",
+      "bytesSha256": "85977db18ae4f12f09047a173b75c3f1aedcb50ad8de904bde3eddde7612ca4a",
+      "assemblySha256": "bae5451d6855e3562dd27a8acf51cc0f780d417436a53e6c6607d1988711fafc"
+    },
+    {
+      "address": "0x10298d278",
+      "endExclusive": "0x10298d304",
+      "file": "10298d278.asm",
+      "bytesSha256": "42a9b8820014407726a04edbd14da4145f44e6f705219a3882f83656f3ebd8dc",
+      "assemblySha256": "c215dfb3049776e8fd205d85bef7277d7d36b6473ef617cb198faf8e6bb012c3"
+    },
+    {
+      "address": "0x10298f250",
+      "endExclusive": "0x10298f2d4",
+      "file": "10298f250.asm",
+      "bytesSha256": "4f05c9e0e3a39755cbab11555971eb661e56de1d533423c59b4f27c862e5afed",
+      "assemblySha256": "958e9dc4b5dfe71ecddc95b0d22efb58549c1ba4cc7a29584b3b9fb108f90d5a"
+    },
+    {
+      "address": "0x10298f350",
+      "endExclusive": "0x10298f3d4",
+      "file": "10298f350.asm",
+      "bytesSha256": "cad37605d3a4a97a91d17047f4faec6a817c1651e90408866dcba2d4ed7d4f99",
+      "assemblySha256": "e95301f0287c4fe8af3d8b487ffbffc6d7ff1b4568f0fe65c45baf92fa8e7da9"
+    },
+    {
+      "address": "0x10298f450",
+      "endExclusive": "0x10298f4d4",
+      "file": "10298f450.asm",
+      "bytesSha256": "d4129002aba60f356a13ebccfa3de737d3e5f1e3c29b0baf7aa15130aaba8d08",
+      "assemblySha256": "d4836eebe106771982c2dc605e8ae71d1dc6620b446d18a4ecb044099dde1f18"
+    },
+    {
+      "address": "0x102991b84",
+      "endExclusive": "0x102991c30",
+      "file": "102991b84.asm",
+      "bytesSha256": "668665b0dc30a987012c24c769c426619b4ea2df2650011e273a4d752adbb0ba",
+      "assemblySha256": "4ce267116de8c788ecef0b471368fe67045815aca492791244887130bca7ad16"
+    },
+    {
+      "address": "0x102992930",
+      "endExclusive": "0x1029929e4",
+      "file": "102992930.asm",
+      "bytesSha256": "8f968e4611eae2997bf1395539432a717c6a61c0cca4c619a059987811648f60",
+      "assemblySha256": "0e63dd92c03211f54f320099448c6ba1c9a6b349212b74bcc3db7ac8940b9530"
+    },
+    {
+      "address": "0x102992eb8",
+      "endExclusive": "0x102992f64",
+      "file": "102992eb8.asm",
+      "bytesSha256": "084190a3eb950856e942d8902ffc3e18d3a3c6bf1dca265c1c59cb14cec62d66",
+      "assemblySha256": "12d4367333c0bbe45c78923e534d50e0253301253d8a1556f7168f059ff62aeb"
+    },
+    {
+      "address": "0x102992f64",
+      "endExclusive": "0x102993010",
+      "file": "102992f64.asm",
+      "bytesSha256": "e1a6b8998c76684f6fb406f56502b765636a9bcb78cc4a7cf4840d4406563095",
+      "assemblySha256": "4c4a4d5dd5dee0f8d5dbdb14731f2750ba169da6ed5c7e86b46fcb55ebb7d5af"
+    },
+    {
+      "address": "0x1029981a0",
+      "endExclusive": "0x102998218",
+      "file": "1029981a0.asm",
+      "bytesSha256": "32c6a4a839783e3ee3009bd9d7925639d4cce099ba2b93d55c8e24dbc51016a5",
+      "assemblySha256": "70c71097be6d6a1d91b5f2d494ad447a546b1809b4c23b6651215920aadb0aa7"
+    },
+    {
+      "address": "0x1029a42f8",
+      "endExclusive": "0x1029a4378",
+      "file": "1029a42f8.asm",
+      "bytesSha256": "12c3eb941260a6835de2a4a4c05eb14edfeb0f797aea000dacb4c0d59c284289",
+      "assemblySha256": "ffc428848ac2ddc243e4e7b8c5fa7c47af5c84b2265c25ab6f44a872d04383a8"
+    },
+    {
+      "address": "0x1029a4378",
+      "endExclusive": "0x1029a43f4",
+      "file": "1029a4378.asm",
+      "bytesSha256": "227cae5e1302e4a6a80c7d7f8081edde25c31f235b07a7f9f0e180399f2818c5",
+      "assemblySha256": "c9270b583c657cb8b645b7c42d8ca413960f45142595d6ae5a872c87cc00c48a"
+    },
+    {
+      "address": "0x1029a4afc",
+      "endExclusive": "0x1029a5994",
+      "file": "1029a4afc.asm",
+      "bytesSha256": "fe57ccfa16e335ad6851a8f0fc33e44e8732d73bcf01f89f44ec464aaa4ce0c8",
+      "assemblySha256": "521c23e2a2aa100a6a8522c883a8efda7a2c9354618c7ea35e32333b5f79cd78"
+    },
+    {
+      "address": "0x102ce7078",
+      "endExclusive": "0x102ce71f4",
+      "file": "102ce7078.asm",
+      "bytesSha256": "57038342b08e87b4177fd27c06bc1b3b54ca482a240a254a82a974cb766b8a91",
+      "assemblySha256": "ec19bd9cb67120965176847e34e32b993d2fad380ef6228c06e47bb90b69aa06"
+    },
+    {
+      "address": "0x102ce87a8",
+      "endExclusive": "0x102ce87c4",
+      "file": "102ce87a8.asm",
+      "bytesSha256": "7ed3b220dba1207b8230943f163ac8d48675917520ba9151ec41136909912150",
+      "assemblySha256": "bc2d82b301f647795b73f60bc57c020cc16ae147d03c50c09e529b2508b9aa4b"
+    },
+    {
+      "address": "0x102ce8894",
+      "endExclusive": "0x102ce889c",
+      "file": "102ce8894.asm",
+      "bytesSha256": "1f31d5ff0e22c7c2e3b958e4e0186cb71a2e67a614d53dd8d744824fcd4b1d53",
+      "assemblySha256": "3ad95ae7173bf886ef03072d68b5f24ad7be851941114b34f44603907ce54bd1"
+    },
+    {
+      "address": "0x102ce889c",
+      "endExclusive": "0x102ce88a4",
+      "file": "102ce889c.asm",
+      "bytesSha256": "5103ba3de080c52a046485f800433848701faa49ab8f60241a80987ca249d7ac",
+      "assemblySha256": "90f88426fff2bed512b36ee618429403d6f11688c0b1ecc2adde99f5e2ea68c0"
+    },
+    {
+      "address": "0x102ce88a4",
+      "endExclusive": "0x102ce8ca0",
+      "file": "102ce88a4.asm",
+      "bytesSha256": "66704afc6b7723b2d84fd8bce84f1e094c592bce6a398daa6ce5fbb4c6dc6d1e",
+      "assemblySha256": "46d9a5949a001a49eec1d3a32b290cd45ac45f8f035963db484a2ffa5ebf64f5"
+    },
+    {
+      "address": "0x102ce9998",
+      "endExclusive": "0x102ce9bdc",
+      "file": "102ce9998.asm",
+      "bytesSha256": "b6253af5520b018a0e90caeacad734d9ce51450a411957cba2152689b5685052",
+      "assemblySha256": "8a79c37a9553916f4e93468b2e142cd278d595ed571d12d8515fe03303713f1f"
+    },
+    {
+      "address": "0x102ceac70",
+      "endExclusive": "0x102ceb038",
+      "file": "102ceac70.asm",
+      "bytesSha256": "3c7e59d59bf78c02a91f5218a67d11205200a5e6a07cdecdff0ee31cb914fbec",
+      "assemblySha256": "0e3a2a77f4657d201f9eae877439709950ef99777bc345795a2888f337706045"
+    },
+    {
+      "address": "0x102ceb708",
+      "endExclusive": "0x102cebac4",
+      "file": "102ceb708.asm",
+      "bytesSha256": "9421b8671389d9833305888a3ec065229813ea7652972ab587b84c581cb21a11",
+      "assemblySha256": "9fc7c51f8a2cfd61736e49ffe17404f08c9806a38a247d634f38ac0068a57325"
+    },
+    {
+      "address": "0x102cec674",
+      "endExclusive": "0x102ceccb0",
+      "file": "102cec674.asm",
+      "bytesSha256": "ebad1c0fa9882a4be4419a55915dd1a4a4aee23272935de5f4b1f9787234162e",
+      "assemblySha256": "41f1d938eb23d018fa7c7997aeaf93e88023aeb3e3f411f0957b555a301c6ff0"
+    },
+    {
+      "address": "0x102ceda80",
+      "endExclusive": "0x102cedd48",
+      "file": "102ceda80.asm",
+      "bytesSha256": "7dc72a6af04e348d65fecd8a522116b5dc90425be59e77b11cd0d565a97d6bc5",
+      "assemblySha256": "ec45c02c726d6a8ae7d6dbcff05d5da50c0e970d69cb943654e6688b81f92b53"
+    },
+    {
+      "address": "0x102cee2b8",
+      "endExclusive": "0x102cee54c",
+      "file": "102cee2b8.asm",
+      "bytesSha256": "1a85a6b420e3eaffe8055904883a0f8a85a17e8cd9e2f1f202309c9f3466580c",
+      "assemblySha256": "f826336ab34b4ec5a3a89104603dff3e012b13177d78d6bfeac346fc32dca390"
+    },
+    {
+      "address": "0x102cef024",
+      "endExclusive": "0x102cef2e4",
+      "file": "102cef024.asm",
+      "bytesSha256": "a76f8fe672dc2eea3550e4b66467b059b913de614edce773e0a264460417e185",
+      "assemblySha256": "084cd9040ff4ef2ec0f7e68a8873e9f77ac328d64cacbcbb714896bce8bfb7e8"
+    },
+    {
+      "address": "0x102cef874",
+      "endExclusive": "0x102cef884",
+      "file": "102cef874.asm",
+      "bytesSha256": "d297bd0ad34080021622fba0912b176da21359b73be8b6fcb01d1750f4a66b67",
+      "assemblySha256": "621e4dd1f0b7d1d558cc2a28724924ad2bc0fe42fd0bf2329c08934125d4fa79"
+    },
+    {
+      "address": "0x102cef884",
+      "endExclusive": "0x102cefe48",
+      "file": "102cef884.asm",
+      "bytesSha256": "9d397f519fae8c0d930cb89a5fdca9aed3d197aca2fcc661a3d3147eb894d1c7",
+      "assemblySha256": "79b6f727ebbbf414492b5639c8325e799ec15d77062806d1238298e9ee801b3e"
+    },
+    {
+      "address": "0x102cf9f70",
+      "endExclusive": "0x102cfa1b4",
+      "file": "102cf9f70.asm",
+      "bytesSha256": "f65cb1088d01962eaed4b641814ca3cd794fc23f4a26f44b9f8ef8c7e90f4b87",
+      "assemblySha256": "fd77f4c7a8a02d77f09bec2b8061d720b281563e2352e88bb9ab9ed339efd7c2"
+    },
+    {
+      "address": "0x1031163b8",
+      "endExclusive": "0x1031163c8",
+      "file": "1031163b8.asm",
+      "bytesSha256": "dadb711805edf44721886a3ad004d22ed2702f0e09290056b2aca4dc8c523e5f",
+      "assemblySha256": "d001631583935af288f9632f8cd82047906dde10674918a2d301d2c5bd58e88e"
+    },
+    {
+      "address": "0x10311643c",
+      "endExclusive": "0x103116448",
+      "file": "10311643c.asm",
+      "bytesSha256": "03644c9499a57327198f6cd07662de02fe54fa3f94027cd47cefa626de0d3fe8",
+      "assemblySha256": "b1c21cadbe615582430ce6e46bb1912ac9b20335c5699cad4be9651a0c9aaecc"
+    },
+    {
+      "address": "0x103116448",
+      "endExclusive": "0x103116488",
+      "file": "103116448.asm",
+      "bytesSha256": "1be47d5af26cedaa7d42401f7181b4e455fdfca89f2bcf1d4ee552ef08a9cbbe",
+      "assemblySha256": "82b3a75284483a70bd31cb41f4d64efe14131fa565be7dfd94359d79c413d12b"
+    },
+    {
+      "address": "0x1031164a8",
+      "endExclusive": "0x1031164b8",
+      "file": "1031164a8.asm",
+      "bytesSha256": "234160c19d826136a5e0dfa7578dd7b4dedf5a41a3d21dfef84991a221d84f7a",
+      "assemblySha256": "d708482b01deec8bcace3c19b5d1233c1f827681146bb04c74a8ea32b5b6066b"
+    },
+    {
+      "address": "0x103116810",
+      "endExclusive": "0x103116824",
+      "file": "103116810.asm",
+      "bytesSha256": "23412f9640fde09996937fdf516df4600596e1bc3e5e78649f000545e64a4986",
+      "assemblySha256": "d224df3b448c954b8f91d98140492856d9088e00d63455e5ca29304ecf897a73"
+    }
+  ]
+}

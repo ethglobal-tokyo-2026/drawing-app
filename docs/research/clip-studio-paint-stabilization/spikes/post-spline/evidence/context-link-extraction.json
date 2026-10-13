@@ -1,0 +1,15 @@
+{
+  "image_sha256": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+  "functions": [
+    {
+      "start": "0x10276af80",
+      "bytes": 44,
+      "code_sha256": "b8c02d9a5e6c466c8f937f1a26c71d65a6afd958ee2ba25df1c8eab3959a1b7a"
+    },
+    {
+      "start": "0x10276afd8",
+      "bytes": 44,
+      "code_sha256": "68cde49e0ea6411f07240f7cff7c826d993bea6e4dbb137b455e6f37e6aaf024"
+    }
+  ]
+}

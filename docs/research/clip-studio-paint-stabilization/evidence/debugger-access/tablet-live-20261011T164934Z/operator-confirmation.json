@@ -1,0 +1,23 @@
+{
+  "operator_confirmation": "I drew on the canvas; 手ブレ補正 is 0",
+  "screenshot": "brush-settings-after-capture.png",
+  "screenshot_sha256": "f9a623c2e9c4de00953669d7fca85055333b22019676f8f40c43ee58fef2a939",
+  "screenshot_timing": "Supplied by user after capture; not a simultaneous settings observation.",
+  "visible_settings": {
+    "手ブレ補正": 0,
+    "速度による手ブレ補正": false,
+    "後補正": true,
+    "速度による調整": false,
+    "表示倍率による調整": false,
+    "ベジェ曲線": false,
+    "はらい": 20
+  },
+  "post_correction_numeric_value": "Not visible; indicator position is not a numeric value.",
+  "next_requested_settings": {
+    "手ブレ補正": 20,
+    "速度による手ブレ補正": false,
+    "後補正": false,
+    "はらい": 0
+  },
+  "interpretation": "The screenshot confirms UI stabilization0. Native queue T was0 despite later screenshot showing はらい20; do not treat UI/native taper correspondence as validated. Post correction was not captured by this live recorder."
+}

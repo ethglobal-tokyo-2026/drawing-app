@@ -1,0 +1,3228 @@
+{
+  "schema": "csp-post-report/v1",
+  "provenance": "runtime",
+  "device": "mouse",
+  "integrity": {
+    "status": "valid",
+    "errors": [],
+    "warnings": [
+      "Call 1: no independent configuration fingerprint; unchanged copied wrapper arguments cannot establish absence of UI-setting drift"
+    ],
+    "entries": 1,
+    "pairs": 1
+  },
+  "arithmeticSummary": {
+    "matches": 0,
+    "mismatches": 0,
+    "derivedOnly": 4
+  },
+  "calls": [
+    {
+      "callId": "1",
+      "captureIntegrity": "valid",
+      "deltas": {
+        "status": "observed",
+        "classification": "changed",
+        "basis": "Exact ordered positions, stored controls, node/path flags, seven float fields +0x44..+0x5c, node endpoint data +0x60..+0x68 and available path endpoint parameter; no rendering or curve sampling. Cached fields alone do not imply correction.",
+        "beforeNodeCount": 99,
+        "afterNodeCount": 8,
+        "nodeCountDelta": -91,
+        "pathFlags": {
+          "before": 8225,
+          "after": 8321
+        },
+        "geometry": {
+          "beforeBounds": {
+            "minX": 3696.6117267421873,
+            "maxX": 9985.62452428125,
+            "minY": 1461.7799454375,
+            "maxY": 6952.1211703125
+          },
+          "afterBounds": {
+            "minX": 4028.302314505371,
+            "maxX": 9924.358561101562,
+            "minY": 1467.0561088256836,
+            "maxY": 6951.27508641211
+          },
+          "orderedEqual": false
+        },
+        "storedControls": {
+          "orderedEqual": false,
+          "beforeCount": 99,
+          "afterCount": 0
+        },
+        "scalar44": {
+          "beforeRange": {
+            "min": 1,
+            "max": 1
+          },
+          "afterRange": {
+            "min": 1,
+            "max": 1
+          },
+          "orderedEqual": false
+        },
+        "factor4c": {
+          "beforeRange": {
+            "min": 0,
+            "max": 0.6669651865959167
+          },
+          "afterRange": {
+            "min": 0,
+            "max": 0.6479480266571045
+          },
+          "orderedEqual": false
+        },
+        "retainedScalarsEqual": false,
+        "endpointDataEqual": false,
+        "cachedDataEqual": false,
+        "nodeFlags": {
+          "orderedEqual": false,
+          "beforeHistogram": {
+            "0x0": 99
+          },
+          "afterHistogram": {
+            "0x0": 8
+          }
+        },
+        "endpointParameterBytes": {
+          "available": true,
+          "before": "0000000000000440",
+          "after": "0000000000000440"
+        }
+      },
+      "decodedSnapshots": {
+        "before": [
+          {
+            "snapshotIndex": 0,
+            "address": "0xc98ff8b90",
+            "className": "PWVectorBezierCurve",
+            "x": 7647.9658734375,
+            "y": 1546.483223390625,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "00000000"
+            },
+            "storedControls": [
+              {
+                "x": 7647.9658734375,
+                "y": 1546.483223390625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f00000000000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "00000000351d690600000000"
+          },
+          {
+            "snapshotIndex": 1,
+            "address": "0xc98ff6088",
+            "className": "PWVectorBezierCurve",
+            "x": 7647.1118822109365,
+            "y": 1546.483223390625,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3a0a3d71"
+            },
+            "storedControls": [
+              {
+                "x": 7646.257890984374,
+                "y": 1546.483223390625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f713d0a3a000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "5383153e351d690600000000"
+          },
+          {
+            "snapshotIndex": 2,
+            "address": "0xc682c4b90",
+            "className": "PWVectorBezierCurve",
+            "x": 7641.039055710937,
+            "y": 1546.483223390625,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3b75c28f"
+            },
+            "storedControls": [
+              {
+                "x": 7635.820220437499,
+                "y": 1546.483223390625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f8fc2753b000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "96e0953d351d690600000000"
+          },
+          {
+            "snapshotIndex": 3,
+            "address": "0xc98ff9c08",
+            "className": "PWVectorBezierCurve",
+            "x": 7624.591817273436,
+            "y": 1546.483223390625,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3c266666"
+            },
+            "storedControls": [
+              {
+                "x": 7613.363414109374,
+                "y": 1546.483223390625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f6666263c000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "db3d203f351d690600000000"
+          },
+          {
+            "snapshotIndex": 4,
+            "address": "0xc9d85d278",
+            "className": "PWVectorBezierCurve",
+            "x": 7602.29315746875,
+            "y": 1546.483223390625,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3c61999a"
+            },
+            "storedControls": [
+              {
+                "x": 7591.222900828125,
+                "y": 1546.483223390625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f9a99613c000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "c691a73e351d690600000000"
+          },
+          {
+            "snapshotIndex": 5,
+            "address": "0xc98ff98d8",
+            "className": "PWVectorBezierCurve",
+            "x": 7572.846274804688,
+            "y": 1546.483223390625,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3c94f5c3"
+            },
+            "storedControls": [
+              {
+                "x": 7554.46964878125,
+                "y": 1546.483223390625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fc3f5943c000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "fc61613f351d690600000000"
+          },
+          {
+            "snapshotIndex": 6,
+            "address": "0xc682c5a70",
+            "className": "PWVectorBezierCurve",
+            "x": 7533.119868117187,
+            "y": 1546.483223390625,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3cc8f5c3"
+            },
+            "storedControls": [
+              {
+                "x": 7511.770087453125,
+                "y": 1546.483223390625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fc3f5c83c000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "c8b01d3e351d690600000000"
+          },
+          {
+            "snapshotIndex": 7,
+            "address": "0xc98ff9058",
+            "className": "PWVectorBezierCurve",
+            "x": 7482.418092703125,
+            "y": 1546.483223390625,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d003d71"
+            },
+            "storedControls": [
+              {
+                "x": 7453.066097953125,
+                "y": 1546.483223390625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f713d003d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "4989e73e351d690600000000"
+          },
+          {
+            "snapshotIndex": 8,
+            "address": "0xc9d866270",
+            "className": "PWVectorBezierCurve",
+            "x": 7413.244803351562,
+            "y": 1546.483223390625,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d2ef5c3"
+            },
+            "storedControls": [
+              {
+                "x": 7373.423508749999,
+                "y": 1546.483223390625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fc3f52e3d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "e7cf8e3e351d690600000000"
+          },
+          {
+            "snapshotIndex": 9,
+            "address": "0xc98ff8640",
+            "className": "PWVectorBezierCurve",
+            "x": 7332.526817789062,
+            "y": 1546.483223390625,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d4c28f6"
+            },
+            "storedControls": [
+              {
+                "x": 7291.630126828125,
+                "y": 1546.483223390625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803ff6284c3d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "0d9a0f3f351d690600000000"
+          },
+          {
+            "snapshotIndex": 10,
+            "address": "0xc9d85d300",
+            "className": "PWVectorBezierCurve",
+            "x": 7238.93570521875,
+            "y": 1546.483223390625,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d6cb852"
+            },
+            "storedControls": [
+              {
+                "x": 7186.2412836093745,
+                "y": 1546.483223390625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f52b86c3d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "e546783f351d690600000000"
+          },
+          {
+            "snapshotIndex": 11,
+            "address": "0xc98ff8fd0",
+            "className": "PWVectorBezierCurve",
+            "x": 7127.157742453124,
+            "y": 1546.483223390625,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d8d5c29"
+            },
+            "storedControls": [
+              {
+                "x": 7068.074201296875,
+                "y": 1546.483223390625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f295c8d3d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "5079443e351d690600000000"
+          },
+          {
+            "snapshotIndex": 12,
+            "address": "0xc98ff5010",
+            "className": "PWVectorBezierCurve",
+            "x": 7009.68650484375,
+            "y": 1546.483223390625,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d948f5c"
+            },
+            "storedControls": [
+              {
+                "x": 6951.298808390625,
+                "y": 1546.483223390625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f5c8f943d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "4d7b383f351d690600000000"
+          },
+          {
+            "snapshotIndex": 13,
+            "address": "0xc9d85b430",
+            "className": "PWVectorBezierCurve",
+            "x": 6879.563545359375,
+            "y": 1546.483223390625,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3da48f5c"
+            },
+            "storedControls": [
+              {
+                "x": 6807.828282328124,
+                "y": 1546.483223390625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f5c8fa43d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "0701193f351d690600000000"
+          },
+          {
+            "snapshotIndex": 14,
+            "address": "0xc98ff6440",
+            "className": "PWVectorBezierCurve",
+            "x": 6729.355977398437,
+            "y": 1538.57589721875,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3dbe766a"
+            },
+            "storedControls": [
+              {
+                "x": 6650.88367246875,
+                "y": 1530.6685710468748
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f6a76be3d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "14dbf33d351d690600000000"
+          },
+          {
+            "snapshotIndex": 15,
+            "address": "0xc98ff6220",
+            "className": "PWVectorBezierCurve",
+            "x": 6572.411367539062,
+            "y": 1518.4596594374998,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3dc82d2d"
+            },
+            "storedControls": [
+              {
+                "x": 6493.939062609375,
+                "y": 1506.250747828125
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f2d2dc83d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "80115f3f351d690600000000"
+          },
+          {
+            "snapshotIndex": 16,
+            "address": "0xc9d85d388",
+            "className": "PWVectorBezierCurve",
+            "x": 6408.033871078125,
+            "y": 1497.6475769531248,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3dd19e0b"
+            },
+            "storedControls": [
+              {
+                "x": 6322.128679546875,
+                "y": 1489.044406078125
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f0b9ed13d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "58f8243e351d690600000000"
+          },
+          {
+            "snapshotIndex": 17,
+            "address": "0xc98ff9168",
+            "className": "PWVectorBezierCurve",
+            "x": 6180.4610238515625,
+            "y": 1478.163925265625,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3e106f7f"
+            },
+            "storedControls": [
+              {
+                "x": 6038.79336815625,
+                "y": 1467.283444453125
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f7f6f103e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "ce44403f351d690600000000"
+          },
+          {
+            "snapshotIndex": 18,
+            "address": "0xc682c4c18",
+            "className": "PWVectorBezierCurve",
+            "x": 5958.138641203124,
+            "y": 1465.6703499140624,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3e0cdaa1"
+            },
+            "storedControls": [
+              {
+                "x": 5877.4839142499995,
+                "y": 1464.0572553749998
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fa1da0c3e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "1beb513d351d690600000000"
+          },
+          {
+            "snapshotIndex": 19,
+            "address": "0xc9d866d10",
+            "className": "PWVectorBezierCurve",
+            "x": 5792.053162289062,
+            "y": 1463.3614106718749,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3dd21061"
+            },
+            "storedControls": [
+              {
+                "x": 5706.622410328125,
+                "y": 1462.66556596875
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f6110d23d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "5ee1723f351d690600000000"
+          },
+          {
+            "snapshotIndex": 20,
+            "address": "0xc98ff48a0",
+            "className": "PWVectorBezierCurve",
+            "x": 5530.2890366953125,
+            "y": 1462.2543850078123,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3e2585a8"
+            },
+            "storedControls": [
+              {
+                "x": 5353.955663062499,
+                "y": 1461.843204046875
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fa885253e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "46583a3e351d690600000000"
+          },
+          {
+            "snapshotIndex": 21,
+            "address": "0xc682c4d28",
+            "className": "PWVectorBezierCurve",
+            "x": 5276.811788929686,
+            "y": 1461.7799454375,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3e2047c3"
+            },
+            "storedControls": [
+              {
+                "x": 5199.667914796874,
+                "y": 1461.716686828125
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fc347203e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "cf4a343f351d690600000000"
+          },
+          {
+            "snapshotIndex": 22,
+            "address": "0xc98ff87d8",
+            "className": "PWVectorBezierCurve",
+            "x": 5130.051815179687,
+            "y": 1464.9745052109374,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3db9b246"
+            },
+            "storedControls": [
+              {
+                "x": 5060.435715562499,
+                "y": 1468.23232359375
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f46b2b93d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "004f653f351d690600000000"
+          },
+          {
+            "snapshotIndex": 23,
+            "address": "0xc682c4ca0",
+            "className": "PWVectorBezierCurve",
+            "x": 4992.749003531249,
+            "y": 1481.0421919921873,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3daf417d"
+            },
+            "storedControls": [
+              {
+                "x": 4925.062291499999,
+                "y": 1493.852060390625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f7d41af3d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "86dd0a3f351d690600000000"
+          },
+          {
+            "snapshotIndex": 24,
+            "address": "0xc9d85ce38",
+            "className": "PWVectorBezierCurve",
+            "x": 4863.733069710937,
+            "y": 1517.004711421875,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3daa05b2"
+            },
+            "storedControls": [
+              {
+                "x": 4802.403847921874,
+                "y": 1540.157362453125
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fb205aa3d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "41b6e03e351d690600000000"
+          },
+          {
+            "snapshotIndex": 25,
+            "address": "0xc98ff8860",
+            "className": "PWVectorBezierCurve",
+            "x": 4691.89105734375,
+            "y": 1600.8539981484373,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3df25ad6"
+            },
+            "storedControls": [
+              {
+                "x": 4581.378266765625,
+                "y": 1661.55063384375
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fd65af23d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "9921c03d351d690600000000"
+          },
+          {
+            "snapshotIndex": 26,
+            "address": "0xc98ff95a8",
+            "className": "PWVectorBezierCurve",
+            "x": 4476.716897554687,
+            "y": 1728.1303202109375,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3e1e2979"
+            },
+            "storedControls": [
+              {
+                "x": 4372.05552834375,
+                "y": 1794.7100065781249
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f79291e3e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "7168563d351d690600000000"
+          },
+          {
+            "snapshotIndex": 27,
+            "address": "0xc98ff8ec0",
+            "className": "PWVectorBezierCurve",
+            "x": 4287.826689960937,
+            "y": 1861.4162101640622,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3e126021"
+            },
+            "storedControls": [
+              {
+                "x": 4203.597851578124,
+                "y": 1928.1224137499999
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f2160123e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "7af2443f351d690600000000"
+          },
+          {
+            "snapshotIndex": 28,
+            "address": "0xc9d866160",
+            "className": "PWVectorBezierCurve",
+            "x": 4160.929919554686,
+            "y": 1964.6226313593747,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3dcee39d"
+            },
+            "storedControls": [
+              {
+                "x": 4118.261987531249,
+                "y": 2001.1228489687498
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f9de3ce3d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "16f3453e351d690600000000"
+          },
+          {
+            "snapshotIndex": 29,
+            "address": "0xc682c58d8",
+            "className": "PWVectorBezierCurve",
+            "x": 4094.192086664062,
+            "y": 2027.6598356015625,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d68a323"
+            },
+            "storedControls": [
+              {
+                "x": 4070.122185796875,
+                "y": 2054.196822234375
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f23a3683d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "a11bab3e351d690600000000"
+          },
+          {
+            "snapshotIndex": 30,
+            "address": "0xc9d865fc8",
+            "className": "PWVectorBezierCurve",
+            "x": 4039.3468723359374,
+            "y": 2082.030610359375,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d439213"
+            },
+            "storedControls": [
+              {
+                "x": 4008.571558875,
+                "y": 2109.8643984843748
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f1392433d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "7178993d351d690600000000"
+          },
+          {
+            "snapshotIndex": 31,
+            "address": "0xc98ff51a8",
+            "className": "PWVectorBezierCurve",
+            "x": 3982.4457532031247,
+            "y": 2135.9585748515624,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d46591f"
+            },
+            "storedControls": [
+              {
+                "x": 3956.31994753125,
+                "y": 2162.05275121875
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f1f59463d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "afb82b3f351d690600000000"
+          },
+          {
+            "snapshotIndex": 32,
+            "address": "0xc98ff9850",
+            "className": "PWVectorBezierCurve",
+            "x": 3937.026071671875,
+            "y": 2189.3172118593748,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d31dfff"
+            },
+            "storedControls": [
+              {
+                "x": 3917.7321958125,
+                "y": 2216.5816725
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fffdf313d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "0eb5033f351d690600000000"
+          },
+          {
+            "snapshotIndex": 33,
+            "address": "0xc9d85c970",
+            "className": "PWVectorBezierCurve",
+            "x": 3905.6181721171874,
+            "y": 2235.2745915703126,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d0cd207"
+            },
+            "storedControls": [
+              {
+                "x": 3893.504148421875,
+                "y": 2253.967510640625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f07d20c3d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "30aa583f351d690600000000"
+          },
+          {
+            "snapshotIndex": 34,
+            "address": "0xc98ff9c90",
+            "className": "PWVectorBezierCurve",
+            "x": 3881.485012640625,
+            "y": 2271.8380677890623,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3cdd9fce"
+            },
+            "storedControls": [
+              {
+                "x": 3869.465876859375,
+                "y": 2289.7086249374997
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fce9fdd3c000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "f39a133d351d690600000000"
+          },
+          {
+            "snapshotIndex": 35,
+            "address": "0xc98ff49b0",
+            "className": "PWVectorBezierCurve",
+            "x": 3853.714483125,
+            "y": 2319.661576476562,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d0c119a"
+            },
+            "storedControls": [
+              {
+                "x": 3837.9630893906246,
+                "y": 2349.6145280156247
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f9a110c3d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "6797353f351d690600000000"
+          },
+          {
+            "snapshotIndex": 36,
+            "address": "0xc98ff9498",
+            "className": "PWVectorBezierCurve",
+            "x": 3822.9391696640623,
+            "y": 2383.0783323749997,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d32602c"
+            },
+            "storedControls": [
+              {
+                "x": 3807.9152499375,
+                "y": 2416.5421367343747
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f2c60323d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "134f553e351d690600000000"
+          },
+          {
+            "snapshotIndex": 37,
+            "address": "0xc98ffa048",
+            "className": "PWVectorBezierCurve",
+            "x": 3792.0689682890625,
+            "y": 2456.58483646875,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d49b37d"
+            },
+            "storedControls": [
+              {
+                "x": 3776.222686640625,
+                "y": 2496.6275362031247
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f7db3493d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "44b4f33e351d690600000000"
+          },
+          {
+            "snapshotIndex": 38,
+            "address": "0xc98ff6198",
+            "className": "PWVectorBezierCurve",
+            "x": 3759.1744914140627,
+            "y": 2564.12447240625,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d8e8075"
+            },
+            "storedControls": [
+              {
+                "x": 3742.1262961875,
+                "y": 2631.621408609375
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f75808e3d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "5a07723f351d690600000000"
+          },
+          {
+            "snapshotIndex": 39,
+            "address": "0xc98ff9eb0",
+            "className": "PWVectorBezierCurve",
+            "x": 3735.5474008125,
+            "y": 2658.190024546875,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d754f99"
+            },
+            "storedControls": [
+              {
+                "x": 3728.9685054375,
+                "y": 2684.758640484375
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f994f753d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "db38753f351d690600000000"
+          },
+          {
+            "snapshotIndex": 40,
+            "address": "0xc98ff89f8",
+            "className": "PWVectorBezierCurve",
+            "x": 3722.231463539062,
+            "y": 2709.5876446640623,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d064ce0"
+            },
+            "storedControls": [
+              {
+                "x": 3715.4944216406248,
+                "y": 2734.41664884375
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fe04c063d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "67be5c3f351d690600000000"
+          },
+          {
+            "snapshotIndex": 41,
+            "address": "0xc98ff5098",
+            "className": "PWVectorBezierCurve",
+            "x": 3711.50912925,
+            "y": 2761.396445742187,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d060d1c"
+            },
+            "storedControls": [
+              {
+                "x": 3707.523836859375,
+                "y": 2788.3762426406247
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f1c0d063d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "c0c46c3f351d690600000000"
+          },
+          {
+            "snapshotIndex": 42,
+            "address": "0xc98ff4a38",
+            "className": "PWVectorBezierCurve",
+            "x": 3704.6455701328123,
+            "y": 2806.5314635312498,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3ce6f2aa"
+            },
+            "storedControls": [
+              {
+                "x": 3701.76730340625,
+                "y": 2824.686684421875
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803faaf2e63c000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "caa38a3e351d690600000000"
+          },
+          {
+            "snapshotIndex": 43,
+            "address": "0xc98ff9fc0",
+            "className": "PWVectorBezierCurve",
+            "x": 3699.6481399921877,
+            "y": 2837.717957953125,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3c9fc5e0"
+            },
+            "storedControls": [
+              {
+                "x": 3697.528976578125,
+                "y": 2850.749231484375
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fe0c59f3c000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "0bb82f3f351d690600000000"
+          },
+          {
+            "snapshotIndex": 44,
+            "address": "0xc9d85bc28",
+            "className": "PWVectorBezierCurve",
+            "x": 3697.21268353125,
+            "y": 2860.4594280234373,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3c67dd31"
+            },
+            "storedControls": [
+              {
+                "x": 3696.896390484375,
+                "y": 2870.1696245625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f31dd673c000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "dcdb4c3f351d690600000000"
+          },
+          {
+            "snapshotIndex": 45,
+            "address": "0xc98ff4818",
+            "className": "PWVectorBezierCurve",
+            "x": 3696.769873265625,
+            "y": 2876.9699250703125,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3c271aa0"
+            },
+            "storedControls": [
+              {
+                "x": 3696.643356046875,
+                "y": 2883.770225578125
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fa01a273c000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "f43d913e351d690600000000"
+          },
+          {
+            "snapshotIndex": 46,
+            "address": "0xc682c6730",
+            "className": "PWVectorBezierCurve",
+            "x": 3696.6117267421873,
+            "y": 2892.721318804687,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3c1f5f5a"
+            },
+            "storedControls": [
+              {
+                "x": 3696.5800974374997,
+                "y": 2901.6724120312497
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f5a5f1f3c000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "b406083f351d690600000000"
+          },
+          {
+            "snapshotIndex": 47,
+            "address": "0xc98ff9b80",
+            "className": "PWVectorBezierCurve",
+            "x": 3698.414597109375,
+            "y": 2913.122220328125,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3c4fe0c4"
+            },
+            "storedControls": [
+              {
+                "x": 3700.2490967812496,
+                "y": 2924.572028625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fc4e04f3c000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "3600f43c351d690600000000"
+          },
+          {
+            "snapshotIndex": 48,
+            "address": "0xc98ff90e0",
+            "className": "PWVectorBezierCurve",
+            "x": 3727.292152289062,
+            "y": 2944.751525015625,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3ce558e4"
+            },
+            "storedControls": [
+              {
+                "x": 3754.335207796875,
+                "y": 2964.93102140625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fe458e53c000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "45abec3e351d690600000000"
+          },
+          {
+            "snapshotIndex": 49,
+            "address": "0xc98ff6660",
+            "className": "PWVectorBezierCurve",
+            "x": 3815.0318434921874,
+            "y": 2995.105378078125,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d8064ee"
+            },
+            "storedControls": [
+              {
+                "x": 3875.7284791875,
+                "y": 3025.27973475
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fee64803d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "17593d3e351d690600000000"
+          },
+          {
+            "snapshotIndex": 50,
+            "address": "0xc98ff7100",
+            "className": "PWVectorBezierCurve",
+            "x": 3975.392418257812,
+            "y": 3067.78952025,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3ddebf9c"
+            },
+            "storedControls": [
+              {
+                "x": 4075.0563573281247,
+                "y": 3110.29930575
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f9cbfde3d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "19b5c83d351d690600000000"
+          },
+          {
+            "snapshotIndex": 51,
+            "address": "0xc98ff54d8",
+            "className": "PWVectorBezierCurve",
+            "x": 4223.967123796875,
+            "y": 3173.3365099921875,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3e2ac333"
+            },
+            "storedControls": [
+              {
+                "x": 4372.877890265625,
+                "y": 3236.373714234375
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f33c32a3e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "aff6303d351d690600000000"
+          },
+          {
+            "snapshotIndex": 52,
+            "address": "0xc98ff4ac0",
+            "className": "PWVectorBezierCurve",
+            "x": 4776.594335296875,
+            "y": 3388.036230210937,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3ebb7960"
+            },
+            "storedControls": [
+              {
+                "x": 5180.310780328125,
+                "y": 3539.6987461874996
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f6079bb3e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "814e143e351d690600000000"
+          },
+          {
+            "snapshotIndex": 53,
+            "address": "0xc98ff5780",
+            "className": "PWVectorBezierCurve",
+            "x": 5746.380446320312,
+            "y": 3737.2237539609373,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3f22f37d"
+            },
+            "storedControls": [
+              {
+                "x": 6312.4501123125,
+                "y": 3934.748761734375
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f7df3223f000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "aa6cc53e351d690600000000"
+          },
+          {
+            "snapshotIndex": 54,
+            "address": "0xc98ff9da0",
+            "className": "PWVectorBezierCurve",
+            "x": 6763.041186890625,
+            "y": 4101.783119789063,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3f2abe3b"
+            },
+            "storedControls": [
+              {
+                "x": 7213.63226146875,
+                "y": 4268.81747784375
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f3bbe2a3f000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "45b3a43e351d690600000000"
+          },
+          {
+            "snapshotIndex": 55,
+            "address": "0xc98ff66e8",
+            "className": "PWVectorBezierCurve",
+            "x": 7735.990228382812,
+            "y": 4489.621653867187,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3f259dae"
+            },
+            "storedControls": [
+              {
+                "x": 8258.348195296874,
+                "y": 4710.425829890624
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fae9d253f000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "9e62553f351d690600000000"
+          },
+          {
+            "snapshotIndex": 56,
+            "address": "0xc98ff5450",
+            "className": "PWVectorBezierCurve",
+            "x": 8696.888504789062,
+            "y": 4937.0814272812495,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3f27afa3"
+            },
+            "storedControls": [
+              {
+                "x": 9135.42881428125,
+                "y": 5163.737024671875
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fa3af273f000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "7a1f193f351d690600000000"
+          },
+          {
+            "snapshotIndex": 57,
+            "address": "0xc98ff55e8",
+            "className": "PWVectorBezierCurve",
+            "x": 9216.431463585937,
+            "y": 5208.555749414062,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3eb957a8"
+            },
+            "storedControls": [
+              {
+                "x": 9297.434112890625,
+                "y": 5253.37447415625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fa857b93e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "a7f1ca3e351d690600000000"
+          },
+          {
+            "snapshotIndex": 58,
+            "address": "0xc9d866b78",
+            "className": "PWVectorBezierCurve",
+            "x": 9383.560709554687,
+            "y": 5308.5359815312495,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3df66b70"
+            },
+            "storedControls": [
+              {
+                "x": 9469.68730621875,
+                "y": 5363.697488906249
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f706bf63d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "b77a1c3f351d690600000000"
+          },
+          {
+            "snapshotIndex": 59,
+            "address": "0xc98ff5560",
+            "className": "PWVectorBezierCurve",
+            "x": 9564.796625414063,
+            "y": 5427.493796460937,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3e0916b5"
+            },
+            "storedControls": [
+              {
+                "x": 9659.905944609374,
+                "y": 5491.290104015625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fb516093e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "0f7e513f351d690600000000"
+          },
+          {
+            "snapshotIndex": 60,
+            "address": "0xc9d860ac8",
+            "className": "PWVectorBezierCurve",
+            "x": 9703.396238554687,
+            "y": 5522.065417476562,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3dd435e9"
+            },
+            "storedControls": [
+              {
+                "x": 9746.886532499999,
+                "y": 5552.8407309375
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fe935d43d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "daecc63c351d690600000000"
+          },
+          {
+            "snapshotIndex": 61,
+            "address": "0xc98ff5670",
+            "className": "PWVectorBezierCurve",
+            "x": 9776.175268640625,
+            "y": 5575.1077614375,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d63d046"
+            },
+            "storedControls": [
+              {
+                "x": 9805.46400478125,
+                "y": 5597.3747919375
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f46d0633d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "fb88763f351d690600000000"
+          },
+          {
+            "snapshotIndex": 62,
+            "address": "0xc98ff8b08",
+            "className": "PWVectorBezierCurve",
+            "x": 9835.796507976564,
+            "y": 5621.476322109374,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d3f0c56"
+            },
+            "storedControls": [
+              {
+                "x": 9866.129011171875,
+                "y": 5645.57785228125
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f560c3f3d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "1b21dd3e351d690600000000"
+          },
+          {
+            "snapshotIndex": 63,
+            "address": "0xc98ff7078",
+            "className": "PWVectorBezierCurve",
+            "x": 9889.186774289063,
+            "y": 5668.09791721875,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d3382da"
+            },
+            "storedControls": [
+              {
+                "x": 9912.24453740625,
+                "y": 5690.61798215625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fda82333d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "3649053f351d690600000000"
+          },
+          {
+            "snapshotIndex": 64,
+            "address": "0xc682c6158",
+            "className": "PWVectorBezierCurve",
+            "x": 9928.05918975,
+            "y": 5711.430064640625,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d13a25e"
+            },
+            "storedControls": [
+              {
+                "x": 9943.87384209375,
+                "y": 5732.242147125
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f5ea2133d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "ac11833e351d690600000000"
+          },
+          {
+            "snapshotIndex": 65,
+            "address": "0xc9d85acc0",
+            "className": "PWVectorBezierCurve",
+            "x": 9955.956236484375,
+            "y": 5751.282988546875,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3cf64d51"
+            },
+            "storedControls": [
+              {
+                "x": 9968.038630875,
+                "y": 5770.32382996875
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f514df63c000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "cd56183f351d690600000000"
+          },
+          {
+            "snapshotIndex": 66,
+            "address": "0xc9d85abb0",
+            "className": "PWVectorBezierCurve",
+            "x": 9974.649155554687,
+            "y": 5788.004611289062,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3cd18ff3"
+            },
+            "storedControls": [
+              {
+                "x": 9981.259680234374,
+                "y": 5805.6853926093745
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803ff38fd13c000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "0f17a23e351d690600000000"
+          },
+          {
+            "snapshotIndex": 67,
+            "address": "0xc98ff43d8",
+            "className": "PWVectorBezierCurve",
+            "x": 9983.442102257812,
+            "y": 5827.288207710937,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3ccd52b9"
+            },
+            "storedControls": [
+              {
+                "x": 9985.62452428125,
+                "y": 5848.8910228125
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fb952cd3c000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "4174733f351d690600000000"
+          },
+          {
+            "snapshotIndex": 68,
+            "address": "0xc98ff56f8",
+            "className": "PWVectorBezierCurve",
+            "x": 9985.62452428125,
+            "y": 5874.447501,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3cef1dc2"
+            },
+            "storedControls": [
+              {
+                "x": 9985.62452428125,
+                "y": 5900.0039791875
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fc21def3c000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "7ebb383f351d690600000000"
+          },
+          {
+            "snapshotIndex": 69,
+            "address": "0xc9d8669e0",
+            "className": "PWVectorBezierCurve",
+            "x": 9985.62452428125,
+            "y": 5916.040036664062,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3cd26666"
+            },
+            "storedControls": [
+              {
+                "x": 9985.62452428125,
+                "y": 5932.076094140624
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f6666d23c000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "4d2c043e351d690600000000"
+          },
+          {
+            "snapshotIndex": 70,
+            "address": "0xc682c7478",
+            "className": "PWVectorBezierCurve",
+            "x": 9983.442102257812,
+            "y": 5949.725246156249,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3cab147a"
+            },
+            "storedControls": [
+              {
+                "x": 9981.259680234374,
+                "y": 5967.374398171874
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f7a14ab3c000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "ae63b43e351d690600000000"
+          },
+          {
+            "snapshotIndex": 71,
+            "address": "0xc9d866518",
+            "className": "PWVectorBezierCurve",
+            "x": 9966.393907031248,
+            "y": 5996.5049877890615,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3cff661a"
+            },
+            "storedControls": [
+              {
+                "x": 9951.528133828124,
+                "y": 6025.6355774062495
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f1a66ff3c000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "ecf3ad3e351d690600000000"
+          },
+          {
+            "snapshotIndex": 72,
+            "address": "0xc98ff9278",
+            "className": "PWVectorBezierCurve",
+            "x": 9924.358561101562,
+            "y": 6056.600666695313,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d3ae9ec"
+            },
+            "storedControls": [
+              {
+                "x": 9897.188988375,
+                "y": 6087.565755984375
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fece93a3d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "5de0503f351d690600000000"
+          },
+          {
+            "snapshotIndex": 73,
+            "address": "0xc9d85c9f8",
+            "className": "PWVectorBezierCurve",
+            "x": 9859.423598578123,
+            "y": 6118.942026234375,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d646148"
+            },
+            "storedControls": [
+              {
+                "x": 9821.65820878125,
+                "y": 6150.3182964843745
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f4861643d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "d613353f351d690600000000"
+          },
+          {
+            "snapshotIndex": 74,
+            "address": "0xc682c5630",
+            "className": "PWVectorBezierCurve",
+            "x": 9715.067451984374,
+            "y": 6217.846861992188,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3dddaafb"
+            },
+            "storedControls": [
+              {
+                "x": 9608.476695187499,
+                "y": 6285.3754275
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803ffbaadd3d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "3d51213f351d690600000000"
+          },
+          {
+            "snapshotIndex": 75,
+            "address": "0xc98ff6330",
+            "className": "PWVectorBezierCurve",
+            "x": 9441.56885435156,
+            "y": 6371.40713625,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3e4685d3"
+            },
+            "storedControls": [
+              {
+                "x": 9274.661013515624,
+                "y": 6457.438845
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fd385463e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "b8855f3f351d690600000000"
+          },
+          {
+            "snapshotIndex": 76,
+            "address": "0xc98ff9960",
+            "className": "PWVectorBezierCurve",
+            "x": 9205.582612078124,
+            "y": 6483.279986929687,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3e255f17"
+            },
+            "storedControls": [
+              {
+                "x": 9136.504210640625,
+                "y": 6509.121128859375
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f175f253e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "2882193f351d690600000000"
+          },
+          {
+            "snapshotIndex": 77,
+            "address": "0xc9d866408",
+            "className": "PWVectorBezierCurve",
+            "x": 8969.153559539063,
+            "y": 6567.224161570312,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3e1ea71a"
+            },
+            "storedControls": [
+              {
+                "x": 8801.8029084375,
+                "y": 6625.32719428125
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f1aa71e3e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "4abe343f351d690600000000"
+          },
+          {
+            "snapshotIndex": 78,
+            "address": "0xc98ff8f48",
+            "className": "PWVectorBezierCurve",
+            "x": 8705.934485929687,
+            "y": 6653.192611710938,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3e2f2535"
+            },
+            "storedControls": [
+              {
+                "x": 8610.066063421875,
+                "y": 6681.058029140625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f35252f3e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "8dd4463f351d690600000000"
+          },
+          {
+            "snapshotIndex": 79,
+            "address": "0xc682c5410",
+            "className": "PWVectorBezierCurve",
+            "x": 8505.309806296875,
+            "y": 6705.570740273437,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3e03287c"
+            },
+            "storedControls": [
+              {
+                "x": 8400.553549171875,
+                "y": 6730.08345140625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f7c28033e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "b76ace3e351d690600000000"
+          },
+          {
+            "snapshotIndex": 80,
+            "address": "0xc98ff8a80",
+            "className": "PWVectorBezierCurve",
+            "x": 8294.880042210938,
+            "y": 6754.37475740625,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3e08978d"
+            },
+            "storedControls": [
+              {
+                "x": 8189.206535249999,
+                "y": 6778.66606340625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f8d97083e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "2f9fc63e351d690600000000"
+          },
+          {
+            "snapshotIndex": 81,
+            "address": "0xc98ff6f68",
+            "className": "PWVectorBezierCurve",
+            "x": 8083.05858871875,
+            "y": 6798.086456484375,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3e08cbfa"
+            },
+            "storedControls": [
+              {
+                "x": 7976.910642187499,
+                "y": 6817.5068495625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803ffacb083e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "ce35ae3d351d690600000000"
+          },
+          {
+            "snapshotIndex": 82,
+            "address": "0xc98ff5890",
+            "className": "PWVectorBezierCurve",
+            "x": 7880.789185242187,
+            "y": 6831.233967796875,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3e01a17a"
+            },
+            "storedControls": [
+              {
+                "x": 7784.667728296875,
+                "y": 6844.96108603125
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f7aa1013e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "632bd63d351d690600000000"
+          },
+          {
+            "snapshotIndex": 83,
+            "address": "0xc98ff6e58",
+            "className": "PWVectorBezierCurve",
+            "x": 7690.444029632812,
+            "y": 6862.863272484375,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3df415c5"
+            },
+            "storedControls": [
+              {
+                "x": 7596.220330968749,
+                "y": 6880.7654589375
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fc515f43d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "2ca9073e351d690600000000"
+          },
+          {
+            "snapshotIndex": 84,
+            "address": "0xc98ffa268",
+            "className": "PWVectorBezierCurve",
+            "x": 7502.154778828124,
+            "y": 6894.334430648438,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3df17ba5"
+            },
+            "storedControls": [
+              {
+                "x": 7408.0892266875,
+                "y": 6907.903402359375
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fa57bf13d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "32b05c3e351d690600000000"
+          },
+          {
+            "snapshotIndex": 85,
+            "address": "0xc98ff45f8",
+            "className": "PWVectorBezierCurve",
+            "x": 7322.18403515625,
+            "y": 6916.4749439296875,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3de55eea"
+            },
+            "storedControls": [
+              {
+                "x": 7236.278843624999,
+                "y": 6925.0464855
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fea5ee53d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "52a05f3f351d690600000000"
+          },
+          {
+            "snapshotIndex": 86,
+            "address": "0xc98ff53c8",
+            "className": "PWVectorBezierCurve",
+            "x": 7066.144813710936,
+            "y": 6938.58382790625,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3e22827f"
+            },
+            "storedControls": [
+              {
+                "x": 6896.010783796874,
+                "y": 6952.1211703125
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f7f82223e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "a8bc603f351d690600000000"
+          },
+          {
+            "snapshotIndex": 87,
+            "address": "0xc9d868580",
+            "className": "PWVectorBezierCurve",
+            "x": 6717.842910492187,
+            "y": 6952.1211703125,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3e5c947c"
+            },
+            "storedControls": [
+              {
+                "x": 6539.6750371875,
+                "y": 6952.1211703125
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f7c945c3e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "c2be623e351d690600000000"
+          },
+          {
+            "snapshotIndex": 88,
+            "address": "0xc98ff5808",
+            "className": "PWVectorBezierCurve",
+            "x": 6463.416783585937,
+            "y": 6945.479016328125,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3e211004"
+            },
+            "storedControls": [
+              {
+                "x": 6387.158529984375,
+                "y": 6938.83686234375
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f0410213e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "6959253f351d690600000000"
+          },
+          {
+            "snapshotIndex": 89,
+            "address": "0xc98ff5918",
+            "className": "PWVectorBezierCurve",
+            "x": 6196.781745070312,
+            "y": 6891.898974187499,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3e2c632f"
+            },
+            "storedControls": [
+              {
+                "x": 6006.40496015625,
+                "y": 6844.96108603125
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f2f632c3e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "066cf53e351d690600000000"
+          },
+          {
+            "snapshotIndex": 90,
+            "address": "0xc9d85cca0",
+            "className": "PWVectorBezierCurve",
+            "x": 5964.685907273437,
+            "y": 6824.781589640625,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3e1949f0"
+            },
+            "storedControls": [
+              {
+                "x": 5922.966854390625,
+                "y": 6804.60209325
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803ff049193e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "f103273f351d690600000000"
+          },
+          {
+            "snapshotIndex": 91,
+            "address": "0xc9d866738",
+            "className": "PWVectorBezierCurve",
+            "x": 5836.397447460937,
+            "y": 6757.569317179687,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3db733c5"
+            },
+            "storedControls": [
+              {
+                "x": 5749.82804053125,
+                "y": 6710.536541109374
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fc533b73d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "80fc4f3f351d690600000000"
+          },
+          {
+            "snapshotIndex": 92,
+            "address": "0xc98ff6ff0",
+            "className": "PWVectorBezierCurve",
+            "x": 5671.861804476563,
+            "y": 6665.1801181875,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3deeaa3f"
+            },
+            "storedControls": [
+              {
+                "x": 5593.8955684218745,
+                "y": 6619.823695265624
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f3faaee3d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "aa50d83d351d690600000000"
+          },
+          {
+            "snapshotIndex": 93,
+            "address": "0xc98ff9e28",
+            "className": "PWVectorBezierCurve",
+            "x": 5561.4439018124995,
+            "y": 6601.9847674218745,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3da0e718"
+            },
+            "storedControls": [
+              {
+                "x": 5528.992235203124,
+                "y": 6584.145839578125
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f18e7a03d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "a044613f351d690600000000"
+          },
+          {
+            "snapshotIndex": 94,
+            "address": "0xc9d85d1f0",
+            "className": "PWVectorBezierCurve",
+            "x": 5504.321377546874,
+            "y": 6565.800842859375,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d2b6cb5"
+            },
+            "storedControls": [
+              {
+                "x": 5479.650519890624,
+                "y": 6547.455846140625
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fb56c2b3d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "8f83563e351d690600000000"
+          },
+          {
+            "snapshotIndex": 95,
+            "address": "0xc682c59e8",
+            "className": "PWVectorBezierCurve",
+            "x": 5457.763041046875,
+            "y": 6528.952702898438,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d164078"
+            },
+            "storedControls": [
+              {
+                "x": 5435.875562203125,
+                "y": 6510.449559656249
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f7840163d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "a904533f351d690600000000"
+          },
+          {
+            "snapshotIndex": 96,
+            "address": "0xc98ff4f88",
+            "className": "PWVectorBezierCurve",
+            "x": 5416.486798429687,
+            "y": 6491.47197684375,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d0d1cdd"
+            },
+            "storedControls": [
+              {
+                "x": 5397.09803465625,
+                "y": 6472.49439403125
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803fdd1c0d3d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "42c96c3d351d690600000000"
+          },
+          {
+            "snapshotIndex": 97,
+            "address": "0xc9d85cfd0",
+            "className": "PWVectorBezierCurve",
+            "x": 5381.979227015625,
+            "y": 6455.003388539062,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3cfe321b"
+            },
+            "storedControls": [
+              {
+                "x": 5366.860419375,
+                "y": 6437.512383046875
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f1b32fe3c000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "eb2c563f351d690600000000"
+          },
+          {
+            "snapshotIndex": 98,
+            "address": "0xc9d85d058",
+            "className": "PWVectorBezierCurve",
+            "x": 5366.860419375,
+            "y": 6437.512383046875,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "00000000"
+            },
+            "storedControls": [
+              {
+                "x": 0,
+                "y": 0
+              }
+            ],
+            "retainedScalarsHex": "0000803f0000803f00000000000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "0e92373f351d690600000000"
+          }
+        ],
+        "after": [
+          {
+            "snapshotIndex": 0,
+            "address": "0xc8abc0638",
+            "className": "PWVectorSplineCurve",
+            "x": 7647.9658734375,
+            "y": 1546.483223390625,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "00000000"
+            },
+            "storedControls": [],
+            "retainedScalarsHex": "0000803f0000803f00000000000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "000000000100000000000000"
+          },
+          {
+            "snapshotIndex": 1,
+            "address": "0xca419bd10",
+            "className": "PWVectorSplineCurve",
+            "x": 6002.279312726074,
+            "y": 1467.0561088256836,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3e0dbfd8"
+            },
+            "storedControls": [],
+            "retainedScalarsHex": "0000803f0000803fd8bf0d3e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "000000000100000000000000"
+          },
+          {
+            "snapshotIndex": 2,
+            "address": "0xc8abc6998",
+            "className": "PWVectorSplineCurve",
+            "x": 4287.826689960937,
+            "y": 1861.4162101640622,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3e126021"
+            },
+            "storedControls": [],
+            "retainedScalarsHex": "0000803f0000803f2160123e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "000000000100000000000000"
+          },
+          {
+            "snapshotIndex": 3,
+            "address": "0xc8abc23c0",
+            "className": "PWVectorSplineCurve",
+            "x": 4028.302314505371,
+            "y": 3090.3273766713864,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3dfc714e"
+            },
+            "storedControls": [],
+            "retainedScalarsHex": "0000803f0000803f4e71fc3d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "000000000100000000000000"
+          },
+          {
+            "snapshotIndex": 4,
+            "address": "0xc8abc5138",
+            "className": "PWVectorSplineCurve",
+            "x": 7865.270069214111,
+            "y": 4544.914126331909,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3f25dfec"
+            },
+            "storedControls": [],
+            "retainedScalarsHex": "0000803f0000803fecdf253f000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "000000000100000000000000"
+          },
+          {
+            "snapshotIndex": 5,
+            "address": "0xc8abc6308",
+            "className": "PWVectorSplineCurve",
+            "x": 9924.358561101562,
+            "y": 6056.600666695313,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3d3ae9ec"
+            },
+            "storedControls": [],
+            "retainedScalarsHex": "0000803f0000803fece93a3d000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "000000000100000000000000"
+          },
+          {
+            "snapshotIndex": 6,
+            "address": "0xc5f6dbf60",
+            "className": "PWVectorSplineCurve",
+            "x": 6806.424731932617,
+            "y": 6951.27508641211,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "3e4e0ffd"
+            },
+            "storedControls": [],
+            "retainedScalarsHex": "0000803f0000803ffd0f4e3e000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "000000000100000000000000"
+          },
+          {
+            "snapshotIndex": 7,
+            "address": "0xc5f6de990",
+            "className": "PWVectorSplineCurve",
+            "x": 5366.860419375,
+            "y": 6437.512383046875,
+            "flags": 0,
+            "scalar44": {
+              "f32": "3f800000"
+            },
+            "factor4c": {
+              "f32": "00000000"
+            },
+            "storedControls": [],
+            "retainedScalarsHex": "0000803f0000803f00000000000000000000803f0000803f0000803f",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "000000000100000000000000"
+          }
+        ],
+        "indexMeaning": "Local traversal index in each snapshot only; not source-to-output correspondence."
+      },
+      "correspondence": {
+        "status": "not-evaluated",
+        "reason": "Output/source multimap was not captured; ordered equality and aggregate changes do not identify which source nodes survived or merged."
+      },
+      "arithmetic": [
+        {
+          "name": "convertPostSettings",
+          "status": "not-evaluated",
+          "reason": "Wrapper inputs do not recover original setting IDs, magnification, fallback or prior outputs; provide a helper observation."
+        },
+        {
+          "name": "applyCallerCap",
+          "status": "not-evaluated",
+          "reason": "Wrapper arguments follow the caller cap; original k/tolerance and the object condition were not captured."
+        },
+        {
+          "name": "scalarLimits",
+          "status": "derived",
+          "expected": {
+            "ratio": {
+              "f32": "40400000"
+            },
+            "floor": {
+              "f32": "3e99999a"
+            }
+          },
+          "reason": "Reference arithmetic only; no runtime result captured.",
+          "evidence": "Derived from saved wrapper arguments; core execution was not observed."
+        },
+        {
+          "name": "removalPassSchedule",
+          "status": "derived",
+          "expected": {
+            "initialTolerances": [
+              {
+                "f64": "4064000000000000"
+              },
+              {
+                "f64": "4064000000000000"
+              }
+            ],
+            "raw": 8,
+            "n": 7,
+            "decrement": 3,
+            "additionalPassLimit": 10,
+            "additionalTolerances": [
+              {
+                "f64": "4063a00000000000"
+              },
+              {
+                "f64": "4063400000000000"
+              },
+              {
+                "f64": "4062e00000000000"
+              },
+              {
+                "f64": "4062800000000000"
+              },
+              {
+                "f64": "4062200000000000"
+              },
+              {
+                "f64": "4061c00000000000"
+              },
+              {
+                "f64": "4061600000000000"
+              },
+              {
+                "f64": "4061000000000000"
+              },
+              {
+                "f64": "4060a00000000000"
+              },
+              {
+                "f64": "4060400000000000"
+              }
+            ]
+          },
+          "reason": "Reference arithmetic only; no runtime result captured.",
+          "evidence": "Derived from saved wrapper arguments; core execution was not observed."
+        },
+        {
+          "name": "endpointParameter",
+          "status": "derived",
+          "expected": {
+            "f64": "3ff0000000000000"
+          },
+          "reason": "Reference arithmetic only; no runtime result captured.",
+          "evidence": "Derived from saved wrapper arguments; core execution was not observed."
+        },
+        {
+          "name": "sourceSegmentToleranceAtInitialPass",
+          "status": "derived",
+          "expected": [
+            {
+              "sourceSnapshotIndex": 0,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 1,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 2,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 3,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 4,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 5,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 6,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 7,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 8,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 9,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 10,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 11,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 12,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 13,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 14,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 15,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 16,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 17,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 18,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 19,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 20,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 21,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 22,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 23,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 24,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 25,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 26,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 27,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 28,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 29,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 30,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 31,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 32,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 33,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 34,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 35,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 36,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 37,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 38,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 39,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 40,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 41,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 42,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 43,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 44,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 45,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 46,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 47,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 48,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 49,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 50,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 51,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 52,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 53,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 54,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 55,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 56,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 57,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 58,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 59,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 60,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 61,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 62,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 63,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 64,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 65,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 66,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 67,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 68,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 69,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 70,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 71,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 72,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 73,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 74,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 75,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 76,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 77,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 78,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 79,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 80,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 81,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 82,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 83,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 84,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 85,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 86,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 87,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 88,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 89,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 90,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 91,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 92,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 93,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 94,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 95,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 96,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 97,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 98,
+              "tolerance": {
+                "f64": "4064000000000000"
+              }
+            }
+          ],
+          "reason": "One value per captured source node at the initial tolerance; sampled segments and actual passes remain unobserved."
+        }
+      ],
+      "wholeCurveEquivalence": {
+        "status": "not-evaluated",
+        "reason": "No complete curve engine is reconstructed. Spline evaluator/measurement/neighbor adjustment, correspondence, mutation, endpoints, closure and alternate class behavior remain unresolved."
+      }
+    }
+  ],
+  "coverage": {
+    "captureIntegrity": "evaluated",
+    "capturedFieldDeltas": "evaluated",
+    "helperArithmetic": "only explicitly captured helper inputs/results can match or mismatch",
+    "renderedOutput": "not-evaluated",
+    "wholeCurveEquivalence": "not-evaluated",
+    "tabletValidation": "not-evaluated"
+  }
+}

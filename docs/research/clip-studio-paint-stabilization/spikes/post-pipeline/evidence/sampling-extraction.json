@@ -1,0 +1,91 @@
+{
+  "imageSha256": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+  "functions": [
+    {
+      "address": "0x10359b3b4",
+      "endExclusive": "0x10359b494",
+      "bytes": 224,
+      "codeSha256": "3c04d097d5a51debf8c84f1ce133848a70b11e665b544544bbb0890e1ecd3a15",
+      "assemblyFile": "sampling-10359b3b4.asm",
+      "assemblySha256": "a3c6c48b7e0193ec56c0064d44122c8b6541d13afea4f9458c5a466615bc16f1"
+    },
+    {
+      "address": "0x102193940",
+      "endExclusive": "0x1021939b4",
+      "bytes": 116,
+      "codeSha256": "8a2fef8a02957c7ca61e246bcb7cdbb5d0e7e11eaf8bed282e2ee6846dfa3558",
+      "assemblyFile": "sampling-102193940.asm",
+      "assemblySha256": "3ba61933072fa5c95027e0dea2f99eb0fb6a444c923f218eeb1f76fa0ea83abe"
+    },
+    {
+      "address": "0x10359b240",
+      "endExclusive": "0x10359b3b4",
+      "bytes": 372,
+      "codeSha256": "5a21ac2cdd67a236425cba1ed7603fbe31ea8ecec8c32bba1a20108341bc902a",
+      "assemblyFile": "sampling-10359b240.asm",
+      "assemblySha256": "cda0daf05da54db1e3119dceab0903994aa2240c781d6133f95b53e83a455f33"
+    },
+    {
+      "address": "0x1021944a8",
+      "endExclusive": "0x102194520",
+      "bytes": 120,
+      "codeSha256": "7dd2e2f5d9e0babc5987c1f80312d8be4c0cbe9fa126257f86f0ece6ab23bd70",
+      "assemblyFile": "sampling-1021944a8.asm",
+      "assemblySha256": "ec5687fb7450f528c9e6939b07bf67a821050d250fed2e9369c6f24d3cc502ea"
+    },
+    {
+      "address": "0x10276ca3c",
+      "endExclusive": "0x10276caac",
+      "bytes": 112,
+      "codeSha256": "99d20c2ef84924c08e308e9aa351815585d6cfac823f3afe087458e00e36843f",
+      "assemblyFile": "sampling-10276ca3c.asm",
+      "assemblySha256": "98024a7852d49eecc88d9c2010e2d17ea2c2e240551ac57a8895be7ee2c2377e"
+    },
+    {
+      "address": "0x1027653d4",
+      "endExclusive": "0x1027654b4",
+      "bytes": 224,
+      "codeSha256": "166b7d6d06e729f0c3083a5a7654bc7abdabab7bb862ff16174f4012ca42f668",
+      "assemblyFile": "sampling-1027653d4.asm",
+      "assemblySha256": "81a5371d3cfa5b9fbb6403c25f7c96e8ea88584ca63bcc52acf828611944cff9"
+    },
+    {
+      "address": "0x10359c7f0",
+      "endExclusive": "0x10359c838",
+      "bytes": 72,
+      "codeSha256": "a7919b0814519640e00b3c133c69a22000a71cbfa51572a36ae150726d29cbe8",
+      "assemblyFile": "sampling-10359c7f0.asm",
+      "assemblySha256": "c29abf276e3474f0f157770f4e0f0a8fbb2baa1539b72a5cdb290514f66ae3bb"
+    },
+    {
+      "address": "0x10359c838",
+      "endExclusive": "0x10359ca30",
+      "bytes": 504,
+      "codeSha256": "020046aff1db27f185fdc011ee36e192ca0da88a8765d53e32d2f3efc5633a4e",
+      "assemblyFile": "sampling-10359c838.asm",
+      "assemblySha256": "becf936a4b4889a61bafb5e629dbdcdf229fe0c746563d4c477154cd6d7f27c6"
+    },
+    {
+      "address": "0x10359c490",
+      "endExclusive": "0x10359c5e8",
+      "bytes": 344,
+      "codeSha256": "5c7366512e76dc1ed3b83e26f35277afad3a2cf47a16a272aafc9b2a65bb211e",
+      "assemblyFile": "sampling-10359c490.asm",
+      "assemblySha256": "23fb2d19a8d75f884e40f02d52b32d71339137d736610c4b16a2780da985bf8b"
+    },
+    {
+      "address": "0x102193618",
+      "endExclusive": "0x102193644",
+      "bytes": 44,
+      "codeSha256": "205910f351a26db8755f4dc177aa6a47136d26cd6de26f545f894d8b3216d982",
+      "assemblyFile": "sampling-102193618.asm",
+      "assemblySha256": "fc3230ce44ba577e05f5e24f77ffb86b41396d62015c866e09c53747ffe60a38"
+    }
+  ],
+  "vtableEntry": {
+    "address": "0x104a528a8",
+    "slot": "0xf8",
+    "bytesHex": "d453760201000000",
+    "target": "0x1027653d4"
+  }
+}

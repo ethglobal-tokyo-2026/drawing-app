@@ -3,7 +3,7 @@ import { currentLanguage } from "../i18n/i18n";
 import { useTranslation } from "../i18n/react";
 import { EASE_OUT } from "../ui/easing";
 import { isCancelled } from "../ui/webAnimations";
-import { cloudShape, type PairSize, type Pt } from "./balloonGeometry";
+import { cloudShape, type PairLayout, type PairSize, type Pt } from "./balloonGeometry";
 import { ARRIVE, BOIL, CLOUD_ARRIVE, PEEK, SPRING, WORD_STAMP } from "./dealMotion";
 import { SubjectWord } from "./SubjectWord";
 import { Inked, ThoughtTrail } from "./ThoughtCloud";
@@ -19,6 +19,8 @@ interface Props {
   reduced: boolean;
   /** Where it sits on a board, by its top-left; the detail's sits in its column. */
   at?: Pt;
+  /** On a board, both trails lead back to the selected sticker's edge. */
+  trails?: PairLayout["trails"];
   /** A peek has played and faded. */
   onDone?: () => void;
 }
@@ -28,7 +30,7 @@ interface Props {
  * each with a trail of bubbles back to it. Hidden from screen readers, which hear the pair in the sticker's
  * name or the detail's line instead.
  */
-export function SubjectThought({ subjects, size, toward, reduced, at, onDone }: Props) {
+export function SubjectThought({ subjects, size, toward, reduced, at, trails, onDone }: Props) {
   // Rendered again as the language changes, so the words follow it.
   useTranslation();
   const english = currentLanguage() === "en";
@@ -131,7 +133,7 @@ export function SubjectThought({ subjects, size, toward, reduced, at, onDone }: 
       style={style}
       aria-hidden="true"
     >
-      {layout.trails.map((trail, i) => (
+      {(trails ?? layout.trails).map((trail, i) => (
         <ThoughtTrail
           key={i}
           trail={trail}

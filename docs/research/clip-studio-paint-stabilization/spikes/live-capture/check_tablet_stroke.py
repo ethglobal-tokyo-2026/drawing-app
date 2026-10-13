@@ -167,6 +167,45 @@ class StrokeContractTests(unittest.TestCase):
         contract.finish_call(2, queue(count=2, state=0), 3, True)
         self.assertFalse(contract.complete)
 
+    def test_normal_release_return_accepts_only_window_reset_to_initial_window(self):
+        contract = capture.StrokeContract()
+        self.begin(contract)
+        contract.source_event(6)
+        contract.begin_call(2, queue(count=1, state=1), 3, 'digitizer_normal', 0, (7., 9., 0.))
+        final = bytearray(queue(count=2, state=0))
+        struct.pack_into('<d', final, 0x58, 5.5)
+        contract.finish_call(2, bytes(final), 3, True)
+        contract.source_return(queue(count=2, state=0))
+        self.assertTrue(contract.complete)
+
+    def test_release_window_reset_does_not_allow_other_mutations(self):
+        for offset, fmt, value in ((0x58, '<d', 2.5), (0x90, '<d', 1.),
+                                   (0x50, '<i', 3), (0x88, '<i', 2)):
+            contract = capture.StrokeContract()
+            self.begin(contract)
+            contract.source_event(6)
+            contract.begin_call(2, queue(count=1, state=1), 3, 'digitizer_normal', 0, (7., 9., 0.))
+            final = bytearray(queue(count=2, state=0))
+            struct.pack_into('<d', final, 0x58, 5.5)
+            contract.finish_call(2, bytes(final), 3, True)
+            returned = bytearray(queue(count=2, state=0))
+            struct.pack_into(fmt, returned, offset, value)
+            with self.subTest(offset=offset), self.assertRaises(capture.shared.CaptureError):
+                contract.source_return(bytes(returned))
+            self.assertFalse(contract.complete)
+
+    def test_window_reset_before_final_phase_remains_rejected(self):
+        contract = capture.StrokeContract()
+        self.begin(contract)
+        contract.source_event(6)
+        contract.begin_call(2, queue(count=1, state=1), 3, 'digitizer_normal', 0, (7., 9., 0.))
+        pending_end = bytearray(queue(count=2, state=2))
+        struct.pack_into('<d', pending_end, 0x58, 5.5)
+        contract.finish_call(2, bytes(pending_end), 1, True)
+        with self.assertRaises(capture.shared.CaptureError):
+            contract.source_return(queue(count=2, state=2))
+        self.assertFalse(contract.complete)
+
     def test_captured_hover_history_allows_begin_without_new_proximity_event(self):
         contract = capture.StrokeContract()
         self.assertTrue(hasattr(contract, 'initial_history'), 'Initial history tracking is missing')

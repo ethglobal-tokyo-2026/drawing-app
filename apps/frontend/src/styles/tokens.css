@@ -130,6 +130,8 @@
   --z-status: 80;
   /* The upright cover, over the whole app and its toasts while the phone is on its side */
   --z-cover: 90;
+  /* Pointer indicators for recording, above every app screen without taking input. */
+  --z-pointer-indicators: 100;
 }
 
 @media (prefers-reduced-motion: reduce) {

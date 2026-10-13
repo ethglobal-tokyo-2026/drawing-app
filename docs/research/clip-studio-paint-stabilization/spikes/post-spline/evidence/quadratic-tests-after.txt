@@ -1,0 +1,17 @@
+✔ quadratic evaluator preserves rational endpoints, midpoint and extrapolation (1.7275ms)
+✔ quadratic split returns both controls and its separately calculated point (0.304125ms)
+✔ quadratic length uses zero samples, endpoint chords and both quality modes (0.877208ms)
+✔ sampled length rejects an invalid or excessive research sample count (5.627834ms)
+✔ native quadratic instruction Q results match every saved output bit (3.375333ms)
+✔ native quadratic instruction D results match every saved output bit (1.68925ms)
+✔ native quadratic instruction B results match every saved output bit (5.271833ms)
+✔ native quadratic instruction G results match every saved output bit (24.585667ms)
+✔ native quadratic instruction L results match every saved output bit (72.156625ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 321.135167

@@ -1,0 +1,793 @@
+{
+  "schema": "csp-post-static-capture-contract/v1",
+  "imageSha256": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+  "addressConvention": "Unslid file virtual addresses; endExclusive excluded.",
+  "method": "Static objdump; speculative string annotations removed. No target execution.",
+  "metadataSha256": "295bc99dd3f42427dbf54cfd946b141fd7be0250483ff350140067622cc8ccc6",
+  "extracts": [
+    {
+      "name": "adjacency",
+      "address": "0x10276af54",
+      "byteCount": 176,
+      "sha256": "93bc98ec7dd44929e39e051f093172463d36609d83b2cca8069fa1dfd56ab2db",
+      "bytesHex": "e80300aa001440f9400000b4c0035fd6081d40f90985403969000037000080d2c0035fd6001940f9c0035fd6e80300aa001440f9400000b4c0035fd6081d40f90985403969000037000080d2c0035fd6001940f9c0035fd6e80300aa001840f9400000b4c0035fd6081d40f90985403969000037000080d2c0035fd6001d40f9c0035fd6e80300aa001840f9400000b4c0035fd6081d40f90985403969000037000080d2c0035fd6001d40f9c0035fd6",
+      "endExclusive": "0x10276b004",
+      "assemblyFile": "adjacency.asm",
+      "assemblySha256": "b432233dc3faec3abb1e17030fe6fbd4c0d6b30e7d618710876ac2e30d9a8379",
+      "containingFunction": [
+        "0x10276af54",
+        "0x10276af80"
+      ]
+    },
+    {
+      "name": "absent_controls",
+      "address": "0x10276b1d4",
+      "byteCount": 24,
+      "sha256": "617dc3e75ab8f1cbebf93d339408201c54f108069a8c1509cdd5044b7329191a",
+      "bytesHex": "00008052c0035fd600008052c0035fd600008052c0035fd6",
+      "endExclusive": "0x10276b1ec",
+      "assemblyFile": "absent_controls.asm",
+      "assemblySha256": "fa71c8dafc9e37f8f9bf68828a52f9e48fe8f2bd2760af2008a7ccd4b7073522",
+      "containingFunction": [
+        "0x10276b1d4",
+        "0x10276b1dc"
+      ]
+    },
+    {
+      "name": "cached_scalars",
+      "address": "0x10276cc24",
+      "byteCount": 56,
+      "sha256": "94e5c5cf0327462c3969240e3535dba5577824d618cd3387b9f21c930ee29b55",
+      "bytesHex": "c8c20191c7000034600640fd0040621ec06e00bde90313aa06000014c06e40bd00c0221e600600fde90308aae80313aa200140fd000100fd",
+      "endExclusive": "0x10276cc5c",
+      "assemblyFile": "cached_scalars.asm",
+      "assemblySha256": "03a2815d71ddf073a66fd1fc68308023433370142beb349d9953ffc505ae4cd3",
+      "containingFunction": [
+        "0x10276cbd4",
+        "0x10276d174"
+      ]
+    },
+    {
+      "name": "stroke_endpoint_getters",
+      "address": "0x102789774",
+      "byteCount": 44,
+      "sha256": "7f2c97bcd808c246e42e413ddc8c3ea5b8345dae7b9e2867b5ddf0ed116d29c6",
+      "bytesHex": "0aa448a90a2500a9890000b42821009129008052080129b8c0035fd6004c40fdc0035fd6004c00fdc0035fd6",
+      "endExclusive": "0x1027897a0",
+      "assemblyFile": "stroke_endpoint_getters.asm",
+      "assemblySha256": "9cc0e625eec06a69e541de8f282e5a5e7eefb559d54e2047e800c081b614d349",
+      "containingFunction": [
+        "0x102789774",
+        "0x102789790"
+      ]
+    },
+    {
+      "name": "post_gate",
+      "address": "0x102891ca0",
+      "byteCount": 224,
+      "sha256": "95cde6f62ff3a0c6ffce8362ee51626a0ba9c0e3c678c92d70767655a785193e",
+      "bytesHex": "886641b92810003480a209914e7b0f94e0000034802e41f9a00000b437610f94580f00351f040071080f0054e89f41f9e8a301f9803e40f9800200b4080040f9080940f900013fd600020034803e40f9e95a11941f90017180010054887241b91f1500716b00005488008052887201b980b640fd01106f1e0020611e6d00005408ffe7d288b600f9ff5b01f9e82601b0087940f9080140f9000140f9c00a00b4817241b980b640fd827641b9e39f42b9848241b981be40fdc36c0194e05b01f9a00900b4e0e30c91e1c30a9143935f97884640f9080900b4e85b41f9c80800b4",
+      "endExclusive": "0x102891d80",
+      "assemblyFile": "post_gate.asm",
+      "assemblySha256": "73acd799c0b1ffc994d84564af6b532d546cb2f3b2c0b766151eb6b3a33ae7e3",
+      "containingFunction": [
+        "0x10289148c",
+        "0x102892fc8"
+      ]
+    },
+    {
+      "name": "settings_caller",
+      "address": "0x1028897d0",
+      "byteCount": 64,
+      "sha256": "15e718051b8d951773edd249de8a7eacae51413c0299a5350431ac79eee5c345",
+      "bytesHex": "29012ab8f6631291f7231291f9e31191e80300f9e0631291e1231291e2e3119164a2059165c2059166d2059167e20591c25e0194a00200b920230091881a5e97",
+      "endExclusive": "0x102889810",
+      "assemblyFile": "settings_caller.asm",
+      "assemblySha256": "d43f50a52683015e2677a668c5be35c980a91eef4ba570c8d164a69aade69e59",
+      "containingFunction": [
+        "0x1028889ac",
+        "0x10288b7fc"
+      ]
+    },
+    {
+      "name": "descriptor_entry",
+      "address": "0x1028c5438",
+      "byteCount": 120,
+      "sha256": "5596451be4dec3008e629b51d296995b45ce3504b9b8ff5b27b296477c3540e8",
+      "bytesHex": "fc6fbaa9fa6701a9f85f02a9f65703a9f44f04a9fd7b05a9fd430191ff8326d1f30301aaf40300aace612b94f50300aa680240b9e96998120901090b297d04530a6a98523fd5307156319f1a0801164b1ff911718d0800541f6113716c0f00541fc512710c1800541f211271ad4d00541f7112712c7c0054",
+      "endExclusive": "0x1028c54b0",
+      "assemblyFile": "descriptor_entry.asm",
+      "assemblySha256": "9bd671c8bca9731f1963e11d939ea11fac72d0317549eaabf088a03284377226",
+      "containingFunction": [
+        "0x1028c5438",
+        "0x1028cb514"
+      ]
+    },
+    {
+      "name": "descriptor_switch",
+      "address": "0x1028c5e58",
+      "byteCount": 28,
+      "sha256": "6b0fbd208d6a2e49988d07d09e5462aaf2157d132c8471594182f5ea458f7977",
+      "bytesHex": "1f0112716d7f00541f05127160af00541f09127180c100541f211271",
+      "endExclusive": "0x1028c5e74",
+      "assemblyFile": "descriptor_switch.asm",
+      "assemblySha256": "0281ac6bc4c62796492c404eab143dce873b0ee20a780321b1d2a2addb816b39",
+      "containingFunction": [
+        "0x1028c5438",
+        "0x1028cb514"
+      ]
+    },
+    {
+      "name": "descriptor_47f_480",
+      "address": "0x1028c6e40",
+      "byteCount": 124,
+      "sha256": "17a0ae87779b91a3fa8179093acccc1b56408c78bd702b817d386f43cb8ee81d",
+      "bytesHex": "c0220091ac0e00141ffd1171205300541f01127181d6015408d200f000b140fd604200fcf50080521503a072f6430c91e8430c91a1fe0111e00314aa4d281594f7431291e0c7c03dff8b01f9ff8f01f96182c13c6082813ce127813de0027db2e3245d97c0027db2e1245d97e8430c91a1021932ec0700141fc91271",
+      "endExclusive": "0x1028c6ebc",
+      "assemblyFile": "descriptor_47f_480.asm",
+      "assemblySha256": "f83c4183d549e2a6c2668159f5001cfadfd9dc8664649372003163606a197f30",
+      "containingFunction": [
+        "0x1028c5438",
+        "0x1028cb514"
+      ]
+    },
+    {
+      "name": "descriptor_481",
+      "address": "0x1028c7450",
+      "byteCount": 100,
+      "sha256": "145094679d16575ee557a83b9df1f43217e1a4f295433b40b27561f5cb3a7e3e",
+      "bytesHex": "08d200d000b140fd604200fcf50080521503a072f6430c91e8430c91a1060211e00314aacf261594f7431291e0c7c03dff8b01f9ff8f01f96182c13c6082813ce127813de0027db265235d97c0027db263235d97e8430c91a10a02116e06001468d200b0",
+      "endExclusive": "0x1028c74b4",
+      "assemblyFile": "descriptor_481.asm",
+      "assemblySha256": "50586184ec7c640e99996fb8f67983f3aa9da7df700f641bb09a84afb639a2a9",
+      "containingFunction": [
+        "0x1028c5438",
+        "0x1028cb514"
+      ]
+    },
+    {
+      "name": "descriptor_482",
+      "address": "0x1028c769c",
+      "byteCount": 100,
+      "sha256": "f1ed8b598ae6ad4187acb0b8f5c80b4424c7a9304e1c707b548c77904a6f2058",
+      "bytesHex": "08d200d000b140fd604200fcf50080521503a072f6430c91e8430c91a10e0211e00314aa3c261594f7431291e0c7c03dff8b01f9ff8f01f96182c13c6082813ce127813de0027db2d2225d97c0027db2d0225d97e8430c91a1120211db05001448e400f0",
+      "endExclusive": "0x1028c7700",
+      "assemblyFile": "descriptor_482.asm",
+      "assemblySha256": "aaa4e76d0dd93a86344149bdccf47dab98c6f7cb0e54c71a2c0a6d6f70b4f2db",
+      "containingFunction": [
+        "0x1028c5438",
+        "0x1028cb514"
+      ]
+    },
+    {
+      "name": "descriptor_post",
+      "address": "0x1028c78b0",
+      "byteCount": 208,
+      "sha256": "5b2e3ee2b4ec5a1881c77b377c614ec6c90a3abe08c2bbd474005d4c0d8df571",
+      "bytesHex": "48e400f0006547fd604200fcc8fa1111681200b9f50080521503a072f6430c91e8430c91a1f60111e00314aab5251594f7431291e0c7c03dff8b01f9ff8f01f96182c13c6082813ce127813de0027db24b225d97c0027db249225d97e8430c91a1fa0111e00314aaa6251594e0c7c03dff8b01f9ff8f01f96182c23c6082823ce127813de0027db23d225d97c0027db23b225d9708d200d000a5c03d6016803d08908052e89304b960a20191e1431291ad2a5d9728908052e89304b960a20191e1431291a82a5d9748908052e60b0014",
+      "endExclusive": "0x1028c7980",
+      "assemblyFile": "descriptor_post.asm",
+      "assemblySha256": "d2c793b5b44573fa6f1046d3abc30e5ef5358cb1bf42f7f4b8c775a7ad5545f6",
+      "containingFunction": [
+        "0x1028c5438",
+        "0x1028cb514"
+      ]
+    },
+    {
+      "name": "wrapper",
+      "address": "0x1028ed064",
+      "byteCount": 284,
+      "sha256": "7389acda8989c2936f66dd99e8bd5ae456658eebbe1a032297906390a1d72d97",
+      "bytesHex": "ff0303d1e923086df65709a9f44f0aa9fd7b0ba9fdc302912840601ef40303aaf50302aa0940601ef30300aaa4030034e02300914f63fa97610e40f9e8cf00f000bd45fd2009601ee0230091e20315aae30314aa0141601e7663fa97f40300aae02300915b63fa97b40300b4ffff00a9e1230091e00314aa1852fa97210b01d021601891220b01d042602e91e00314aa030080d2d7c04b94600e00f911000014f60301aae02300914167fa97610e40f9e0230091e20316aa2041601ee30315aae40314aa0141601eb268fa97f40300aae02300915767fa97b4fcffb5600e40f9fd7b4ba9f44f4aa9f65749a9e923486dff030391c0035fd6f30300aae02300914c67fa9704000014f30300aae02300913063fa97e00313aafdb54b94",
+      "endExclusive": "0x1028ed180",
+      "assemblyFile": "wrapper.asm",
+      "assemblySha256": "0d5ce851e2123bd7be5bd602facb098a1b4eedece3e95220417b647da7430b4a",
+      "containingFunction": [
+        "0x1028ed064",
+        "0x1028ed180"
+      ]
+    },
+    {
+      "name": "ordinary_wrapper",
+      "address": "0x1027873f4",
+      "byteCount": 80,
+      "sha256": "01233f09dbfa9afe4c81f151c7aff9b242cbb426358dd97349b9ac95c5459533",
+      "bytesHex": "f44fbea9fd7b01a9fd430091f30300aa28db00d0022d42fd021800fd035800b9002800fd013400fd1f7000b9012400f9210c40f9e30304aa2400805268ffff97602240f9fd7b41a9f44fc2a8c0035fd6",
+      "endExclusive": "0x102787444",
+      "assemblyFile": "ordinary_wrapper.asm",
+      "assemblySha256": "891ef370a12c2d4e29344975846782599782a30ffbe2f17a9fa800024f58f07c",
+      "containingFunction": [
+        "0x1027873f4",
+        "0x102787444"
+      ]
+    },
+    {
+      "name": "ordinary_core",
+      "address": "0x1027871d0",
+      "byteCount": 460,
+      "sha256": "68473f298831bbf9590d2d9c306153e62730deb94aefbf05044689fef6c74c07",
+      "bytesHex": "ffc301d1e923016dfa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd830191f60304aaf50303aaf70302aaf40301aaf30300aa28db00f0000dc23d4300621e28ee00d001bdc33d0110c34f2068610e28ee00d0018147fd02e4a12e201ca22e00c005fcc8db00f000ed47fde303803d6008601e1900781ee80080523f1f007138b3881a1f2000f9e20303aaa9000094683640b968000034e00313aaec010094e00313aa2f020094e00313aa2d02009476000034e00313aa4a0200943f0b0031cb01005408130011e80ec81a0801621e080b0011f70308aa602a40fd0038681e602a00fde00313aa1e02009460000034e806005117ffff35e00313aa7402009416020034e8e700b0002942fde103c03d2008601e01106e1e0020611e28cc601ee00313aa210080520041601ead020094e00313aa010080520041601ea9020094e00313aa2003009475000034602240f938e5ff97612640f9e00314aab3ccff97610e41f8602200d1629862977f7e00a973821ff8fd7b46a9f44f45a9f65744a9f85f43a9fa6742a9e923416dffc30191c0035fd602000014010000141c585194612240f9610000b4e00314aa9fccff972f585194200020d4f30300aa1a585194e00313aa774d5194c2236297",
+      "endExclusive": "0x10278739c",
+      "assemblyFile": "ordinary_core.asm",
+      "assemblySha256": "7f3a8a569c8334a76002abb5087e7fd818e4722f54d649e042f120d7e4ae18f9",
+      "containingFunction": [
+        "0x1027871d0",
+        "0x10278739c"
+      ]
+    },
+    {
+      "name": "clone",
+      "address": "0x102787500",
+      "byteCount": 1004,
+      "sha256": "3b97c7d890ee0bb40a7e7061c3c523387be80930ae02ae29693137514af99bc5",
+      "bytesHex": "ff4305d1e9230e6dfc6f0fa9fa6710a9f85f11a9f65712a9f44f13a9fd7b14a9fd030591f40302aaf60301aaf30300aaf50300aaa10e41f800200091e1976297750600f9bf0200f9f50313aaa28e44f8bf021df8572040b9081e8212e802080aa01240fd0190641e0808611ea9025fb849030034693e40b9290530370a011932ff061b72eb179f1a0c011c32ed021c72ad7d04530110621e0108611e011d611e3f011c72010d611e6b018d1a4a018c1a08011b32ff061a72ec179f1a0028601e000d601e3f011b72280c601e78018c1a4801881a18000014090119322a0080520b011c322c008052ff021c724a018c1a29018b1a0b011b32ff021b724a018c1a29018b1a08011a322b008052ff021a7258018b1a2801881a0700001408011a32ff021972f8179f1a0110621e0008611e080d601e29018052ff02096a841a407a090114321401891ae00316aae10314aae0cbff97602200f9612640f983eeff9798000037e00315aa0041601e97e0ff97a80240f9151940f9951200b4981204539f021a72e8179f1a99061b12ff021a721a159f1a0810611e00f5006fe003803d602240f933e8ff97f60300aae1230291e00315aaa18eff97e1230291e00316aab48eff97a84240b90801182a097514129f021a722801881ac84200b9590d00349a050036e00315aa1b8eff97c00c00b4a086406de007076d0080c03ce01b803da00640fde007056d9707283700e4002fe00315aab48fff97e18301ad00106e1ee00315aab08fff970640601e2740601ee007476de20f466de0430191e59341ade79b00ad5a593894f4082837d409303640060035e0830191e1c30191af2fe8970018681ee18f41ad2304186ee18b40ad2204186e4290c04f6090c04fe30743ad20d4604e61d4e24ee113803d2c000014a80240f9080940f9e1c30191e00315aa0200805200013fd6e0000034e007476dc80240f9080d40f9e00316aa0100805200013fd6a80240f9080940f9e1830191e00315aa2200805200013fd640050034e007466dc80240f9080d40f9e00316aa2100805223000014a80240f9080940f9e1430191e00315aa0200805200013fd6d402283794033036e10343ade217c03d42d4624e40d4604e41d4614ee203c03d21fc626ee113803d00fc626e0104185ec80240f9080d40f9e00316aa0100805200013fd6e213c03d4104185e2100805204000014e001003401008052e207456dc80240f9080d40f9e00316aa4040601e00013fd6f65707a960220091e1c301918d030094b51640f955f0ffb50b00001401008052c84240b908010032c84200b9e007466de20bc03d0238621ee007c03d2138601eebffff17fd7b54a9f44f53a9f65752a9f85f51a9fa6750a9fc6f4fa9e9234e6dff430591c0035fd6",
+      "endExclusive": "0x1027878ec",
+      "assemblyFile": "clone.asm",
+      "assemblySha256": "57451e6b7ae61c0394d6b5c34da5ab371a12475c7388515e33fc8662bd828f82",
+      "containingFunction": [
+        "0x102787500",
+        "0x1027878ec"
+      ]
+    },
+    {
+      "name": "path_base_constructor",
+      "address": "0x102781384",
+      "byteCount": 212,
+      "sha256": "27a8e0d6a853fdd7787cfdb00da16ed841cbc13aa18c126515a5570b6d5a977b",
+      "bytesHex": "f44fbea9fd7b01a9fd430091f30300aa881601d008e11391080000f9881601d008a1189108410091f40300aa888e02f81f2400f91f7c03a91f4000b900800191e85eea9760920191e65eea9760a20191e45eea9760b20191e25eea9760c20191e05eea9760d20191de5eea977ffe00a97f2200b97f0e00f908fee7d2683e00f97f8200b97f7e05a9608201910100805202008052030080528366ea9760b201910100801202008012030080127e66ea97e00313aafd7b41a9f44fc2a8c0035fd6f30300aae00314aa03000094e00313aa47655194",
+      "endExclusive": "0x102781458",
+      "assemblyFile": "path_base_constructor.asm",
+      "assemblySha256": "9db847ab8b818ad90548c6dbb6ed41955559979aa56c73c87b0db7b03c323e1e",
+      "containingFunction": [
+        "0x102781384",
+        "0x102781458"
+      ]
+    },
+    {
+      "name": "stroke_constructor",
+      "address": "0x102789680",
+      "byteCount": 92,
+      "sha256": "2aa21fc66d2dbca40adab08bfd5fe9d689d72d8f0201975cfa49269e41b010ca",
+      "bytesHex": "f44fbea9fd7b01a9fd430091f30300aa3ddfff97481601d008e12991080000f91f7c09a91f4400f9443aea9760a200b9e00313aafd7b41a9f44fc2a8c0035fd6f40300aa60420291d91a6297e00313aa7ddfff97e00314aaa6445194",
+      "endExclusive": "0x1027896dc",
+      "assemblyFile": "stroke_constructor.asm",
+      "assemblySha256": "c9a8943736c3f4c33599fcbda9b7ad933f505bf4935c6a0780043110f7f6bf95",
+      "containingFunction": [
+        "0x102789680",
+        "0x1027896dc"
+      ]
+    },
+    {
+      "name": "path_initialize",
+      "address": "0x102781714",
+      "byteCount": 92,
+      "sha256": "b15f1d182a76d265853a6cea775f262952b15b510d0872a5ebbc1077860bb508",
+      "bytesHex": "f44fbea9fd7b01a9fd430091f40302aaf30300aa022000b9010c00f9e00301aa93e0ff97b4002837d4003037f4003837fff4ff970600001413f5ff970400001427f5ff97020000143bf5ff97602600f9fd7b41a9f44fc2a8c0035fd6",
+      "endExclusive": "0x102781770",
+      "assemblyFile": "path_initialize.asm",
+      "assemblySha256": "47917eda7019a0220ed2073de035d246ce91a7a8f0d3a52e0dd6f53f4266dd26",
+      "containingFunction": [
+        "0x102781714",
+        "0x102781770"
+      ]
+    },
+    {
+      "name": "append_node",
+      "address": "0x102781770",
+      "byteCount": 96,
+      "sha256": "c4321088628063964cabcec163be2220b527c0f7521f36062d60f8acf87740f8",
+      "bytesHex": "f44fbea9fd7b01a9fd430091f30300aa002440f9080040f9080940f900013fd6681e40f9e90313aaea0300aa880000b4001500f9e90300aaea0308aa2a1900f9601e00f9684240b908050011684200b9131c00f9fd7b41a9f44fc2a8c0035fd6",
+      "endExclusive": "0x1027817d0",
+      "assemblyFile": "append_node.asm",
+      "assemblySha256": "e08c176814b5598143b517e4e63e2c3a84ba568dbd15831ef1d8955dfd1e90bd",
+      "containingFunction": [
+        "0x102781770",
+        "0x1027817d0"
+      ]
+    },
+    {
+      "name": "remove_node",
+      "address": "0x102781838",
+      "byteCount": 100,
+      "sha256": "1f14407c420ed035173fcc9130fc7d606c9e7fc6d92f85312225777d2afd6c7b",
+      "bytesHex": "f44fbea9fd7b01a9fd430091f30300aa29a042a90ac000910ba100911f0100f14a018b9a490100f90ae000912bc100913f0100f149018b9a280100f9002440f9080040f9080d40f900013fd6684240b908050051684200b9fd7b41a9f44fc2a8c0035fd6",
+      "endExclusive": "0x10278189c",
+      "assemblyFile": "remove_node.asm",
+      "assemblySha256": "744196a1a575553eb0fa659180c679a8864e44b1028f4c127b907317b71d1b3f",
+      "containingFunction": [
+        "0x102781838",
+        "0x10278189c"
+      ]
+    },
+    {
+      "name": "base_pool",
+      "address": "0x10277eb40",
+      "byteCount": 88,
+      "sha256": "16dcc00ee9ad792509f9683216932136a51dd2f8916b9abc8187054f0cc30610",
+      "bytesHex": "f44fbea9fd7b01a9fd430091f30300aa000440f9c00100b500088052087a5194a81601b008610a9108410091087c00a91f7c01a968ee00f000b9c23d28e800d001b9c33d000401ad600600f9fd7b41a9f44fc2a8c0035fd6",
+      "endExclusive": "0x10277eb98",
+      "assemblyFile": "base_pool.asm",
+      "assemblySha256": "35fd70b951e54275d1e400939c256a5b9daa0125429380eff9b45fbf114f198c",
+      "containingFunction": [
+        "0x10277eb40",
+        "0x10277eb98"
+      ]
+    },
+    {
+      "name": "bezier_pool",
+      "address": "0x10277eb98",
+      "byteCount": 88,
+      "sha256": "6d1a927c77954b13a32e4a4bb8796e03ab68222702919b55672bd6461cefbf47",
+      "bytesHex": "f44fbea9fd7b01a9fd430091f30300aa000840f9c00100b500088052f2795194a81601b008c10b9108410091087c00a91f7c01a968ee00f000bdc23d68ee00f001c1c23d000401ad600a00f9fd7b41a9f44fc2a8c0035fd6",
+      "endExclusive": "0x10277ebf0",
+      "assemblyFile": "bezier_pool.asm",
+      "assemblySha256": "36b278455200521b03b54b280bda5e241ef55373b0e9b909d5ecb3a854b16abe",
+      "containingFunction": [
+        "0x10277eb98",
+        "0x10277ebf0"
+      ]
+    },
+    {
+      "name": "cubic_pool",
+      "address": "0x10277ebf0",
+      "byteCount": 88,
+      "sha256": "ad5939941b337818642a154e3537017a18e4b25bde947a9476721e690e3812ba",
+      "bytesHex": "f44fbea9fd7b01a9fd430091f30300aa000c40f9c00100b500088052dc795194a81601b008e10c9108410091087c00a91f7c01a928e800d000e5c33d28e800d001b9c33d000401ad600e00f9fd7b41a9f44fc2a8c0035fd6",
+      "endExclusive": "0x10277ec48",
+      "assemblyFile": "cubic_pool.asm",
+      "assemblySha256": "109253b899ae770667356950cd20b6283e635e1cc1a6fdc9d39d094448cef2bc",
+      "containingFunction": [
+        "0x10277ebf0",
+        "0x10277ec48"
+      ]
+    },
+    {
+      "name": "spline_pool",
+      "address": "0x10277ec48",
+      "byteCount": 88,
+      "sha256": "aa6a6f34cef840bdf6cf8b18dd2e6de83ebab770798d1fd7aeeffc42e8880294",
+      "bytesHex": "f44fbea9fd7b01a9fd430091f30300aa001040f9c00100b500088052c6795194a81601b008010e9108410091087c00a91f7c01a968ee00f000c5c23d68ee00f001c1c23d000401ad601200f9fd7b41a9f44fc2a8c0035fd6",
+      "endExclusive": "0x10277eca0",
+      "assemblyFile": "spline_pool.asm",
+      "assemblySha256": "42f26f3a0124a95bde2c27397287d7f6302e218ede6bdb6523c892b63df4f502",
+      "containingFunction": [
+        "0x10277ec48",
+        "0x10277eca0"
+      ]
+    },
+    {
+      "name": "stroke_pool",
+      "address": "0x10277eca0",
+      "byteCount": 88,
+      "sha256": "ef27533307c21184d839f6ca1106611c538951b94e8b40e9704f2c172697e9cd",
+      "bytesHex": "f44fbea9fd7b01a9fd430091f30300aa001440f9c00100b500088052b0795194a81601b008210f9108410091087c00a91f7c01a968ee00f000c9c23d68ee00f001cdc23d000401ad601600f9fd7b41a9f44fc2a8c0035fd6",
+      "endExclusive": "0x10277ecf8",
+      "assemblyFile": "stroke_pool.asm",
+      "assemblySha256": "bd0c0d9cb335c2ec8b05516f71028502f40f6b3fb15559631f841159ad75a201",
+      "containingFunction": [
+        "0x10277eca0",
+        "0x10277ecf8"
+      ]
+    },
+    {
+      "name": "allocate_pool",
+      "address": "0x10277ef38",
+      "byteCount": 372,
+      "sha256": "0d0d2b5bcb7e1dfd266b8008438b95dcbfddfa898a05e756e507448b3b04d0c4",
+      "bytesHex": "f657bda9f44f01a9fd7b02a9fd830091f30300aa0801805209a841a93f2100f12881889a081d009115f17d92160280d2b45a0a9be00314aa4f000094c00100b46a1a40f968a641a96a0300b42b7d159b6b09c89a7f010aeb420400542bf97fd30a7d0a9b4a09d59a5f0509eb49318b9a12000014681240f91f1500f1c305005408fd41d3681200f9690e40f90a0180523f2100f129818a9a291d009135f17d92b45a089be00314aa33000094a0fcffb52d00001429f97fd30a0180521f2100f108818a9a081d009108f17d920a0280924809c89a1f0109eb0831899a682202a9690240f9880215cb0a4100d14809d59a0b7d159b08000b8b090100f949010bcb5f0109eb00020054e90315cb0a01098b5f0100eb40010054eb030aaa086929f84a01098b5f0100ebe8030baa61ffff5404000014000080d20b000014eb0308aa0b0000f9600200f90800148b69aa40a909293fa960d200a9600240f9080040f9680200f9fd7b42a9f44f41a9f657c3a8c0035fd6",
+      "endExclusive": "0x10277f0ac",
+      "assemblyFile": "allocate_pool.asm",
+      "assemblySha256": "7db955bbdd369c12b07ed71e5e4b2441e6948f67e09d145fe853d124671361f4",
+      "containingFunction": [
+        "0x10277ef38",
+        "0x10277f0ac"
+      ]
+    },
+    {
+      "name": "allocate_base",
+      "address": "0x10277ee70",
+      "byteCount": 48,
+      "sha256": "48b2acc19bee84de92b2b5eed0dc73bc08ec58fda5e7e57126e7aeeaa6a27159",
+      "bytesHex": "e80300aa008d40f8800000b4090040f9090100f905b0ff17fd7bbfa9fd030091e00308aa29000094fd7bc1a8ffafff17",
+      "endExclusive": "0x10277eea0",
+      "assemblyFile": "allocate_base.asm",
+      "assemblySha256": "3737b826be4b771e31e9dc4b4896345ec0022881369b260ebea63faaf67bc12e",
+      "containingFunction": [
+        "0x10277ee70",
+        "0x10277eea0"
+      ]
+    },
+    {
+      "name": "allocate_bezier",
+      "address": "0x10277f17c",
+      "byteCount": 48,
+      "sha256": "aa3a6f011f7897dcc0405db496e695b5668912299f056dd1cc856def26bb9199",
+      "bytesHex": "e80300aa008d40f8800000b4090040f9090100f98c95ff17fd7bbfa9fd030091e00308aa66ffff97fd7bc1a88695ff17",
+      "endExclusive": "0x10277f1ac",
+      "assemblyFile": "allocate_bezier.asm",
+      "assemblySha256": "d325752439eff9d57d42eba9dd912e211d3ed9e14007a04a9e4f5afba4cca378",
+      "containingFunction": [
+        "0x10277f17c",
+        "0x10277f1ac"
+      ]
+    },
+    {
+      "name": "allocate_cubic",
+      "address": "0x10277f21c",
+      "byteCount": 48,
+      "sha256": "504cdc6cb0778207ff83553149f10e43eca5dd5dd7fbfb96b1cba0a649515de3",
+      "bytesHex": "e80300aa008d40f8800000b4090040f9090100f9b9a9ff17fd7bbfa9fd030091e00308aa3effff97fd7bc1a8b3a9ff17",
+      "endExclusive": "0x10277f24c",
+      "assemblyFile": "allocate_cubic.asm",
+      "assemblySha256": "983dcebcdfaeed532fb09ab3e4fd7cfac2592eae95c347d372476aac2545322d",
+      "containingFunction": [
+        "0x10277f21c",
+        "0x10277f24c"
+      ]
+    },
+    {
+      "name": "allocate_spline",
+      "address": "0x10277f2bc",
+      "byteCount": 48,
+      "sha256": "fd7c895e07419bb49455cef20660e4f8a87e787aa75d1df7696e26022ef8d06a",
+      "bytesHex": "e80300aa008d40f8800000b4090040f9090100f95c250014fd7bbfa9fd030091e00308aa16ffff97fd7bc1a856250014",
+      "endExclusive": "0x10277f2ec",
+      "assemblyFile": "allocate_spline.asm",
+      "assemblySha256": "fae2cba87d173cb50d35ac54cbb36629675f0f55b73b77512d071f2df43bb97a",
+      "containingFunction": [
+        "0x10277f2bc",
+        "0x10277f2ec"
+      ]
+    },
+    {
+      "name": "allocate_stroke",
+      "address": "0x10277f35c",
+      "byteCount": 48,
+      "sha256": "cb784431f66b944e407525f30d24fd6b9223ddfa7aa9e37e8b06576125807ee8",
+      "bytesHex": "e80300aa008d40f8800000b4090040f9090100f9db280014fd7bbfa9fd030091e00308aaeefeff97fd7bc1a8d5280014",
+      "endExclusive": "0x10277f38c",
+      "assemblyFile": "allocate_stroke.asm",
+      "assemblySha256": "9b6c52c3d2a09b63f41d54ea65957636068e0e84f84b1d4e9298b11449418f7c",
+      "containingFunction": [
+        "0x10277f35c",
+        "0x10277f38c"
+      ]
+    },
+    {
+      "name": "node_constructor",
+      "address": "0x10276ae48",
+      "byteCount": 80,
+      "sha256": "1b8ed1bcaf3f532a3e968743234866aeb9388a71c956bf25d3346c1e5889e18a",
+      "bytesHex": "4817019008812d91080000f900e4006f0080803c0080813c0080823c0040833cc8e800b00061c23d0040843ce8e800900011c03d0040853c1f3400f91f6400b908dc00f0002d42fd003800fdc0035fd6",
+      "endExclusive": "0x10276ae98",
+      "assemblyFile": "node_constructor.asm",
+      "assemblySha256": "ba0ee2a7b02cf0a0420c1432af5a48584c22e62980443c151a061ef41c0d8fc8",
+      "containingFunction": [
+        "0x10276ae48",
+        "0x10276ae98"
+      ]
+    },
+    {
+      "name": "bezier_constructor",
+      "address": "0x1027647c0",
+      "byteCount": 36,
+      "sha256": "0ba524ae324541bab2b954725ee8b915b92f02e35b3e25d63fb7948d946820a9",
+      "bytesHex": "fd7bbfa9fd030091a0190094681701d008c11e91080000f91ffc07a9fd7bc1a8c0035fd6",
+      "endExclusive": "0x1027647e4",
+      "assemblyFile": "bezier_constructor.asm",
+      "assemblySha256": "3506835d4b77a96aa1ac3f76923e58c3dbe1ad2c903ce854ad891ffdbd31b5da",
+      "containingFunction": [
+        "0x1027647c0",
+        "0x1027647e4"
+      ]
+    },
+    {
+      "name": "cubic_constructor",
+      "address": "0x102769914",
+      "byteCount": 44,
+      "sha256": "f9073e88c0fcdf07bcd5995689323237cca5e9130ccdd0a560d735beafa690f7",
+      "bytesHex": "fd7bbfa9fd0300914b050094481701b008012891080000f900e4006f0080873c0080883cfd7bc1a8c0035fd6",
+      "endExclusive": "0x102769940",
+      "assemblyFile": "cubic_constructor.asm",
+      "assemblySha256": "29c49c2c7d26da575bf3705b1c9d3de4b0aca0036956c964541e6f01349c340a",
+      "containingFunction": [
+        "0x102769914",
+        "0x102769940"
+      ]
+    },
+    {
+      "name": "spline_constructor",
+      "address": "0x102788840",
+      "byteCount": 32,
+      "sha256": "7829152e38a0c88ed5ea8a58b51894d450cf5d3da9e6daf13b5def71ea4a342c",
+      "bytesHex": "fd7bbfa9fd0300918089ff97481601f008612491080000f9fd7bc1a8c0035fd6",
+      "endExclusive": "0x102788860",
+      "assemblyFile": "spline_constructor.asm",
+      "assemblySha256": "1822ded5008d25bdde4a976fbaf83103744f42ddc7e9a58eaf09f8ec419200d8",
+      "containingFunction": [
+        "0x102788840",
+        "0x102788860"
+      ]
+    },
+    {
+      "name": "release_path_dispatch",
+      "address": "0x10277a5f8",
+      "byteCount": 52,
+      "sha256": "0982a5e2882d0ba6e8276e4c27c0b19fccf1cc594e292f64eb9546b39b33dbc9",
+      "bytesHex": "282040b9a8000037c8000837e8001837e8001037c0035fd6000840f9a1260014001040f99f26001431ffff17002040f99c260014",
+      "endExclusive": "0x10277a62c",
+      "assemblyFile": "release_path_dispatch.asm",
+      "assemblySha256": "7c58fbdf1b6ee01137018cfa85fe9ce217e6c60dbdfa2cf2e85027ed9e31c416",
+      "containingFunction": [
+        "0x10277a5f8",
+        "0x10277a62c"
+      ]
+    },
+    {
+      "name": "unlink_path",
+      "address": "0x102784098",
+      "byteCount": 88,
+      "sha256": "05d4657a61e8874bb6cefdcc3a25f95c4b132dbd3bf97901b3842010e3efaeb6",
+      "bytesHex": "f44fbea9fd7b01a9fd430091f30300aa08a001912aa440a93f0100f10b01899a6a0500f95f0100f108018a9a090900f9004440f9080040f9080d40f900013fd6688240b908050051688200b9fd7b41a9f44fc2a8c0035fd6",
+      "endExclusive": "0x1027840f0",
+      "assemblyFile": "unlink_path.asm",
+      "assemblySha256": "98cddc92fe9ca71c0907ccf0ad103b51fa5b38f3009f0beac316933d79a6131a",
+      "containingFunction": [
+        "0x102784098",
+        "0x1027840f0"
+      ]
+    },
+    {
+      "name": "destroy_pool_item",
+      "address": "0x10277eea0",
+      "byteCount": 60,
+      "sha256": "78931c331a0bf24796226d5446d3e715d904c4412c5e87264d769f0e544b67a0",
+      "bytesHex": "f44fbea9fd7b01a9fd430091f30301aaf40300aa280040f9080140f9e00301aa00013fd6880640f9680200f9930600f9fd7b41a9f44fc2a8c0035fd6",
+      "endExclusive": "0x10277eedc",
+      "assemblyFile": "destroy_pool_item.asm",
+      "assemblySha256": "cf0e9672cc761fd0d386700fe24ea23b043e36d9f433a42b290254a432bff99c",
+      "containingFunction": [
+        "0x10277eea0",
+        "0x10277eedc"
+      ]
+    },
+    {
+      "name": "destroy_path",
+      "address": "0x1027814c4",
+      "byteCount": 120,
+      "sha256": "87e4923b57720715eb98265d84505479ef3f8f17de5912ac6558614c4a049962",
+      "bytesHex": "f657bda9f44f01a9fd7b02a9fd830091f30300aa881601d008e11391891601d029a11891080000f928410091081400f9f40300aa950e43f8150100b4e10315aab51640f9602640f9080040f9080d40f900013fd655ffffb59f7e00a99f1200b9e00313aafd7b42a9f44f41a9f657c3a8c0035fd65a3b6297",
+      "endExclusive": "0x10278153c",
+      "assemblyFile": "destroy_path.asm",
+      "assemblySha256": "392adf87f3a6d71d0621974ab3bca06308e5cd3202510860c7d81c66a2e119fd",
+      "containingFunction": [
+        "0x1027814c4",
+        "0x10278153c"
+      ]
+    },
+    {
+      "name": "destroy_stroke",
+      "address": "0x1027896e0",
+      "byteCount": 48,
+      "sha256": "64e3ddd39c2ddefa627fe3f6afa9c3a7f382e0d6a3814e6a028c9e46142eb99e",
+      "bytesHex": "f44fbea9fd7b01a9fd430091f30300aa481601d008e12991080409f8cc1a6297e00313aafd7b41a9f44fc2a86edfff17",
+      "endExclusive": "0x102789710",
+      "assemblyFile": "destroy_stroke.asm",
+      "assemblySha256": "12e2048fb0f806cbbb41ef11bc555f137dadf9b083b2aaf9c654c70282722f0f",
+      "containingFunction": [
+        "0x1027896e0",
+        "0x102789710"
+      ]
+    },
+    {
+      "name": "sample_acceptance",
+      "address": "0x10278847c",
+      "byteCount": 584,
+      "sha256": "29555be927f02331edc0ce65d7d6e166905d5d2fc12524818907ce662b89f3c2",
+      "bytesHex": "eb2bb96de923016dfc6f02a9f85f03a9f65704a9f44f05a9fd7b06a9fd83019109068452100a0190106642f900023fd6ff0b40d1ffc300d10840201ef60303aaf40302aaf50301aaf30300aa080a0190086942f9080140f9a88319f8092840fd085840b948010034a04e40bd00c0221e28db009001bd45fd0020611e204c601e2009601e0020611e294c601e687240b968010034f7074091a082c03ce00e823ce00315aa988aff97a00100b40080c03ce006803d570080520a000014e1074091218000910010621ee00315aa220080523c91ff97f70300aa0200001437008052ff1f00b9e2830091e3730091e00314aae10316aa6991ff9760080034ff060071ab010054f803172af7074091f7820091e11f40b9e0830091e20317aa874b38940020691eec060054f7420091180700f101ffff54df06007101060054a04640bd8b4640bd618a4b2d0308211e6020221e4a4c231e0118211e0020221e00e4002f094c211e6041201e4141201ee53dea97a00100346041201e2141201ec93dea97200100340041201e4141201edd3dea97a00000340041201e2141201ec13dea97c0020035e11f40b9e0830091e207409142800091e3230091034b389461c1221e02106e1e4238601e03c1221e0008631e2000421f0840621e0041201e4141201ec83dea97e00000340041201e2141201eac3dea9760000034200080520200001400008052a88359f8090a0190296942f9290140f93f0108eb61010054ff0b4091ffc30091fd7b46a9f44f45a9f65744a9f85f43a9fc6f42a9e923416deb2bc76cc0035fd686535194",
+      "endExclusive": "0x1027886c4",
+      "assemblyFile": "sample_acceptance.asm",
+      "assemblySha256": "50f8799bb1f3e23c00c577e0c81992baea040547d66cb2e2423b5bcde22766da",
+      "containingFunction": [
+        "0x10278847c",
+        "0x1027886c4"
+      ]
+    },
+    {
+      "name": "corner_predicate",
+      "address": "0x1027878ec",
+      "byteCount": 304,
+      "sha256": "ada84944610fac8e380101ef3a838c39ac906172c03e41e2e98cef024dacc281",
+      "bytesHex": "3044406d0414406d023a641e233a651e6608631e5218421fe8da0090134943fd4022731e04010054461c406dd038701ef438711e910a741e1546501fa022731e6500005420008052c0035fd656c2611e5118761e7218761eb7c2611e131a771ed02a771e150a611e01106e1ea022611e811a771e8500005488db00b0141d40fd130000141410611ea022741e85000054e8da00f014e547fd0d0000141490641ea022741e8500005408dc00f0143942fd0700001414d0671ea022741ec8dd0090145140fd15106c1eb44e741e410a611e2106531f2020741e6d00005400008052c0035fd62820601ee4faff54c138641ee438651e8508641e2514411fa820601e20faff54a5c0611ea628651ec020701ea4f9ff544288641e6108411f21c0601ea008601e2020601ee0479f1ac0035fd6",
+      "endExclusive": "0x102787a1c",
+      "assemblyFile": "corner_predicate.asm",
+      "assemblySha256": "925f2bf1e43ea7952c4d42e91a7e645bc73c57c81868078ebafd593c22a378a6",
+      "containingFunction": [
+        "0x1027878ec",
+        "0x102787a1c"
+      ]
+    },
+    {
+      "name": "classify_corner",
+      "address": "0x102787bb0",
+      "byteCount": 236,
+      "sha256": "f89a34727d52352beec2f2759ddf0400df7c1e43b1a4b4300b23beef6945e9b5",
+      "bytesHex": "ffc301d1e923036df65704a9f44f05a9fd7b06a9fd830191002840fd082040f9081940f90181c03ce10b803d141540f9340500b48182c03ce107803d881640f9a80400b4f30300aaa9db00d021e947fd0808611e75088012f60314aaf40308aa0081c03ce003803dc8024139e8011037683240b948020034613640fde0830091e1430091e20300910041601e2cffff97c84240b90901150a080100321f0000712801881ac84200b9e00740ade08700ad881640f928fdffb507000014601240f940ffffb4e143009180a4ff9760fdff35f6ffff17fd7b46a9f44f45a9f65744a9e923436dffc30191c0035fd6",
+      "endExclusive": "0x102787c9c",
+      "assemblyFile": "classify_corner.asm",
+      "assemblySha256": "78257c62ea3c51bc5bf391fb08b198c3dc871aba74897bb4239c5429f774499c",
+      "containingFunction": [
+        "0x102787bb0",
+        "0x102787c9c"
+      ]
+    },
+    {
+      "name": "brush_mode_predicate",
+      "address": "0x102c709e4",
+      "byteCount": 48,
+      "sha256": "bce52867b436277a6d1c469adaa30b8fc3ec65943632591f76286130ab94e300",
+      "bytesHex": "081040b928010034080040b9090900512a0080521f150071e8179f1a3f0d00714031881ac0035fd600008052c0035fd6",
+      "endExclusive": "0x102c70a14",
+      "assemblyFile": "brush_mode_predicate.asm",
+      "assemblySha256": "8afebeb390ab248d8657645feec66db099f25e83d9d95808426bfc094da355c9",
+      "containingFunction": [
+        "0x102c709e4",
+        "0x102c70a14"
+      ]
+    },
+    {
+      "name": "object_count",
+      "address": "0x102c6a198",
+      "byteCount": 8,
+      "sha256": "2567803b2657720ccf21bc84b638b4e96b979bb1e6b3102a8d03cdf0f468aae0",
+      "bytesHex": "00c440b9c0035fd6",
+      "endExclusive": "0x102c6a1a0",
+      "assemblyFile": "object_count.asm",
+      "assemblySha256": "ea217089ae7fe26e5286327c051f0eb73883c75a1e58244e4dd525bff0624a0e",
+      "containingFunction": [
+        "0x102c6a198",
+        "0x102c6a1a0"
+      ]
+    },
+    {
+      "name": "label_lookup",
+      "address": "0x102e10fb0",
+      "byteCount": 92,
+      "sha256": "d18771c65a854eec0aff4943ebd1141282753b7606ea402c46f8293f4f0f44da",
+      "bytesHex": "0a0c41f8aa0100b4e90300aa4b2140b97f01016beb279f1a29318a9a4a596bf86affffb53f0100eb800000542a2140b95f01016b690000541f7d00a9c0035fd62aa542a90a2500a9890000b42821009129008052080129b8c0035fd6",
+      "endExclusive": "0x102e1100c",
+      "assemblyFile": "label_lookup.asm",
+      "assemblySha256": "1b505b1b40882bac443c554a1bbd73e627118a4e0496791ec38e4e09e98be465",
+      "containingFunction": [
+        "0x102e10fb0",
+        "0x102e1100c"
+      ]
+    },
+    {
+      "name": "settings_reader",
+      "address": "0x1028e1308",
+      "byteCount": 652,
+      "sha256": "fe72b017f5a59bec705a37d5a054e66c8bc6067132ce36e4fbe7f396938d28b8",
+      "bytesHex": "ff8303d1e923076dfc6f08a9fa6709a9f85f0aa9f6570ba9f44f0ca9fd7b0da9fd430391f40307aaf90306aafb0305aaf30304aafa0303aaf50302aaf70301aaf80300aabfc319b828008052e86b00b9000040f92a2440a9eb63019176210091eaa705a9690000b429210091280128b8e2630191a39301d1c18f805212b99897e00316aaa8bb5c97a8c359b88809003428008052680300b9000340f9e923019136210091ea2640a9eaa704a9690000b429210091280128b8e2230191e18f8052e3031baa67f38e97e00316aa96bb5c97680340b9087d081b0001631e48d000f001bd45fd0008611e08d100b001ed47fd0020611e444b407a201c601e600200fd000340f9e8e3009116210091e92240a9e9a303a9880000b40821009129008052080129b8e2e3009101908052e30319aae5b89897e00316aa7bbb5c97000340f9e8a3009116210091e92240a9e9a302a9880000b40821009129008052080129b8e2a30091e3a3019121908052d6b89897b90b40f9e00316aa6bbb5c97000340f9e863009116210091e92240a9e9a301a9880000b40821009129008052080129b8e263009141908052e30319aac6b89897e00316aa5cbb5c97080000141a05003428008052680300b9e8e701b2483393f228f9e7f2680200f9e823009116210091a92240a9e9a300a9880000b40821009129008052080129b8e02300910bc5029468d000b0011544fd0808611ee00316aa45bb5c9700106e1e0018681e800200fde86b40b988000034610240fd0008611e600200fd20008052fd7b4da9f44f4ca9f6574ba9f85f4aa9fa6749a9fc6f48a9e923476dff830391c0035fd600008052f6ffff170500001404000014030000140200001401000014f30300aae00316aa29bb5c97e00313aaf8e44b94",
+      "endExclusive": "0x1028e1594",
+      "assemblyFile": "settings_reader.asm",
+      "assemblySha256": "89da0ce6a4fbe050f19d55cfd191c1948aeeb73733eb116c71d3c40d1f5ac6d6",
+      "containingFunction": [
+        "0x1028e1308",
+        "0x1028e1594"
+      ]
+    },
+    {
+      "name": "bezier_controls",
+      "address": "0x102764800",
+      "byteCount": 128,
+      "sha256": "7bddb2985f77a1336d60d815baf02f1ee8f96ca4236e25a04bf2981e54976924",
+      "bytesHex": "6200003400008052c0035fd60080c73c2000803d20008052c0035fd66100003400008052c0035fd60084076d20008052c0035fd66200003400008052c0035fd608044139680010370080c73c0a000014081440f9e80000b40081c03c0180c03c00d4614e01f4036f00dc616e020000140080c03c2000803d20008052c0035fd6",
+      "endExclusive": "0x102764880",
+      "assemblyFile": "bezier_controls.asm",
+      "assemblySha256": "1b6f12283e8ba85e07e7f41d7eb3073907e91c81b230c2ca25b59a995e55a3e9",
+      "containingFunction": [
+        "0x102764800",
+        "0x10276481c"
+      ]
+    },
+    {
+      "name": "cubic_controls",
+      "address": "0x10276995c",
+      "byteCount": 348,
+      "sha256": "93a42590ffe84ce3b37e9bc45ba4bfff9cbb4393ba813242e3ce64f0c4e6590f",
+      "bytesHex": "5f00007108118052090f80522801889a0068e83c2000803d20008052c0035fd63f00007108118052090f80522801889a091280520a1080524901899a006828fc016829fc20008052c0035fd6ff8301d1f65703a9f44f04a9fd7b05a9fd430191f30301aaf40300aa084040b982000034c80058378082c83c32000014080350378082c73c2f000014e00314aa66050094600500b4f50300aa00106e1ee00314aafa060094e10300ada082c03ce00b803d80220091e183009101a7e8970110611e0018611ee20740ad4104186e2090c04fe10bc03d20d4e04e1a00001400e4002fe00314aae9060094e10300ad8082c03ce00b803de00314aa4b050094600000b5801a40f9600000b40080c03ce00b803d80220091e1830091e9a6e8970110611e0018611ee20740ad4104186e2090c04f8182c03c20d4604e020000148082c03c6002803d20008052fd7b45a9f44f44a9f65743a9ff830191c0035fd6",
+      "endExclusive": "0x102769ab8",
+      "assemblyFile": "cubic_controls.asm",
+      "assemblySha256": "fd39b24b3df4f1d1408387e08a0e7f79169e4f30111f041326586ca393d4f916",
+      "containingFunction": [
+        "0x10276995c",
+        "0x10276997c"
+      ]
+    },
+    {
+      "name": "endpoint_extras",
+      "address": "0x10276b2a0",
+      "byteCount": 36,
+      "sha256": "b56a43df640c1d2fb5ab7d16f074246de14c23cf3d302146293a2da739d21c88",
+      "bytesHex": "0040621e2140621e00040c2d4040621e006800bd084040b908050032084000b9c0035fd6",
+      "endExclusive": "0x10276b2c4",
+      "assemblyFile": "endpoint_extras.asm",
+      "assemblySha256": "d5977b57bc1dfec949a37b80ebf64e0742144b5e1ae164d943e15d5f9f4d0754",
+      "containingFunction": [
+        "0x10276b2a0",
+        "0x10276b2c4"
+      ]
+    },
+    {
+      "name": "finalizer",
+      "address": "0x10289148c",
+      "byteCount": 6972,
+      "sha256": "858ee302b5dcc22222e3da3445726bff50b9d851e443d909355a0f7a8803b08b",
+      "bytesHex": "eb2bb86de923016dfc6f02a9fa6703a9f85f04a9f65705a9f44f06a9fd7b07a9fdc30191ffc30fd1e63f00b9e52700f9f40300aae31700f9600040f960bc00b4fc0302aa480040f908bc00b4e82601b0087940f9082540a9350108cba8fe44d31f0500712bbb0054f90307aafb0304aaf30301aae80700f9b82302d1a82302d1a20a1694a98357f8c9b900b4a80358f8a92336a9880000b40821009129008052080129b8b78302d180a209912b7d0f9400020034880e42b9c8010034885e41f9880100b4896241f9890000b42a2100912b0080524a012bb8eac30591a003d63ca82736a9e05f803d40017db22dfb5d97800340f9ac0f02940840601ef61740f9c00240f9a8c302d182101694a00355f8c92240a9a92334a9880000b40821009129008052080129b8a9a377a9a92333a9880000b40821009129008052080129b8b60303d1b74303d1080040f9082941f9a10303d1a24303d100013fd6fa0300aafb2300f9f30f00f9e02200910dfb5d97c02200910bfb5d97bfff31a9bf8312f8ffa301f9ff9f01f9ffa701f9ff9701f9ff9301f9ff9b01f9ff8f01f93a070035ff7301b9f31740f9600240f9e8230c9116210091a92376a9e98701f9e88b01f9880000b40821009129008052080129b8e2230c91e3c30591c1ee805259f89997e00316aaeffa5d97884241b9e97341b90801092a68040035600240f9e8e30b9116210091a92376a9e97f01f9e88301f9880000b40821009129008052080129b8e2e30b91e3730c910196805245f89997e00316aadbfa5d97e81f43b928020034600240f9e8a30b9116210091a92376a9e97701f9e87b01f9880000b40821009129008052080129b8e2a30b91e3630c918196805233f89997e00316aac9fa5d97fa3b00b9fc1300f9180080d2170080d21a0080d21c0080d2a80f40f9e81b00f9b30b40f9a82b40b9e81700b9b58a44d3a82740b9e81300b9bb2340b9e82601b0087940f9080140f916697af8e82601b0088140f9080140f908011a8b090140f9e98b00f9080540f9e88f00f9880000b40821009129008052080129b8e81b40f90001c03de0b7803d804640f9800000b4e1430b91e2031caa24a01194e83f40b968030034205340fd230b552924b340b9889641b925c340b92a2741a9ea6301f9e96701f9890000b4292100912a00805229012ab80101621ee1430b91e6030b91e00314aae70313aa52edff97e8030b91002100918bfa5d97e08b40f96006406d216b40f968830194601200fdffa300f980a20991717c0f9480000034888e41f900797cf806000014e00316aae10313aae22340f923008052236c0194e0a300f95b010034e82601b0087d40f9080140f900697af8e10313aae22340f903008052196c0194e0a340f90014c03de0af803de00316aa2e690194c00000b40014c03de05f803de0c30a91e1c305915327e69780a20991517c0f94e83b40b92805003500050034e81f43b9c8040034e81b43b988040034e0a340f9080040f9094d40f9e8830a9120013fd6e85341f9480300b4808240f9000300b4f4e63794f60300aa808240f9fce63794e20300aaffeb00f900e4006fe0830dade0830cade0830bade05341f9e3c30591e10316aa81c8f097e89b41b9292280523f01286ac1000054e0e340fd0100781ee0c30a91e20301aaf326e697e8830a910021009139fa5d97e1c30a91e02740f92427e697e0e30c91e103059146945f97e0830c91e1c30a91a7ad6697601640fd610e40fde0b701fde1b301fde0b7c03de0d7803da0a303d1e1430d91394c929780a209910b7c0f9400010034887641f9898241f9e2a340f90001178b2101188b03008052dd320f94e8430491002100911afa5d979c0700915a430091f722049118630091bf021ceb61ebff54ff6f01f9ff6b01f9884e40f9fc0f40f9fb2340f9f81340b9880100b480a20991f97b0f9420010035000280525c2e4d94f60300aa814e40f977802294e0430b91e10316aa01060094805640f9400000b4b53af09716008052ff9f02b9e83b40b90801182ae8120035e81740f9000140f9a92376a9e94701f9e84b01f9880000b40821009129008052080129b8f6230a91e2230a91e3730a91c194805254f79997c0220091eaf95d97ff4301f9ff5301f9ffa300f9ff7f17a9e81740f9000140f9a92376a9e93b01f9e83f01f9880000b40821009129008052080129b8f6c30991e2c30991e3c305914191805250be9a97c0220091d6f95d97e0bb40f9e00700b4bc1d0a94a0070034e81740f9092140a9e93301f9e83701f9880000b40821009129008052080129b8a92376a9e92b01f9e82f01f9880000b40821009129008052080129b8f6830991f7430991e0830991e1430991e2130a91e3830a91e4030591e5030a910041601e933e0194f30300aae0220091b6f95d97c0220091b4f95d97d3030034e89f41f9000140f9080040f9094d40f9e843049120013fd6e08b40f9012080525ac3f097c0020034130080d2f60315aae82601b0087940f9080140f9006973f8e18742b9e05341fde1a340fde28342b9596c0194805640f9400000b4513af09773420091d60600f141feff5436008052140000141600805215000014e08b40f9e8c30a9195c0f097e05b41f9200100b4012080523dc3f097f30300aae8c30a910021009189f95d9713fcff3504000014e8c30a910021009184f95d9716008052e84304910021009180f95d97889241b90803003480a209916a7b0f94a0020035160080d2889241b9690080521f0d007113c1891af70315aae82601b0087940f9080140f9006976f880ce40fde10313aa836c0194805640f9400000b4213af097d6420091f70600f181feff5436008052e8c305910021009164f95d97886641b92810003480a209914e7b0f94e0000034802e41f9a00000b437610f94580f00351f040071080f0054e89f41f9e8a301f9803e40f9800200b4080040f9080940f900013fd600020034803e40f9e95a11941f90017180010054887241b91f1500716b00005488008052887201b980b640fd01106f1e0020611e6d00005408ffe7d288b600f9ff5b01f9e82601b0087940f9080140f9000140f9c00a00b4817241b980b640fd827641b9e39f42b9848241b981be40fdc36c0194e05b01f9a00900b4e0e30c91e1c30a9143935f97884640f9080900b4e85b41f9c80800b4e90740f93f05007160080054132140b9882a41b90801621e882e41b90901621ef7c3059100e4002f0a38691e48008052e90740f93f09007138c1881a0b38681e360080521bfee7d2fbbb00f9ff7e01a9ff8200f8fbcb00f9ebc300fdeacf00fd804640f9e2c30591e10316aab19e1194e0c340fde1cf40fd0028681e2128691ee0c300fde1cf00fde82601b0087940f9080140f9c9ee7cd3006969f8e10313aad86c0194e05301f9000300b4e85b41f9191940f9f90100b4e05341f94dbefb97fa0300aa400100b4e0031aaae10319aa3e6afb97e1c3059100106e1ee0031aaa1e69fb97391740f999feffb5e05341f9ff7f11a9e1430491b1befb97e0e30c91e1830a91fd925f97d6060091df0218ebc1f9ff54805640f9400000b49a39f09736008052fb2340f989224fa9e92301f9e82701f9880000b40821009129008052080129b8f7030991e00309919d3cf697e0220091d6f85d97e81b43b9c802082a68000035884641b9481b0034882a41b9892241b98a2e41b98b2641b9ec2740f98001c03de05f803d1301094bf903134b5b010b4bfa031b4be0c30591e10319aae2031aaa6c25e697e1c30591e02340f9ad25e697884641b948020035883241b9808240f988000034e1c30591234d38940c000014e17341b9e27741b9e87b41b9e97f41b90301014b2401024b858a40f9ff0300b9e60301aae70302aa6a4f3894806e41f9400000b4534e0094d600003580a20991947a0f94c00a0034e81b43b9880a0034160080d2f72601b0f80315aae89341f90069f63ce047803de0430491e10319aae2031aaa4325e697e08a40f9e10b51a9846df097d6420091180700f181feff541c0080d2e82740f91f7d00a9f7c30891e82601b0087940f9080140f9166978f8e89341f90069f83ce047803de89f41f908797cf80015c03de0af803de0430491e10319aae2031aaa2a25e697884241b968000034883a41b90803003489a24aa9e91b01f9e81f01f9880000b40821009129008052080129b8e1430491e2c30891e00316aa8d6a0194e05301f9e15701f9e02200916df85d97e0830a91e10313aae2031baa1325e697e0c30a91e1830a915425e69704000014e10b51a9e00316aa946d0194e00316aa23670194c00000b40014c03de0ab803de0c30a91e1830a914825e697e1c30a91e02740f94525e697e89341f9e0afc03d0069b83c9c07009118430091bf021ceb41f8ff54160080d29f4601b9f70315aae89341f90069f63ce047803de0430491e10319aae2031aaaf024e697e8260190087940f9080140f9006976f8e1430491956a0194e0430491e10313aae2031baae624e697e89341f9e047c03d0069b63cd6420091f70600f141fdff54e8260190087940f9080140f9130140f9e82740f90001c03de047803de0430491e10319aae2031aaad524e697e1430491e00313aa8e6a0194fc0f40f9fb2340f9f30300aae02740f9e10313aae20313aad824e697170080d2f80315aae8260190087940f9080140f9166977f8e89341f90069f73ce0af803de0c30a91e10319aae2031aaabe24e697e0c30a91e10313aae20313aac724e697e15b41f9e25f41f9e00316aa3e6d0194884241b968000034883a41b988000034e1c30a91e00316aa6e6a0194f7420091180700f181fcff54e82740f90001c03de0af803de0c30a91e10319aae2031aaaa524e697e1c30a91e0031baae624e697805640f9400000b4ab38f09700e4006fe08310ade0830fade0830eade0830dade0830cade0830bade91740f9282540a9c90000b42a2100912b0080524a012bb8eabf40f9020000140a0080d2f3430491e82717a9ff2b11a960220091e0f75d97892340a9880000b40a2100912b0080524a012bb8e063c03de92318a9e047803d60027db2d6f75d97e81340f9092140a9880000b40a2100912b0080524a012bb8ea430491e067c03df9c30591e92319a9e047803d40017db2c9f75d97e82740f90001c03de073803d882a41b9e103084b882e41b9e203084b204301916a24e697130080d2160080d2fac30591ffe301b9e81b40f90001c03de077803de8260190087940f9080140f9006973f877660194a00000b4e08b00f920e30191e1430491c2915f97e89f41f9087976f8e88b00f920e30191e1430491bc915f97d606009173420091bf0216eba1fdff54882e41f9480400b480a209918f790f948000003580a2099184790f9480030034932e41f9e8260190087940f9080140f9160140f9e00313aa715f0f94e20300aae00313aae10316aade5f0f9480a2099176790f94f80300aa880e42b9e8010034a8008052e8e301b9802e41f9f3c3059161820291aa5f0f9461820291e0031baa7224e6973b0080520a000014380080523b0080521400001488008052e8e301b980a2099169790f941f000071fb179f1a895e41f9886241f9880000b40a2100912b0080524a012bb8ea430491e08bc03de91301f9e81701f9e047803d40017db26cf75d97a08357f80dd71694e10300aae81740f9000140f9f3430491e8430491a20c1694f68b40f96022009161f75d97df0214ebe0020054804e40f9400000b4e244e297e8e341b91f1100718100005480a209913d790f94c0010034e81740f9000140f9892340a9e92316a9880000b40821009129008052080129b8f6830591e183059154281694c022009149f75d97883241b988020034807a40f9400200b4fa89f39700020034892250a9880000b40a2100912b0080524a012bb8ea430491e06fc03de9231ba9e047803d40017db238f75d9721430191e02340f92324e69757000014883a41b9a80a0034f3c30a91e8c30a910edf3794e8430491e0afc03dff5b01f9ff5f01f9e16fc03de06f803de147803d00017db226f75d9760027db224f75d97f3db40f9808240f965e13794f60300aa808240f964e13794e20300aae00313aae10316aa2300805202e037942003c53ce047803d812241b9822641b9e0430491bd23e697130080d2f643059137008052e8260190087940f9080140f9006973f8e9235ba9e92315a9680000b408210091080137b8e20f51a9e1430591bd6b0194c022009102f75d9773420091b50600f101feff54e81340f9000140f9e8c30a9151160294e05b41f93fe3f8971f04007181020054e05b41f9e8830a913ce3f897e05341f9e8030591c080f397e05341f9c67ef397e20300aa03fc60d3e0db40f9e1a340f91b573894e803059100210091e7f65d97e8830a9100210091e4f65d97883e41b91f01007118039f1ae8c30a9100210091def65d97f3c30a91e8c30a91e00318aadbd02594e8430491e0afc03dff5b01f9ff5f01f9e183c03de083803de147803d00017db2d1f65d9760027db2cff65d97e80341f9680f00b4e0430491ba272294e8e341b91f150071a101005480a209918e780f9480020034e8030491f8bb2894f5030491e0430491e2030491412480520103a072cd2de39713000014a08357f8e8c30a91eace1694e05b41f9600000b4e14304911c171794e8c30a91002100910a000014e8c30391e5bb2894f5c30391e0430491e2c30391612480520103a072ba2de397a0220091a8f65d97e00341f9e1430491bac22594e81740b908040034e883039116210091e81340f9092140a9e9230ea9880000b40821009129008052080129b8f3c30a91e8c30a91e083039128bbff97e00316aa94f65d97e00341f976220091e95b41f9e85f41f9e9230da9880000b40821009129008052080129b8f5430391e1430391ecca2594a022009186f65d97e00316aa84f65d9780a2099170780f94a00500348a2641f9e8030391892a41f9ea270ca9890000b4292100912a00805229012ab816210091892e41f9e8c3029118210091883241f9e9230ba9880000b40821009129008052080129b8f3c30a91e8c30a91e0030391e1c3029140580f94e00318aa68f65d97e00316aa66f65d97e00341f9e88302911821009176220091e95b41f9e85f41f9e9230aa9880000b40821009129008052080129b8e1830291bdca2594e00318aa57f65d97e00316aa55f65d97e04304919d282294806e41f9800300b4e12340f9f14c0094880340f9080300b4806e41f95a4c0094e00711a91f00016b6a02005408fc60d329fc60d31f01096bea010054892340a9e92309a9880000b40821009129008052080129b8f5430291e0430291e14304914f360494a022009138f65d97800340f941bbe497e81740f9000140f9e8430491950b1694e08b40f9c00000b4080040f9086d40f9e1c3059100013fd60d000014e81740f9000140f9e8c30a91830b1694e05b41f9080040f9087140f9e1c3059100013fd6e8c30a91002100911ff65d9780a209910b780f948000003580a2099100780f94c001003428008052880e02b9802e41f9800000b4e8c3059101810291395e0f9480a20991fe770f9480000034e81340f9000140f98c212c94f5c30591e84304910021009108f65d97f3c3059160e2029105f65d97a062029103f65d97e0f740f9600000b4e0fb00f9472a4d9460220191fdf55d9760e20091fbf55d9720a30091f9f55d9740630091f7f55d9740037db2f5f55d97e8430b9100210091f2f55d97e92340f9280140b9290940b91f01096baa020054e92340f9280540b9290d40b91f01096b0a020054807a40f9892250a9e92308a9880000b40821009129008052080129b8f5030291e2030291f32340f9e10313aa4785f397600600a9a0220091d9f55d97890340f9a90100b4880740f9e92307a9880000b40821009129008052080129b8f5c30191e0c30191010080528dcf0394a0220091cbf55d97e81740b90801003480a209918f770f94a0000035e81340f9000140f9a1a303d1a9c40294883241b91f0100716803005208159f1ab82302d1b78302d1f32340f9a8020037807a40f9e8c30591a28af397e0bb40f9a00100b489224fa9e92306a9880000b40821009129008052080129b8f5830191e18301912200805248a3f397a0220091a9f55d97e8c3059100210091a6f55d97680240b9690a40b91f01096b2a030054680640b9690e40b91f01096baa0200546002c03de05f803d882241b9e103084b882641b9e203084be0c305914022e697892340a9e92305a9880000b40821009129008052080129b8f4430191e0430191e1c30591a1350494802200918af55d97e09341f9600000b4e09701f9ce294d94e09f41f9600000b4e0a301f9ca294d94a08351f8600000b4a00312f8c6294d94a8c302d1002100917bf55d97e0027db279f55d970023009177f55d97ffc30f91fd7b47a9f44f46a9f65745a9f85f44a9fa6743a9fc6f42a9e923416deb2bc86cc0035fd6f30300aae8c30a910021009169f55d978500001483000014820000148b0000140a0000142c000014f30300aae022009160f55d972300001427000014f30300aaa022009189000014f30300aaa02200912e000014f30300aae8c30a91002100912a0000149c000014f30300aae00316aa98294d9499000014f30300aa2a0000142d00001494000014f30300aaa022009148f55d97e8c30591002100912e00001454000014f30300aae8c30a910021009140f55d97610000145f000014f30300aac02200915a000014f30300aac02200916a000014f30300aae00316aa8400001401000014f30300aae00318aa03000014f30300aaa02200912ef55d9702000014f30300aae00316aa2af55d973a0000144e000014f30300aae80305910021009124f55d97e8830a910021009121f55d9702000014f30300aae8c30a91400000145b0000145a00001459000014f30300aa8022009117f55d976800001401000014f30300aa65000014030000143d0000144f000014f30300aaa02200915c0000144b0000145400001453000014f30300aa580000144600001445000014440000144300001433000014f30300aae022009100f55d97c0220091fef45d97b78302d15a0000140200001401000014f30300aa590000140f0000143f0000143e0000143d0000143c0000143b0000143a000014f30300aae0430491382722942d00001435000014340000140200001401000014f30300aae8830a911f00001424000014f30300aae843049100210091e1f45d9707000014f30300aae8430491002100910a0000141a000014f30300aae8c305910021009109000014220000141e000014f30300aac0220091d2f45d9711000014f30300aae0220091cef45d97170000140b0000141700001416000014f30300aae8030b9100210091c6f45d97120000140d0000140c00001401000014f30300aae0c30591d000009408000014060000140800001404000014030000140500001401000014f30300aae8430b9103000014f30300aae843049100210091b1f45d97b82302d1b78302d1e09341f9600000b4e09701f9f3284d94e09f41f9600000b4e0a301f9ef284d94a08351f8600000b4a00312f8eb284d94a8c302d100210091a0f45d97e0027db29ef45d97002300919cf45d97e00313aa6b1e4d94",
+      "endExclusive": "0x102892fc8",
+      "assemblyFile": "finalizer.asm",
+      "assemblySha256": "8c0b467c9fc8bff01741df96403e7ded3caa5cd68a8351fae7a9e7064e6502a5",
+      "containingFunction": [
+        "0x10289148c",
+        "0x102892fc8"
+      ]
+    },
+    {
+      "name": "source_conversion",
+      "address": "0x10277f8c8",
+      "byteCount": 400,
+      "sha256": "752d33d76e9b526e146962135b26f8a9c1e9bc1f356274d725d2130b168457fd",
+      "bytesHex": "ff8303d1eb2b096de9230a6df6570ba9f44f0ca9fd7b0da9fd4303910840601ef30300aa000040f9082040b98803383748012036e0030091441d0094610240f9e0030091e71e0094600200f9e00300915f1d0094600240f9131840f9130700b4e00313aa2100805255b0ff970020681e0d01005400106c1e01106c1ee00313aa60b9ff97600000b4d3feffb52c000014731640f973feffb529000014bfff3aa9bf831bf8141840f9d40300b40a106e1ee00314aa2100805241b0ff970020681ead0200540018681e0800681e1f0900712b0200540001621e4b19601e150500516941601ef40300f9e90700fde00314aa2041601e46afff97e007016da06301d1e10300912a9496976929691eb5060071a1feff54941640f9d4fcffb5600240f9a16301d1020080526f8cff97a0835af8600000b4a0031bf853765194fd7b4da9f44f4ca9f6574ba9e9234a6deb2b496dff830391c0035fd6f30300aae00300911b1d009409000014030000140200001401000014f30300aaa0835af8600000b4a0031bf840765194e00313aac76b5194",
+      "endExclusive": "0x10277fa58",
+      "assemblyFile": "source_conversion.asm",
+      "assemblySha256": "f3d2bed14738aa576311134aa08d91fdd90de7c9a42ffb8c337f58b469a03b7a",
+      "containingFunction": [
+        "0x10277f8c8",
+        "0x10277fa58"
+      ]
+    },
+    {
+      "name": "stroke_allocate_constructor",
+      "address": "0x1027896dc",
+      "byteCount": 4,
+      "sha256": "060bafc9bf89e5e4e210f014bbcb70368ecad88912be4c91e1ab95ddd5348800",
+      "bytesHex": "e9ffff17",
+      "endExclusive": "0x1027896e0",
+      "assemblyFile": "stroke_allocate_constructor.asm",
+      "assemblySha256": "1c8db40d5b6b19765ac1150cbb7ba2a7ee4d744f6cbe465579d9c7e178ff6bab",
+      "containingFunction": [
+        "0x1027896dc",
+        "0x1027896e0"
+      ]
+    },
+    {
+      "name": "source_sampler",
+      "address": "0x10276ca3c",
+      "byteCount": 112,
+      "sha256": "99d20c2ef84924c08e308e9aa351815585d6cfac823f3afe087458e00e36843f",
+      "bytesHex": "ff8300d1fd7b01a9fd430091e30302aae40301aa28008052a8c31fb8011440f9210100b4080040f9087d40f901e4002f02106e1ea51300d10200805200013fd609000014081c40f90985403969000036011940f981feffb50080c03c8000803d20008052fd7b41a9ff830091c0035fd6",
+      "endExclusive": "0x10276caac",
+      "assemblyFile": "source_sampler.asm",
+      "assemblySha256": "98024a7852d49eecc88d9c2010e2d17ea2c2e240551ac57a8895be7ee2c2377e",
+      "containingFunction": [
+        "0x10276ca3c",
+        "0x10276caac"
+      ]
+    },
+    {
+      "name": "replacement_sampler",
+      "address": "0x10276cb14",
+      "byteCount": 144,
+      "sha256": "4532260070b15274a066d38dce432c6655bc1aab348e080f3e7de838680d573b",
+      "bytesHex": "ffc300d1f44f01a9fd7b02a9fd830091f30303aae40302aae20301aa28008052e80f00b9011440f9810100b4080040f9087d40f90010621e01e4002f02106e1ee53300910300805200013fd6e80300aae00f40b90a000014081c40f90985403969000036011940f921feffb50080c03c8000803d2000805228008052680200b9fd7b42a9f44f41a9ffc30091c0035fd6",
+      "endExclusive": "0x10276cba4",
+      "assemblyFile": "replacement_sampler.asm",
+      "assemblySha256": "00b18f6a31b6c4cbdea2eb123771efced85ca57904da9630a7f3a407fab95d4e",
+      "containingFunction": [
+        "0x10276cb14",
+        "0x10276cba4"
+      ]
+    }
+  ]
+}

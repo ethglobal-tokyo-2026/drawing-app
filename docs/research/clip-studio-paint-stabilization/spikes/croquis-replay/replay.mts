@@ -2,22 +2,31 @@ import fs from "node:fs";
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Stabilizer } from "../../../../../apps/frontend/src/sticker-creation/canvas/stabilizer.ts";
 import { StrokeBuilder } from "../../../../../apps/frontend/src/sticker-creation/canvas/brush.ts";
 import { StrokeCurve } from "../../../../../apps/frontend/src/sticker-creation/canvas/strokeCurve.ts";
 import { InkEngine } from "../../../../../apps/frontend/src/sticker-creation/canvas/inkEngine.ts";
+import { FIRST_POST_CORRECTION } from "../../../../../apps/frontend/src/sticker-creation/canvas/post-correction/settings.ts";
+import type { LayerInk } from "../../../../../apps/frontend/src/sticker-creation/layers/layerInk.ts";
 import {
   configureLiveQueue,
   adjustFixedWindow,
   averageFractionalHistory,
-} from "../../live-reference.ts";
+} from "../../../../../apps/frontend/src/sticker-creation/canvas/stabilization/arithmetic.ts";
 
 const repo = fileURLToPath(new URL("../../../../../", import.meta.url));
-const out = path.resolve(process.argv[2] ?? path.join(tmpdir(), "csp-croquis-replay-spike"));
+const out = path.resolve(
+  process.argv[2] ??
+    fileURLToPath(
+      new URL(`./results-${new Date().toISOString().replace(/[:.]/g, "-")}/`, import.meta.url),
+    ),
+);
 fs.mkdirSync(out, { recursive: true });
+const deadline = performance.now() + 180000;
+const checkDeadline = () =>
+  assert(performance.now() < deadline, "Replay exceeded its 180-second work limit");
 type Sample = { x: number; y: number; t: number; pressure: number };
 const fixtures = [
   { name: "line_12", speed: 12, xy: (s: number) => [20 + 12 * s, 80] },
@@ -43,8 +52,8 @@ const fixtures = [
 ];
 const filters = [
   { name: "raw", smoothing: 0 },
-  { name: "one_euro_35", smoothing: 35 },
-  { name: "one_euro_100", smoothing: 100 },
+  { name: "queue_S35_T0", smoothing: 35 },
+  { name: "queue_S100_T0", smoothing: 100 },
   { name: "fixed_S4_T0", S: 4, T: 0 },
   { name: "fixed_S12_T0", S: 12, T: 0 },
   { name: "fixed_S24_T12", S: 24, T: 12 },
@@ -67,16 +76,18 @@ const makeSamples = (fixture: (typeof fixtures)[number], rate: number): Sample[]
   });
 for (const fixture of fixtures)
   for (const rate of [60, 120, 240]) {
+    checkDeadline();
     const samples = makeSamples(fixture, rate);
     savedFixtures.push({ name: fixture.name, rate, samples });
     for (const cfg of filters) {
       const start = samples[0];
-      const stab = new Stabilizer(start.x, start.y, start.t, cfg.smoothing ?? 0);
       const config = cfg.S ? configureLiveQueue(cfg.S, cfg.T!, false, false) : null;
+      const stab = config ? null : new Stabilizer(start, cfg.smoothing ?? 0, true);
       let H = config?.initialWindow ?? 0;
       const history: any[] = [];
       const builder = new StrokeBuilder({
         tool: "brush",
+        layer: 1,
         color: "#123456",
         size: 7,
         ...start,
@@ -93,26 +104,29 @@ for (const fixture of fixtures)
       for (let i = 0; i < samples.length; i++) {
         const raw = samples[i];
         let filtered: { x: number; y: number; pressure: number };
+        let outputs: Sample[];
         if (config) {
-          // Ordinary native timestamps are confirmed integer milliseconds. Rounding these synthetic
-          // sample times is an adapter choice, and the cadence is not a captured device stream.
-          const timestamp = BigInt(Math.round(raw.t));
+          // Match the browser adapter's truncation; this synthetic cadence is not a device capture.
+          const timestamp = BigInt(Math.trunc(raw.t));
           history.unshift({ ...raw, timestamp });
           H = adjustFixedWindow(H, cfg.S!, config.initialWindow, i === 0 ? 0 : 1);
           const averaged = averageFractionalHistory(history, H, timestamp);
           assert(averaged);
           filtered = averaged;
+          outputs = [{ ...filtered, t: raw.t }];
         } else {
-          const [x, y] = i === 0 ? [raw.x, raw.y] : stab.add(raw.x, raw.y, raw.t);
-          filtered = { x, y, pressure: raw.pressure };
+          outputs = i === 0 ? [stab!.initial] : stab!.add(raw);
+          filtered = stab!.position;
         }
         let didAccept = false;
         if (i > 0) {
-          curve.add(filtered.x, filtered.y, 7, raw.t);
-          didAccept = builder.add(filtered.x, filtered.y, filtered.pressure, raw.t, raw);
-          if (didAccept) {
-            latestAccepted = { ...filtered, t: raw.t };
-            accepted++;
+          for (const output of outputs) {
+            curve.add(output.x, output.y, 7, output.t);
+            if (builder.add(output.x, output.y, output.pressure, output.t, raw)) {
+              didAccept = true;
+              latestAccepted = output;
+              accepted++;
+            }
           }
         }
         const end = last(builder.op.pts);
@@ -130,6 +144,7 @@ for (const fixture of fixtures)
           visible_x: end.x,
           visible_y: end.y,
           H: config ? H : null,
+          emitted: outputs.length,
           accepted: didAccept,
           raw_to_filter: dist(raw, filtered),
           filter_to_curve: dist(filtered, end),
@@ -148,13 +163,19 @@ for (const fixture of fixtures)
       if (!config) {
         const raw = samples.at(-1)!;
         const before = last(builder.op.pts);
-        const finish = stab.finish(raw.x, raw.y);
-        for (const [x, y, t] of finish) builder.add(x, y, raw.pressure, t, null);
-        builder.settle(raw.x, raw.y);
+        const finish = stab!.finish({ ...raw, pressure: 0 });
+        for (const output of finish)
+          builder.add(output.x, output.y, output.pressure, output.t, null);
+        const endpoint = stab!.position;
+        builder.settle(endpoint.x, endpoint.y);
         builder.taperEnd();
-        assert.equal(dist(last(builder.op.pts), raw), 0);
+        assert.equal(dist(last(builder.op.pts), endpoint), 0);
+        assert(finish.every((output) => output.t === raw.t));
+        // Native movement-based ending can retain positive pressure; record the observed scalar.
+        terminal.terminal_pressure = endpoint.pressure;
         terminal.finish_samples = finish.length;
-        terminal.synthetic_time_extension_ms = finish.at(-1)?.[2] ? finish.at(-1)![2] - raw.t : 0;
+        terminal.synthetic_time_extension_ms = endpoint.t - raw.t;
+        terminal.raw_to_terminal_endpoint = dist(raw, endpoint);
         terminal.terminal_displacement = dist(before, last(builder.op.pts));
       }
       summaries.push({
@@ -175,33 +196,55 @@ for (const fixture of fixtures)
     }
   }
 
-// Engine harness follows inkEngine.test.ts; this layer records geometry, never pixels.
-class GeometryLayer {
-  paints = 0;
-  restores = 0;
+// Explicit non-raster recording substitutes; pixel verification uses the real LayerInk separately.
+class GeometryInk {
+  copiesHeld = 0;
   setFrame() {
     return true;
   }
-  paint() {
-    this.paints++;
-  }
-  fill() {
-    return true;
-  }
+  show() {}
   apply() {}
-  restore() {
-    this.restores++;
-  }
-  snapshot() {
+  releaseAll() {}
+  restore() {}
+  release() {}
+  hold() {
     return null;
   }
-  discard() {}
+  rebuild(_layer: number, write: () => void) {
+    write();
+  }
   cost() {
     return 1;
   }
+  copyBudgetFor() {
+    return 100;
+  }
+  copiesFreedBy() {
+    return 0;
+  }
+}
+class GeometryDisplay {
+  paints = 0;
+  restores = 0;
+  resize() {}
+  show() {}
+  showCurrent() {}
+  previewOpacity() {}
+  inkChanged() {}
+  beginStroke() {}
+  paintStroke() {
+    this.paints++;
+  }
+  paintTail() {}
+  endStroke() {
+    this.restores++;
+  }
+  flash() {}
+  release() {}
 }
 const settings = {
   tool: "brush" as const,
+  fillReference: "layer" as const,
   color: "#123456",
   size: 7,
   smoothing: 35,
@@ -219,7 +262,8 @@ function engineReplay(
   coalesced: boolean,
   idle = false,
 ) {
-  const layer = new GeometryLayer();
+  checkDeadline();
+  const layer = new GeometryDisplay();
   let frame: ((t: number) => void) | null = null;
   const commits: any[] = [];
   const events = {
@@ -228,16 +272,29 @@ function engineReplay(
       commits.push(structuredClone(op));
     },
     onBlocked() {},
-    onDismissPanel() {},
+    onBlockedHidden() {},
+    onInkFailed(error: unknown) {
+      throw error;
+    },
+    onLayers() {},
     onPen() {},
     onHover() {},
   };
-  const engine = new InkEngine(layer, { ...settings, smoothing }, events, (cb) => {
-    frame = cb;
-    return () => {
-      frame = null;
-    };
-  });
+  const engine = new InkEngine(
+    new GeometryInk() as unknown as LayerInk,
+    layer,
+    { ...settings, smoothing, postCorrection: FIRST_POST_CORRECTION },
+    events,
+    {
+      now: () => samples.at(-1)!.t,
+      request(cb) {
+        frame = cb;
+        return () => {
+          frame = null;
+        };
+      },
+    },
+  );
   engine.fit({ width: 374, height: 748 }, 1);
   const at = (s: Sample) => ({
     pointerId: 1,
@@ -267,7 +324,7 @@ function engineReplay(
   }
   const end = samples.at(-1)!;
   if (idle) for (let t = end.t + 1000 / 60; t <= end.t + 400; t += 1000 / 60) tick(t);
-  engine.up(at(end));
+  engine.up({ ...at(end), pressure: 0, buttons: 0 });
   assert.equal(commits.length, 1);
   engine.dispose();
   return { op: commits[0], paints: layer.paints, restores: layer.restores };
@@ -303,20 +360,23 @@ const idleResult = {
   geometry_equal: JSON.stringify(noIdle.op) === JSON.stringify(idle.op),
   no_idle_last_time: noIdle.op.pts.at(-1),
   idle_last_time: idle.op.pts.at(-1),
-  note: "Genuine empty frames after the last sample introduce hold processing. This is deliberately outside delivery equivalence.",
+  note: "Empty display frames add no stabilization packets; finalized geometry and input timestamps remain identical.",
 };
+assert.equal(idleResult.geometry_equal, true);
+assert.equal(idleResult.no_idle_last_time, idleResult.idle_last_time);
 for (const row of rows.filter((r) => r.filter === "raw")) assert.equal(row.raw_to_filter, 0);
 for (const row of summaries.filter(
   (r) => r.filter === "fixed_S12_T0" && r.fixture.startsWith("line_"),
 ))
   assert(Math.abs(row.raw_filter_equivalent_ms - (5.5 * 1000) / row.rate) < 1e-8);
-fs.writeFileSync(out + "/fixtures.json", JSON.stringify(savedFixtures, null, 2));
-fs.writeFileSync(out + "/samples.csv", csv(rows));
-fs.writeFileSync(out + "/summary.csv", csv(summaries));
-fs.writeFileSync(out + "/summary.json", JSON.stringify(summaries, null, 2));
+fs.writeFileSync(out + "/fixtures.json", JSON.stringify(savedFixtures, null, 2), { flag: "wx" });
+fs.writeFileSync(out + "/samples.csv", csv(rows), { flag: "wx" });
+fs.writeFileSync(out + "/summary.csv", csv(summaries), { flag: "wx" });
+fs.writeFileSync(out + "/summary.json", JSON.stringify(summaries, null, 2), { flag: "wx" });
 fs.writeFileSync(
   out + "/batch-results.json",
   JSON.stringify({ cases: batches, idle: idleResult }, null, 2),
+  { flag: "wx" },
 );
 const validation = {
   sample_rows: rows.length,
@@ -327,18 +387,26 @@ const validation = {
   analytical_fixed_window_checks: 9,
   idle: idleResult,
 };
-fs.writeFileSync(path.join(out, "validation.json"), JSON.stringify(validation, null, 2));
+fs.writeFileSync(path.join(out, "validation.json"), JSON.stringify(validation, null, 2), {
+  flag: "wx",
+});
 const sourcePaths = [
   "apps/frontend/src/sticker-creation/canvas/stabilizer.ts",
   "apps/frontend/src/sticker-creation/canvas/brush.ts",
   "apps/frontend/src/sticker-creation/canvas/strokeCurve.ts",
   "apps/frontend/src/sticker-creation/canvas/inkEngine.ts",
-  "apps/frontend/src/sticker-creation/canvas/inkSurface.ts",
+  "apps/frontend/src/sticker-creation/layers/layerInk.ts",
+  "apps/frontend/src/sticker-creation/layers/layerHistory.ts",
+  "apps/frontend/src/sticker-creation/layers/sheetDisplay.ts",
   "apps/frontend/src/sticker-creation/canvas/paintStroke.ts",
-  "docs/research/clip-studio-paint-stabilization/live-reference.ts",
+  "apps/frontend/src/sticker-creation/canvas/stabilization/arithmetic.ts",
+  "apps/frontend/src/sticker-creation/canvas/stabilization/binary64.ts",
+  "apps/frontend/src/sticker-creation/canvas/stabilization/queue.ts",
 ];
 const provenance = {
   date: new Date().toISOString(),
+  implementation:
+    "Shared reconstructed CSP queue with browser release adapter; fixed-helper rows isolate only averaging arithmetic",
   node: process.version,
   source_audit_head: "ebe0d143f134d7e28cd2da386044a8327f0fe10b",
   initial_spike_head: "52493b5618ec22291b32caa8fd1f803c15384416",
@@ -355,7 +423,9 @@ const provenance = {
       .digest("hex"),
   })),
 };
-fs.writeFileSync(path.join(out, "provenance.json"), JSON.stringify(provenance, null, 2));
+fs.writeFileSync(path.join(out, "provenance.json"), JSON.stringify(provenance, null, 2), {
+  flag: "wx",
+});
 console.log(JSON.stringify(validation, null, 2));
 console.log("STEADY STRAIGHT LINES: mean lag in ms, filter + curve");
 for (const r of summaries.filter(

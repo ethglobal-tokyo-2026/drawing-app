@@ -1,0 +1,205 @@
+{
+  "scope": "Offline live stabilization arithmetic; no Croquis integration or new CSP attachment",
+  "tests": {
+    "research_tests_passed": 142,
+    "research_tests_failed": 0,
+    "strict_types_exit_code": 0,
+    "format_exit_code": 0,
+    "native_arm_probe_exit_code": 0,
+    "independent_review": "No remaining actionable findings; overflow edge regression corrected and reviewed."
+  },
+  "captures": [
+    {
+      "report": "native-s0-comparison-final.json",
+      "input_sha256": "cf3bb7c761de415dea8286c9a3b1249c26b91adcc7ed529ec6043f3e2464876a",
+      "compared_calls": 115,
+      "mismatches": 0,
+      "observed_completion": {
+        "nativeReleaseReturned": true,
+        "finalSourceReturned": true,
+        "finalPairId": 147,
+        "terminalWrapperRecords": 0,
+        "sourceReturnRecords": 1
+      }
+    },
+    {
+      "report": "native-s20-comparison-final.json",
+      "input_sha256": "68a60bc01d3cdda720f7360d12438925aef7087ce544372a7cd087135ff612e6",
+      "compared_calls": 311,
+      "mismatches": 0,
+      "observed_completion": {
+        "nativeReleaseReturned": true,
+        "finalSourceReturned": true,
+        "finalPairId": 347,
+        "terminalWrapperRecords": 0,
+        "sourceReturnRecords": 1
+      }
+    }
+  ],
+  "verified_sources": {
+    "binary64.ts": {
+      "sha256": "98b4db6e40de82bb941770cac14aea5ed7bf67fbbe9d9ac42d8d623fe62c4797",
+      "snapshot": "verified-source/binary64.ts"
+    },
+    "binary64.test.ts": {
+      "sha256": "635a74a45742469ee103b97dff1e5f7ce6ccc12dde153a28244d6f46a8334dd6",
+      "snapshot": "verified-source/binary64.test.ts"
+    },
+    "live-reference.ts": {
+      "sha256": "a3ba7aff0b73281e41d8cda020f290b42517bb1cb7c581f145100e4e3e7d7699",
+      "snapshot": "verified-source/live-reference.ts"
+    },
+    "live-reference.test.ts": {
+      "sha256": "eb0b6e06176dc912de41c3ef0001aa4e6b7551f2d3df644c54c0cf27a1a6bbff",
+      "snapshot": "verified-source/live-reference.test.ts"
+    },
+    "post-reference.ts": {
+      "sha256": "5c7164ba9c7e27e92ad8d91374d10acd6cd47f6abb5f25c95328c5ba4cdc5624",
+      "snapshot": "verified-source/post-reference.ts"
+    },
+    "post-reference.test.ts": {
+      "sha256": "1a982066ca4b9d57896eab8e2a41ca75a6cdf6d66e28ccc5343f51560625d12f",
+      "snapshot": "verified-source/post-reference.test.ts"
+    },
+    "spikes/live-replay/compare.ts": {
+      "sha256": "e29385049d718a60a600742860a5020f0dd984fae3ca5aa09976276e651cbea8",
+      "snapshot": "verified-source/spikes/live-replay/compare.ts"
+    },
+    "spikes/live-replay/live-replay.test.ts": {
+      "sha256": "78d5e8897b4301061e1c55bd5d293febc43f877d42542c072d2325f8b3a48999",
+      "snapshot": "verified-source/spikes/live-replay/live-replay.test.ts"
+    },
+    "spikes/live-replay/native-replay.test.ts": {
+      "sha256": "1549fa84f3c19dbf036b91caf2b408baa2b812332fa66d56e601a94186a750cc",
+      "snapshot": "verified-source/spikes/live-replay/native-replay.test.ts"
+    },
+    "spikes/live-replay/queue.ts": {
+      "sha256": "e302ac6ed23b3e6c58fab5c62afaa814787318fa0711ce133d2f0012b9c78ed8",
+      "snapshot": "verified-source/spikes/live-replay/queue.ts"
+    },
+    "spikes/live-replay/reader.ts": {
+      "sha256": "499756e0be7bd201a8a593e25f6b5dbb3ba289693cd4919a5f388146b686e2ed",
+      "snapshot": "verified-source/spikes/live-replay/reader.ts"
+    }
+  },
+  "artifacts": {
+    "edge-regression-after.txt": {
+      "bytes": 567,
+      "sha256": "f3ba056e97de89308c51bb03bfcf0a77094b38f9aafa4e1d55c85747ef8339fa"
+    },
+    "edge-regression-before.txt": {
+      "bytes": 5203,
+      "sha256": "2c4a1472829c55cdab6e1557de1ecae8ee8a4602b92f5f776cf3338ca0b1dbcc"
+    },
+    "format-final.txt": {
+      "bytes": 112,
+      "sha256": "490920b4be995942ec64b1a0677cb030dc43383900860fe5c651efec4186075e"
+    },
+    "geometry-regression-before.txt": {
+      "bytes": 5686,
+      "sha256": "41c610d9cc0750bb04a748c9303d2c32c7c4a844f72bc7f9293978583facaec9"
+    },
+    "native-fused-vectors-final.json": {
+      "bytes": 349,
+      "sha256": "228e437cae6c3d783df737e0ebae31a3b4b1b89b910cb5deea12e7ad44321bac"
+    },
+    "native-fused-vectors.c": {
+      "bytes": 3163,
+      "sha256": "d74b488513100d9bd71a6096d7318f52a76c5ca66e01d51db3c990e44c283d69"
+    },
+    "native-fused-vectors.json": {
+      "bytes": 161,
+      "sha256": "978c4b1c6686b65892edfc7dc0c9eabd7859cd54e00fa0a6f3da64aef1ce85f8"
+    },
+    "native-regression-after-fraction.txt": {
+      "bytes": 245,
+      "sha256": "630ef1c411452eca851c035d8fb3469335945e66082bd8ae4904115221778129"
+    },
+    "native-regression-before.txt": {
+      "bytes": 1444,
+      "sha256": "0f649d5f3643f0cc701fc1be35237fd8cbbf0ccf06076e88f951daf2f55b0025"
+    },
+    "native-s0-comparison-final.json": {
+      "bytes": 1112699,
+      "sha256": "efeedb7a248a0314dc2c728e7080b2d459e1d504428575c5550543aa9e78aa3c"
+    },
+    "native-s0-comparison.json": {
+      "bytes": 1112610,
+      "sha256": "d9531ee5e549535d26d744170d075975f926ddfd27bc9c60291f10932dc95151"
+    },
+    "native-s20-comparison-final.json": {
+      "bytes": 3038712,
+      "sha256": "dd4d032432c5ea3eaef5b706f0c854108d0e28b23ee2074b10ea644feb8b5ebf"
+    },
+    "native-s20-comparison.json": {
+      "bytes": 3038623,
+      "sha256": "c0809e20a5d2a81d919da23c1f04f0eecd3e6ade2c721ac6e6cabb92e48819ce"
+    },
+    "research-tests-final.txt": {
+      "bytes": 12566,
+      "sha256": "1f802715daea37d5858d692a98cb118a38e908c67e10ceea03d0476090f75282"
+    },
+    "research-tests.txt": {
+      "bytes": 12096,
+      "sha256": "029f506b5de16608460237aba979faec0af3c5fdedf448ad68e17fb0553ba661"
+    },
+    "typecheck-final.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "typecheck.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "verified-source/binary64.test.ts": {
+      "bytes": 811,
+      "sha256": "635a74a45742469ee103b97dff1e5f7ce6ccc12dde153a28244d6f46a8334dd6"
+    },
+    "verified-source/binary64.ts": {
+      "bytes": 2099,
+      "sha256": "98b4db6e40de82bb941770cac14aea5ed7bf67fbbe9d9ac42d8d623fe62c4797"
+    },
+    "verified-source/live-reference.test.ts": {
+      "bytes": 13280,
+      "sha256": "eb0b6e06176dc912de41c3ef0001aa4e6b7551f2d3df644c54c0cf27a1a6bbff"
+    },
+    "verified-source/live-reference.ts": {
+      "bytes": 17777,
+      "sha256": "a3ba7aff0b73281e41d8cda020f290b42517bb1cb7c581f145100e4e3e7d7699"
+    },
+    "verified-source/post-reference.test.ts": {
+      "bytes": 5496,
+      "sha256": "1a982066ca4b9d57896eab8e2a41ca75a6cdf6d66e28ccc5343f51560625d12f"
+    },
+    "verified-source/post-reference.ts": {
+      "bytes": 9663,
+      "sha256": "5c7164ba9c7e27e92ad8d91374d10acd6cd47f6abb5f25c95328c5ba4cdc5624"
+    },
+    "verified-source/spikes/live-replay/compare.ts": {
+      "bytes": 9941,
+      "sha256": "e29385049d718a60a600742860a5020f0dd984fae3ca5aa09976276e651cbea8"
+    },
+    "verified-source/spikes/live-replay/live-replay.test.ts": {
+      "bytes": 32814,
+      "sha256": "78d5e8897b4301061e1c55bd5d293febc43f877d42542c072d2325f8b3a48999"
+    },
+    "verified-source/spikes/live-replay/native-replay.test.ts": {
+      "bytes": 1148,
+      "sha256": "1549fa84f3c19dbf036b91caf2b408baa2b812332fa66d56e601a94186a750cc"
+    },
+    "verified-source/spikes/live-replay/queue.ts": {
+      "bytes": 9791,
+      "sha256": "e302ac6ed23b3e6c58fab5c62afaa814787318fa0711ce133d2f0012b9c78ed8"
+    },
+    "verified-source/spikes/live-replay/reader.ts": {
+      "bytes": 41030,
+      "sha256": "499756e0be7bd201a8a593e25f6b5dbb3ba289693cd4919a5f388146b686e2ed"
+    }
+  },
+  "limits": [
+    "Only saved S0/T0 and fixed S20/T0 complete native streams are compared. Fast/slow modes and nonzero taper have static/arithmetic tests, not complete native captures.",
+    "No natural latency, pen-feel, browser input adaptation, or Croquis integration validation.",
+    "Post-correction geometry reconstruction remains incomplete.",
+    "NaN payloads, floating-point status flags, alternate FPCR modes, and arbitrary input domains are not emulated."
+  ]
+}

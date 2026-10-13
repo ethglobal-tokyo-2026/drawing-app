@@ -1,0 +1,266 @@
+✖ ordinary contacts create midpoint anchors and raw controls before exact terminal import (1.539666ms)
+✖ midpoint import narrows before halving and copies current scalar54 rather than averaging it (0.174959ms)
+✖ repeated input points remain native source nodes rather than being silently rejected (0.235459ms)
+✖ deferred begin imports the first append without midpoint construction or scalar fade (0.188125ms)
+✖ distance accumulation fades scalar54 on contact and terminal using the previous raw record (0.09725ms)
+✖ explicit source marker causes a flagged corner on the next append, not on the marked record (0.51825ms)
+✖ caller-enabled corner detection inserts an unmarked corner at a sharp reversal (0.101292ms)
+✖ source snapshots do not mutate caller records and cannot mutate the builder (0.065167ms)
+✖ finite input, explicit work limits and terminal state fail rather than fabricating source nodes (0.129625ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 0
+ℹ fail 9
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 74.274125
+
+✖ failing tests:
+
+test at docs/research/clip-studio-paint-stabilization/post-source.test.ts:10:1
+✖ ordinary contacts create midpoint anchors and raw controls before exact terminal import (1.539666ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   {
+  -     control: {
+  -       x: 0,
+  -       y: 0
+  -     },
+  -     point: {
+  -       x: 0,
+  -       y: 0
+  -     }
+  -   },
+  -   {
+  -     control: {
+  -       x: 10,
+  -       y: 20
+  -     },
+  -     point: {
+  -       x: 5,
+  -       y: 10
+  -     }
+  -   },
+  -   {
+  -     control: {
+  -       x: 20,
+  -       y: 0
+  -     },
+  -     point: {
+  -       x: 15,
+  -       y: 10
+  -     }
+  -   },
+  -   {
+  -     control: {
+  -       x: 0,
+  -       y: 0
+  -     },
+  -     point: {
+  -       x: 24,
+  -       y: 4
+  -     }
+  -   }
+  - ]
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-source.test.ts:16:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ { point: [Object], control: [Object] }, { point: [Object], control: [Object] }, { point: [Object], control: [Object] }, { point: [Object], control: [Object] } ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at docs/research/clip-studio-paint-stabilization/post-source.test.ts:26:1
+✖ midpoint import narrows before halving and copies current scalar54 rather than averaging it (0.174959ms)
+  Error: Source construction is not implemented
+      at constructQuadraticSourceNode (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-source.ts:22:9)
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-source.test.ts:31:18)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at docs/research/clip-studio-paint-stabilization/post-source.test.ts:39:1
+✖ repeated input points remain native source nodes rather than being silently rejected (0.235459ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 3
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-source.test.ts:43:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 3,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at docs/research/clip-studio-paint-stabilization/post-source.test.ts:47:1
+✖ deferred begin imports the first append without midpoint construction or scalar fade (0.188125ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   [
+  -     20,
+  -     1
+  -   ]
+  - ]
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-source.test.ts:50:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ [ 20, 1 ] ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at docs/research/clip-studio-paint-stabilization/post-source.test.ts:55:1
+✖ distance accumulation fades scalar54 on contact and terminal using the previous raw record (0.09725ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   1,
+  -   0.5,
+  -   0
+  - ]
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-source.test.ts:59:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ 1, 0.5, 0 ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at docs/research/clip-studio-paint-stabilization/post-source.test.ts:62:1
+✖ explicit source marker causes a flagged corner on the next append, not on the marked record (0.51825ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   {
+  -     x: 0,
+  -     y: 0
+  -   },
+  -   {
+  -     x: 2,
+  -     y: 1
+  -   },
+  -   {
+  -     x: 4,
+  -     y: 2
+  -   },
+  -   {
+  -     x: 6,
+  -     y: 3
+  -   }
+  - ]
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-source.test.ts:68:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ { x: 0, y: 0 }, { x: 2, y: 1 }, { x: 4, y: 2 }, { x: 6, y: 3 } ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at docs/research/clip-studio-paint-stabilization/post-source.test.ts:74:1
+✖ caller-enabled corner detection inserts an unmarked corner at a sharp reversal (0.101292ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   0,
+  -   0,
+  -   1,
+  -   0
+  - ]
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-source.test.ts:78:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ 0, 0, 1, 0 ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at docs/research/clip-studio-paint-stabilization/post-source.test.ts:81:1
+✖ source snapshots do not mutate caller records and cannot mutate the builder (0.065167ms)
+  TypeError: Cannot read properties of undefined (reading 'point')
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-source.test.ts:86:58)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at docs/research/clip-studio-paint-stabilization/post-source.test.ts:92:1
+✖ finite input, explicit work limits and terminal state fail rather than fabricating source nodes (0.129625ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception.
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-source.test.ts:93:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /finite/,
+    operator: 'throws',
+    diff: 'simple'
+  }

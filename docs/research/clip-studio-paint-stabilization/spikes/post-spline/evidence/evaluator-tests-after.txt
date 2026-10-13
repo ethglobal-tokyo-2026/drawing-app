@@ -1,0 +1,21 @@
+✔ six-point evaluator preserves point ordering and both branch coefficient sets (2.421791ms)
+✔ evaluator endpoints retain multiply-then-divide rounding (0.287875ms)
+✔ evaluator does not clamp an out-of-range parameter (0.61075ms)
+✔ outer neighbor uses the greater of ten and 2.5 times the opposite distance (0.312375ms)
+✔ outer-neighbor equality still recomputes coordinates (0.156417ms)
+✔ spline measure includes all four quarter chords with direct segment endpoints (1.068542ms)
+✔ sampler truncates its interval count and emits both endpoints (0.574709ms)
+✔ sampler preserves reversed and out-of-range intervals (0.494291ms)
+✔ sampler bounds allocation even when density causes infinity or NaN (6.418375ms)
+✔ native instruction E results match every saved output bit (16.960167ms)
+✔ native instruction M results match every saved output bit (2.59275ms)
+✔ native instruction N results match every saved output bit (4.445958ms)
+✔ native instruction S results match every saved output bit (14.434125ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 13
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 261.594917

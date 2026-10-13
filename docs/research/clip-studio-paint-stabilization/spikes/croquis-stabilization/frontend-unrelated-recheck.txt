@@ -1,0 +1,9 @@
+
+ RUN  v5.0.1 /Users/adoll/projects/drawing-app/apps/frontend
+
+
+ Test Files  2 passed (2)
+      Tests  17 passed (17)
+   Start at  15:49:21
+   Duration  26.97s (tests 88%, transform 7%, environment 4%, import 1%)
+

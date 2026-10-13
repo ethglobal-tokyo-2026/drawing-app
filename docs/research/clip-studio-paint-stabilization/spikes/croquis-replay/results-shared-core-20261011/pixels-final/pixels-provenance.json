@@ -1,0 +1,46 @@
+{
+  "date": "2026-10-11T19:50:33.601Z",
+  "node": "v24.21.0",
+  "files": [
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/croquis-replay/pixels.ts",
+      "sha256": "fa3ddb0a73524aeab951c1465bfacc47c4bb461c5d918ec93cf2d221e57a08d2"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/croquis-replay/pixels.cjs",
+      "sha256": "f55638399d38d5b7152be84fc1e0142c6e286737c1424c9cc6b6fca6b0689f53"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/inkEngine.ts",
+      "sha256": "ec6c304469c96bb93ae896782932defc6fc1163414ce198b7d2744ebcd748784"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/stabilizer.ts",
+      "sha256": "b6da01bbb1b0876814260abdd5f5a7ec2ee299244d1daf753f026906d305b543"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/stabilization/arithmetic.ts",
+      "sha256": "40e6bc7ece073c7e27fc244b16ed5e6e13693c6f2c9482f7c47f5112f7f35d5e"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/stabilization/binary64.ts",
+      "sha256": "f08af99e8b3ad726b030d803d17090a5133c3f5bd2b3b195106ce74d0b6c3ca4"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/stabilization/queue.ts",
+      "sha256": "ca2edc1909e4f506b1cf28f83a723a3e52f994cba86d265949975b0aedb9b432"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/layers/layerInk.ts",
+      "sha256": "2e7d1082f02ddc6b6058a4e7a708c8a72db023e807208747e5124ed84d48e4a7"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/layers/layerDisplay.ts",
+      "sha256": "db6848910bbb422362587c1b2441a76bfa5e006ee326244d17a240c2951cf7fc"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/paintStroke.ts",
+      "sha256": "6604f45c8d482ee080bb6a2d2ac1b52a7a101216637f27d98c018f8ca38e3a12"
+    }
+  ]
+}

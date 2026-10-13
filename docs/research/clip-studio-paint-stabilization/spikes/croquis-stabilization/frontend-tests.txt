@@ -1,0 +1,116 @@
+$ vitest run
+
+ RUN  v5.0.1 /Users/adoll/projects/drawing-app/apps/frontend
+
+ ❯ src/sticker-board/boardSettled.test.ts (2 tests | 2 failed) 6053ms
+   ❯ the board settling (2)
+     × waits for the board to be complete and quiet, and for its artist chips to have played 5013ms
+     × waits for the chips when the board completes first 1039ms
+ ❯ src/sticker-board/timelapse/fillSnapshots.test.ts (15 tests | 1 failed) 96353ms
+   ❯ the prepare pass (15)
+     × retains at most one fill snapshot for forty full-sheet fills 94825ms
+ ❯ src/sticker-creation/canvas/brush.test.ts (19 tests | 2 failed) 108ms
+   ❯ StrokeBuilder (19)
+     × does not infer pen capability from synthetic terminal pressure changes 12ms
+     × uses raw contact pressure for capability while stabilized pressure can ramp from an unread landing 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/sticker-board/boardSettled.test.ts > the board settling > waits for the board to be complete and quiet, and for its artist chips to have played
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/sticker-board/boardSettled.test.ts:14:3
+     12|
+     13| describe("the board settling", () => {
+     14|   it("waits for the board to be complete and quiet, and for its artist…
+       |   ^
+     15|     const { markBoardComplete, QUIET_MS } = await import("./boardCompl…
+     16|     const { markChipsPlayed, whenBoardSettled } = await import("./boar…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  src/sticker-board/boardSettled.test.ts > the board settling > waits for the chips when the board completes first
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/sticker-board/boardSettled.test.ts:39:21
+     37|     markBoardComplete();
+     38|     await vi.advanceTimersByTimeAsync(5000);
+     39|     expect(settled).toBe(false);
+       |                     ^
+     40|     markChipsPlayed();
+     41|     await vi.advanceTimersByTimeAsync(0);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  src/sticker-board/timelapse/fillSnapshots.test.ts > the prepare pass > retains at most one fill snapshot for forty full-sheet fills
+Error: Test timed out in 60000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/sticker-board/timelapse/fillSnapshots.test.ts:111:3
+    109|
+    110| describe("the prepare pass", () => {
+    111|   it("retains at most one fill snapshot for forty full-sheet fills", a…
+       |   ^
+    112|     const retained = new Map<WeakKey, number>();
+    113|     let cacheWrites = 0;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  src/sticker-creation/canvas/brush.test.ts > StrokeBuilder > does not infer pen capability from synthetic terminal pressure changes
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/sticker-creation/canvas/brush.test.ts:266:30
+    264|     stroke.add(40, 0, 0.3, 20, null);
+    265|     stroke.add(60, 0, 0.1, 20, null);
+    266|     expect(stroke.pressured).toBe(false);
+       |                              ^
+    267|   });
+    268|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  src/sticker-creation/canvas/brush.test.ts > StrokeBuilder > uses raw contact pressure for capability while stabilized pressure can ramp from an unread landing
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/sticker-creation/canvas/brush.test.ts:273:30
+    271|     stroke.add(20, 0, 0.2, 10, { x: 20, y: 0, t: 10, pressure: 0.5 });
+    272|     stroke.add(40, 0, 1 / 3, 20, { x: 40, y: 0, t: 20, pressure: 0.5 }…
+    273|     expect(stroke.pressured).toBe(false);
+       |                              ^
+    274|     stroke.add(60, 0, 0.4, 30, { x: 60, y: 0, t: 30, pressure: 0.7 });
+    275|     expect(stroke.pressured).toBe(true);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  3 failed | 247 passed (250)
+      Tests  5 failed | 2474 passed (2479)
+   Start at  15:46:13
+   Duration  164.51s (import 42%, tests 31%, environment 13%, transform 13%, setup 1%)
+
+    Isolate  250 workers spawned · ~2.01s startup each (spawn + environment, per file)
+             at least ~27.49s faster with isolate: false — reuses workers across files instead of one per file
+
+[ELIFECYCLE] Test failed. See above for more details.
+Error: ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL
+
+  × "pnpm recursive run" failed in /Users/adoll/projects/drawing-app/apps/
+  │ frontend
+

@@ -1009,6 +1009,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
             key={peek.n}
             subjects={peeked}
             sticker={{ ...chosenBox, r: chosen.placement.r }}
+            art={chosen}
             board={size}
             knobBelow={knobBelow}
             trayEdge={TRAY_EDGE}

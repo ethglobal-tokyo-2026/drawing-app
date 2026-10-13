@@ -1,0 +1,17 @@
+{
+  "pid": 57266,
+  "executable": "/Users/adoll/Applications/CSP Research/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT",
+  "original": "/Users/adoll/Applications/CSP Research/original-arm64",
+  "recorderSha256": {
+    "capture_joined_post.py": "0a3c99dd760a3805cd634c17efd8348f27a1cf8c9501c0f0844ec20a6f90c920",
+    "capture_post_correction.py": "1840032ba2b30ec5da1356e143c51a8528a9ed342393d0aebd39929252c01a44",
+    "capture_live_contract.py": "ca93a5daff62c6633385cb38d750e04c13d5077e3fbc9cd4f09e57d4634ae9b8",
+    "post_evaluator_capture.py": "ebf20e8500538f296729a2d03a55db6b6bddaea0501fd5797e8bd6c7cb1aa399",
+    "record_joined_post.py": "c8321b923684f25e0456c480d82420bee5c2861fe039d3f704a0dabb9d9cfbfd",
+    "record_tablet_stroke.py": "8c893aae014ba21597298b3586d40b90b133c7831ccc8aa32f19265ed0f95e93"
+  },
+  "captureSeconds": 30,
+  "outerSeconds": 45,
+  "deviceDeclaration": "mouse",
+  "settings": "Read actual captured inputs; no UI values assumed."
+}

@@ -1,0 +1,38 @@
+(lldb) process attach --pid 21351
+Process 21351 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = signal SIGSTOP
+    frame #0: 0x00000001811cbc34 libsystem_kernel.dylib`mach_msg2_trap + 8
+libsystem_kernel.dylib`mach_msg2_trap:
+->  0x1811cbc34 <+8>: ret    
+
+libsystem_kernel.dylib`macx_swapon:
+    0x1811cbc38 <+0>: mov    x16, #-0x30               ; =-48 
+    0x1811cbc3c <+4>: svc    #0x80
+    0x1811cbc40 <+8>: ret    
+Target 0: (CLIP STUDIO PAINT) stopped.
+Executable binary set to "/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT".
+Architecture set to: arm64-apple-macosx-.
+(lldb) script import sys; sys.dont_write_bytecode=True; sys.path.insert(0,'/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-capture'); import capture_post_correction as post; post.run(lldb.debugger,21351,'/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/post-mouse-manual-20261010T184049Z/pid-21351.jsonl',timeout_seconds=30,device="mouse",metadata={'inputOperator': 'human mouse stroke', 'requestedPostStrength': 5, 'requestedBezierCurve': False, 'requestedAdjustBySpeed': False, 'requestedAdjustByScale': False, 'requestedStabilization': 0, 'requestedSpeedStabilization': False, 'settingsConfirmation': 'user confirmed; UI automation unavailable', 'purpose': 'one before/after post-correction wrapper pair', 'parallelResearchPids': [21351, 21626]})
+CSP post-correction capture active; one correction operation requested.
+Process 21351 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 1.1
+    frame #0: 0x0000000106b05064 CLIP STUDIO PAINT`___lldb_unnamed_symbol_1028ed064
+CLIP STUDIO PAINT`___lldb_unnamed_symbol_1028ed064:
+->  0x106b05064 <+0>:  sub    sp, sp, #0xc0
+    0x106b05068 <+4>:  stp    d9, d8, [sp, #0x80]
+    0x106b0506c <+8>:  stp    x22, x21, [sp, #0x90]
+    0x106b05070 <+12>: stp    x20, x19, [sp, #0xa0]
+Target 0: (CLIP STUDIO PAINT) stopped.
+Process 21351 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 2.1
+    frame #0: 0x0000000106b05144 CLIP STUDIO PAINT`___lldb_unnamed_symbol_1028ed064 + 224
+CLIP STUDIO PAINT`___lldb_unnamed_symbol_1028ed064:
+->  0x106b05144 <+224>: ldp    x29, x30, [sp, #0xb0]
+    0x106b05148 <+228>: ldp    x20, x19, [sp, #0xa0]
+    0x106b0514c <+232>: ldp    x22, x21, [sp, #0x90]
+    0x106b05150 <+236>: ldp    d9, d8, [sp, #0x80]
+Target 0: (CLIP STUDIO PAINT) stopped.
+Process 21351 detached
+CSP post capture saved: /Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/post-mouse-manual-20261010T184049Z/pid-21351.jsonl; complete=True; pairs=1; wholeCurveEquivalence=not_evaluated
+{'output_path': '/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/post-mouse-manual-20261010T184049Z/pid-21351.jsonl', 'capture_complete': True, 'cleanup_errors': []}
+(lldb) quit

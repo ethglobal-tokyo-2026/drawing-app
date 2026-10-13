@@ -1,0 +1,26 @@
+{
+  "debugger.txt": {
+    "bytes": 2337,
+    "sha256": "424a4bccbb647adc5c9c2e3ce6ef1ccee9edee8f1398b8bb53246b59d41d02cf"
+  },
+  "process-resume.json": {
+    "bytes": 315,
+    "sha256": "9c5fa148ace63bc505869063959230d5a4945e1e8af591dae89ebb0e4dd23459"
+  },
+  "runner-result.json": {
+    "bytes": 126,
+    "sha256": "38c5fdd41e025e74da8b8e6d43f7f46cc8ce35a347513254d08e661ba024ba79"
+  },
+  "session-outcome.json": {
+    "bytes": 131,
+    "sha256": "060efc6ae6f2a6e34fddd48764b5d57e157b07b51545331075e7c66f3dc6dc19"
+  },
+  "session.json": {
+    "bytes": 1531,
+    "sha256": "da3302d3ab3f91b36442b22a9bbbf6fff8cd514dfdf6314e9a34f6fc285d8007"
+  },
+  "tablet.jsonl": {
+    "bytes": 8422,
+    "sha256": "7dbf517285bf9fcf8279c838d8907d44c9e1b48c58b11f7bebd3ee52a508c726"
+  }
+}

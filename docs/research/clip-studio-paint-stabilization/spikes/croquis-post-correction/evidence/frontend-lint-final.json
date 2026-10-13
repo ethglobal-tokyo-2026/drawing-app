@@ -1,0 +1,10 @@
+{
+  "command": [
+    "pnpm",
+    "--filter",
+    "frontend",
+    "lint"
+  ],
+  "exitCode": 0,
+  "seconds": 19.96
+}

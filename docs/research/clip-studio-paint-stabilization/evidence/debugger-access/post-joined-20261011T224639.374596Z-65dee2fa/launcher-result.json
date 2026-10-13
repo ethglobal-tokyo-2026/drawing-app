@@ -1,0 +1,38 @@
+{
+  "debuggerExitCode": 0,
+  "outerTimeout": false,
+  "armedCue": true,
+  "resumeIndependentlyVerified": true,
+  "captureComplete": false,
+  "summary": {
+    "captureComplete": false,
+    "capture_warnings": [],
+    "cleanupErrors": [],
+    "cleanupWarnings": [],
+    "deadlineExceeded": false,
+    "detachRequestSucceeded": true,
+    "detachStateEvents": [
+      9
+    ],
+    "detachedStateObserved": true,
+    "elapsed_seconds": 27.124981292,
+    "entries": 0,
+    "kind": "summary",
+    "operationObserved": false,
+    "pairs": 0,
+    "resumeIndependentlyVerified": false,
+    "sourceEntries": 0,
+    "sourceEntryComplete": false,
+    "sourceStage": "awaiting_begin",
+    "stopReason": "CaptureError: capture_deadline_reached",
+    "unmatchedEntries": 0,
+    "upstreamComplete": false,
+    "watchdogError": null,
+    "wholeCurveEquivalence": "not_evaluated",
+    "workqueue_step_recoveries": []
+  },
+  "errors": [
+    "CaptureError: capture_deadline_reached"
+  ],
+  "recordingSucceeded": false
+}

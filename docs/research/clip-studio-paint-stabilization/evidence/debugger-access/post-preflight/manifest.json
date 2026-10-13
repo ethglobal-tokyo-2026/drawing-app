@@ -1,0 +1,45 @@
+{
+  "scope": "post preparation: host synthetic fixture plus live no-input preflight; no post invocation or tablet equivalence",
+  "files": [
+    {
+      "path": "evidence/debugger-access/post-preflight/post-no-input-comparison.json",
+      "bytes": 884,
+      "sha256": "9797413c58f08228b7da3170616ff4269f372a694a9fb54a106e7ead078ab6ad"
+    },
+    {
+      "path": "evidence/debugger-access/post-preflight/post-no-input-preflight-lldb.txt",
+      "bytes": 2160,
+      "sha256": "ec68983970bd57ac4cd8a8a4097acc20ed9e135cd1b8d31afeab7de38ad41dda"
+    },
+    {
+      "path": "evidence/debugger-access/post-preflight/post-no-input-preflight.jsonl",
+      "bytes": 4225,
+      "sha256": "1bb9108cc5c97caad09edf0ff0049271691268a30a188eafe466287e808453f8"
+    },
+    {
+      "path": "evidence/debugger-access/post-preflight/post-recorder-host-crosscheck.jsonl",
+      "bytes": 3653,
+      "sha256": "83b416598df6370c0b00b25d7d1d52cbc19ed4cabc75e885bc280202abb5d6d7"
+    },
+    {
+      "path": "evidence/debugger-access/post-preflight/post-recorder-host-crosscheck.report.json",
+      "bytes": 9016,
+      "sha256": "71ff8ca6ed40551e03608cebb166ef2a318b599308a141610f7bbae8d67076a4"
+    },
+    {
+      "path": "evidence/debugger-access/post-preflight/verification.md",
+      "bytes": 4168,
+      "sha256": "00307e3f74ed8069baeb4f5397c4b8920797bc13bde886fea3a43e46eed0a10d"
+    },
+    {
+      "path": "spikes/live-capture/capture_post_correction.py",
+      "bytes": 14335,
+      "sha256": "b611c03e57abbcf9ad17a53e4ab5362448c6e5de75baa1aa2c82854fa31cf1a8"
+    },
+    {
+      "path": "spikes/live-capture/check_post_correction.py",
+      "bytes": 6193,
+      "sha256": "5b4b3df38e5d14132589d6e6e04bd9204e76a70fb52c33b69d9c640e856dfb2f"
+    }
+  ]
+}

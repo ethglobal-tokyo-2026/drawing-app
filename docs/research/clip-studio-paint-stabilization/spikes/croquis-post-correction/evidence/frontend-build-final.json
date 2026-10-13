@@ -1,0 +1,10 @@
+{
+  "command": [
+    "pnpm",
+    "--filter",
+    "frontend",
+    "build"
+  ],
+  "exitCode": 0,
+  "seconds": 12.19
+}

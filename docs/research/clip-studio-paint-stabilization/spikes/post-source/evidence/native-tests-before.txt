@@ -1,0 +1,54 @@
+✔ ordinary contacts create midpoint anchors and raw controls before exact terminal import (1.24625ms)
+✔ midpoint import narrows before halving and copies current scalar54 rather than averaging it (0.284209ms)
+✔ repeated input points remain native source nodes rather than being silently rejected (0.230625ms)
+✔ deferred begin imports the first append without midpoint construction or scalar fade (0.157125ms)
+✔ distance accumulation fades scalar54 on contact and terminal using the previous raw record (0.140291ms)
+✔ explicit source marker causes a flagged corner on the next append, not on the marked record (0.124333ms)
+✔ caller-enabled corner detection inserts an unmarked corner at a sharp reversal (0.132625ms)
+✔ source snapshots do not mutate caller records and cannot mutate the builder (0.091417ms)
+✔ finite input, explicit work limits and terminal state fail rather than fabricating source nodes (0.396125ms)
+✖ every source-node field and preceding quadratic control matches standalone native instructions (2.3665ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 9
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 88.550833
+
+✖ failing tests:
+
+test at docs/research/clip-studio-paint-stabilization/post-source.test.ts:103:1
+✖ every source-node field and preceding quadratic control matches standalone native instructions (2.3665ms)
+  AssertionError [ERR_ASSERTION]: A: random-0
+  + actual - expected
+  ... Skipped lines
+  
+    [
+      '4083625f5f6a3b67',
+      'c04c951aa58c8a60',
+      '3e24e64e',
+      '3eac5a10',
+  ...
+      '00000000',
+  +   '4129992e43133a56',
+  +   'c125d92ef6e0de00'
+  -   '40811a13fadb6bb4',
+  -   'c07d41a6042e7614'
+    ]
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/post-source.test.ts:122:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ '4083625f5f6a3b67', 'c04c951aa58c8a60', '3e24e64e', '3eac5a10', '3f1d5d9d', '4382fed2', 'bef64960', '3f2ee798', 'bf04e0bf', '00000000', '4129992e43133a56', 'c125d92ef6e0de00' ],
+    expected: [ '4083625f5f6a3b67', 'c04c951aa58c8a60', '3e24e64e', '3eac5a10', '3f1d5d9d', '4382fed2', 'bef64960', '3f2ee798', 'bf04e0bf', '00000000', '40811a13fadb6bb4', 'c07d41a6042e7614' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

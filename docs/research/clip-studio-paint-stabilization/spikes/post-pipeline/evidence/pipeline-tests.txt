@@ -1,0 +1,12 @@
+✔ ordinary reconstructed path agrees with all saved native output positions, flags and retained fields (38506.968083ms)
+✔ unsupported source flags and alternate paths fail explicitly (0.712666ms)
+✔ ordinary straight input removes interior nodes, preserves scalar values and leaves input untouched (7.972583ms)
+✔ node and source-comparison work limits throw rather than returning a partial path (0.762625ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 39890.685166

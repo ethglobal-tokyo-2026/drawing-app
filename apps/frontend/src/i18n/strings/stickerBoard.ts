@@ -244,6 +244,15 @@ export const stickerBoard = {
         /** Settings note, Drawing group: the drawing hand choice for the left hand, which mirrors the drawing screen */
         left: { en: "Left", ja: "左手" },
       },
+      pointerIndicators: {
+        /** Settings note, Drawing group: the switch showing the pointer and taps across Croquis on this device */
+        label: { en: "Show pointer and taps", ja: "ポインターとタップを表示する" },
+        /** Settings note, Drawing group: help below the pointer and tap indicators switch, explaining its reach and hover requirements */
+        help: {
+          en: "Across Croquis on this device. Hover requires a compatible pen or mouse.",
+          ja: "この端末のクロッキー全体で表示します。ホバー表示には対応するペンやマウスが必要です。",
+        },
+      },
       /** Settings note, Drawing group: the alert when this device couldn't keep a drawing setting, which still applies until Croquis closes */
       notKept: {
         en: "This device couldn’t keep that, so it lasts until you close Croquis.",

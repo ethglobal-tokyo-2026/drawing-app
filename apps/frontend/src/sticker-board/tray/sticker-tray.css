@@ -14,6 +14,9 @@
   --tray-weave: rgba(255, 255, 255, 0.55);
   --tray-deep: rgba(150, 30, 90, 0.22);
   --tray-col: 205px;
+  --tray-paper-shadow:
+    0 0 0 0.5px rgba(28, 24, 36, 0.18), 1px 2px 3px rgba(28, 24, 36, 0.16),
+    3px 8px 18px rgba(28, 24, 36, 0.14);
   position: absolute;
   inset: 0;
   /* In the board's own stacking context: over its stickers and header, under a sticker in hand. */
@@ -156,10 +159,7 @@
   overflow: hidden;
   border-radius: var(--r-paper);
   background: var(--liner-lift);
-  box-shadow:
-    0 0 0 0.5px rgba(28, 24, 36, 0.18),
-    1px 2px 3px rgba(28, 24, 36, 0.16),
-    3px 8px 18px rgba(28, 24, 36, 0.14);
+  box-shadow: var(--tray-paper-shadow);
 }
 
 .tray__sheet:not(.is-top) .tray__paper {
@@ -350,6 +350,11 @@
     0 0 0 0.5px rgba(28, 24, 36, 0.18),
     3px 7px 8px rgba(28, 24, 36, 0.16),
     8px 18px 30px rgba(28, 24, 36, 0.18);
+}
+
+/* A returning sheet settles onto the stack, including paper rebuilt during its flight. */
+.tray__pulled.is-returning .tray__paper {
+  box-shadow: var(--tray-paper-shadow);
 }
 
 /* Out and hovering, its paper and stickers take the finger; the layer it rides in doesn't. */

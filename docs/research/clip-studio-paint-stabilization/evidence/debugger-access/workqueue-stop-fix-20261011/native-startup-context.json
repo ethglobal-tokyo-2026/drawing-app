@@ -1,0 +1,21 @@
+{
+  "scope": "Native startup-location inspection, not an exception reproduction.",
+  "contexts": [
+    {
+      "pc": "0x19cf8ccdc",
+      "module_path": "/usr/lib/system/libsystem_pthread.dylib",
+      "module_uuid": "5A1828C3-CBC2-3B85-BD07-C8ED10021A41",
+      "symbol_name": "start_wqthread",
+      "symbol_start": "0x19cf8ccd8",
+      "instruction_bytes_le": "67040094200020d4",
+      "bl_target": "0x19cf8de78",
+      "bl_target_symbol": "_pthread_wqthread",
+      "bl_target_symbol_start": "0x19cf8de78",
+      "bl_target_module_uuid": "5A1828C3-CBC2-3B85-BD07-C8ED10021A41"
+    }
+  ],
+  "cleanup_errors": [],
+  "exit_status": 0,
+  "passed": true,
+  "elapsed_seconds": 0.2736097500000003
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "oxc"],
+  "options": { "typeAware": false, "typeCheck": false },
+  "categories": { "correctness": "error" },
+  "ignorePatterns": [
+    "docs/research/**/evidence/**",
+    "docs/research/clip-studio-paint-stabilization/spikes/croquis-replay/results*/**",
+    "docs/research/clip-studio-paint-stabilization/spikes/post-joined/scripts/compare-attribute-distance.mjs",
+    "docs/research/clip-studio-paint-stabilization/spikes/post-joined/scripts/production-smoke.mjs"
+  ],
+  "rules": {
+    "no-unused-vars": [
+      "error",
+      {
+        "fix": { "imports": "safe-fix", "variables": "off" },
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ]
+  }
+}

@@ -1,0 +1,92 @@
+✖ an infinite addend dominates finite multiplicands before product rounding (0.642708ms)
+✖ nonfinite intermediate operands preserve IEEE results without modeling NaN payloads (0.076416ms)
+✖ slow diagonal fusion preserves the integer target at a truncation boundary (2.4195ms)
+✖ signed integer conversion has a single zero representation (0.230375ms)
+✖ finite fast-mode coordinates can overflow distance while retaining finite output (1.542959ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 0
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 101.65175
+
+✖ failing tests:
+
+test at docs/research/clip-studio-paint-stabilization/binary64.test.ts:5:1
+✖ an infinite addend dominates finite multiplicands before product rounding (0.642708ms)
+  RangeError: fma64 requires finite operands
+      at fma64 (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/binary64.ts:20:11)
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/binary64.test.ts:6:16)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)
+
+test at docs/research/clip-studio-paint-stabilization/binary64.test.ts:11:1
+✖ nonfinite intermediate operands preserve IEEE results without modeling NaN payloads (0.076416ms)
+  RangeError: fma64 requires finite operands
+      at fma64 (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/binary64.ts:20:11)
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/binary64.test.ts:12:16)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at docs/research/clip-studio-paint-stabilization/live-reference.test.ts:72:1
+✖ slow diagonal fusion preserves the integer target at a truncation boundary (2.4195ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  27 !== 28
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/live-reference.test.ts:88:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 27,
+    expected: 28,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at docs/research/clip-studio-paint-stabilization/live-reference.test.ts:93:1
+✖ signed integer conversion has a single zero representation (0.230375ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + -0
+  - 0
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/live-reference.test.ts:94:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: -0,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at docs/research/clip-studio-paint-stabilization/spikes/live-replay/live-replay.test.ts:764:1
+✖ finite fast-mode coordinates can overflow distance while retaining finite output (1.542959ms)
+  RangeError: fma64 requires finite operands
+      at fma64 (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/binary64.ts:20:11)
+      at pointDistance (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/live-reference.ts:110:19)
+      at adjustFastWindow (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/live-reference.ts:132:20)
+      at QueueReplay.ingest (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-replay/queue.ts:171:42)
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-replay/live-replay.test.ts:769:27)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)

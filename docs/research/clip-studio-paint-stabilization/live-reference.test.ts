@@ -15,11 +15,12 @@ import {
   interpolatePressureZero,
   limitPressureDecline,
   motionFlags,
+  pointDistance,
   scaleSettingIntegers,
   shouldEndForMovement,
   terminalPrefeedCount,
   truncateToSignedInt32,
-} from "./live-reference.ts";
+} from "../../../apps/frontend/src/sticker-creation/canvas/stabilization/arithmetic.ts";
 
 const near = (actual: number, expected: number) => {
   assert.ok(Math.abs(actual - expected) < 1e-12, `${actual} != ${expected}`);
@@ -29,6 +30,69 @@ const sample = (x: number, pressure: number, timestamp: bigint) => ({
   y: 0,
   pressure,
   timestamp,
+});
+
+const doubleBits = (value: number) => {
+  const bytes = Buffer.alloc(8);
+  bytes.writeDoubleBE(value);
+  return bytes.toString("hex");
+};
+
+test("distance preserves the native fused square sum before square root", () => {
+  assert.equal(
+    doubleBits(pointDistance({ x: 0, y: 0 }, { x: 0.35103995166245305, y: 0.1360045479411855 })),
+    "3fd81802d1cdd2e1",
+  );
+});
+
+test("ending threshold preserves both native fused subtractions", () => {
+  assert.equal(doubleBits(endingMovementThreshold(1, 18.01346802553044)), "3ff3d4d5599df48b");
+});
+
+test("ending detects a negative fused dot product lost by separate rounding", () => {
+  assert.equal(
+    shouldEndForMovement(
+      { x: 1 + 2 ** -27, y: 1 },
+      { x: 0, y: 0 },
+      { x: -(1 - 2 ** -27), y: 1 },
+      0,
+      2,
+    ),
+    true,
+  );
+});
+
+test("ending compares fused lengths when separate square sums are equal", () => {
+  const a = 0.8870876118464046;
+  const b = 0.8272999826832926;
+  assert.equal(shouldEndForMovement({ x: a, y: b }, { x: 0, y: 0 }, { x: -b, y: -a }, 0, 2), true);
+  assert.equal(shouldEndForMovement({ x: b, y: a }, { x: 0, y: 0 }, { x: -a, y: -b }, 0, 2), false);
+});
+
+test("slow diagonal fusion preserves the integer target at a truncation boundary", () => {
+  const history = [
+    ...Array.from({ length: 29 }, () => ({ x: 0, y: 0, pressure: 1, timestamp: 100n })),
+    { x: 0.755862390026055, y: 0.7991696233758715, pressure: 1, timestamp: 100n },
+  ];
+  const result = adjustSlowWindow({
+    currentWindow: 27.5,
+    stabilization: 20,
+    initialWindow: 2,
+    state: 1,
+    catchUpArgument: false,
+    collectedCount: 30,
+    historyNewestFirst: history,
+    slowNumerator: 200,
+    slowThreshold: 25,
+  });
+  assert.equal(result.candidate, 28);
+  assert.equal(result.target, 28);
+  assert.equal(result.currentWindow, 27.75);
+});
+
+test("signed integer conversion has a single zero representation", () => {
+  assert.equal(truncateToSignedInt32(-0.5), 0);
+  assert.equal(truncateToSignedInt32(-0), 0);
 });
 
 test("configuration recovers initial window, flag precedence, reciprocal, and scales", () => {

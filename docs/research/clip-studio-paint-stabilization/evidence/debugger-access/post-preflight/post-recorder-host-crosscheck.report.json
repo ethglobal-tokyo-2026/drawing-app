@@ -1,0 +1,299 @@
+{
+  "schema": "csp-post-report/v1",
+  "provenance": "synthetic",
+  "device": "unknown",
+  "integrity": {
+    "status": "valid",
+    "errors": [],
+    "warnings": [
+      "Call 1: no independent configuration fingerprint; unchanged copied wrapper arguments cannot establish absence of UI-setting drift"
+    ],
+    "entries": 1,
+    "pairs": 1
+  },
+  "arithmeticSummary": {
+    "matches": 0,
+    "mismatches": 0,
+    "derivedOnly": 4
+  },
+  "calls": [
+    {
+      "callId": "1",
+      "captureIntegrity": "valid",
+      "deltas": {
+        "status": "observed",
+        "classification": "identity",
+        "basis": "Exact ordered positions, stored controls, node/path flags, seven float fields +0x44..+0x5c, node endpoint data +0x60..+0x68 and available path endpoint parameter; no rendering or curve sampling. Cached fields alone do not imply correction.",
+        "beforeNodeCount": 2,
+        "afterNodeCount": 2,
+        "nodeCountDelta": 0,
+        "pathFlags": {
+          "before": 32,
+          "after": 32
+        },
+        "geometry": {
+          "beforeBounds": {
+            "minX": 0,
+            "maxX": 1,
+            "minY": 1,
+            "maxY": 2
+          },
+          "afterBounds": {
+            "minX": 0,
+            "maxX": 1,
+            "minY": 1,
+            "maxY": 2
+          },
+          "orderedEqual": true
+        },
+        "storedControls": {
+          "orderedEqual": true,
+          "beforeCount": 2,
+          "afterCount": 2
+        },
+        "scalar44": {
+          "beforeRange": {
+            "min": 0,
+            "max": 0
+          },
+          "afterRange": {
+            "min": 0,
+            "max": 0
+          },
+          "orderedEqual": true
+        },
+        "factor4c": {
+          "beforeRange": {
+            "min": 0,
+            "max": 0
+          },
+          "afterRange": {
+            "min": 0,
+            "max": 0
+          },
+          "orderedEqual": true
+        },
+        "retainedScalarsEqual": true,
+        "endpointDataEqual": true,
+        "cachedDataEqual": true,
+        "nodeFlags": {
+          "orderedEqual": true,
+          "beforeHistogram": {
+            "0x1234": 2
+          },
+          "afterHistogram": {
+            "0x1234": 2
+          }
+        },
+        "endpointParameterBytes": {
+          "available": true,
+          "before": "0000000000000000",
+          "after": "0000000000000000"
+        }
+      },
+      "decodedSnapshots": {
+        "before": [
+          {
+            "snapshotIndex": 0,
+            "address": "0x2000",
+            "className": "PWVectorBezierCurve",
+            "x": 0,
+            "y": 1,
+            "flags": 4660,
+            "scalar44": {
+              "f32": "00000000"
+            },
+            "factor4c": {
+              "f32": "00000000"
+            },
+            "storedControls": [
+              {
+                "x": 0,
+                "y": 0
+              }
+            ],
+            "retainedScalarsHex": "00000000000000000000000000000000000000000000000000000000",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "000000000000000000000000"
+          },
+          {
+            "snapshotIndex": 1,
+            "address": "0x2100",
+            "className": "PWVectorBezierCurve",
+            "x": 1,
+            "y": 2,
+            "flags": 4660,
+            "scalar44": {
+              "f32": "00000000"
+            },
+            "factor4c": {
+              "f32": "00000000"
+            },
+            "storedControls": [
+              {
+                "x": 0,
+                "y": 0
+              }
+            ],
+            "retainedScalarsHex": "00000000000000000000000000000000000000000000000000000000",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "000000000000000000000000"
+          }
+        ],
+        "after": [
+          {
+            "snapshotIndex": 0,
+            "address": "0x2000",
+            "className": "PWVectorBezierCurve",
+            "x": 0,
+            "y": 1,
+            "flags": 4660,
+            "scalar44": {
+              "f32": "00000000"
+            },
+            "factor4c": {
+              "f32": "00000000"
+            },
+            "storedControls": [
+              {
+                "x": 0,
+                "y": 0
+              }
+            ],
+            "retainedScalarsHex": "00000000000000000000000000000000000000000000000000000000",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "000000000000000000000000"
+          },
+          {
+            "snapshotIndex": 1,
+            "address": "0x2100",
+            "className": "PWVectorBezierCurve",
+            "x": 1,
+            "y": 2,
+            "flags": 4660,
+            "scalar44": {
+              "f32": "00000000"
+            },
+            "factor4c": {
+              "f32": "00000000"
+            },
+            "storedControls": [
+              {
+                "x": 0,
+                "y": 0
+              }
+            ],
+            "retainedScalarsHex": "00000000000000000000000000000000000000000000000000000000",
+            "endpointDataHex": "000000000000000000000000",
+            "cachedDataHex": "000000000000000000000000"
+          }
+        ],
+        "indexMeaning": "Local traversal index in each snapshot only; not source-to-output correspondence."
+      },
+      "correspondence": {
+        "status": "not-evaluated",
+        "reason": "Output/source multimap was not captured; ordered equality and aggregate changes do not identify which source nodes survived or merged."
+      },
+      "arithmetic": [
+        {
+          "name": "convertPostSettings",
+          "status": "not-evaluated",
+          "reason": "Wrapper inputs do not recover original setting IDs, magnification, fallback or prior outputs; provide a helper observation."
+        },
+        {
+          "name": "applyCallerCap",
+          "status": "not-evaluated",
+          "reason": "Wrapper arguments follow the caller cap; original k/tolerance and the object condition were not captured."
+        },
+        {
+          "name": "scalarLimits",
+          "status": "derived",
+          "expected": {
+            "ratio": {
+              "f32": "3fd9999a"
+            },
+            "floor": {
+              "f32": "3dcccccd"
+            }
+          },
+          "reason": "Reference arithmetic only; no runtime result captured.",
+          "evidence": "Derived from saved wrapper arguments; core execution was not observed."
+        },
+        {
+          "name": "removalPassSchedule",
+          "status": "derived",
+          "expected": {
+            "initialTolerances": [
+              {
+                "f64": "4004000000000000"
+              },
+              {
+                "f64": "4004000000000000"
+              }
+            ],
+            "raw": 1,
+            "n": 1,
+            "decrement": 1,
+            "additionalPassLimit": 4,
+            "additionalTolerances": [
+              {
+                "f64": "3ff8000000000000"
+              },
+              {
+                "f64": "3fe0000000000000"
+              },
+              {
+                "f64": "bfe0000000000000"
+              },
+              {
+                "f64": "bff8000000000000"
+              }
+            ]
+          },
+          "reason": "Reference arithmetic only; no runtime result captured.",
+          "evidence": "Derived from saved wrapper arguments; core execution was not observed."
+        },
+        {
+          "name": "endpointParameter",
+          "status": "derived",
+          "expected": {
+            "f64": "3fd0000000000000"
+          },
+          "reason": "Reference arithmetic only; no runtime result captured.",
+          "evidence": "Derived from saved wrapper arguments; core execution was not observed."
+        },
+        {
+          "name": "sourceSegmentToleranceAtInitialPass",
+          "status": "derived",
+          "expected": [
+            {
+              "sourceSnapshotIndex": 0,
+              "tolerance": {
+                "f64": "4004000000000000"
+              }
+            },
+            {
+              "sourceSnapshotIndex": 1,
+              "tolerance": {
+                "f64": "4004000000000000"
+              }
+            }
+          ],
+          "reason": "One value per captured source node at the initial tolerance; sampled segments and actual passes remain unobserved."
+        }
+      ],
+      "wholeCurveEquivalence": {
+        "status": "not-evaluated",
+        "reason": "No complete curve engine is reconstructed. Spline evaluator/measurement/neighbor adjustment, correspondence, mutation, endpoints, closure and alternate class behavior remain unresolved."
+      }
+    }
+  ],
+  "coverage": {
+    "captureIntegrity": "evaluated",
+    "capturedFieldDeltas": "evaluated",
+    "helperArithmetic": "only explicitly captured helper inputs/results can match or mismatch",
+    "renderedOutput": "not-evaluated",
+    "wholeCurveEquivalence": "not-evaluated",
+    "tabletValidation": "not-evaluated"
+  }
+}

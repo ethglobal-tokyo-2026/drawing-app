@@ -1,0 +1,62 @@
+{
+  "originalSha256": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+  "method": "Pinned original, LC_FUNCTION_STARTS bounds, objdump through inspect_binary.py with reference path replaced in memory only",
+  "functions": [
+    {
+      "address": "0x10276ae48",
+      "size": 80,
+      "file": "10276ae48.asm",
+      "bytesSha256": "1b8ed1bcaf3f532a3e968743234866aeb9388a71c956bf25d3346c1e5889e18a",
+      "assemblySha256": "ba0ee2a7b02cf0a0420c1432af5a48584c22e62980443c151a061ef41c0d8fc8"
+    },
+    {
+      "address": "0x1027647c0",
+      "size": 36,
+      "file": "1027647c0.asm",
+      "bytesSha256": "0ba524ae324541bab2b954725ee8b915b92f02e35b3e25d63fb7948d946820a9",
+      "assemblySha256": "3506835d4b77a96aa1ac3f76923e58c3dbe1ad2c903ce854ad891ffdbd31b5da"
+    },
+    {
+      "address": "0x102781770",
+      "size": 96,
+      "file": "102781770.asm",
+      "bytesSha256": "c4321088628063964cabcec163be2220b527c0f7521f36062d60f8acf87740f8",
+      "assemblySha256": "e08c176814b5598143b517e4e63e2c3a84ba568dbd15831ef1d8955dfd1e90bd"
+    },
+    {
+      "address": "0x1027817d0",
+      "size": 104,
+      "file": "1027817d0.asm",
+      "bytesSha256": "1b38aa156d362dde04c83483883f52f0e13cd414164ce575712731c550b57215",
+      "assemblySha256": "e93307d040e7fba33ccb03ac76c8bd55f1f0d7ef86d91d7006081f044ea351af"
+    },
+    {
+      "address": "0x10276afac",
+      "size": 44,
+      "file": "10276afac.asm",
+      "bytesSha256": "68cde49e0ea6411f07240f7cff7c826d993bea6e4dbb137b455e6f37e6aaf024",
+      "assemblySha256": "8999e04076a372762417c21e4f06d90efbc296495e5265e9790a10eb35a4cdc4"
+    },
+    {
+      "address": "0x10276af54",
+      "size": 44,
+      "file": "10276af54.asm",
+      "bytesSha256": "b8c02d9a5e6c466c8f937f1a26c71d65a6afd958ee2ba25df1c8eab3959a1b7a",
+      "assemblySha256": "9c7a4d9cd601506f588b27e6e28a14fa4c742978ce9b6823d3221996b639275a"
+    },
+    {
+      "address": "0x10276af80",
+      "size": 44,
+      "file": "10276af80.asm",
+      "bytesSha256": "b8c02d9a5e6c466c8f937f1a26c71d65a6afd958ee2ba25df1c8eab3959a1b7a",
+      "assemblySha256": "d1acec97bae456736eb4b556ebc0f80d172973aa8214fc64acd1663f4cefb41c"
+    },
+    {
+      "address": "0x10276afd8",
+      "size": 44,
+      "file": "10276afd8.asm",
+      "bytesSha256": "68cde49e0ea6411f07240f7cff7c826d993bea6e4dbb137b455e6f37e6aaf024",
+      "assemblySha256": "3e1b9de56ad713af36b934ea8368eb0628122f841f2b67e5475bff4eb770772b"
+    }
+  ]
+}

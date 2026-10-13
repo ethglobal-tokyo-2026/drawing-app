@@ -1,0 +1,5958 @@
+{
+  "schema": "csp-post-quadratic-subdivision/v1",
+  "status": "complete",
+  "inputPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/post-mouse-manual-20261010T184049Z/pid-21351.jsonl",
+  "inputSha256": "c58ad8bf883500013717aa56bcbeedecf270ec9c68d5b30ed6b91db2dbd6452a",
+  "scope": "Positions and stored quadratic controls only; no scalar import, source/output associations, removal, endpoints, closure, rendering, or complete correction claim.",
+  "sourceFunctions": [
+    "0x102787500",
+    "0x10277f8c8",
+    "0x10276dec8",
+    "0x102765694"
+  ],
+  "bounds": {
+    "maximumNodes": 10000,
+    "deadlineMilliseconds": 30000,
+    "maximumLengthSampleIntervals": 100000
+  },
+  "captureIntegrity": {
+    "status": "valid",
+    "errors": [],
+    "warnings": [
+      "Call 1: no independent configuration fingerprint; unchanged copied wrapper arguments cannot establish absence of UI-setting drift"
+    ],
+    "entries": 1,
+    "pairs": 1
+  },
+  "arguments": {
+    "closedMode": 0,
+    "flag480": 0,
+    "k": 40,
+    "lengthScaleBits": "402031b75947da06",
+    "selector482": 0,
+    "toleranceBits": "4064000000000000"
+  },
+  "sourceFlags": "0x2021",
+  "lengthScale": 8.097101964970545,
+  "threshold": 80.97101964970545,
+  "sourceNodes": 99,
+  "subdividedNodes": 304,
+  "insertedNodes": 205,
+  "lengthCalls": 508,
+  "rejectedSplits": 0,
+  "rejections": [],
+  "maximumAcceptedLength": 80.71798556249996,
+  "outputPositions": [
+    {
+      "outputIndex": 0,
+      "point": {
+        "x": 7647.9658734375,
+        "y": 1546.483223390625
+      },
+      "bits": {
+        "x": "40bddff7437b4a23",
+        "y": "409829eed21ccd96"
+      },
+      "originalIndices": [
+        0
+      ],
+      "subdividedIndices": [
+        0
+      ]
+    },
+    {
+      "outputIndex": 1,
+      "point": {
+        "x": 6002.279312726074,
+        "y": 1467.0561088256836
+      },
+      "bits": {
+        "x": "40b772478109efd8",
+        "y": "4096ec3974978d50"
+      },
+      "originalIndices": [],
+      "subdividedIndices": [
+        32
+      ]
+    },
+    {
+      "outputIndex": 2,
+      "point": {
+        "x": 4287.826689960937,
+        "y": 1861.4162101640622
+      },
+      "bits": {
+        "x": "40b0bfd3a1f40a28",
+        "y": "409d15aa32ff4ba4"
+      },
+      "originalIndices": [
+        27
+      ],
+      "subdividedIndices": [
+        64
+      ]
+    },
+    {
+      "outputIndex": 3,
+      "point": {
+        "x": 4028.302314505371,
+        "y": 3090.3273766713864
+      },
+      "bits": {
+        "x": "40af789ac8f7835a",
+        "y": "40a824a79dea4228"
+      },
+      "originalIndices": [],
+      "subdividedIndices": [
+        96
+      ]
+    },
+    {
+      "outputIndex": 4,
+      "point": {
+        "x": 7865.270069214111,
+        "y": 4544.914126331909
+      },
+      "bits": {
+        "x": "40beb94523418a43",
+        "y": "40b1c0ea042eebf6"
+      },
+      "originalIndices": [],
+      "subdividedIndices": [
+        160
+      ]
+    },
+    {
+      "outputIndex": 5,
+      "point": {
+        "x": 9924.358561101562,
+        "y": 6056.600666695313
+      },
+      "bits": {
+        "x": "40c3622de554866a",
+        "y": "40b7a899c54ae42a"
+      },
+      "originalIndices": [
+        72
+      ],
+      "subdividedIndices": [
+        208
+      ]
+    },
+    {
+      "outputIndex": 6,
+      "point": {
+        "x": 6806.424731932617,
+        "y": 6951.27508641211
+      },
+      "bits": {
+        "x": "40ba966cbb3b6028",
+        "y": "40bb27466c102796"
+      },
+      "originalIndices": [],
+      "subdividedIndices": [
+        272
+      ]
+    },
+    {
+      "outputIndex": 7,
+      "point": {
+        "x": 5366.860419375,
+        "y": 6437.512383046875
+      },
+      "bits": {
+        "x": "40b4f6dc4471b478",
+        "y": "40b925832b890d5a"
+      },
+      "originalIndices": [
+        98
+      ],
+      "subdividedIndices": [
+        303
+      ]
+    }
+  ],
+  "outputPositionsAbsentFromOriginal": 4,
+  "newlyExplainedPositions": 4,
+  "unmatchedOutputPositions": 0,
+  "qualification": "Bit-exact final-position membership is evidence for the position subdivision stage, not an independent observation of native intermediate nodes or proof of the complete correction pass.",
+  "nodes": [
+    {
+      "index": 0,
+      "x": 7647.9658734375,
+      "y": 1546.483223390625,
+      "control": {
+        "x": 7647.9658734375,
+        "y": 1546.483223390625
+      },
+      "originalIndex": 0,
+      "originalSegmentIndex": 0,
+      "bits": {
+        "x": "40bddff7437b4a23",
+        "y": "409829eed21ccd96"
+      },
+      "controlBits": {
+        "x": "40bddff7437b4a23",
+        "y": "409829eed21ccd96"
+      }
+    },
+    {
+      "index": 1,
+      "x": 7647.1118822109365,
+      "y": 1546.483223390625,
+      "control": {
+        "x": 7646.257890984374,
+        "y": 1546.483223390625
+      },
+      "originalIndex": 1,
+      "originalSegmentIndex": 1,
+      "bits": {
+        "x": "40bddf1ca45004fa",
+        "y": "409829eed21ccd96"
+      },
+      "controlBits": {
+        "x": "40bdde420524bfd2",
+        "y": "409829eed21ccd96"
+      }
+    },
+    {
+      "index": 2,
+      "x": 7641.039055710937,
+      "y": 1546.483223390625,
+      "control": {
+        "x": 7635.820220437499,
+        "y": 1546.483223390625
+      },
+      "originalIndex": 2,
+      "originalSegmentIndex": 2,
+      "bits": {
+        "x": "40bdd909ff8e1932",
+        "y": "409829eed21ccd96"
+      },
+      "controlBits": {
+        "x": "40bdd3d1f9f77292",
+        "y": "409829eed21ccd96"
+      }
+    },
+    {
+      "index": 3,
+      "x": 7624.591817273436,
+      "y": 1546.483223390625,
+      "control": {
+        "x": 7613.363414109374,
+        "y": 1546.483223390625
+      },
+      "originalIndex": 3,
+      "originalSegmentIndex": 3,
+      "bits": {
+        "x": "40bdc89781563a9e",
+        "y": "409829eed21ccd96"
+      },
+      "controlBits": {
+        "x": "40bdbd5d08b502ab",
+        "y": "409829eed21ccd96"
+      }
+    },
+    {
+      "index": 4,
+      "x": 7602.29315746875,
+      "y": 1546.483223390625,
+      "control": {
+        "x": 7591.222900828125,
+        "y": 1546.483223390625
+      },
+      "originalIndex": 4,
+      "originalSegmentIndex": 4,
+      "bits": {
+        "x": "40bdb24b0c5e2cdc",
+        "y": "409829eed21ccd96"
+      },
+      "controlBits": {
+        "x": "40bda7391007570c",
+        "y": "409829eed21ccd96"
+      }
+    },
+    {
+      "index": 5,
+      "x": 7572.846274804688,
+      "y": 1546.483223390625,
+      "control": {
+        "x": 7554.46964878125,
+        "y": 1546.483223390625
+      },
+      "originalIndex": 5,
+      "originalSegmentIndex": 5,
+      "bits": {
+        "x": "40bd94d8a5773190",
+        "y": "409829eed21ccd96"
+      },
+      "controlBits": {
+        "x": "40bd82783ae70c13",
+        "y": "409829eed21ccd96"
+      }
+    },
+    {
+      "index": 6,
+      "x": 7533.119868117187,
+      "y": 1546.483223390625,
+      "control": {
+        "x": 7511.770087453125,
+        "y": 1546.483223390625
+      },
+      "originalIndex": 6,
+      "originalSegmentIndex": 6,
+      "bits": {
+        "x": "40bd6d1eafad4b27",
+        "y": "409829eed21ccd96"
+      },
+      "controlBits": {
+        "x": "40bd57c524738a3b",
+        "y": "409829eed21ccd96"
+      }
+    },
+    {
+      "index": 7,
+      "x": 7482.418092703125,
+      "y": 1546.483223390625,
+      "control": {
+        "x": 7453.066097953125,
+        "y": 1546.483223390625
+      },
+      "originalIndex": 7,
+      "originalSegmentIndex": 7,
+      "bits": {
+        "x": "40bd3a6b081f969e",
+        "y": "409829eed21ccd96"
+      },
+      "controlBits": {
+        "x": "40bd1d10ebcba301",
+        "y": "409829eed21ccd96"
+      }
+    },
+    {
+      "index": 8,
+      "x": 7413.244803351562,
+      "y": 1546.483223390625,
+      "control": {
+        "x": 7373.423508749999,
+        "y": 1546.483223390625
+      },
+      "originalIndex": 8,
+      "originalSegmentIndex": 8,
+      "bits": {
+        "x": "40bcf53eab6eb4e9",
+        "y": "409829eed21ccd96"
+      },
+      "controlBits": {
+        "x": "40bccd6c6b11c6d1",
+        "y": "409829eed21ccd96"
+      }
+    },
+    {
+      "index": 9,
+      "x": 7332.526817789062,
+      "y": 1546.483223390625,
+      "control": {
+        "x": 7312.0784723085935,
+        "y": 1546.483223390625
+      },
+      "originalIndex": 9,
+      "originalSegmentIndex": 9,
+      "bits": {
+        "x": "40bca486dd87d6f9",
+        "y": "409829eed21ccd96"
+      },
+      "controlBits": {
+        "x": "40bc901416c2df0d",
+        "y": "409829eed21ccd96"
+      }
+    },
+    {
+      "index": 10,
+      "x": 7288.680694166016,
+      "y": 1546.483223390625,
+      "control": {
+        "x": 7265.282916023438,
+        "y": 1546.483223390625
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 9,
+      "bits": {
+        "x": "40bc78ae41f90d9e",
+        "y": "409829eed21ccd96"
+      },
+      "controlBits": {
+        "x": "40bc61486d2f3c2e",
+        "y": "409829eed21ccd96"
+      }
+    },
+    {
+      "index": 11,
+      "x": 7238.93570521875,
+      "y": 1546.483223390625,
+      "control": {
+        "x": 7212.588494414062,
+        "y": 1546.483223390625
+      },
+      "originalIndex": 10,
+      "originalSegmentIndex": 10,
+      "bits": {
+        "x": "40bc46ef8a60913a",
+        "y": "409829eed21ccd96"
+      },
+      "controlBits": {
+        "x": "40bc2c96a791e646",
+        "y": "409829eed21ccd96"
+      }
+    },
+    {
+      "index": 12,
+      "x": 7184.644003722656,
+      "y": 1546.483223390625,
+      "control": {
+        "x": 7156.69951303125,
+        "y": 1546.483223390625
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 10,
+      "bits": {
+        "x": "40bc10a4dd6d8f4f",
+        "y": "409829eed21ccd96"
+      },
+      "controlBits": {
+        "x": "40bbf4b313493858",
+        "y": "409829eed21ccd96"
+      }
+    },
+    {
+      "index": 13,
+      "x": 7127.157742453124,
+      "y": 1546.483223390625,
+      "control": {
+        "x": 7097.615971875,
+        "y": 1546.483223390625
+      },
+      "originalIndex": 11,
+      "originalSegmentIndex": 11,
+      "bits": {
+        "x": "40bbd72861cf355c",
+        "y": "409829eed21ccd96"
+      },
+      "controlBits": {
+        "x": "40bbb99db0553261",
+        "y": "409829eed21ccd96"
+      }
+    },
+    {
+      "index": 14,
+      "x": 7068.248162472656,
+      "y": 1546.483223390625,
+      "control": {
+        "x": 7038.880353070313,
+        "y": 1546.483223390625
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 11,
+      "bits": {
+        "x": "40bb9c3f87936827",
+        "y": "409829eed21ccd96"
+      },
+      "controlBits": {
+        "x": "40bb7ee15ed19ded",
+        "y": "409829eed21ccd96"
+      }
+    },
+    {
+      "index": 15,
+      "x": 7009.68650484375,
+      "y": 1546.483223390625,
+      "control": {
+        "x": 6980.492656617187,
+        "y": 1546.483223390625
+      },
+      "originalIndex": 12,
+      "originalSegmentIndex": 12,
+      "bits": {
+        "x": "40bb61afbec80c74",
+        "y": "409829eed21ccd96"
+      },
+      "controlBits": {
+        "x": "40bb447e1ebe7afa",
+        "y": "409829eed21ccd96"
+      }
+    },
+    {
+      "index": 16,
+      "x": 6947.961916746094,
+      "y": 1546.483223390625,
+      "control": {
+        "x": 6915.431176874999,
+        "y": 1546.483223390625
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 12,
+      "bits": {
+        "x": "40bb23f6402d05f3",
+        "y": "409829eed21ccd96"
+      },
+      "controlBits": {
+        "x": "40bb036e619b90ea",
+        "y": "409829eed21ccd96"
+      }
+    },
+    {
+      "index": 17,
+      "x": 6879.563545359375,
+      "y": 1546.483223390625,
+      "control": {
+        "x": 6843.69591384375,
+        "y": 1546.483223390625
+      },
+      "originalIndex": 13,
+      "originalSegmentIndex": 13,
+      "bits": {
+        "x": "40badf9044823854",
+        "y": "409829eed21ccd96"
+      },
+      "controlBits": {
+        "x": "40babbb22768dfbd",
+        "y": "409829eed21ccd96"
+      }
+    },
+    {
+      "index": 18,
+      "x": 6806.144021853515,
+      "y": 1544.5063918476562,
+      "control": {
+        "x": 6768.59212986328,
+        "y": 1542.5295603046875
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 13,
+      "bits": {
+        "x": "40ba9624de9dbec2",
+        "y": "409822068b95a294"
+      },
+      "controlBits": {
+        "x": "40ba709795d29dc6",
+        "y": "40981a1e450e7792"
+      }
+    },
+    {
+      "index": 19,
+      "x": 6729.355977398437,
+      "y": 1538.57589721875,
+      "control": {
+        "x": 6690.119824933594,
+        "y": 1534.6222341328125
+      },
+      "originalIndex": 14,
+      "originalSegmentIndex": 14,
+      "bits": {
+        "x": "40ba495b2155b467",
+        "y": "40980a4db800218e"
+      },
+      "controlBits": {
+        "x": "40ba221eacd8cb08",
+        "y": "4097fa7d2af1cb8a"
+      }
+    },
+    {
+      "index": 20,
+      "x": 6650.88367246875,
+      "y": 1529.5931746874999,
+      "control": {
+        "x": 6611.647520003906,
+        "y": 1524.5641152421872
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 14,
+      "bits": {
+        "x": "40b9fae2385be1a8",
+        "y": "4097e65f692f6e82"
+      },
+      "controlBits": {
+        "x": "40b9d3a5c3def848",
+        "y": "4097d241a76d117a"
+      }
+    },
+    {
+      "index": 21,
+      "x": 6572.411367539062,
+      "y": 1518.4596594374998,
+      "control": {
+        "x": 6552.79329130664,
+        "y": 1515.407431535156
+      },
+      "originalIndex": 15,
+      "originalSegmentIndex": 15,
+      "bits": {
+        "x": "40b9ac694f620ee8",
+        "y": "4097b9d6b0f6ad70"
+      },
+      "controlBits": {
+        "x": "40b998cb15239a38",
+        "y": "4097ada135bb7b6b"
+      }
+    },
+    {
+      "index": 22,
+      "x": 6532.71065966162,
+      "y": 1512.580562428711,
+      "control": {
+        "x": 6512.628028016601,
+        "y": 1509.7536933222655
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 15,
+      "bits": {
+        "x": "40b984b5edcaa53f",
+        "y": "4097a2527ef51266"
+      },
+      "controlBits": {
+        "x": "40b970a0c671b046",
+        "y": "40979703c82ea960"
+      }
+    },
+    {
+      "index": 23,
+      "x": 6492.080840958984,
+      "y": 1507.1521830117185,
+      "control": {
+        "x": 6471.533653901366,
+        "y": 1504.5506727011716
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 15,
+      "bits": {
+        "x": "40b95c14b1fe3b03",
+        "y": "40978c9bd5dd095a"
+      },
+      "controlBits": {
+        "x": "40b947889d8ac5c0",
+        "y": "40978233e38b6954"
+      }
+    },
+    {
+      "index": 24,
+      "x": 6450.521911431152,
+      "y": 1502.1745211865232,
+      "control": {
+        "x": 6429.510168960937,
+        "y": 1499.7983696718748
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 15,
+      "bits": {
+        "x": "40b932859bfcd035",
+        "y": "409778b2b5ae924e"
+      },
+      "controlBits": {
+        "x": "40b91d829a6edaa9",
+        "y": "40976f3187d1bb48"
+      }
+    },
+    {
+      "index": 25,
+      "x": 6408.033871078125,
+      "y": 1497.6475769531248,
+      "control": {
+        "x": 6386.557573195312,
+        "y": 1495.496784234375
+      },
+      "originalIndex": 16,
+      "originalSegmentIndex": 16,
+      "bits": {
+        "x": "40b90808abc664d4",
+        "y": "409766971e69ad42"
+      },
+      "controlBits": {
+        "x": "40b8f28ebd1deefe",
+        "y": "40975dfcb5019f3c"
+      }
+    },
+    {
+      "index": 26,
+      "x": 6361.5961213022465,
+      "y": 1493.2036596445314,
+      "control": {
+        "x": 6336.63466940918,
+        "y": 1490.9105350546874
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 16,
+      "bits": {
+        "x": "40b8d9989b67d999",
+        "y": "409754d08c27631c"
+      },
+      "controlBits": {
+        "x": "40b8c0a279b1c433",
+        "y": "40974ba4634d26fa"
+      }
+    },
+    {
+      "index": 27,
+      "x": 6308.18806350586,
+      "y": 1488.47507859375,
+      "control": {
+        "x": 6279.7414576025385,
+        "y": 1486.0396221328124
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 16,
+      "bits": {
+        "x": "40b8a43024ee0f3d",
+        "y": "409741e67b00bcbe"
+      },
+      "controlBits": {
+        "x": "40b887bdd02a5a46",
+        "y": "4097382892b45282"
+      }
+    },
+    {
+      "index": 28,
+      "x": 6247.809697688965,
+      "y": 1483.461833800781,
+      "control": {
+        "x": 6215.877937775391,
+        "y": 1480.88404546875
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 16,
+      "bits": {
+        "x": "40b867cf485905c0",
+        "y": "40972dd8eaf5ba2b"
+      },
+      "controlBits": {
+        "x": "40b847e0c087b13a",
+        "y": "40972389433721d5"
+      }
+    },
+    {
+      "index": 29,
+      "x": 6180.4610238515625,
+      "y": 1478.163925265625,
+      "control": {
+        "x": 6145.044109927734,
+        "y": 1475.4438050625
+      },
+      "originalIndex": 17,
+      "originalSegmentIndex": 17,
+      "bits": {
+        "x": "40b8247605a8bd23",
+        "y": "409718a7dc065b64"
+      },
+      "controlBits": {
+        "x": "40b8010b4ac9c90c",
+        "y": "40970dc674d594f2"
+      }
+    },
+    {
+      "index": 30,
+      "x": 6113.440504050293,
+      "y": 1473.302896501465,
+      "control": {
+        "x": 6081.836898172852,
+        "y": 1471.1619879404298
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 17,
+      "bits": {
+        "x": "40b7e170c4df99c4",
+        "y": "409705362a801f76"
+      },
+      "controlBits": {
+        "x": "40b7c1d63ef56a7b",
+        "y": "4096fca5e02aa9f8"
+      }
+    },
+    {
+      "index": 31,
+      "x": 6054.046600341797,
+      "y": 1469.6002910214843,
+      "control": {
+        "x": 6026.256302510742,
+        "y": 1468.038594102539
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 17,
+      "bits": {
+        "x": "40b7a60bee000000",
+        "y": "4096f666b2b0856e"
+      },
+      "controlBits": {
+        "x": "40b78a419d0a9585",
+        "y": "4096f027853660e5"
+      }
+    },
+    {
+      "index": 32,
+      "x": 6002.279312726074,
+      "y": 1467.0561088256836,
+      "control": {
+        "x": 5978.302322941406,
+        "y": 1466.073623548828
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 17,
+      "bits": {
+        "x": "40b772478109efd8",
+        "y": "4096ec3974978d50"
+      },
+      "controlBits": {
+        "x": "40b75a4d65094a2b",
+        "y": "4096e84b63f8b9ba"
+      }
+    },
+    {
+      "index": 33,
+      "x": 5958.138641203124,
+      "y": 1465.6703499140624,
+      "control": {
+        "x": 5937.974959464843,
+        "y": 1465.2670762792968
+      },
+      "originalIndex": 18,
+      "originalSegmentIndex": 18,
+      "bits": {
+        "x": "40b746237dfd694c",
+        "y": "4096e6ae70353719"
+      },
+      "controlBits": {
+        "x": "40b731f996f1886d",
+        "y": "4096e5117c71b478"
+      }
+    },
+    {
+      "index": 34,
+      "x": 5917.512776163574,
+      "y": 1464.921130759277,
+      "control": {
+        "x": 5897.050592862304,
+        "y": 1464.5751852392577
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 18,
+      "bits": {
+        "x": "40b71d83454c74b8",
+        "y": "4096e3af3ce6d9bd"
+      },
+      "controlBits": {
+        "x": "40b7090cf3a76102",
+        "y": "4096e24cfd5bff04"
+      }
+    },
+    {
+      "index": 35,
+      "x": 5876.289907998047,
+      "y": 1464.2865678339842,
+      "control": {
+        "x": 5855.529223133789,
+        "y": 1463.9979504287107
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 18,
+      "bits": {
+        "x": "40b6f44a37691a76",
+        "y": "4096e1257209cc31"
+      },
+      "controlBits": {
+        "x": "40b6df877b2ad3e9",
+        "y": "4096dffde6b7995e"
+      }
+    },
+    {
+      "index": 36,
+      "x": 5834.470036706543,
+      "y": 1463.7666611381835,
+      "control": {
+        "x": 5813.410850279297,
+        "y": 1463.5353718476563
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 18,
+      "bits": {
+        "x": "40b6ca7854535a86",
+        "y": "4096df110f9e0e73"
+      },
+      "controlBits": {
+        "x": "40b6b5692d7be122",
+        "y": "4096de2438848388"
+      }
+    },
+    {
+      "index": 37,
+      "x": 5792.053162289062,
+      "y": 1463.3614106718749,
+      "control": {
+        "x": 5770.695474298827,
+        "y": 1463.1874494960934
+      },
+      "originalIndex": 19,
+      "originalSegmentIndex": 19,
+      "bits": {
+        "x": "40b6a00d9c0b34e7",
+        "y": "4096dd7215a3a083"
+      },
+      "controlBits": {
+        "x": "40b68ab20a9a88ac",
+        "y": "4096dcbff2c2bd7e"
+      }
+    },
+    {
+      "index": 38,
+      "x": 5743.656372454101,
+      "y": 1463.0312798041991,
+      "control": {
+        "x": 5716.617270609375,
+        "y": 1462.8751101123046
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 19,
+      "bits": {
+        "x": "40b66fa80806705c",
+        "y": "4096dc2007d0203e"
+      },
+      "controlBits": {
+        "x": "40b6549e0572580c",
+        "y": "4096db801cdd82fd"
+      }
+    },
+    {
+      "index": 39,
+      "x": 5683.896754910156,
+      "y": 1462.736731904297,
+      "control": {
+        "x": 5651.176239210938,
+        "y": 1462.598353696289
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 19,
+      "bits": {
+        "x": "40b633e591bad3a6",
+        "y": "4096daf269d92b80"
+      },
+      "controlBits": {
+        "x": "40b6132d1e034f40",
+        "y": "4096da64b6d4d402"
+      }
+    },
+    {
+      "index": 40,
+      "x": 5612.774309657227,
+      "y": 1462.477766972168,
+      "control": {
+        "x": 5593.573344880371,
+        "y": 1462.4174736101072
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 19,
+      "bits": {
+        "x": "40b5ecc639285ec4",
+        "y": "4096d9e93bbec248"
+      },
+      "controlBits": {
+        "x": "40b5d992c6bae686",
+        "y": "4096d9ab7e33b96a"
+      }
+    },
+    {
+      "index": 41,
+      "x": 5572.952026639892,
+      "y": 1462.3616281190184,
+      "control": {
+        "x": 5552.330708399414,
+        "y": 1462.3057826279296
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 19,
+      "bits": {
+        "x": "40b5c4f3b8049342",
+        "y": "4096d9724ea441fe"
+      },
+      "controlBits": {
+        "x": "40b5b054a94e3fff",
+        "y": "4096d9391f14ca92"
+      }
+    },
+    {
+      "index": 42,
+      "x": 5530.2890366953125,
+      "y": 1462.2543850078123,
+      "control": {
+        "x": 5508.247364991211,
+        "y": 1462.202987387695
+      },
+      "originalIndex": 20,
+      "originalSegmentIndex": 20,
+      "bits": {
+        "x": "40b59a49fe4f11b6",
+        "y": "4096d9047d80e496"
+      },
+      "controlBits": {
+        "x": "40b5843f534fe36d",
+        "y": "4096d8cfdbecfe9a"
+      }
+    },
+    {
+      "index": 43,
+      "x": 5487.755529216797,
+      "y": 1462.157026054321,
+      "control": {
+        "x": 5467.263693442383,
+        "y": 1462.111064720947
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 20,
+      "bits": {
+        "x": "40b56fc16a5cdd51",
+        "y": "4096d8a0cb701fb7"
+      },
+      "controlBits": {
+        "x": "40b55b438169d734",
+        "y": "4096d871baf340d4"
+      }
+    },
+    {
+      "index": 44,
+      "x": 5448.321693597655,
+      "y": 1462.0705396743163,
+      "control": {
+        "x": 5410.437693908203,
+        "y": 1461.9894895810544
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 20,
+      "bits": {
+        "x": "40b548525a82f943",
+        "y": "4096d8483b8d6909"
+      },
+      "controlBits": {
+        "x": "40b522700cb53d64",
+        "y": "4096d7f53cc1b972"
+      }
+    },
+    {
+      "index": 45,
+      "x": 5378.753037937499,
+      "y": 1461.9301846347655,
+      "control": {
+        "x": 5347.068381966796,
+        "y": 1461.8708796884766
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 20,
+      "bits": {
+        "x": "40b502c0c7182235",
+        "y": "4096d7b88252263d"
+      },
+      "controlBits": {
+        "x": "40b4e311817b0706",
+        "y": "4096d77bc7e29308"
+      }
+    },
+    {
+      "index": 46,
+      "x": 5321.583069714843,
+      "y": 1461.83331988916,
+      "control": {
+        "x": 5296.09775746289,
+        "y": 1461.7957600898437
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 20,
+      "bits": {
+        "x": "40b4c995440e8c8a",
+        "y": "4096d75551cf1c32"
+      },
+      "controlBits": {
+        "x": "40b4b01906a2120d",
+        "y": "4096d72edbbba55d"
+      }
+    },
+    {
+      "index": 47,
+      "x": 5276.811788929686,
+      "y": 1461.7799454375,
+      "control": {
+        "x": 5238.23985186328,
+        "y": 1461.7483161328123
+      },
+      "originalIndex": 21,
+      "originalSegmentIndex": 21,
+      "bits": {
+        "x": "40b49ccfd1663842",
+        "y": "4096d71eaa044ae8"
+      },
+      "controlBits": {
+        "x": "40b4763d66ee84ac",
+        "y": "4096d6fe469595fe"
+      }
+    },
+    {
+      "index": 48,
+      "x": 5201.54985842578,
+      "y": 1462.5469560761717,
+      "control": {
+        "x": 5164.859864988281,
+        "y": 1463.345596019531
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 21,
+      "bits": {
+        "x": "40b4518cc3859428",
+        "y": "4096da301540ee06"
+      },
+      "controlBits": {
+        "x": "40b42cdc201ca3a4",
+        "y": "4096dd61e3ec460e"
+      }
+    },
+    {
+      "index": 49,
+      "x": 5130.051815179687,
+      "y": 1464.9745052109374,
+      "control": {
+        "x": 5095.243765371093,
+        "y": 1466.6034144023438
+      },
+      "originalIndex": 22,
+      "originalSegmentIndex": 22,
+      "bits": {
+        "x": "40b40a0d43c27631",
+        "y": "4096e3e5e4b1ab08"
+      },
+      "controlBits": {
+        "x": "40b3e73e676848be",
+        "y": "4096ea69e5771002"
+      }
+    },
+    {
+      "index": 50,
+      "x": 5060.918062458984,
+      "y": 1470.6203360976563,
+      "control": {
+        "x": 5026.592359546874,
+        "y": 1474.6372577929687
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 22,
+      "bits": {
+        "x": "40b3c4eb06242d06",
+        "y": "4096fa7b3962cfd9"
+      },
+      "controlBits": {
+        "x": "40b3a297a4e0114c",
+        "y": "40970a8c8d4e8fb0"
+      }
+    },
+    {
+      "index": 51,
+      "x": 4992.749003531249,
+      "y": 1481.0421919921873,
+      "control": {
+        "x": 4958.905647515625,
+        "y": 1487.4471261914061
+      },
+      "originalIndex": 23,
+      "originalSegmentIndex": 23,
+      "bits": {
+        "x": "40b380bfbeb2074e",
+        "y": "4097242b3460aa64"
+      },
+      "controlBits": {
+        "x": "40b35ee7d883fd50",
+        "y": "40973dc9db72c519"
+      }
+    },
+    {
+      "index": 52,
+      "x": 4926.651664060546,
+      "y": 1496.437756048828,
+      "control": {
+        "x": 4894.397680605469,
+        "y": 1505.42838590625
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 23,
+      "bits": {
+        "x": "40b33ea6d374b406",
+        "y": "409761c0431f255f"
+      },
+      "controlBits": {
+        "x": "40b31e65ce656abe",
+        "y": "409785b6aacb85a5"
+      }
+    },
+    {
+      "index": 53,
+      "x": 4863.733069710937,
+      "y": 1517.004711421875,
+      "control": {
+        "x": 4833.068458816406,
+        "y": 1528.5810369375
+      },
+      "originalIndex": 24,
+      "originalSegmentIndex": 24,
+      "bits": {
+        "x": "40b2ffbbaa74e22a",
+        "y": "4097b404d3122b7c"
+      },
+      "controlBits": {
+        "x": "40b2e11186845996",
+        "y": "4097e252fb58d152"
+      }
+    },
+    {
+      "index": 54,
+      "x": 4790.1079557246085,
+      "y": 1549.5433586191407,
+      "control": {
+        "x": 4768.627704178711,
+        "y": 1560.0245194599609
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 24,
+      "bits": {
+        "x": "40b2b61ba2fc829c",
+        "y": "4098362c6633acd6"
+      },
+      "controlBits": {
+        "x": "40b2a0a0b1389720",
+        "y": "409860191ba11a97"
+      }
+    },
+    {
+      "index": 55,
+      "x": 4744.073479583496,
+      "y": 1572.8521793422851,
+      "control": {
+        "x": 4719.519254988281,
+        "y": 1585.6798392246092
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 24,
+      "bits": {
+        "x": "40b28812cf8ed80a",
+        "y": "40989368a1b395c4"
+      },
+      "controlBits": {
+        "x": "40b26f84ede518f4",
+        "y": "4098c6b827c610f0"
+      }
+    },
+    {
+      "index": 56,
+      "x": 4691.89105734375,
+      "y": 1600.8539981484373,
+      "control": {
+        "x": 4664.262859699218,
+        "y": 1616.0281570722655
+      },
+      "originalIndex": 25,
+      "originalSegmentIndex": 25,
+      "bits": {
+        "x": "40b253e41c558644",
+        "y": "4099036a7e7d9988"
+      },
+      "controlBits": {
+        "x": "40b238434ac5f394",
+        "y": "4099401cd5352220"
+      }
+    },
+    {
+      "index": 57,
+      "x": 4637.000375890137,
+      "y": 1631.5700066630857,
+      "control": {
+        "x": 4609.737892081055,
+        "y": 1647.1118562539061
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 25,
+      "bits": {
+        "x": "40b21d0018a263d8",
+        "y": "40997e47afd3a1d2"
+      },
+      "controlBits": {
+        "x": "40b201bce67ed41c",
+        "y": "4099bc728a722185"
+      }
+    },
+    {
+      "index": 58,
+      "x": 4582.841122107422,
+      "y": 1663.0213965117186,
+      "control": {
+        "x": 4555.944352133789,
+        "y": 1678.9309367695312
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 25,
+      "bits": {
+        "x": "40b1e6d753c74752",
+        "y": "4099fc15e8f79852"
+      },
+      "controlBits": {
+        "x": "40b1cbf1c10fba88",
+        "y": "409a3bb9477d0f1f"
+      }
+    },
+    {
+      "index": 59,
+      "x": 4529.413295995605,
+      "y": 1695.2081676943358,
+      "control": {
+        "x": 4502.882239857421,
+        "y": 1711.4853986191406
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 25,
+      "bits": {
+        "x": "40b1b169cdc430b1",
+        "y": "409a7cd529e97d06"
+      },
+      "controlBits": {
+        "x": "40b196e1da78a6da",
+        "y": "409abdf10c55eaee"
+      }
+    },
+    {
+      "index": 60,
+      "x": 4476.716897554687,
+      "y": 1728.1303202109375,
+      "control": {
+        "x": 4450.551555251954,
+        "y": 1744.7752418027344
+      },
+      "originalIndex": 26,
+      "originalSegmentIndex": 26,
+      "bits": {
+        "x": "40b17cb786991ff7",
+        "y": "409b008572a94ff0"
+      },
+      "controlBits": {
+        "x": "40b1628d32b99914",
+        "y": "409b4319d8fcb4f2"
+      }
+    },
+    {
+      "index": 61,
+      "x": 4425.663246125977,
+      "y": 1761.428070720703,
+      "control": {
+        "x": 4400.774937,
+        "y": 1778.0808996386718
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 26,
+      "bits": {
+        "x": "40b149a9ca7f8445",
+        "y": "409b85b6582bc72e"
+      },
+      "controlBits": {
+        "x": "40b130c662456f76",
+        "y": "409bc852d75ad96a"
+      }
+    },
+    {
+      "index": 62,
+      "x": 4377.163661050781,
+      "y": 1794.7416358828125,
+      "control": {
+        "x": 4353.552385101562,
+        "y": 1811.4023721269532
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 26,
+      "bits": {
+        "x": "40b11929e5b0ccbc",
+        "y": "409c0af76f6598e1"
+      },
+      "controlBits": {
+        "x": "40b1018d691c2a02",
+        "y": "409c4d9c07705858"
+      }
+    },
+    {
+      "index": 63,
+      "x": 4331.218142329101,
+      "y": 1828.0710156972655,
+      "control": {
+        "x": 4308.88389955664,
+        "y": 1844.739659267578
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 26,
+      "bits": {
+        "x": "40b0eb37d82cf95d",
+        "y": "409c9048b856c508"
+      },
+      "controlBits": {
+        "x": "40b0d4e2473dc8b8",
+        "y": "409cd2f5693d31b9"
+      }
+    },
+    {
+      "index": 64,
+      "x": 4287.826689960937,
+      "y": 1861.4162101640622,
+      "control": {
+        "x": 4266.769480365234,
+        "y": 1878.0927610605468
+      },
+      "originalIndex": 27,
+      "originalSegmentIndex": 27,
+      "bits": {
+        "x": "40b0bfd3a1f40a28",
+        "y": "409d15aa32ff4ba4"
+      },
+      "controlBits": {
+        "x": "40b0aac4fcaa4b98",
+        "y": "409d585efcc16590"
+      }
+    },
+    {
+      "index": 65,
+      "x": 4248.3098274169915,
+      "y": 1892.8814378334957,
+      "control": {
+        "x": 4229.850174468749,
+        "y": 1907.6701146064452
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 27,
+      "bits": {
+        "x": "40b0984f50d97f62",
+        "y": "409d938697a3b149"
+      },
+      "controlBits": {
+        "x": "40b085d9a508b32c",
+        "y": "409dceae3285fd04"
+      }
+    },
+    {
+      "index": 66,
+      "x": 4213.988078167968,
+      "y": 1920.570917255859,
+      "control": {
+        "x": 4182.263885566405,
+        "y": 1946.3725225546873
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 27,
+      "bits": {
+        "x": "40b075fcf2b0d950",
+        "y": "409e02489e887a8c"
+      },
+      "controlBits": {
+        "x": "40b056438e012599",
+        "y": "409e697d768d759e"
+      }
+    },
+    {
+      "index": 67,
+      "x": 4160.929919554686,
+      "y": 1964.6226313593747,
+      "control": {
+        "x": 4139.595953542968,
+        "y": 1982.8727401640622
+      },
+      "originalIndex": 28,
+      "originalSegmentIndex": 28,
+      "bits": {
+        "x": "40b040ee0f353b4a",
+        "y": "409eb27d931337ea"
+      },
+      "controlBits": {
+        "x": "40b02b98906950fc",
+        "y": "409efb7daf98fa36"
+      }
+    },
+    {
+      "index": 68,
+      "x": 4122.911495320312,
+      "y": 1998.632041224609,
+      "control": {
+        "x": 4106.227037097656,
+        "y": 2014.391342285156
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 28,
+      "bits": {
+        "x": "40b01ae957c1df32",
+        "y": "409f3a8735d095ae"
+      },
+      "controlBits": {
+        "x": "40b00a3a1f1a6d69",
+        "y": "409f7990bc083126"
+      }
+    },
+    {
+      "index": 69,
+      "x": 4094.192086664062,
+      "y": 2027.6598356015625,
+      "control": {
+        "x": 4070.122185796875,
+        "y": 2054.196822234375
+      },
+      "originalIndex": 29,
+      "originalSegmentIndex": 29,
+      "bits": {
+        "x": "40affc62592ee84a",
+        "y": "409faea3abf1a5ca"
+      },
+      "controlBits": {
+        "x": "40afcc3e8f23033a",
+        "y": "40a00c64c5e24788"
+      }
+    },
+    {
+      "index": 70,
+      "x": 4039.3468723359374,
+      "y": 2082.030610359375,
+      "control": {
+        "x": 4008.571558875,
+        "y": 2109.8643984843748
+      },
+      "originalIndex": 30,
+      "originalSegmentIndex": 30,
+      "bits": {
+        "x": "40af8eb19940357a",
+        "y": "40a0440fac2938de"
+      },
+      "controlBits": {
+        "x": "40af5124a35d67ba",
+        "y": "40a07bba92702a34"
+      }
+    },
+    {
+      "index": 71,
+      "x": 3982.4457532031247,
+      "y": 2135.9585748515624,
+      "control": {
+        "x": 3956.31994753125,
+        "y": 2162.05275121875
+      },
+      "originalIndex": 31,
+      "originalSegmentIndex": 31,
+      "bits": {
+        "x": "40af1ce439c38b04",
+        "y": "40a0afeaca52ac75"
+      },
+      "controlBits": {
+        "x": "40aee8a3d029ae4f",
+        "y": "40a0e41b02352eb6"
+      }
+    },
+    {
+      "index": 72,
+      "x": 3937.026071671875,
+      "y": 2189.3172118593748,
+      "control": {
+        "x": 3917.7321958125,
+        "y": 2216.5816725
+      },
+      "originalIndex": 32,
+      "originalSegmentIndex": 32,
+      "bits": {
+        "x": "40aec20d5944241c",
+        "y": "40a11aa26997c3d6"
+      },
+      "controlBits": {
+        "x": "40ae9b76e25e99e9",
+        "y": "40a15129d0fa58f7"
+      }
+    },
+    {
+      "index": 73,
+      "x": 3905.6181721171874,
+      "y": 2235.2745915703126,
+      "control": {
+        "x": 3893.504148421875,
+        "y": 2253.967510640625
+      },
+      "originalIndex": 33,
+      "originalSegmentIndex": 33,
+      "bits": {
+        "x": "40ae833c810e453d",
+        "y": "40a1768c97442c80"
+      },
+      "controlBits": {
+        "x": "40ae6b021fbdf091",
+        "y": "40a19bef5d8e0008"
+      }
+    },
+    {
+      "index": 74,
+      "x": 3881.485012640625,
+      "y": 2271.8380677890623,
+      "control": {
+        "x": 3869.465876859375,
+        "y": 2289.7086249374997
+      },
+      "originalIndex": 34,
+      "originalSegmentIndex": 34,
+      "bits": {
+        "x": "40ae52f85393ab43",
+        "y": "40a1bfad1738a3b5"
+      },
+      "controlBits": {
+        "x": "40ae3aee876965f5",
+        "y": "40a1e36ad0e34762"
+      }
+    },
+    {
+      "index": 75,
+      "x": 3853.714483125,
+      "y": 2319.661576476562,
+      "control": {
+        "x": 3837.9630893906246,
+        "y": 2349.6145280156247
+      },
+      "originalIndex": 35,
+      "originalSegmentIndex": 35,
+      "bits": {
+        "x": "40ae1b6dd0bb6ed6",
+        "y": "40a21f52ba26e546"
+      },
+      "controlBits": {
+        "x": "40adfbed1a0d77b7",
+        "y": "40a25b3aa36a832b"
+      }
+    },
+    {
+      "index": 76,
+      "x": 3822.9391696640623,
+      "y": 2383.0783323749997,
+      "control": {
+        "x": 3807.9152499375,
+        "y": 2416.5421367343747
+      },
+      "originalIndex": 36,
+      "originalSegmentIndex": 36,
+      "bits": {
+        "x": "40addde0dad8a116",
+        "y": "40a29e281b2e59af"
+      },
+      "controlBits": {
+        "x": "40adbfd49ba3ca75",
+        "y": "40a2e11592f23033"
+      }
+    },
+    {
+      "index": 77,
+      "x": 3792.0689682890625,
+      "y": 2456.58483646875,
+      "control": {
+        "x": 3784.145827464844,
+        "y": 2476.6061863359373
+      },
+      "originalIndex": 37,
+      "originalSegmentIndex": 37,
+      "bits": {
+        "x": "40ada0234fcfc3f8",
+        "y": "40a3312b6faf8594"
+      },
+      "controlBits": {
+        "x": "40ad904aa9e5c0ba",
+        "y": "40a359365e0e3044"
+      }
+    },
+    {
+      "index": 78,
+      "x": 3775.9222082460938,
+      "y": 2503.4910953203125,
+      "control": {
+        "x": 3767.6985890273436,
+        "y": 2530.3760043046873
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 37,
+      "bits": {
+        "x": "40ad7fd82bade226",
+        "y": "40a38efb70d887ec"
+      },
+      "controlBits": {
+        "x": "40ad6f65ad760392",
+        "y": "40a3c4c083a2df93"
+      }
+    },
+    {
+      "index": 79,
+      "x": 3759.1744914140627,
+      "y": 2564.12447240625,
+      "control": {
+        "x": 3750.6503938007813,
+        "y": 2597.8729405078125
+      },
+      "originalIndex": 38,
+      "originalSegmentIndex": 38,
+      "bits": {
+        "x": "40ad5e5956f049aa",
+        "y": "40a4083fbad8e432"
+      },
+      "controlBits": {
+        "x": "40ad4d4d006a8fc1",
+        "y": "40a44bbef20ee8d1"
+      }
+    },
+    {
+      "index": 80,
+      "x": 3744.7436211503905,
+      "y": 2621.3893285429685,
+      "control": {
+        "x": 3738.8368485,
+        "y": 2644.905716578125
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 38,
+      "bits": {
+        "x": "40ad417cbbe95315",
+        "y": "40a47ac756121ee6"
+      },
+      "controlBits": {
+        "x": "40ad35ac7768166a",
+        "y": "40a4a9cfba1554fc"
+      }
+    },
+    {
+      "index": 81,
+      "x": 3735.5474008125,
+      "y": 2658.190024546875,
+      "control": {
+        "x": 3728.9685054375,
+        "y": 2684.758640484375
+      },
+      "originalIndex": 39,
+      "originalSegmentIndex": 39,
+      "bits": {
+        "x": "40ad2f1844eb56fc",
+        "y": "40a4c4614ae5bc88"
+      },
+      "controlBits": {
+        "x": "40ad21efdff1d81f",
+        "y": "40a4f9846c868ba0"
+      }
+    },
+    {
+      "index": 82,
+      "x": 3722.231463539062,
+      "y": 2709.5876446640623,
+      "control": {
+        "x": 3715.4944216406248,
+        "y": 2734.41664884375
+      },
+      "originalIndex": 40,
+      "originalSegmentIndex": 40,
+      "bits": {
+        "x": "40ad1476826394fa",
+        "y": "40a52b2cdfc2eba2"
+      },
+      "controlBits": {
+        "x": "40ad06fd24d551d6",
+        "y": "40a55cd552ff4ba5"
+      }
+    },
+    {
+      "index": 83,
+      "x": 3711.50912925,
+      "y": 2761.396445742187,
+      "control": {
+        "x": 3707.523836859375,
+        "y": 2788.3762426406247
+      },
+      "originalIndex": 41,
+      "originalSegmentIndex": 41,
+      "bits": {
+        "x": "40acff04ac96cc60",
+        "y": "40a592cafaefb2aa"
+      },
+      "controlBits": {
+        "x": "40acf70c345846e9",
+        "y": "40a5c8c0a2e019b0"
+      }
+    },
+    {
+      "index": 84,
+      "x": 3704.6455701328123,
+      "y": 2806.5314635312498,
+      "control": {
+        "x": 3701.76730340625,
+        "y": 2824.686684421875
+      },
+      "originalIndex": 42,
+      "originalSegmentIndex": 42,
+      "bits": {
+        "x": "40acf14a882b1f68",
+        "y": "40a5ed101bfceb78"
+      },
+      "controlBits": {
+        "x": "40aceb88dbfdf7e8",
+        "y": "40a6115f9519bd40"
+      }
+    },
+    {
+      "index": 85,
+      "x": 3699.6481399921877,
+      "y": 2837.717957953125,
+      "control": {
+        "x": 3697.528976578125,
+        "y": 2850.749231484375
+      },
+      "originalIndex": 43,
+      "originalSegmentIndex": 43,
+      "bits": {
+        "x": "40ace74bd9014b5a",
+        "y": "40a62b6f982f5126"
+      },
+      "controlBits": {
+        "x": "40ace30ed6049ecb",
+        "y": "40a6457f9b44e50c"
+      }
+    },
+    {
+      "index": 86,
+      "x": 3697.21268353125,
+      "y": 2860.4594280234373,
+      "control": {
+        "x": 3696.896390484375,
+        "y": 2870.1696245625
+      },
+      "originalIndex": 44,
+      "originalSegmentIndex": 44,
+      "bits": {
+        "x": "40ace26ce4db163c",
+        "y": "40a658eb3a265f0f"
+      },
+      "controlBits": {
+        "x": "40ace1caf3b18dac",
+        "y": "40a66c56d907d912"
+      }
+    },
+    {
+      "index": 87,
+      "x": 3696.769873265625,
+      "y": 2876.9699250703125,
+      "control": {
+        "x": 3696.643356046875,
+        "y": 2883.770225578125
+      },
+      "originalIndex": 45,
+      "originalSegmentIndex": 45,
+      "bits": {
+        "x": "40ace18a2cd423d9",
+        "y": "40a679f09a04d120"
+      },
+      "controlBits": {
+        "x": "40ace14965f6ba06",
+        "y": "40a6878a5b01c92e"
+      }
+    },
+    {
+      "index": 88,
+      "x": 3696.6117267421873,
+      "y": 2892.721318804687,
+      "control": {
+        "x": 3696.5800974374997,
+        "y": 2901.6724120312497
+      },
+      "originalIndex": 46,
+      "originalSegmentIndex": 46,
+      "bits": {
+        "x": "40ace139343f5f91",
+        "y": "40a6997150b2c83e"
+      },
+      "controlBits": {
+        "x": "40ace1290288051c",
+        "y": "40a6ab584663c74f"
+      }
+    },
+    {
+      "index": 89,
+      "x": 3698.414597109375,
+      "y": 2913.122220328125,
+      "control": {
+        "x": 3700.2490967812496,
+        "y": 2924.572028625
+      },
+      "originalIndex": 47,
+      "originalSegmentIndex": 47,
+      "bits": {
+        "x": "40ace4d446128390",
+        "y": "40a6c23e93a9b068"
+      },
+      "controlBits": {
+        "x": "40ace87f899d0203",
+        "y": "40a6d924e0ef9980"
+      }
+    },
+    {
+      "index": 90,
+      "x": 3727.292152289062,
+      "y": 2944.751525015625,
+      "control": {
+        "x": 3740.8136800429684,
+        "y": 2954.8412732109373
+      },
+      "originalIndex": 48,
+      "originalSegmentIndex": 48,
+      "bits": {
+        "x": "40ad1e9594fc1df2",
+        "y": "40a70180c7e30878"
+      },
+      "controlBits": {
+        "x": "40ad39a09aababea",
+        "y": "40a715aebb5cbff4"
+      }
+    },
+    {
+      "index": 91,
+      "x": 3762.7486028437497,
+      "y": 2967.4297364765625,
+      "control": {
+        "x": 3784.683525644531,
+        "y": 2980.0181997421873
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 48,
+      "bits": {
+        "x": "40ad657f48df3732",
+        "y": "40a72edc066b6178"
+      },
+      "controlBits": {
+        "x": "40ad915df712c27a",
+        "y": "40a74809517a02fb"
+      }
+    },
+    {
+      "index": 92,
+      "x": 3815.0318434921874,
+      "y": 2995.105378078125,
+      "control": {
+        "x": 3845.3801613398437,
+        "y": 3010.1925564140624
+      },
+      "originalIndex": 49,
+      "originalSegmentIndex": 49,
+      "bits": {
+        "x": "40adce104dca4b12",
+        "y": "40a76635f41d8e86"
+      },
+      "controlBits": {
+        "x": "40ae0ac2a481d3aa",
+        "y": "40a7846296c11a11"
+      }
+    },
+    {
+      "index": 93,
+      "x": 3885.47030503125,
+      "y": 3028.3635919570315,
+      "control": {
+        "x": 3905.5153768769533,
+        "y": 3037.449109728516
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 49,
+      "bits": {
+        "x": "40ae5af0cbd230ba",
+        "y": "40a7a8ba28b99914"
+      },
+      "controlBits": {
+        "x": "40ae8307df7a5f42",
+        "y": "40a7bae5f1b5d895"
+      }
+    },
+    {
+      "index": 94,
+      "x": 3927.9959051835935,
+      "y": 3047.305591801758,
+      "control": {
+        "x": 3950.476433490234,
+        "y": 3057.162073875
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 49,
+      "bits": {
+        "x": "40aeaffde748c2e7",
+        "y": "40a7ce9c768754f4"
+      },
+      "controlBits": {
+        "x": "40aedcf3ef17268c",
+        "y": "40a7e252fb58d152"
+      }
+    },
+    {
+      "index": 95,
+      "x": 3975.392418257812,
+      "y": 3067.78952025,
+      "control": {
+        "x": 4000.3084030253904,
+        "y": 3078.416966625
+      },
+      "originalIndex": 50,
+      "originalSegmentIndex": 50,
+      "bits": {
+        "x": "40af0ec8eb0bbf50",
+        "y": "40a7f7943bff8a8f"
+      },
+      "controlBits": {
+        "x": "40af409de7005814",
+        "y": "40a80cd57ca643cc"
+      }
+    },
+    {
+      "index": 96,
+      "x": 4028.302314505371,
+      "y": 3090.3273766713864,
+      "control": {
+        "x": 4056.2962259853516,
+        "y": 3102.2377867177734
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 50,
+      "bits": {
+        "x": "40af789ac8f7835a",
+        "y": "40a824a79dea4228"
+      },
+      "controlBits": {
+        "x": "40afb097aaeeae9f",
+        "y": "40a83c79bf2e4085"
+      }
+    },
+    {
+      "index": 97,
+      "x": 4087.3680641777346,
+      "y": 3115.431160435547,
+      "control": {
+        "x": 4118.439902370117,
+        "y": 3128.6245341533204
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 50,
+      "bits": {
+        "x": "40afeebc72e86c66",
+        "y": "40a856dcc10f8402"
+      },
+      "controlBits": {
+        "x": "40b016709d711516",
+        "y": "40a8713fc2f0c77e"
+      }
+    },
+    {
+      "index": 98,
+      "x": 4152.589667274902,
+      "y": 3143.1008715424805,
+      "control": {
+        "x": 4186.739432179687,
+        "y": 3157.5772089316406
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 50,
+      "bits": {
+        "x": "40b03896f46f3d3a",
+        "y": "40a88e33a56f501a"
+      },
+      "controlBits": {
+        "x": "40b05abd4b6d655e",
+        "y": "40a8ab2787edd8b6"
+      }
+    },
+    {
+      "index": 99,
+      "x": 4223.967123796875,
+      "y": 3173.3365099921875,
+      "control": {
+        "x": 4242.580969605469,
+        "y": 3181.216160522461
+      },
+      "originalIndex": 51,
+      "originalSegmentIndex": 51,
+      "bits": {
+        "x": "40b07ff7956cd6c3",
+        "y": "40a8caac4b09a672"
+      },
+      "controlBits": {
+        "x": "40b09294ba6c8f76",
+        "y": "40a8da6eac978d50"
+      }
+    },
+    {
+      "index": 100,
+      "x": 4265.176154141602,
+      "y": 3190.4805815485843,
+      "control": {
+        "x": 4287.771338677734,
+        "y": 3199.745002574707
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 51,
+      "bits": {
+        "x": "40b0a92d1870153c",
+        "y": "40a8ecf60ec8e476"
+      },
+      "controlBits": {
+        "x": "40b0bfc576739b02",
+        "y": "40a8ff7d70fa3b9b"
+      }
+    },
+    {
+      "index": 101,
+      "x": 4314.347861941406,
+      "y": 3210.3941940966797,
+      "control": {
+        "x": 4340.924385205079,
+        "y": 3221.0433856186523
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 51,
+      "bits": {
+        "x": "40b0da590d7aeddd",
+        "y": "40a914c9d3cf0308"
+      },
+      "controlBits": {
+        "x": "40b0f4eca48240b8",
+        "y": "40a92a1636a3ca75"
+      }
+    },
+    {
+      "index": 102,
+      "x": 4371.482247196289,
+      "y": 3233.0773476364748,
+      "control": {
+        "x": 4402.0401091875,
+        "y": 3245.1113096542967
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 51,
+      "bits": {
+        "x": "40b1137b748d60a6",
+        "y": "40a942279a1c022a"
+      },
+      "controlBits": {
+        "x": "40b1320a44988095",
+        "y": "40a95a38fd9439de"
+      }
+    },
+    {
+      "index": 103,
+      "x": 4436.57930990625,
+      "y": 3258.5300421679685,
+      "control": {
+        "x": 4471.118510625,
+        "y": 3271.9487746816403
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 51,
+      "bits": {
+        "x": "40b154944da76d98",
+        "y": "40a9750f61afe1da"
+      },
+      "controlBits": {
+        "x": "40b1771e56b65a9b",
+        "y": "40a98fe5c5cb89d6"
+      }
+    },
+    {
+      "index": 104,
+      "x": 4509.63905007129,
+      "y": 3286.752277691162,
+      "control": {
+        "x": 4528.899319794435,
+        "y": 3294.1540291959227
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 51,
+      "bits": {
+        "x": "40b19da398c914b2",
+        "y": "40a9ad812a8aa21a"
+      },
+      "controlBits": {
+        "x": "40b1b0e639d271be",
+        "y": "40a9bc4edcea2e3c"
+      }
+    },
+    {
+      "index": 105,
+      "x": 4549.1549241994635,
+      "y": 3301.901973324646,
+      "control": {
+        "x": 4569.410528604492,
+        "y": 3309.649917453369
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 51,
+      "bits": {
+        "x": "40b1c527a91cc20e",
+        "y": "40a9cbcdcf729670"
+      },
+      "controlBits": {
+        "x": "40b1d9691867125e",
+        "y": "40a9db4cc1fafea4"
+      }
+    },
+    {
+      "index": 106,
+      "x": 4590.661467691407,
+      "y": 3317.7440542060544,
+      "control": {
+        "x": 4611.912406778321,
+        "y": 3325.8381909587397
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 51,
+      "bits": {
+        "x": "40b1eea955f255f4",
+        "y": "40a9eb7cf4ac42e9"
+      },
+      "controlBits": {
+        "x": "40b203e9937d998a",
+        "y": "40a9fbad275d872e"
+      }
+    },
+    {
+      "index": 107,
+      "x": 4634.15868054712,
+      "y": 3334.278520335388,
+      "control": {
+        "x": 4656.404954315918,
+        "y": 3342.718849712036
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 51,
+      "bits": {
+        "x": "40b21a289f49d064",
+        "y": "40aa0c8e9a37a786"
+      },
+      "controlBits": {
+        "x": "40b23067ab16073e",
+        "y": "40aa1d700d11c7de"
+      }
+    },
+    {
+      "index": 108,
+      "x": 4679.646562766602,
+      "y": 3351.505371712646,
+      "control": {
+        "x": 4702.888171217286,
+        "y": 3360.2918937132563
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 51,
+      "bits": {
+        "x": "40b247a58523315e",
+        "y": "40aa2f02c014c447"
+      },
+      "controlBits": {
+        "x": "40b25ee35f305b7e",
+        "y": "40aa40957317c0b0"
+      }
+    },
+    {
+      "index": 109,
+      "x": 4727.125114349854,
+      "y": 3369.4246083378293,
+      "control": {
+        "x": 4751.362057482422,
+        "y": 3378.557322962402
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 51,
+      "bits": {
+        "x": "40b27720077e78e2",
+        "y": "40aa52d96643992c"
+      },
+      "controlBits": {
+        "x": "40b28f5cafcc9646",
+        "y": "40aa651d596f71a7"
+      }
+    },
+    {
+      "index": 110,
+      "x": 4776.594335296875,
+      "y": 3388.036230210937,
+      "control": {
+        "x": 4801.826613111329,
+        "y": 3397.515137459472
+      },
+      "originalIndex": 52,
+      "originalSegmentIndex": 52,
+      "bits": {
+        "x": "40b2a898265ba6f0",
+        "y": "40aa78128cc42634"
+      },
+      "controlBits": {
+        "x": "40b2c1d39ceab79a",
+        "y": "40aa8b07c018dac1"
+      }
+    },
+    {
+      "index": 111,
+      "x": 4827.6930831951595,
+      "y": 3407.173195066589,
+      "control": {
+        "x": 4853.559553278992,
+        "y": 3416.8312526737054
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 52,
+      "bits": {
+        "x": "40b2dbb16de6789e",
+        "y": "40aa9e58ad0615a8"
+      },
+      "controlBits": {
+        "x": "40b2f58f3ee239a4",
+        "y": "40aab1a999f3508e"
+      }
+    },
+    {
+      "index": 112,
+      "x": 4880.060215632202,
+      "y": 3426.668460639404,
+      "control": {
+        "x": 4906.560877985412,
+        "y": 3436.505668605102
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 52,
+      "bits": {
+        "x": "40b3100f6a4aab04",
+        "y": "40aac556407911cf"
+      },
+      "controlBits": {
+        "x": "40b32a8f95b31c64",
+        "y": "40aad902e6fed30e"
+      }
+    },
+    {
+      "index": 113,
+      "x": 4933.695732608001,
+      "y": 3446.5220269293823,
+      "control": {
+        "x": 4960.83058723059,
+        "y": 3456.5383852536615
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 52,
+      "bits": {
+        "x": "40b345b21b883e20",
+        "y": "40aaed0b471d1aa8"
+      },
+      "controlBits": {
+        "x": "40b360d4a15d5fdc",
+        "y": "40ab0113a73b6240"
+      }
+    },
+    {
+      "index": 114,
+      "x": 4988.599634122558,
+      "y": 3466.733893936523,
+      "control": {
+        "x": 5016.368681014526,
+        "y": 3476.9294026193847
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 52,
+      "bits": {
+        "x": "40b37c99819f31f4",
+        "y": "40ab1577c0f23033"
+      },
+      "controlBits": {
+        "x": "40b3985e61e1040c",
+        "y": "40ab29dbdaa8fe26"
+      }
+    },
+    {
+      "index": 115,
+      "x": 5044.771920175872,
+      "y": 3487.3040616608278,
+      "control": {
+        "x": 5073.175159337219,
+        "y": 3497.6787207022703
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 52,
+      "bits": {
+        "x": "40b3b4c59c8f867e",
+        "y": "40ab3e9badf85272"
+      },
+      "controlBits": {
+        "x": "40b3d12cd73e08f2",
+        "y": "40ab535b8147a6bd"
+      }
+    },
+    {
+      "index": 116,
+      "x": 5102.212590767944,
+      "y": 3508.2325301022947,
+      "control": {
+        "x": 5131.250022198668,
+        "y": 3518.786339502319
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 52,
+      "bits": {
+        "x": "40b3ee366c593bc0",
+        "y": "40ab68770e2f8162"
+      },
+      "controlBits": {
+        "x": "40b40b4001746e8e",
+        "y": "40ab7d929b175c07"
+      }
+    },
+    {
+      "index": 117,
+      "x": 5160.921645898772,
+      "y": 3529.519299260925,
+      "control": {
+        "x": 5190.593269598876,
+        "y": 3540.2522590195313
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 52,
+      "bits": {
+        "x": "40b428ebf0fc51b8",
+        "y": "40ab9309e197bd05"
+      },
+      "controlBits": {
+        "x": "40b44697e08434e2",
+        "y": "40aba88128181e04"
+      }
+    },
+    {
+      "index": 118,
+      "x": 5220.899085568359,
+      "y": 3551.1643691367185,
+      "control": {
+        "x": 5251.204901537842,
+        "y": 3562.0764792539057
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 52,
+      "bits": {
+        "x": "40b464e62a78c868",
+        "y": "40abbe542831055b"
+      },
+      "controlBits": {
+        "x": "40b48334746d5bee",
+        "y": "40abd4272849ecb2"
+      }
+    },
+    {
+      "index": 119,
+      "x": 5282.144909776702,
+      "y": 3573.1677397296753,
+      "control": {
+        "x": 5313.084918015564,
+        "y": 3584.259000205444
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 52,
+      "bits": {
+        "x": "40b4a22518ce9fce",
+        "y": "40abea55e1fb5a64"
+      },
+      "controlBits": {
+        "x": "40b4c115bd2fe3b0",
+        "y": "40ac00849bacc814"
+      }
+    },
+    {
+      "index": 120,
+      "x": 5344.659118523803,
+      "y": 3595.529411039795,
+      "control": {
+        "x": 5376.233319032042,
+        "y": 3606.799821874146
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 52,
+      "bits": {
+        "x": "40b4e0a8bbfdd7ec",
+        "y": "40ac170f0ef6bc1f"
+      },
+      "controlBits": {
+        "x": "40b5003bbacbcc28",
+        "y": "40ac2d998240b02a"
+      }
+    },
+    {
+      "index": 121,
+      "x": 5408.441711809661,
+      "y": 3618.249383067078,
+      "control": {
+        "x": 5440.650104587279,
+        "y": 3629.6989442600097
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 52,
+      "bits": {
+        "x": "40b52071140670c0",
+        "y": "40ac447faf232a8d"
+      },
+      "controlBits": {
+        "x": "40b540a66d411558",
+        "y": "40ac5b65dc05a4f0"
+      }
+    },
+    {
+      "index": 122,
+      "x": 5473.492689634277,
+      "y": 3641.3276558115235,
+      "control": {
+        "x": 5506.335274681274,
+        "y": 3652.9563673630373
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 52,
+      "bits": {
+        "x": "40b5617e20e86a4c",
+        "y": "40ac72a7c280a5ad"
+      },
+      "controlBits": {
+        "x": "40b58255d48fbf40",
+        "y": "40ac89e9a8fba66a"
+      }
+    },
+    {
+      "index": 123,
+      "x": 5539.812051997649,
+      "y": 3664.764229273132,
+      "control": {
+        "x": 5573.288829314026,
+        "y": 3676.5720911832277
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 52,
+      "bits": {
+        "x": "40b5a3cfe2a3c48e",
+        "y": "40aca187490f2d7f"
+      },
+      "controlBits": {
+        "x": "40b5c549f0b7c9de",
+        "y": "40acb924e922b496"
+      }
+    },
+    {
+      "index": 124,
+      "x": 5607.39979889978,
+      "y": 3688.5591034519043,
+      "control": {
+        "x": 5641.510768485534,
+        "y": 3700.546115720581
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 52,
+      "bits": {
+        "x": "40b5e76659387f88",
+        "y": "40acd11e42cec205"
+      },
+      "controlBits": {
+        "x": "40b60982c1b93532",
+        "y": "40ace9179c7acf74"
+      }
+    },
+    {
+      "index": 125,
+      "x": 5676.255930340667,
+      "y": 3712.7122783478394,
+      "control": {
+        "x": 5711.0010921958,
+        "y": 3724.878440975098
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 52,
+      "bits": {
+        "x": "40b62c4184a69b38",
+        "y": "40ad016cafbf633d"
+      },
+      "controlBits": {
+        "x": "40b64f004794013e",
+        "y": "40ad19c1c303f706"
+      }
+    },
+    {
+      "index": 126,
+      "x": 5746.380446320312,
+      "y": 3737.2237539609373,
+      "control": {
+        "x": 5781.759800444825,
+        "y": 3749.5690669467767
+      },
+      "originalIndex": 53,
+      "originalSegmentIndex": 53,
+      "bits": {
+        "x": "40b6726164ee17a0",
+        "y": "40ad32728fe11127"
+      },
+      "controlBits": {
+        "x": "40b695c282482e02",
+        "y": "40ad4b235cbe2b48"
+      }
+    },
+    {
+      "index": 127,
+      "x": 5816.688066321625,
+      "y": 3761.795275832153,
+      "control": {
+        "x": 5851.616332198426,
+        "y": 3774.021484717529
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 53,
+      "bits": {
+        "x": "40b6b8b0251d4cdc",
+        "y": "40ad63972e64d4cb"
+      },
+      "controlBits": {
+        "x": "40b6db9dc7f26bb6",
+        "y": "40ad7c0b000b7e4d"
+      }
+    },
+    {
+      "index": 128,
+      "x": 5886.093509827515,
+      "y": 3786.128589502441,
+      "control": {
+        "x": 5920.570687456604,
+        "y": 3798.235694287353
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 53,
+      "bits": {
+        "x": "40b6fe17f0429308",
+        "y": "40ad9441d67bb730"
+      },
+      "controlBits": {
+        "x": "40b720921892ba5a",
+        "y": "40adac78acebf012"
+      }
+    },
+    {
+      "index": 129,
+      "x": 5954.596776837982,
+      "y": 3810.2236949718013,
+      "control": {
+        "x": 5988.622866219361,
+        "y": 3822.2116956562495
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 53,
+      "bits": {
+        "x": "40b74298c65dea25",
+        "y": "40adc4728825b855"
+      },
+      "controlBits": {
+        "x": "40b7649f742919f0",
+        "y": "40addc6c635f8098"
+      }
+    },
+    {
+      "index": 130,
+      "x": 6022.1978673530275,
+      "y": 3834.080592240234,
+      "control": {
+        "x": 6055.772868486694,
+        "y": 3845.949488824219
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 53,
+      "bits": {
+        "x": "40b78632a76f5233",
+        "y": "40adf4294362d83c"
+      },
+      "controlBits": {
+        "x": "40b7a7c5dab58a76",
+        "y": "40ae0be623662fe0"
+      }
+    },
+    {
+      "index": 131,
+      "x": 6088.89678137265,
+      "y": 3857.699281307739,
+      "control": {
+        "x": 6122.020694258606,
+        "y": 3869.4490737912597
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 53,
+      "bits": {
+        "x": "40b7c8e59376cb32",
+        "y": "40ae2366083316e3"
+      },
+      "controlBits": {
+        "x": "40b7ea054c380bee",
+        "y": "40ae3ae5ecfffde7"
+      }
+    },
+    {
+      "index": 132,
+      "x": 6154.693518896851,
+      "y": 3881.0797621743163,
+      "control": {
+        "x": 6187.366343535095,
+        "y": 3892.7104505573734
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 53,
+      "bits": {
+        "x": "40b80ab18a745522",
+        "y": "40ae5228d696744b"
+      },
+      "controlBits": {
+        "x": "40b82b5dc8b09e56",
+        "y": "40ae696bc02ceab0"
+      }
+    },
+    {
+      "index": 133,
+      "x": 6219.588079925629,
+      "y": 3904.222034839966,
+      "control": {
+        "x": 6251.809816316162,
+        "y": 3915.7336191225586
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 53,
+      "bits": {
+        "x": "40b84b968c67f003",
+        "y": "40ae8071ae8cf074"
+      },
+      "controlBits": {
+        "x": "40b86bcf501f41af",
+        "y": "40ae97779cecf638"
+      }
+    },
+    {
+      "index": 134,
+      "x": 6283.580464458984,
+      "y": 3927.1260993046876,
+      "control": {
+        "x": 6315.351112601807,
+        "y": 3938.5185794868166
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 53,
+      "bits": {
+        "x": "40b88b9499519bd4",
+        "y": "40aeae4090168b5d"
+      },
+      "controlBits": {
+        "x": "40b8ab59e283f5f9",
+        "y": "40aec50983402082"
+      }
+    },
+    {
+      "index": 135,
+      "x": 6346.670672496917,
+      "y": 3949.791955568481,
+      "control": {
+        "x": 6377.990232392029,
+        "y": 3961.0653316501466
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 53,
+      "bits": {
+        "x": "40b8caabb1315896",
+        "y": "40aedb957b334506"
+      },
+      "controlBits": {
+        "x": "40b8e9fd7fdebb34",
+        "y": "40aef2217326698c"
+      }
+    },
+    {
+      "index": 136,
+      "x": 6408.858704039429,
+      "y": 3972.2196036313476,
+      "control": {
+        "x": 6439.727175686829,
+        "y": 3983.3738756125485
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 53,
+      "bits": {
+        "x": "40b908dbd407264a",
+        "y": "40af08706fe31d71"
+      },
+      "controlBits": {
+        "x": "40b927ba282f9160",
+        "y": "40af1ebf6c9fd156"
+      }
+    },
+    {
+      "index": 137,
+      "x": 6470.144559086518,
+      "y": 3994.409043493286,
+      "control": {
+        "x": 6500.561942486206,
+        "y": 4005.4442113740233
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 53,
+      "bits": {
+        "x": "40b9462501d304ef",
+        "y": "40af34d16e26149c"
+      },
+      "controlBits": {
+        "x": "40b9648fdb76787d",
+        "y": "40af4ae36fac57e2"
+      }
+    },
+    {
+      "index": 138,
+      "x": 6530.528237638184,
+      "y": 4016.360275154297,
+      "control": {
+        "x": 6560.494532790161,
+        "y": 4027.276338934571
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 53,
+      "bits": {
+        "x": "40b982873a94f484",
+        "y": "40af60b875fc2a89"
+      },
+      "controlBits": {
+        "x": "40b9a07e99b3708b",
+        "y": "40af768d7c4bfd30"
+      }
+    },
+    {
+      "index": 139,
+      "x": 6590.0097396944275,
+      "y": 4038.0732986143803,
+      "control": {
+        "x": 6619.5249465986935,
+        "y": 4048.8702582941896
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 53,
+      "bits": {
+        "x": "40b9be027e4cf50a",
+        "y": "40af8c2587655f36"
+      },
+      "controlBits": {
+        "x": "40b9db8662e67989",
+        "y": "40afa1bd927ec13c"
+      }
+    },
+    {
+      "index": 140,
+      "x": 6648.589065255248,
+      "y": 4059.5481138735354,
+      "control": {
+        "x": 6677.653183911803,
+        "y": 4070.225969452881
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 53,
+      "bits": {
+        "x": "40b9f896ccfb0680",
+        "y": "40afb718a261b2a3"
+      },
+      "controlBits": {
+        "x": "40ba15a7370f9378",
+        "y": "40afcc73b244a40a"
+      }
+    },
+    {
+      "index": 141,
+      "x": 6706.266214320647,
+      "y": 4080.784720931763,
+      "control": {
+        "x": 6734.879244729492,
+        "y": 4091.3434724106446
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 53,
+      "bits": {
+        "x": "40ba3244269f28e8",
+        "y": "40afe191c6f124d1"
+      },
+      "controlBits": {
+        "x": "40ba4ee1162ebe59",
+        "y": "40aff6afdb9da598"
+      }
+    },
+    {
+      "index": 142,
+      "x": 6763.041186890625,
+      "y": 4101.783119789063,
+      "control": {
+        "x": 6791.203129051758,
+        "y": 4112.222767167481
+      },
+      "originalIndex": 54,
+      "originalSegmentIndex": 54,
+      "bits": {
+        "x": "40ba6b0a8b395c42",
+        "y": "40b005c87a89dae0"
+      },
+      "controlBits": {
+        "x": "40ba87340043fa2b",
+        "y": "40b010390744e2f4"
+      }
+    },
+    {
+      "index": 143,
+      "x": 6819.645410636078,
+      "y": 4122.87245289734,
+      "control": {
+        "x": 6848.087692220398,
+        "y": 4133.522138627198
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 54,
+      "bits": {
+        "x": "40baa3a539a1a672",
+        "y": "40b01adf5912b560"
+      },
+      "controlBits": {
+        "x": "40bac01672ff52b9",
+        "y": "40b02585aae087cb"
+      }
+    },
+    {
+      "index": 144,
+      "x": 6876.810313227905,
+      "y": 4144.381862708497,
+      "control": {
+        "x": 6905.5329342354125,
+        "y": 4155.241586789795
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 54,
+      "bits": {
+        "x": "40badccf70b00d5e",
+        "y": "40b03061c1c1248e"
+      },
+      "controlBits": {
+        "x": "40baf9886e60c804",
+        "y": "40b03b3dd8a1c151"
+      }
+    },
+    {
+      "index": 145,
+      "x": 6934.535894666107,
+      "y": 4166.311349222535,
+      "control": {
+        "x": 6963.538855096802,
+        "y": 4177.381111655273
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 54,
+      "bits": {
+        "x": "40bb168930649108",
+        "y": "40b0464fb495286c"
+      },
+      "controlBits": {
+        "x": "40bb3389f2685a0c",
+        "y": "40b0516190888f86"
+      }
+    },
+    {
+      "index": 146,
+      "x": 6992.822154950683,
+      "y": 4188.660912439453,
+      "control": {
+        "x": 7022.105454804565,
+        "y": 4199.940713223632
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 54,
+      "bits": {
+        "x": "40bb50d278bf316e",
+        "y": "40b05ca9318ec0f8"
+      },
+      "controlBits": {
+        "x": "40bb6e1aff1608d0",
+        "y": "40b067f0d294f26a"
+      }
+    },
+    {
+      "index": 147,
+      "x": 7051.669094081635,
+      "y": 4211.430552359252,
+      "control": {
+        "x": 7081.232733358704,
+        "y": 4222.920391494872
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 54,
+      "bits": {
+        "x": "40bb8bab49bfee92",
+        "y": "40b0736e38adee34"
+      },
+      "controlBits": {
+        "x": "40bba93b9469d452",
+        "y": "40b07eeb9ec6e9fe"
+      }
+    },
+    {
+      "index": 148,
+      "x": 7111.076712058961,
+      "y": 4234.620268981933,
+      "control": {
+        "x": 7140.920690759217,
+        "y": 4246.320146468994
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 54,
+      "bits": {
+        "x": "40bbc713a366c872",
+        "y": "40b08a9ec9f2b020"
+      },
+      "controlBits": {
+        "x": "40bbe4ebb263bc91",
+        "y": "40b09651f51e7642"
+      }
+    },
+    {
+      "index": 149,
+      "x": 7171.04500888266,
+      "y": 4258.230062307495,
+      "control": {
+        "x": 7201.169327006104,
+        "y": 4270.139978145996
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 54,
+      "bits": {
+        "x": "40bc030b85b3bf0e",
+        "y": "40b0a23ae55d06bc"
+      },
+      "controlBits": {
+        "x": "40bc212b5903c18c",
+        "y": "40b0ae23d59b9735"
+      }
+    },
+    {
+      "index": 150,
+      "x": 7231.573984552734,
+      "y": 4282.259932335937,
+      "control": {
+        "x": 7261.978642099364,
+        "y": 4294.379886525879
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 54,
+      "bits": {
+        "x": "40bc3f92f0a6d267",
+        "y": "40b0ba428aecf206"
+      },
+      "controlBits": {
+        "x": "40bc5dfa8849e342",
+        "y": "40b0c661403e4cd7"
+      }
+    },
+    {
+      "index": 151,
+      "x": 7292.663639069183,
+      "y": 4306.709879067261,
+      "control": {
+        "x": 7323.348636039001,
+        "y": 4319.039871608642
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 54,
+      "bits": {
+        "x": "40bc7ca9e440027d",
+        "y": "40b0d2b5baa27200"
+      },
+      "controlBits": {
+        "x": "40bc9b59403621b7",
+        "y": "40b0df0a35069728"
+      }
+    },
+    {
+      "index": 152,
+      "x": 7354.313972432006,
+      "y": 4331.579902501464,
+      "control": {
+        "x": 7385.279308825012,
+        "y": 4344.119933394286
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 54,
+      "bits": {
+        "x": "40bcba50607f4f50",
+        "y": "40b0eb94747d86a8"
+      },
+      "controlBits": {
+        "x": "40bcd94780c87ce9",
+        "y": "40b0f81eb3f47628"
+      }
+    },
+    {
+      "index": 153,
+      "x": 7416.524984641204,
+      "y": 4356.870002638549,
+      "control": {
+        "x": 7447.770660457398,
+        "y": 4369.620071882811
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 54,
+      "bits": {
+        "x": "40bcf8866564b8e0",
+        "y": "40b104deb87e3000"
+      },
+      "controlBits": {
+        "x": "40bd17c54a00f4d8",
+        "y": "40b1119ebd07e9d8"
+      }
+    },
+    {
+      "index": 154,
+      "x": 7479.296675696777,
+      "y": 4382.580179478515,
+      "control": {
+        "x": 7510.8226909361565,
+        "y": 4395.540287074218
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 54,
+      "bits": {
+        "x": "40bd374bf2f03f2d",
+        "y": "40b11e9486a46e08"
+      },
+      "controlBits": {
+        "x": "40bd56d29bdf8982",
+        "y": "40b12b8a5040f238"
+      }
+    },
+    {
+      "index": 155,
+      "x": 7542.629045598724,
+      "y": 4408.710433021362,
+      "control": {
+        "x": 7574.435400261291,
+        "y": 4421.880578968506
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 54,
+      "bits": {
+        "x": "40bd76a10921e236",
+        "y": "40b138b5def040c0"
+      },
+      "controlBits": {
+        "x": "40bd966f76643aea",
+        "y": "40b145e16d9f8f47"
+      }
+    },
+    {
+      "index": 156,
+      "x": 7606.522094347046,
+      "y": 4435.26076326709,
+      "control": {
+        "x": 7638.608788432801,
+        "y": 4448.640947565674
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 54,
+      "bits": {
+        "x": "40bdb685a7f9a1fd",
+        "y": "40b15342c161a826"
+      },
+      "controlBits": {
+        "x": "40bdd69bd98f0910",
+        "y": "40b160a41523c105"
+      }
+    },
+    {
+      "index": 157,
+      "x": 7670.975821941742,
+      "y": 4462.2311702156985,
+      "control": {
+        "x": 7703.342855450684,
+        "y": 4475.821392865722
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 54,
+      "bits": {
+        "x": "40bdf6f9cf777e80",
+        "y": "40b16e3b2df8a43c"
+      },
+      "controlBits": {
+        "x": "40be1757c55ff3f1",
+        "y": "40b17bd246cd8772"
+      }
+    },
+    {
+      "index": 158,
+      "x": 7735.990228382812,
+      "y": 4489.621653867187,
+      "control": {
+        "x": 7768.637601314941,
+        "y": 4503.421914868652
+      },
+      "originalIndex": 55,
+      "originalSegmentIndex": 55,
+      "bits": {
+        "x": "40be37fd7f9b77c0",
+        "y": "40b1899f24b53500"
+      },
+      "controlBits": {
+        "x": "40be58a339d6fb8f",
+        "y": "40b1976c029ce28e"
+      }
+    },
+    {
+      "index": 159,
+      "x": 7800.957561522766,
+      "y": 4517.2450329848325,
+      "control": {
+        "x": 7833.27752173059,
+        "y": 4531.0681511010125
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 55,
+      "bits": {
+        "x": "40be78f522c08030",
+        "y": "40b1a53eba7b504c"
+      },
+      "controlBits": {
+        "x": "40be99470baa04d0",
+        "y": "40b1b3117259be09"
+      }
+    },
+    {
+      "index": 160,
+      "x": 7865.270069214111,
+      "y": 4544.914126331909,
+      "control": {
+        "x": 7897.2626166976315,
+        "y": 4558.760101562804
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 55,
+      "bits": {
+        "x": "40beb94523418a43",
+        "y": "40b1c0ea042eebf6"
+      },
+      "controlBits": {
+        "x": "40bed9433ad90fb6",
+        "y": "40b1cec2960419e2"
+      }
+    },
+    {
+      "index": 161,
+      "x": 7928.927751456848,
+      "y": 4572.628933908416,
+      "control": {
+        "x": 7960.592886216064,
+        "y": 4586.497766254028
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 55,
+      "bits": {
+        "x": "40bef8ed811e95fa",
+        "y": "40b1dca101d007fe"
+      },
+      "controlBits": {
+        "x": "40bf1897c7641c3e",
+        "y": "40b1ea7f6d9bf61a"
+      }
+    },
+    {
+      "index": 162,
+      "x": 7991.930608250976,
+      "y": 4600.389455714355,
+      "control": {
+        "x": 8023.268330285888,
+        "y": 4614.281145174682
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 55,
+      "bits": {
+        "x": "40bf37ee3c57a354",
+        "y": "40b1f863b35ea465"
+      },
+      "controlBits": {
+        "x": "40bf5744b14b2a6a",
+        "y": "40b20647f92152b0"
+      }
+    },
+    {
+      "index": 163,
+      "x": 8054.278639596496,
+      "y": 4628.195691749725,
+      "control": {
+        "x": 8085.288948907104,
+        "y": 4642.110238324767
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 55,
+      "bits": {
+        "x": "40bf764754ecb252",
+        "y": "40b2143218dac12a"
+      },
+      "controlBits": {
+        "x": "40bf9549f88e3a3a",
+        "y": "40b2221c38942fa4"
+      }
+    },
+    {
+      "index": 164,
+      "x": 8115.971845493407,
+      "y": 4656.047642014526,
+      "control": {
+        "x": 8146.654742079711,
+        "y": 4669.985045704284
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 55,
+      "bits": {
+        "x": "40bfb3f8caddc2f3",
+        "y": "40b2300c32445e4e"
+      },
+      "controlBits": {
+        "x": "40bfd2a79d2d4bac",
+        "y": "40b23dfc2bf48cf7"
+      }
+    },
+    {
+      "index": 165,
+      "x": 8177.010225941711,
+      "y": 4683.945306508758,
+      "control": {
+        "x": 8207.365709803711,
+        "y": 4697.905567313232
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 55,
+      "bits": {
+        "x": "40bff1029e2ad538",
+        "y": "40b24bf1ff9b7bd0"
+      },
+      "controlBits": {
+        "x": "40c007aecf942f62",
+        "y": "40b259e7d3426aa8"
+      }
+    },
+    {
+      "index": 166,
+      "x": 8237.393780941406,
+      "y": 4711.888685232421,
+      "control": {
+        "x": 8267.4218520791,
+        "y": 4725.871803151611
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 55,
+      "bits": {
+        "x": "40c016b26769f490",
+        "y": "40b267e380e019b0"
+      },
+      "controlBits": {
+        "x": "40c025b5ff3fb9be",
+        "y": "40b275df2e7dc8b8"
+      }
+    },
+    {
+      "index": 167,
+      "x": 8297.122510492492,
+      "y": 4739.877778185516,
+      "control": {
+        "x": 8326.823168905885,
+        "y": 4753.883753219421
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 55,
+      "bits": {
+        "x": "40c0348fae6c7f56",
+        "y": "40b283e0b61237ef"
+      },
+      "controlBits": {
+        "x": "40c043695d9944ee",
+        "y": "40b291e23da6a726"
+      }
+    },
+    {
+      "index": 168,
+      "x": 8356.196414594971,
+      "y": 4767.912585368042,
+      "control": {
+        "x": 8385.569660284058,
+        "y": 4781.941417516662
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 55,
+      "bits": {
+        "x": "40c05219241d0aee",
+        "y": "40b29fe99f31d68c"
+      },
+      "controlBits": {
+        "x": "40c060c8eaa0d0ee",
+        "y": "40b2adf100bd05f2"
+      }
+    },
+    {
+      "index": 169,
+      "x": 8414.61549324884,
+      "y": 4795.993106779998,
+      "control": {
+        "x": 8443.661326213623,
+        "y": 4810.044796043334
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 55,
+      "bits": {
+        "x": "40c06f4ec87b9757",
+        "y": "40b2bbfe3c3ef587"
+      },
+      "controlBits": {
+        "x": "40c07dd4a6565dc0",
+        "y": "40b2ca0b77c0e51c"
+      }
+    },
+    {
+      "index": 170,
+      "x": 8472.379746454102,
+      "y": 4824.119342421386,
+      "control": {
+        "x": 8501.09816669458,
+        "y": 4838.193888799438
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 55,
+      "bits": {
+        "x": "40c08c309b882492",
+        "y": "40b2d81e8d3994e1"
+      },
+      "controlBits": {
+        "x": "40c09a8c90b9eb64",
+        "y": "40b2e631a2b244a6"
+      }
+    },
+    {
+      "index": 171,
+      "x": 8529.489174210754,
+      "y": 4852.291292292205,
+      "control": {
+        "x": 8557.880181726929,
+        "y": 4866.388695784973
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 55,
+      "bits": {
+        "x": "40c0a8be9d42b29e",
+        "y": "40b2f44a9221b499"
+      },
+      "controlBits": {
+        "x": "40c0b6f0a9cb79d9",
+        "y": "40b302638191248d"
+      }
+    },
+    {
+      "index": 172,
+      "x": 8585.943776518798,
+      "y": 4880.508956392456,
+      "control": {
+        "x": 8614.007371310669,
+        "y": 4894.629216999939
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 55,
+      "bits": {
+        "x": "40c0c4f8cdab417c",
+        "y": "40b310824af754b0"
+      },
+      "controlBits": {
+        "x": "40c0d300f18b0920",
+        "y": "40b31ea1145d84d3"
+      }
+    },
+    {
+      "index": 173,
+      "x": 8641.743553378234,
+      "y": 4908.772334722137,
+      "control": {
+        "x": 8669.4797354458,
+        "y": 4922.915452444336
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 55,
+      "bits": {
+        "x": "40c0e0df2cc1d12c",
+        "y": "40b32cc5b7ba7525"
+      },
+      "controlBits": {
+        "x": "40c0eebd67f89939",
+        "y": "40b33aea5b176577"
+      }
+    },
+    {
+      "index": 174,
+      "x": 8696.888504789062,
+      "y": 4937.0814272812495,
+      "control": {
+        "x": 8724.297274132323,
+        "y": 4951.247402118163
+      },
+      "originalIndex": 56,
+      "originalSegmentIndex": 56,
+      "bits": {
+        "x": "40c0fc71ba8661ae",
+        "y": "40b34914d86b15f8"
+      },
+      "controlBits": {
+        "x": "40c10a260d142a23",
+        "y": "40b3573f55bec679"
+      }
+    },
+    {
+      "index": 175,
+      "x": 8750.309411990478,
+      "y": 4964.703076671294,
+      "control": {
+        "x": 8776.321549848632,
+        "y": 4978.158751224426
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 56,
+      "bits": {
+        "x": "40c117279acfe60c",
+        "y": "40b364b3fcd52dca"
+      },
+      "controlBits": {
+        "x": "40c12429288ba1f4",
+        "y": "40b37228a3eb951c"
+      }
+    },
+    {
+      "index": 176,
+      "x": 8800.937056221679,
+      "y": 4990.904125493774,
+      "control": {
+        "x": 8825.552562594727,
+        "y": 5003.649499763122
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 56,
+      "bits": {
+        "x": "40c13077f1755150",
+        "y": "40b37ee774c4b33d"
+      },
+      "controlBits": {
+        "x": "40c13cc6ba5f00ac",
+        "y": "40b38ba6459dd15e"
+      }
+    },
+    {
+      "index": 177,
+      "x": 8848.771437482665,
+      "y": 5015.684573748687,
+      "control": {
+        "x": 8871.990312370604,
+        "y": 5027.719647734253
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 56,
+      "bits": {
+        "x": "40c14862be76a37a",
+        "y": "40b397af4039a650"
+      },
+      "controlBits": {
+        "x": "40c153fec28e4649",
+        "y": "40b3a3b83ad57b42"
+      }
+    },
+    {
+      "index": 178,
+      "x": 8893.812555773437,
+      "y": 5039.044421436035,
+      "control": {
+        "x": 8915.634799176269,
+        "y": 5050.369195137817
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 56,
+      "bits": {
+        "x": "40c15ee801d3dc8b",
+        "y": "40b3af0b5f340703"
+      },
+      "controlBits": {
+        "x": "40c169d1411972cd",
+        "y": "40b3ba5e839292c4"
+      }
+    },
+    {
+      "index": 179,
+      "x": 8936.060411093993,
+      "y": 5060.983668555817,
+      "control": {
+        "x": 8956.48602301172,
+        "y": 5071.598141973816
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 56,
+      "bits": {
+        "x": "40c17407bb8cfc82",
+        "y": "40b3c4fbd1b3d556"
+      },
+      "controlBits": {
+        "x": "40c17e3e36008638",
+        "y": "40b3cf991fd517e8"
+      }
+    },
+    {
+      "index": 180,
+      "x": 8975.515003444336,
+      "y": 5081.502315108032,
+      "control": {
+        "x": 9013.57296430957,
+        "y": 5101.310661376465
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 56,
+      "bits": {
+        "x": "40c187c1eba20360",
+        "y": "40b3d98097b91149"
+      },
+      "controlBits": {
+        "x": "40c19ac956e4fdb0",
+        "y": "40b3ed4f8781040c"
+      }
+    },
+    {
+      "index": 181,
+      "x": 9046.044399234375,
+      "y": 5118.2778065097655,
+      "control": {
+        "x": 9078.51583415918,
+        "y": 5135.244951643066
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 56,
+      "bits": {
+        "x": "40c1ab05aedfc5ce",
+        "y": "40b3fe471e53d20f"
+      },
+      "controlBits": {
+        "x": "40c1bb4206da8deb",
+        "y": "40b40f3eb526a012"
+      }
+    },
+    {
+      "index": 182,
+      "x": 9105.400743143555,
+      "y": 5149.370895641236,
+      "control": {
+        "x": 9132.285652127928,
+        "y": 5163.496839639405
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 56,
+      "bits": {
+        "x": "40c1c8b34b8d23d5",
+        "y": "40b41d5ef3044956"
+      },
+      "controlBits": {
+        "x": "40c1d624903fb9be",
+        "y": "40b42b7f30e1f29a"
+      }
+    },
+    {
+      "index": 183,
+      "x": 9153.584035171874,
+      "y": 5174.781582502442,
+      "control": {
+        "x": 9196.180801259765,
+        "y": 5197.351068228516
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 56,
+      "bits": {
+        "x": "40c1e0cac1aa1d75",
+        "y": "40b436c815ca771d"
+      },
+      "controlBits": {
+        "x": "40c1f617247ee4e2",
+        "y": "40b44d59df9b8024"
+      }
+    },
+    {
+      "index": 184,
+      "x": 9216.431463585937,
+      "y": 5208.555749414062,
+      "control": {
+        "x": 9236.68212591211,
+        "y": 5219.760430599608
+      },
+      "originalIndex": 57,
+      "originalSegmentIndex": 57,
+      "bits": {
+        "x": "40c200373a32e382",
+        "y": "40b4588e4597f62b"
+      },
+      "controlBits": {
+        "x": "40c20a574fe6e222",
+        "y": "40b463c2ab946c32"
+      }
+    },
+    {
+      "index": 185,
+      "x": 9257.253034948242,
+      "y": 5231.611535699707,
+      "control": {
+        "x": 9277.823943984375,
+        "y": 5243.462640799804
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 57,
+      "bits": {
+        "x": "40c214a06372fdb9",
+        "y": "40b46f9c8d9a8694"
+      },
+      "controlBits": {
+        "x": "40c21ee976ff1950",
+        "y": "40b47b766fa0a0f4"
+      }
+    },
+    {
+      "index": 186,
+      "x": 9298.715099730469,
+      "y": 5255.9601698144525,
+      "control": {
+        "x": 9319.606255476563,
+        "y": 5268.457698829101
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 57,
+      "bits": {
+        "x": "40c2295b886351df",
+        "y": "40b487f5cdb05fae"
+      },
+      "controlBits": {
+        "x": "40c233cd99c78a6e",
+        "y": "40b494752bc01e68"
+      }
+    },
+    {
+      "index": 187,
+      "x": 9340.817657932617,
+      "y": 5281.6016517583,
+      "control": {
+        "x": 9362.029060388671,
+        "y": 5294.7456046874995
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 57,
+      "bits": {
+        "x": "40c23e68a903dff4",
+        "y": "40b4a19a05d9817b"
+      },
+      "controlBits": {
+        "x": "40c24903b840357a",
+        "y": "40b4aebedff2e48e"
+      }
+    },
+    {
+      "index": 188,
+      "x": 9383.560709554687,
+      "y": 5308.5359815312495,
+      "control": {
+        "x": 9405.092358720703,
+        "y": 5322.3263583749995
+      },
+      "originalIndex": 58,
+      "originalSegmentIndex": 58,
+      "bits": {
+        "x": "40c253c7c554a7f8",
+        "y": "40b4bc893615ebfa"
+      },
+      "controlBits": {
+        "x": "40c25e8bd2691a76",
+        "y": "40b4ca538c38f366"
+      }
+    },
+    {
+      "index": 189,
+      "x": 9427.185428044922,
+      "y": 5336.65641022998,
+      "control": {
+        "x": 9449.278497369141,
+        "y": 5350.98646208496
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 58,
+      "bits": {
+        "x": "40c26997bc1b2e5a",
+        "y": "40b4d8a80a803686"
+      },
+      "controlBits": {
+        "x": "40c274a3a5cd423e",
+        "y": "40b4e6fc88c779a6"
+      }
+    },
+    {
+      "index": 190,
+      "x": 9471.932986851563,
+      "y": 5365.856188951171,
+      "control": {
+        "x": 9494.587476333985,
+        "y": 5380.725915817382
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 58,
+      "bits": {
+        "x": "40c27ff76c1cf788",
+        "y": "40b4f5db2f32f87a"
+      },
+      "controlBits": {
+        "x": "40c28b4b326cacd2",
+        "y": "40b504b9d59e774e"
+      }
+    },
+    {
+      "index": 191,
+      "x": 9517.80338597461,
+      "y": 5396.135317694823,
+      "control": {
+        "x": 9541.019295615235,
+        "y": 5411.5447195722645
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 58,
+      "bits": {
+        "x": "40c296e6d55a0382",
+        "y": "40b51422a42e31d6"
+      },
+      "controlBits": {
+        "x": "40c2a28278475a32",
+        "y": "40b5238b72bdec5e"
+      }
+    },
+    {
+      "index": 192,
+      "x": 9564.796625414063,
+      "y": 5427.493796460937,
+      "control": {
+        "x": 9588.57395521289,
+        "y": 5443.44287334961
+      },
+      "originalIndex": 59,
+      "originalSegmentIndex": 59,
+      "bits": {
+        "x": "40c2ae65f7d25248",
+        "y": "40b5337e6971e29b"
+      },
+      "controlBits": {
+        "x": "40c2ba49775d4a5e",
+        "y": "40b543716025d8d8"
+      }
+    },
+    {
+      "index": 193,
+      "x": 9609.125095933594,
+      "y": 5457.328138107422,
+      "control": {
+        "x": 9629.676236654297,
+        "y": 5471.2134028652345
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 59,
+      "bits": {
+        "x": "40c2c4900324bfd3",
+        "y": "40b5515400dbe7f3"
+      },
+      "controlBits": {
+        "x": "40c2ced68eec3548",
+        "y": "40b55f36a191f70e"
+      }
+    },
+    {
+      "index": 194,
+      "x": 9647.001188296876,
+      "y": 5483.0348554921875,
+      "control": {
+        "x": 9681.65109158203,
+        "y": 5506.677760746094
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 59,
+      "bits": {
+        "x": "40c2d78026f0281c",
+        "y": "40b56b08ec4a1f08"
+      },
+      "controlBits": {
+        "x": "40c2e8d356f80dc3",
+        "y": "40b582ad81ba6efc"
+      }
+    },
+    {
+      "index": 195,
+      "x": 9703.396238554687,
+      "y": 5522.065417476562,
+      "control": {
+        "x": 9725.141385527342,
+        "y": 5537.453074207031
+      },
+      "originalIndex": 60,
+      "originalSegmentIndex": 60,
+      "bits": {
+        "x": "40c2f3b2b7f1e8e6",
+        "y": "40b59210bf33226c"
+      },
+      "controlBits": {
+        "x": "40c2fe9218ebc408",
+        "y": "40b5a173fcabd5dc"
+      }
+    },
+    {
+      "index": 196,
+      "x": 9743.336143048828,
+      "y": 5550.713660197265,
+      "control": {
+        "x": 9761.530900570313,
+        "y": 5563.974246187499
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 60,
+      "bits": {
+        "x": "40c307ab06bc44bf",
+        "y": "40b5aeb6b26f47b6"
+      },
+      "controlBits": {
+        "x": "40c310c3f48cc576",
+        "y": "40b5bbf96832b990"
+      }
+    },
+    {
+      "index": 197,
+      "x": 9776.175268640625,
+      "y": 5575.1077614375,
+      "control": {
+        "x": 9805.46400478125,
+        "y": 5597.3747919375
+      },
+      "originalIndex": 61,
+      "originalSegmentIndex": 61,
+      "bits": {
+        "x": "40c318166f33ebc0",
+        "y": "40b5c71b9640e9d5"
+      },
+      "controlBits": {
+        "x": "40c326bb64823854",
+        "y": "40b5dd5ff25d4a5e"
+      }
+    },
+    {
+      "index": 198,
+      "x": 9835.796507976564,
+      "y": 5621.476322109374,
+      "control": {
+        "x": 9866.129011171875,
+        "y": 5645.57785228125
+      },
+      "originalIndex": 62,
+      "originalSegmentIndex": 62,
+      "bits": {
+        "x": "40c335e5f3f92f2c",
+        "y": "40b5f579f03eea20"
+      },
+      "controlBits": {
+        "x": "40c3451083702603",
+        "y": "40b60d93ee2089e3"
+      }
+    },
+    {
+      "index": 199,
+      "x": 9889.186774289063,
+      "y": 5668.09791721875,
+      "control": {
+        "x": 9912.24453740625,
+        "y": 5690.61798215625
+      },
+      "originalIndex": 63,
+      "originalSegmentIndex": 63,
+      "bits": {
+        "x": "40c35097e8384ba1",
+        "y": "40b62419111a543f"
+      },
+      "controlBits": {
+        "x": "40c35c1f4d00713f",
+        "y": "40b63a9e34141e9b"
+      }
+    },
+    {
+      "index": 200,
+      "x": 9928.05918975,
+      "y": 5711.430064640625,
+      "control": {
+        "x": 9943.87384209375,
+        "y": 5732.242147125
+      },
+      "originalIndex": 64,
+      "originalSegmentIndex": 64,
+      "bits": {
+        "x": "40c3640793879c41",
+        "y": "40b64f6e18b75ea6"
+      },
+      "controlBits": {
+        "x": "40c36befda0ec743",
+        "y": "40b6643dfd5a9eb2"
+      }
+    },
+    {
+      "index": 201,
+      "x": 9955.956236484375,
+      "y": 5751.282988546875,
+      "control": {
+        "x": 9968.038630875,
+        "y": 5770.32382996875
+      },
+      "originalIndex": 65,
+      "originalSegmentIndex": 65,
+      "bits": {
+        "x": "40c371fa65f505d1",
+        "y": "40b6774871eff9f8"
+      },
+      "controlBits": {
+        "x": "40c37804f1db445f",
+        "y": "40b68a52e685553f"
+      }
+    },
+    {
+      "index": 202,
+      "x": 9974.649155554687,
+      "y": 5788.004611289062,
+      "control": {
+        "x": 9981.259680234374,
+        "y": 5805.6853926093745
+      },
+      "originalIndex": 66,
+      "originalSegmentIndex": 66,
+      "bits": {
+        "x": "40c37b5317877ab3",
+        "y": "40b69c012e3497b7"
+      },
+      "controlBits": {
+        "x": "40c37ea13d33b107",
+        "y": "40b6adaf75e3da2f"
+      }
+    },
+    {
+      "index": 203,
+      "x": 9983.442102257812,
+      "y": 5827.288207710937,
+      "control": {
+        "x": 9985.62452428125,
+        "y": 5848.8910228125
+      },
+      "originalIndex": 67,
+      "originalSegmentIndex": 67,
+      "bits": {
+        "x": "40c37fb896ce8965",
+        "y": "40b6c349c7fb04ee"
+      },
+      "controlBits": {
+        "x": "40c380cff06961c3",
+        "y": "40b6d8e41a122fad"
+      }
+    },
+    {
+      "index": 204,
+      "x": 9985.62452428125,
+      "y": 5874.447501,
+      "control": {
+        "x": 9985.62452428125,
+        "y": 5900.0039791875
+      },
+      "originalIndex": 68,
+      "originalSegmentIndex": 68,
+      "bits": {
+        "x": "40c380cff06961c3",
+        "y": "40b6f2728f6cefed"
+      },
+      "controlBits": {
+        "x": "40c380cff06961c3",
+        "y": "40b70c0104c7b02d"
+      }
+    },
+    {
+      "index": 205,
+      "x": 9985.62452428125,
+      "y": 5916.040036664062,
+      "control": {
+        "x": 9985.62452428125,
+        "y": 5932.076094140624
+      },
+      "originalIndex": 69,
+      "originalSegmentIndex": 69,
+      "bits": {
+        "x": "40c380cff06961c3",
+        "y": "40b71c0a3fd7c2ca"
+      },
+      "controlBits": {
+        "x": "40c380cff06961c3",
+        "y": "40b72c137ae7d566"
+      }
+    },
+    {
+      "index": 206,
+      "x": 9983.442102257812,
+      "y": 5949.725246156249,
+      "control": {
+        "x": 9981.259680234374,
+        "y": 5967.374398171874
+      },
+      "originalIndex": 70,
+      "originalSegmentIndex": 70,
+      "bits": {
+        "x": "40c37fb896ce8965",
+        "y": "40b73db9a9bb6aa4"
+      },
+      "controlBits": {
+        "x": "40c37ea13d33b107",
+        "y": "40b74f5fd88effe2"
+      }
+    },
+    {
+      "index": 207,
+      "x": 9966.393907031248,
+      "y": 5996.5049877890615,
+      "control": {
+        "x": 9951.528133828124,
+        "y": 6025.6355774062495
+      },
+      "originalIndex": 71,
+      "originalSegmentIndex": 71,
+      "bits": {
+        "x": "40c377326b8bac70",
+        "y": "40b76c8146e136e6"
+      },
+      "controlBits": {
+        "x": "40c36fc399e3a7da",
+        "y": "40b789a2b5336deb"
+      }
+    },
+    {
+      "index": 208,
+      "x": 9924.358561101562,
+      "y": 6056.600666695313,
+      "control": {
+        "x": 9910.773774738282,
+        "y": 6072.083211339844
+      },
+      "originalIndex": 72,
+      "originalSegmentIndex": 72,
+      "bits": {
+        "x": "40c3622de554866a",
+        "y": "40b7a899c54ae42a"
+      },
+      "controlBits": {
+        "x": "40c35b630b0cf5b2",
+        "y": "40b7b8154d569f49"
+      }
+    },
+    {
+      "index": 209,
+      "x": 9894.54003410742,
+      "y": 6087.668551224609,
+      "control": {
+        "x": 9878.306293476562,
+        "y": 6103.253891109374
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 72,
+      "bits": {
+        "x": "40c353451fd66f0c",
+        "y": "40b7c7ab262c4d65"
+      },
+      "controlBits": {
+        "x": "40c34b27349fe868",
+        "y": "40b7d740ff01fb82"
+      }
+    },
+    {
+      "index": 210,
+      "x": 9859.423598578123,
+      "y": 6118.942026234375,
+      "control": {
+        "x": 9840.540903679686,
+        "y": 6134.630161359375
+      },
+      "originalIndex": 73,
+      "originalSegmentIndex": 73,
+      "bits": {
+        "x": "40c341b6387a6bd6",
+        "y": "40b7e6f128a19c9d"
+      },
+      "controlBits": {
+        "x": "40c338453c54ef45",
+        "y": "40b7f6a152413db8"
+      }
+    },
+    {
+      "index": 211,
+      "x": 9804.45186703125,
+      "y": 6159.356370298828,
+      "control": {
+        "x": 9786.40734870703,
+        "y": 6171.719474768554
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 73,
+      "bits": {
+        "x": "40c32639d6c764ae",
+        "y": "40b80f5b3b157abb"
+      },
+      "controlBits": {
+        "x": "40c31d3424009f62",
+        "y": "40b81bb82f7f993d"
+      }
+    },
+    {
+      "index": 212,
+      "x": 9764.061244945311,
+      "y": 6186.342097691894,
+      "control": {
+        "x": 9741.715141183593,
+        "y": 6200.964720615235
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 73,
+      "bits": {
+        "x": "40c31207d6dfd694",
+        "y": "40b82a5793b6deb9"
+      },
+      "controlBits": {
+        "x": "40c306db89bf0dc7",
+        "y": "40b838f6f7ee2436"
+      }
+    },
+    {
+      "index": 213,
+      "x": 9715.067451984374,
+      "y": 6217.846861992188,
+      "control": {
+        "x": 9688.419762785155,
+        "y": 6234.729003369141
+      },
+      "originalIndex": 74,
+      "originalSegmentIndex": 74,
+      "bits": {
+        "x": "40c2f988a2444178",
+        "y": "40b849d8cbf290ac"
+      },
+      "controlBits": {
+        "x": "40c2ec35bac97529",
+        "y": "40b85aba9ff6fd22"
+      }
+    },
+    {
+      "index": 214,
+      "x": 9658.002255833495,
+      "y": 6252.767591198731,
+      "control": {
+        "x": 9627.584748881834,
+        "y": 6270.806179028321
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 74,
+      "bits": {
+        "x": "40c2dd0049eb4d8b",
+        "y": "40b86cc480db573f"
+      },
+      "controlBits": {
+        "x": "40c2cdcad90d25ed",
+        "y": "40b87ece61bfb15c"
+      }
+    },
+    {
+      "index": 215,
+      "x": 9593.397424177732,
+      "y": 6290.001213310547,
+      "control": {
+        "x": 9576.303761825682,
+        "y": 6299.59873045166
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 74,
+      "bits": {
+        "x": "40c2bcb2decba300",
+        "y": "40b892004f83f91f"
+      },
+      "controlBits": {
+        "x": "40c2b426e1aae18a",
+        "y": "40b89b9946661d00"
+      }
+    },
+    {
+      "index": 216,
+      "x": 9558.267645035521,
+      "y": 6309.4853592059335,
+      "control": {
+        "x": 9540.23152824536,
+        "y": 6319.371987960205
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 74,
+      "bits": {
+        "x": "40c2ab2242314940",
+        "y": "40b8a57c40803c4c"
+      },
+      "controlBits": {
+        "x": "40c2a21da2b7b0f6",
+        "y": "40b8af5f3a9a5b96"
+      }
+    },
+    {
+      "index": 217,
+      "x": 9521.252957017088,
+      "y": 6329.547728327637,
+      "control": {
+        "x": 9502.274385788816,
+        "y": 6339.723468695069
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 74,
+      "bits": {
+        "x": "40c298a060e541d8",
+        "y": "40b8b98c37ec764b"
+      },
+      "controlBits": {
+        "x": "40c28f231f12d2ba",
+        "y": "40b8c3b9353e9100"
+      }
+    },
+    {
+      "index": 218,
+      "x": 9482.353360122434,
+      "y": 6350.188320675659,
+      "control": {
+        "x": 9462.432334456053,
+        "y": 6360.65317265625
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 74,
+      "bits": {
+        "x": "40c2852d3ae78cc8",
+        "y": "40b8ce3035c8a71e"
+      },
+      "controlBits": {
+        "x": "40c27b3756bc46d7",
+        "y": "40b8d8a73652bd3c"
+      }
+    },
+    {
+      "index": 219,
+      "x": 9441.56885435156,
+      "y": 6371.40713625,
+      "control": {
+        "x": 9420.705374247069,
+        "y": 6382.16109984375
+      },
+      "originalIndex": 75,
+      "originalSegmentIndex": 75,
+      "bits": {
+        "x": "40c270c8d0382a12",
+        "y": "40b8e3683a14cec4"
+      },
+      "controlBits": {
+        "x": "40c2665a49b40d4d",
+        "y": "40b8ee293dd6e04c"
+      }
+    },
+    {
+      "index": 220,
+      "x": 9401.370479133177,
+      "y": 6391.9745858309325,
+      "control": {
+        "x": 9382.035584019286,
+        "y": 6401.788071818115
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 75,
+      "bits": {
+        "x": "40c25caf6bdc386c",
+        "y": "40b8f7f97e74ff00"
+      },
+      "controlBits": {
+        "x": "40c253048e04638c",
+        "y": "40b901c9bf131db4"
+      }
+    },
+    {
+      "index": 221,
+      "x": 9364.229273895995,
+      "y": 6410.66108019873,
+      "control": {
+        "x": 9328.616653649413,
+        "y": 6428.407096959961
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 75,
+      "bits": {
+        "x": "40c24a1d58d8d690",
+        "y": "40b90aa93c8d4994"
+      },
+      "controlBits": {
+        "x": "40c2384eee81bc98",
+        "y": "40b91c683781a155"
+      }
+    },
+    {
+      "index": 222,
+      "x": 9299.118373365232,
+      "y": 6442.391203294921,
+      "control": {
+        "x": 9269.620093081054,
+        "y": 6456.375309629882
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 75,
+      "bits": {
+        "x": "40c2298f26dbc232",
+        "y": "40b92a6425e62dc6"
+      },
+      "controlBits": {
+        "x": "40c21acf5f35c7cd",
+        "y": "40b93860144aba38"
+      }
+    },
+    {
+      "index": 223,
+      "x": 9246.236152759277,
+      "y": 6466.597505538573,
+      "control": {
+        "x": 9222.8522124375,
+        "y": 6476.819701447265
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 75,
+      "bits": {
+        "x": "40c20f1e3a40ecfa",
+        "y": "40b94298f61f7b5a"
+      },
+      "controlBits": {
+        "x": "40c2036d154c1227",
+        "y": "40b94cd1d7f43c7d"
+      }
+    },
+    {
+      "index": 224,
+      "x": 9205.582612078124,
+      "y": 6483.279986929687,
+      "control": {
+        "x": 9188.31301171875,
+        "y": 6489.740272412109
+      },
+      "originalIndex": 76,
+      "originalSegmentIndex": 76,
+      "bits": {
+        "x": "40c1faca930856e6",
+        "y": "40b95347ad393250"
+      },
+      "controlBits": {
+        "x": "40c1f22810c49ba6",
+        "y": "40b959bd827e2824"
+      }
+    },
+    {
+      "index": 225,
+      "x": 9164.90139575537,
+      "y": 6498.2169260683595,
+      "control": {
+        "x": 9141.489779791991,
+        "y": 6506.69357972461
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 76,
+      "bits": {
+        "x": "40c1e67360efa509",
+        "y": "40b9623788778141"
+      },
+      "controlBits": {
+        "x": "40c1dabeb11aae6c",
+        "y": "40b96ab18e70da5e"
+      }
+    },
+    {
+      "index": 226,
+      "x": 9111.93614822461,
+      "y": 6517.1866015546875,
+      "control": {
+        "x": 9082.382516657228,
+        "y": 6527.679623384765
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 76,
+      "bits": {
+        "x": "40c1cbf7d3b47c74",
+        "y": "40b9752fc51e96c4"
+      },
+      "controlBits": {
+        "x": "40c1bd30f64e4a7c",
+        "y": "40b97fadfbcc532a"
+      }
+    },
+    {
+      "index": 227,
+      "x": 9046.68686948584,
+      "y": 6540.189013388672,
+      "control": {
+        "x": 9028.839045900146,
+        "y": 6546.443708390625
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 76,
+      "bits": {
+        "x": "40c1ab57eb56dd27",
+        "y": "40b98c30632e72da"
+      },
+      "controlBits": {
+        "x": "40c1a26b65db267c",
+        "y": "40b9927196df82b2"
+      }
+    },
+    {
+      "index": 228,
+      "x": 9009.455718413454,
+      "y": 6553.202495436036,
+      "control": {
+        "x": 8990.072390926758,
+        "y": 6559.961282481445
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 76,
+      "bits": {
+        "x": "40c198ba54fb20fc",
+        "y": "40b99933d6bdab5d"
+      },
+      "controlBits": {
+        "x": "40c18f09441b1b7a",
+        "y": "40b99ff6169bd406"
+      }
+    },
+    {
+      "index": 229,
+      "x": 8969.153559539063,
+      "y": 6567.224161570312,
+      "control": {
+        "x": 8948.234728151368,
+        "y": 6574.48704065918
+      },
+      "originalIndex": 77,
+      "originalSegmentIndex": 77,
+      "bits": {
+        "x": "40c18493a7d6c722",
+        "y": "40b9a73962a71583"
+      },
+      "controlBits": {
+        "x": "40c17a1e0b9272ca",
+        "y": "40b9ae7caeb25700"
+      }
+    },
+    {
+      "index": 230,
+      "x": 8928.43280658545,
+      "y": 6581.277457009277,
+      "control": {
+        "x": 8908.630885019531,
+        "y": 6588.067873359375
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 77,
+      "bits": {
+        "x": "40c170376634c900",
+        "y": "40b9b547076c2ce4"
+      },
+      "controlBits": {
+        "x": "40c16650c0d71f36",
+        "y": "40b9bc11602602c9"
+      }
+    },
+    {
+      "index": 231,
+      "x": 8889.94587327539,
+      "y": 6594.385826970703,
+      "control": {
+        "x": 8852.575849787108,
+        "y": 6607.021734193359
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 77,
+      "bits": {
+        "x": "40c15cf912601ffb",
+        "y": "40b9c262c58e6d16"
+      },
+      "controlBits": {
+        "x": "40c14a49b5722185",
+        "y": "40b9cf05905f41af"
+      }
+    },
+    {
+      "index": 232,
+      "x": 8819.673465585936,
+      "y": 6617.767790460937,
+      "control": {
+        "x": 8786.771081384764,
+        "y": 6628.513846728516
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 77,
+      "bits": {
+        "x": "40c139d6341ecd4a",
+        "y": "40b9d9c48dea67e8"
+      },
+      "controlBits": {
+        "x": "40c12962b2cb790f",
+        "y": "40b9e4838b758e22"
+      }
+    },
+    {
+      "index": 233,
+      "x": 8758.336336470702,
+      "y": 6637.370052041017,
+      "control": {
+        "x": 8729.90159155664,
+        "y": 6646.226257353515
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 77,
+      "bits": {
+        "x": "40c11b2b0d12cf0f",
+        "y": "40b9ed5ebbbb05fc"
+      },
+      "controlBits": {
+        "x": "40c10cf3675a250f",
+        "y": "40b9f639ec007dd4"
+      }
+    },
+    {
+      "index": 234,
+      "x": 8705.934485929687,
+      "y": 6653.192611710938,
+      "control": {
+        "x": 8681.967380302734,
+        "y": 6660.158966068359
+      },
+      "originalIndex": 78,
+      "originalSegmentIndex": 78,
+      "bits": {
+        "x": "40c100f79d3c254a",
+        "y": "40b9fd314f00474e"
+      },
+      "controlBits": {
+        "x": "40c0f4fbd31e2585",
+        "y": "40ba0428b20010c7"
+      }
+    },
+    {
+      "index": 235,
+      "x": 8657.444785012207,
+      "y": 6666.915776282227,
+      "control": {
+        "x": 8632.92218972168,
+        "y": 6673.672586496094
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 78,
+      "bits": {
+        "x": "40c0e8b8eeb71c97",
+        "y": "40ba0aea70507e9e"
+      },
+      "controlBits": {
+        "x": "40c0dc760a5013a9",
+        "y": "40ba11ac2ea0ec74"
+      }
+    },
+    {
+      "index": 236,
+      "x": 8607.844104767577,
+      "y": 6680.219852566406,
+      "control": {
+        "x": 8582.766019813476,
+        "y": 6686.767118636719
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 78,
+      "bits": {
+        "x": "40c0cfec0ba00192",
+        "y": "40ba18384841fea8"
+      },
+      "controlBits": {
+        "x": "40c0c3620cefef7c",
+        "y": "40ba1ec461e310dc"
+      }
+    },
+    {
+      "index": 237,
+      "x": 8557.1324451958,
+      "y": 6693.1048405634765,
+      "control": {
+        "x": 8531.498870578125,
+        "y": 6699.442562490234
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 78,
+      "bits": {
+        "x": "40c0b690f3f6d43d",
+        "y": "40ba251ad6d4c76d"
+      },
+      "controlBits": {
+        "x": "40c0a9bfdafdb8fe",
+        "y": "40ba2b714bc67dfe"
+      }
+    },
+    {
+      "index": 238,
+      "x": 8505.309806296875,
+      "y": 6705.570740273437,
+      "control": {
+        "x": 8479.120742015624,
+        "y": 6711.69891805664
+      },
+      "originalIndex": 79,
+      "originalSegmentIndex": 79,
+      "bits": {
+        "x": "40c09ca7a7bb9496",
+        "y": "40ba31921c08d8ec"
+      },
+      "controlBits": {
+        "x": "40c08f8f7479702e",
+        "y": "40ba37b2ec4b33da"
+      }
+    },
+    {
+      "index": 239,
+      "x": 8452.87434961963,
+      "y": 6717.813258019043,
+      "control": {
+        "x": 8426.627957223633,
+        "y": 6723.927597981445
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 79,
+      "bits": {
+        "x": "40c0826feab036ca",
+        "y": "40ba3dd031ad7300"
+      },
+      "controlBits": {
+        "x": "40c0755060e6fd65",
+        "y": "40ba43ed770fb224"
+      }
+    },
+    {
+      "index": 240,
+      "x": 8400.324236712891,
+      "y": 6730.028100123047,
+      "control": {
+        "x": 8374.020516202148,
+        "y": 6736.128602264648
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 79,
+      "bits": {
+        "x": "40c068298096af04",
+        "y": "40ba4a073191d580"
+      },
+      "controlBits": {
+        "x": "40c05b02a04660a2",
+        "y": "40ba5020ec13f8db"
+      }
+    },
+    {
+      "index": 241,
+      "x": 8347.659467576661,
+      "y": 6742.215266585449,
+      "control": {
+        "x": 8321.298418951172,
+        "y": 6748.301930906249
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 79,
+      "bits": {
+        "x": "40c04dd4696efd44",
+        "y": "40ba56371bb6006d"
+      },
+      "controlBits": {
+        "x": "40c040a6329799e5",
+        "y": "40ba5c4d4b5807fe"
+      }
+    },
+    {
+      "index": 242,
+      "x": 8294.880042210938,
+      "y": 6754.37475740625,
+      "control": {
+        "x": 8268.461665470702,
+        "y": 6760.447583906251
+      },
+      "originalIndex": 80,
+      "originalSegmentIndex": 80,
+      "bits": {
+        "x": "40c03370a539218a",
+        "y": "40ba625ff019f3c7"
+      },
+      "controlBits": {
+        "x": "40c0263b17daa92e",
+        "y": "40ba687294dbdf90"
+      }
+    },
+    {
+      "index": 243,
+      "x": 8242.013636257325,
+      "y": 6766.215978348633,
+      "control": {
+        "x": 8215.565607043945,
+        "y": 6771.984372791016
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 80,
+      "bits": {
+        "x": "40c01901bed537a0",
+        "y": "40ba6e374a5b6806"
+      },
+      "controlBits": {
+        "x": "40c00bc865cfc611",
+        "y": "40ba73fbffdaf07c"
+      }
+    },
+    {
+      "index": 244,
+      "x": 8189.087925357422,
+      "y": 6777.448335175782,
+      "control": {
+        "x": 8162.610243670899,
+        "y": 6782.912297560548
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 80,
+      "bits": {
+        "x": "40bffd168246b69e",
+        "y": "40ba7972c61815a1"
+      },
+      "controlBits": {
+        "x": "40bfe29c38ede11a",
+        "y": "40ba7ee98c553ac6"
+      }
+    },
+    {
+      "index": 245,
+      "x": 8136.10290951123,
+      "y": 6788.071827887696,
+      "control": {
+        "x": 8109.595575351563,
+        "y": 6793.231358214844
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 80,
+      "bits": {
+        "x": "40bfc81a5847192e",
+        "y": "40ba8412634ffc98"
+      },
+      "controlBits": {
+        "x": "40bfad9877a05144",
+        "y": "40ba893b3a4abe6a"
+      }
+    },
+    {
+      "index": 246,
+      "x": 8083.05858871875,
+      "y": 6798.086456484375,
+      "control": {
+        "x": 8056.521602085937,
+        "y": 6802.9415547539065
+      },
+      "originalIndex": 81,
+      "originalSegmentIndex": 81,
+      "bits": {
+        "x": "40bf930effab96f2",
+        "y": "40ba8e1622031ceb"
+      },
+      "controlBits": {
+        "x": "40bf788587b6dca0",
+        "y": "40ba92f109bb7b6c"
+      }
+    },
+    {
+      "index": 247,
+      "x": 8030.611271052247,
+      "y": 6807.440823345703,
+      "control": {
+        "x": 8004.700940018554,
+        "y": 6811.9400919375
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 81,
+      "bits": {
+        "x": "40bf5e9c7c427a64",
+        "y": "40ba9770d9cc7d1c"
+      },
+      "controlBits": {
+        "x": "40bf44b370ce1826",
+        "y": "40ba9bf0a9dd7ecc"
+      }
+    },
+    {
+      "index": 248,
+      "x": 7979.417264583984,
+      "y": 6816.0835308515625,
+      "control": {
+        "x": 7954.133589149414,
+        "y": 6820.226969765625
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 81,
+      "bits": {
+        "x": "40bf2b6ad1da0dfe",
+        "y": "40baa015624723ab"
+      },
+      "controlBits": {
+        "x": "40bf122232e603d5",
+        "y": "40baa43a1ab0c88a"
+      }
+    },
+    {
+      "index": 249,
+      "x": 7929.476569313965,
+      "y": 6824.014579001953,
+      "control": {
+        "x": 7904.819549478515,
+        "y": 6827.802188238282
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 81,
+      "bits": {
+        "x": "40bef97a007251c2",
+        "y": "40baa803bb731099"
+      },
+      "controlBits": {
+        "x": "40bee0d1cdfe9fad",
+        "y": "40baabcd5c3558a8"
+      }
+    },
+    {
+      "index": 250,
+      "x": 7880.789185242187,
+      "y": 6831.233967796875,
+      "control": {
+        "x": 7856.758821005859,
+        "y": 6834.665747355468
+      },
+      "originalIndex": 82,
+      "originalSegmentIndex": 82,
+      "bits": {
+        "x": "40bec8ca080b45ae",
+        "y": "40baaf3be55043e5"
+      },
+      "controlBits": {
+        "x": "40beb0c24217ebaf",
+        "y": "40bab2aa6e6b2f22"
+      }
+    },
+    {
+      "index": 251,
+      "x": 7832.84706666211,
+      "y": 6838.358468677734,
+      "control": {
+        "x": 7808.935312318359,
+        "y": 6842.051189999999
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 82,
+      "bits": {
+        "x": "40be98d8d95c5b4b",
+        "y": "40bab65bc49a6f82"
+      },
+      "controlBits": {
+        "x": "40be80ef70a0cae6",
+        "y": "40baba0d1ac9afe1"
+      }
+    },
+    {
+      "index": 252,
+      "x": 7785.142167867187,
+      "y": 6846.004853085937,
+      "control": {
+        "x": 7761.349023416015,
+        "y": 6849.958516171874
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 82,
+      "bits": {
+        "x": "40be6924651d041c",
+        "y": "40babe013e0d4562"
+      },
+      "controlBits": {
+        "x": "40be515959993d53",
+        "y": "40bac1f56150dae3"
+      }
+    },
+    {
+      "index": 253,
+      "x": 7737.674488857421,
+      "y": 6854.173121021483,
+      "control": {
+        "x": 7713.999954298828,
+        "y": 6858.387725871093
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 82,
+      "bits": {
+        "x": "40be39acab4d4024",
+        "y": "40bac62c51a8c585"
+      },
+      "controlBits": {
+        "x": "40be21fffd0142f6",
+        "y": "40baca634200b028"
+      }
+    },
+    {
+      "index": 254,
+      "x": 7690.444029632812,
+      "y": 6862.863272484375,
+      "control": {
+        "x": 7666.888104966796,
+        "y": 6867.338819097657
+      },
+      "originalIndex": 83,
+      "originalSegmentIndex": 83,
+      "bits": {
+        "x": "40be0a71abed0f62",
+        "y": "40bacedcff6cefed"
+      },
+      "controlBits": {
+        "x": "40bdf2e35ad8dbce",
+        "y": "40bad356bcd92fb2"
+      }
+    },
+    {
+      "index": 255,
+      "x": 7643.342064458496,
+      "y": 6871.543539789551,
+      "control": {
+        "x": 7619.7960239501945,
+        "y": 6875.748260481445
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 83,
+      "bits": {
+        "x": "40bddb5791894e5d",
+        "y": "40bad78b256c7432"
+      },
+      "controlBits": {
+        "x": "40bdc3cbc839c0eb",
+        "y": "40badbbf8dffb8b2"
+      }
+    },
+    {
+      "index": 256,
+      "x": 7596.259867599609,
+      "y": 6879.682155251952,
+      "control": {
+        "x": 7572.723711249023,
+        "y": 6883.6160500224605
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 83,
+      "bits": {
+        "x": "40bdac4286aed99c",
+        "y": "40badfaea1ba01ee"
+      },
+      "controlBits": {
+        "x": "40bd94b94523f24d",
+        "y": "40bae39db5744b2b"
+      }
+    },
+    {
+      "index": 257,
+      "x": 7549.197439056152,
+      "y": 6887.279118871582,
+      "control": {
+        "x": 7525.671166863281,
+        "y": 6890.942187720703
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 83,
+      "bits": {
+        "x": "40bd7d328b5db120",
+        "y": "40bae74774559924"
+      },
+      "controlBits": {
+        "x": "40bd65abd1976ff3",
+        "y": "40baeaf13336e71d"
+      }
+    },
+    {
+      "index": 258,
+      "x": 7502.154778828124,
+      "y": 6894.334430648438,
+      "control": {
+        "x": 7478.6383907929685,
+        "y": 6897.726673576172
+      },
+      "originalIndex": 84,
+      "originalSegmentIndex": 84,
+      "bits": {
+        "x": "40bd4e279f95d4e8",
+        "y": "40baee559d3f39d2"
+      },
+      "controlBits": {
+        "x": "40bd36a36d9439de",
+        "y": "40baf1ba07478c87"
+      }
+    },
+    {
+      "index": 259,
+      "x": 7455.6320252958985,
+      "y": 6900.806577120117,
+      "control": {
+        "x": 7432.625659798828,
+        "y": 6903.886480664063
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 84,
+      "bits": {
+        "x": "40bd1fa1cc68e821",
+        "y": "40baf4ce7bd6909b"
+      },
+      "controlBits": {
+        "x": "40bd08a02b3d9663",
+        "y": "40baf7e2f06594b0"
+      }
+    },
+    {
+      "index": 260,
+      "x": 7410.129316839843,
+      "y": 6906.6540448242185,
+      "control": {
+        "x": 7387.632973880859,
+        "y": 6909.421608984375
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 84,
+      "bits": {
+        "x": "40bcf2211ae88df3",
+        "y": "40bafaa76f7b4a23"
+      },
+      "controlBits": {
+        "x": "40bcdba20a938583",
+        "y": "40bafd6bee90ff97"
+      }
+    },
+    {
+      "index": 261,
+      "x": 7365.64665345996,
+      "y": 6911.876833760742,
+      "control": {
+        "x": 7343.660333039063,
+        "y": 6914.332058537109
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 84,
+      "bits": {
+        "x": "40bcc5a58b14c660",
+        "y": "40baffe0782d666a"
+      },
+      "controlBits": {
+        "x": "40bcafa90b96073e",
+        "y": "40bb025501c9cd3e"
+      }
+    },
+    {
+      "index": 262,
+      "x": 7322.18403515625,
+      "y": 6916.4749439296875,
+      "control": {
+        "x": 7300.707737273437,
+        "y": 6918.617829322266
+      },
+      "originalIndex": 85,
+      "originalSegmentIndex": 85,
+      "bits": {
+        "x": "40bc9a2f1ced9168",
+        "y": "40bb047995ece571"
+      },
+      "controlBits": {
+        "x": "40bc84b52e451b92",
+        "y": "40bb069e2a0ffda4"
+      }
+    },
+    {
+      "index": 263,
+      "x": 7273.967136991698,
+      "y": 6921.07107726709,
+      "control": {
+        "x": 7247.226536709961,
+        "y": 6923.524325211914
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 85,
+      "bits": {
+        "x": "40bc69f7964a3618",
+        "y": "40bb0912321ea9a4"
+      },
+      "controlBits": {
+        "x": "40bc4f39fe4f50a0",
+        "y": "40bb0b863a2d55a4"
+      }
+    },
+    {
+      "index": 264,
+      "x": 7215.221634029296,
+      "y": 6926.287935708984,
+      "control": {
+        "x": 7183.216731348632,
+        "y": 6929.051546206055
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 85,
+      "bits": {
+        "x": "40bc2f38bd01fb82",
+        "y": "40bb0e49b6279570"
+      },
+      "controlBits": {
+        "x": "40bc0f377bb4a664",
+        "y": "40bb110d3221d53d"
+      }
+    },
+    {
+      "index": 265,
+      "x": 7145.947526269042,
+      "y": 6932.125519255371,
+      "control": {
+        "x": 7108.678321189453,
+        "y": 6935.199492304688
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 85,
+      "bits": {
+        "x": "40bbe9f29114e1a3",
+        "y": "40bb14202207a8d6"
+      },
+      "controlBits": {
+        "x": "40bbc4ada6751ce2",
+        "y": "40bb173311ed7c70"
+      }
+    },
+    {
+      "index": 266,
+      "x": 7066.144813710936,
+      "y": 6938.58382790625,
+      "control": {
+        "x": 7044.878059971679,
+        "y": 6940.275995707031
+      },
+      "originalIndex": 86,
+      "originalSegmentIndex": 86,
+      "bits": {
+        "x": "40bb9a251282e87c",
+        "y": "40bb1a9575bee3d6"
+      },
+      "controlBits": {
+        "x": "40bb84e0c889ce4a",
+        "y": "40bb1c46a7a79789"
+      }
+    },
+    {
+      "index": 267,
+      "x": 7023.485777429442,
+      "y": 6941.756642532715,
+      "control": {
+        "x": 7002.093494887206,
+        "y": 6943.237289358398
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 86,
+      "bits": {
+        "x": "40bb6f7c5be8dc97",
+        "y": "40bb1dc1b35334c6"
+      },
+      "controlBits": {
+        "x": "40bb5a17ef47eae5",
+        "y": "40bb1f3cbefed202"
+      }
+    },
+    {
+      "index": 268,
+      "x": 6980.575683541992,
+      "y": 6944.5064152089835,
+      "control": {
+        "x": 6959.057872196777,
+        "y": 6945.77554105957
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 86,
+      "bits": {
+        "x": "40bb44935fff21b3",
+        "y": "40bb2081a46d58c8"
+      },
+      "controlBits": {
+        "x": "40bb2f0ed0b65881",
+        "y": "40bb21c689dbdf8f"
+      }
+    },
+    {
+      "index": 269,
+      "x": 6937.414532048583,
+      "y": 6946.833145935058,
+      "control": {
+        "x": 6915.7711919003905,
+        "y": 6947.890750810548
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 86,
+      "bits": {
+        "x": "40bb196a1ec5b7cf",
+        "y": "40bb22d5490d4fdf"
+      },
+      "controlBits": {
+        "x": "40bb03c56cd5171e",
+        "y": "40bb23e4083ec030"
+      }
+    },
+    {
+      "index": 270,
+      "x": 6894.002322949218,
+      "y": 6948.736834710938,
+      "control": {
+        "x": 6872.233453998046,
+        "y": 6949.582918611328
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 86,
+      "bits": {
+        "x": "40baee00983c9eec",
+        "y": "40bb24bca1331a09"
+      },
+      "controlBits": {
+        "x": "40bad83bc3a426ba",
+        "y": "40bb25953a2773e2"
+      }
+    },
+    {
+      "index": 271,
+      "x": 6850.339056243896,
+      "y": 6950.217481536622,
+      "control": {
+        "x": 6828.444658489745,
+        "y": 6950.852044461914
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 86,
+      "bits": {
+        "x": "40bac256cc63d70a",
+        "y": "40bb2637acdeb746"
+      },
+      "controlBits": {
+        "x": "40baac71d5238758",
+        "y": "40bb26da1f95faa9"
+      }
+    },
+    {
+      "index": 272,
+      "x": 6806.424731932617,
+      "y": 6951.27508641211,
+      "control": {
+        "x": 6784.404805375488,
+        "y": 6951.6981283623045
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 86,
+      "bits": {
+        "x": "40ba966cbb3b6028",
+        "y": "40bb27466c102796"
+      },
+      "controlBits": {
+        "x": "40ba8067a15338f7",
+        "y": "40bb27b2b88a5482"
+      }
+    },
+    {
+      "index": 273,
+      "x": 6762.25935001538,
+      "y": 6951.909649337403,
+      "control": {
+        "x": 6740.113894655273,
+        "y": 6952.1211703125
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 86,
+      "bits": {
+        "x": "40ba6a4264c33a46",
+        "y": "40bb27e8dec76af9"
+      },
+      "controlBits": {
+        "x": "40ba541d28333b96",
+        "y": "40bb281f0504816f"
+      }
+    },
+    {
+      "index": 274,
+      "x": 6717.842910492187,
+      "y": 6952.1211703125,
+      "control": {
+        "x": 6695.571926329101,
+        "y": 6952.1211703125
+      },
+      "originalIndex": 87,
+      "originalSegmentIndex": 87,
+      "bits": {
+        "x": "40ba3dd7c8fb6566",
+        "y": "40bb281f0504816f"
+      },
+      "controlBits": {
+        "x": "40ba279269c38f36",
+        "y": "40bb281f0504816f"
+      }
+    },
+    {
+      "index": 275,
+      "x": 6674.893279973876,
+      "y": 6952.017386656494,
+      "control": {
+        "x": 6654.214633618652,
+        "y": 6951.913603000488
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 87,
+      "bits": {
+        "x": "40ba12e4adff11f8",
+        "y": "40bb28047373b107"
+      },
+      "controlBits": {
+        "x": "40b9fe36f23a94bc",
+        "y": "40bb27e9e1e2e0a0"
+      }
+    },
+    {
+      "index": 276,
+      "x": 6635.128325071289,
+      "y": 6951.706035688476,
+      "control": {
+        "x": 6596.955707976562,
+        "y": 6951.290901064453
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 87,
+      "bits": {
+        "x": "40b9eb20d9e97071",
+        "y": "40bb27b4bec13fd0"
+      },
+      "controlBits": {
+        "x": "40b9c4f4a94727dc",
+        "y": "40bb274a787dfe32"
+      }
+    },
+    {
+      "index": 277,
+      "x": 6565.152442113281,
+      "y": 6950.460631816406,
+      "control": {
+        "x": 6533.34917625,
+        "y": 6949.6303625683595
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 87,
+      "bits": {
+        "x": "40b9a52706724313",
+        "y": "40bb2675ebf77af6"
+      },
+      "controlBits": {
+        "x": "40b98559639d5e4a",
+        "y": "40bb25a15f70f7ba"
+      }
+    },
+    {
+      "index": 278,
+      "x": 6507.915261618164,
+      "y": 6948.384958696289,
+      "control": {
+        "x": 6482.4813469863275,
+        "y": 6947.139554824219
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 87,
+      "bits": {
+        "x": "40b96bea4e95dd4c",
+        "y": "40bb24628ca732df"
+      },
+      "controlBits": {
+        "x": "40b9527b398e5c4e",
+        "y": "40bb2323b9dd6e05"
+      }
+    },
+    {
+      "index": 279,
+      "x": 6463.416783585937,
+      "y": 6945.479016328125,
+      "control": {
+        "x": 6444.352220185547,
+        "y": 6943.818477832031
+      },
+      "originalIndex": 88,
+      "originalSegmentIndex": 88,
+      "bits": {
+        "x": "40b93f6ab2543f1c",
+        "y": "40bb217aa0d0678c"
+      },
+      "controlBits": {
+        "x": "40b92c5a2b1a21ea",
+        "y": "40bb1fd187c36113"
+      }
+    },
+    {
+      "index": 280,
+      "x": 6418.155248578125,
+      "y": 6939.639455950195,
+      "control": {
+        "x": 6391.958276970703,
+        "y": 6935.460434068359
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 88,
+      "bits": {
+        "x": "40b91227be5eedcc",
+        "y": "40bb1ba3b3629952"
+      },
+      "controlBits": {
+        "x": "40b8f7f551a3b9ae",
+        "y": "40bb1775df01d191"
+      }
+    },
+    {
+      "index": 281,
+      "x": 6358.628897156249,
+      "y": 6928.762928800781,
+      "control": {
+        "x": 6325.299517341797,
+        "y": 6922.065423533203
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 88,
+      "bits": {
+        "x": "40b8d6a0ff676ea3",
+        "y": "40bb10c34f4d4888"
+      },
+      "controlBits": {
+        "x": "40b8b54cad2b239a",
+        "y": "40bb0a10bf98bf7f"
+      }
+    },
+    {
+      "index": 282,
+      "x": 6284.837729320312,
+      "y": 6912.849434879883,
+      "control": {
+        "x": 6264.60683530957,
+        "y": 6908.241440553223
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 88,
+      "bits": {
+        "x": "40b88cd6756dc1a4",
+        "y": "40bb00d97490752e"
+      },
+      "controlBits": {
+        "x": "40b8789b598f10a9",
+        "y": "40bafc3dcf0c5005"
+      }
+    },
+    {
+      "index": 283,
+      "x": 6242.59283924707,
+      "y": 6903.003825380127,
+      "control": {
+        "x": 6220.57884318457,
+        "y": 6897.766210207031
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 88,
+      "bits": {
+        "x": "40b86297c45019f3",
+        "y": "40baf700fab33a8a"
+      },
+      "controlBits": {
+        "x": "40b84c942f11233e",
+        "y": "40baf1c4265a250f"
+      }
+    },
+    {
+      "index": 284,
+      "x": 6196.781745070312,
+      "y": 6891.898974187499,
+      "control": {
+        "x": 6172.984646956054,
+        "y": 6886.031738167968
+      },
+      "originalIndex": 89,
+      "originalSegmentIndex": 89,
+      "bits": {
+        "x": "40b834c82071e6cd",
+        "y": "40baebe6232c1f42"
+      },
+      "controlBits": {
+        "x": "40b81cfc11d2aa5c",
+        "y": "40bae6081ffe1975"
+      }
+    },
+    {
+      "index": 285,
+      "x": 6151.510325904785,
+      "y": 6880.582602019775,
+      "control": {
+        "x": 6130.036004853516,
+        "y": 6875.133465871581
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 89,
+      "bits": {
+        "x": "40b80782a4b7ef5a",
+        "y": "40bae0952567ed84"
+      },
+      "controlBits": {
+        "x": "40b7f209379d3459",
+        "y": "40badb222ad1c193"
+      }
+    },
+    {
+      "index": 286,
+      "x": 6110.884460865234,
+      "y": 6870.102429594726,
+      "control": {
+        "x": 6072.5813728886715,
+        "y": 6860.040357041014
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 89,
+      "bits": {
+        "x": "40b7dee26c06fac6",
+        "y": "40bad61a38d36f7e"
+      },
+      "controlBits": {
+        "x": "40b7b894d4da87a0",
+        "y": "40bacc0a54d6cb52"
+      }
+    },
+    {
+      "index": 287,
+      "x": 6043.569393164063,
+      "y": 6851.650683972655,
+      "control": {
+        "x": 6014.557413439454,
+        "y": 6843.261010904296
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 89,
+      "bits": {
+        "x": "40b79b91c3c01a37",
+        "y": "40bac3a693398e96"
+      },
+      "controlBits": {
+        "x": "40b77e8eb2a5acce",
+        "y": "40babb42d19c51da"
+      }
+    },
+    {
+      "index": 288,
+      "x": 5994.836541966797,
+      "y": 6836.543737321288,
+      "control": {
+        "x": 5975.11567049414,
+        "y": 6829.826463738281
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 89,
+      "bits": {
+        "x": "40b76ad6279d4520",
+        "y": "40bab48b325e7c8c"
+      },
+      "controlBits": {
+        "x": "40b7571d9c94dd72",
+        "y": "40baadd39320a73f"
+      }
+    },
+    {
+      "index": 289,
+      "x": 5964.685907273437,
+      "y": 6824.781589640625,
+      "control": {
+        "x": 5943.826380832031,
+        "y": 6814.691841445312
+      },
+      "originalIndex": 90,
+      "originalSegmentIndex": 90,
+      "bits": {
+        "x": "40b74caf979e7b80",
+        "y": "40baa8c816423960"
+      },
+      "controlBits": {
+        "x": "40b737d38db1b79d",
+        "y": "40ba9eb11c855da2"
+      }
+    },
+    {
+      "index": 290,
+      "x": 5911.754265878906,
+      "y": 6797.888773330078,
+      "control": {
+        "x": 5895.718208402343,
+        "y": 6789.487239272461
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 90,
+      "bits": {
+        "x": "40b717c117919264",
+        "y": "40ba8de386a6223e"
+      },
+      "controlBits": {
+        "x": "40b707b7dc817fc7",
+        "y": "40ba857cbbb6848c"
+      }
+    },
+    {
+      "index": 291,
+      "x": 5876.879003797851,
+      "y": 6779.407375234863,
+      "control": {
+        "x": 5858.039799193359,
+        "y": 6769.327511197265
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 90,
+      "bits": {
+        "x": "40b6f4e1066494d4",
+        "y": "40ba7b6849be4ef0"
+      },
+      "controlBits": {
+        "x": "40b6e20a3047a9e2",
+        "y": "40ba7153d7c61954"
+      }
+    },
+    {
+      "index": 292,
+      "x": 5836.397447460937,
+      "y": 6757.569317179687,
+      "control": {
+        "x": 5814.755095728515,
+        "y": 6745.811123162109
+      },
+      "originalIndex": 91,
+      "originalSegmentIndex": 91,
+      "bits": {
+        "x": "40b6cc65bf1de69a",
+        "y": "40ba6591bec54bce"
+      },
+      "controlBits": {
+        "x": "40b6b6c14df42352",
+        "y": "40ba59cfa5c47e49"
+      }
+    },
+    {
+      "index": 293,
+      "x": 5793.650442175781,
+      "y": 6734.157701216309,
+      "control": {
+        "x": 5772.545788623046,
+        "y": 6722.504279270507
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 91,
+      "bits": {
+        "x": "40b6a1a68360e0eb",
+        "y": "40ba4e285f1b5e96"
+      },
+      "controlBits": {
+        "x": "40b68c8bb8cd9e83",
+        "y": "40ba428118723ee1"
+      }
+    },
+    {
+      "index": 294,
+      "x": 5751.978833249999,
+      "y": 6710.955629396483,
+      "control": {
+        "x": 5731.4118778769525,
+        "y": 6699.4069795224605
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 91,
+      "bits": {
+        "x": "40b677fa94d0dcfc",
+        "y": "40ba36f4a420ccfe"
+      },
+      "controlBits": {
+        "x": "40b6636970d41b75",
+        "y": "40ba2b682fcf5b1c"
+      }
+    },
+    {
+      "index": 295,
+      "x": 5711.382620683593,
+      "y": 6687.963101720214,
+      "control": {
+        "x": 5691.353363490234,
+        "y": 6676.519223917969
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 91,
+      "bits": {
+        "x": "40b64f61f36ddace",
+        "y": "40ba1ff68dd5970a"
+      },
+      "controlBits": {
+        "x": "40b63b5a76079a28",
+        "y": "40ba1484ebdbd2fa"
+      }
+    },
+    {
+      "index": 296,
+      "x": 5671.861804476563,
+      "y": 6665.1801181875,
+      "control": {
+        "x": 5632.878686449219,
+        "y": 6642.501906726562
+      },
+      "originalIndex": 92,
+      "originalSegmentIndex": 92,
+      "bits": {
+        "x": "40b627dc9f37da62",
+        "y": "40ba092e1c39bcba"
+      },
+      "controlBits": {
+        "x": "40b600e0f1985ad5",
+        "y": "40b9f2807cf5903a"
+      }
+    },
+    {
+      "index": 297,
+      "x": 5605.274210783202,
+      "y": 6626.703069035157,
+      "control": {
+        "x": 5577.669735117187,
+        "y": 6610.904231343749
+      },
+      "originalIndex": null,
+      "originalSegmentIndex": 92,
+      "bits": {
+        "x": "40b5e54632ad8a10",
+        "y": "40b9e2b3fc5510d4"
+      },
+      "controlBits": {
+        "x": "40b5c9ab73c2b94d",
+        "y": "40b9d2e77bb4916c"
+      }
+    },
+    {
+      "index": 298,
+      "x": 5561.4439018124995,
+      "y": 6601.9847674218745,
+      "control": {
+        "x": 5528.992235203124,
+        "y": 6584.145839578125
+      },
+      "originalIndex": 93,
+      "originalSegmentIndex": 93,
+      "bits": {
+        "x": "40b5b971a38c9752",
+        "y": "40b9c9fc19b7bf1e"
+      },
+      "controlBits": {
+        "x": "40b598fe0320535c",
+        "y": "40b9b82555be1a82"
+      }
+    },
+    {
+      "index": 299,
+      "x": 5504.321377546874,
+      "y": 6565.800842859375,
+      "control": {
+        "x": 5479.650519890624,
+        "y": 6547.455846140625
+      },
+      "originalIndex": 94,
+      "originalSegmentIndex": 94,
+      "bits": {
+        "x": "40b5805245cc857e",
+        "y": "40b9a5cd0409a240"
+      },
+      "controlBits": {
+        "x": "40b567a68878b7a1",
+        "y": "40b99374b25529fe"
+      }
+    },
+    {
+      "index": 300,
+      "x": 5457.763041046875,
+      "y": 6528.952702898438,
+      "control": {
+        "x": 5435.875562203125,
+        "y": 6510.449559656249
+      },
+      "originalIndex": 95,
+      "originalSegmentIndex": 95,
+      "bits": {
+        "x": "40b551c356a875d5",
+        "y": "40b980f3e4564f98"
+      },
+      "controlBits": {
+        "x": "40b53be024d83409",
+        "y": "40b96e7316577531"
+      }
+    },
+    {
+      "index": 301,
+      "x": 5416.486798429687,
+      "y": 6491.47197684375,
+      "control": {
+        "x": 5397.09803465625,
+        "y": 6472.49439403125
+      },
+      "originalIndex": 96,
+      "originalSegmentIndex": 96,
+      "bits": {
+        "x": "40b5287c9ed26740",
+        "y": "40b95b78d3797460"
+      },
+      "controlBits": {
+        "x": "40b5151918cc9a78",
+        "y": "40b9487e909b738e"
+      }
+    },
+    {
+      "index": 302,
+      "x": 5381.979227015625,
+      "y": 6455.003388539062,
+      "control": {
+        "x": 5366.860419375,
+        "y": 6437.512383046875
+      },
+      "originalIndex": 97,
+      "originalSegmentIndex": 97,
+      "bits": {
+        "x": "40b505faae9f2778",
+        "y": "40b93700de124074"
+      },
+      "controlBits": {
+        "x": "40b4f6dc4471b478",
+        "y": "40b925832b890d5a"
+      }
+    },
+    {
+      "index": 303,
+      "x": 5366.860419375,
+      "y": 6437.512383046875,
+      "control": {
+        "x": 0,
+        "y": 0
+      },
+      "originalIndex": 98,
+      "originalSegmentIndex": 98,
+      "bits": {
+        "x": "40b4f6dc4471b478",
+        "y": "40b925832b890d5a"
+      },
+      "controlBits": {
+        "x": "0000000000000000",
+        "y": "0000000000000000"
+      }
+    }
+  ],
+  "elapsedMilliseconds": 1673.637208
+}

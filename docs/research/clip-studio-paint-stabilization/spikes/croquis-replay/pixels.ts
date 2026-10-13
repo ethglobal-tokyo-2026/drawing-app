@@ -1,14 +1,38 @@
 import { InkEngine } from "../../../../../apps/frontend/src/sticker-creation/canvas/inkEngine.ts";
-import { InkSurface } from "../../../../../apps/frontend/src/sticker-creation/canvas/inkSurface.ts";
+import { FIRST_POST_CORRECTION } from "../../../../../apps/frontend/src/sticker-creation/canvas/post-correction/settings.ts";
+import { LayerInk } from "../../../../../apps/frontend/src/sticker-creation/layers/layerInk.ts";
+import { LayerDisplay } from "../../../../../apps/frontend/src/sticker-creation/layers/layerDisplay.ts";
+import {
+  FIRST_LAYER,
+  FIRST_LAYERS,
+} from "../../../../../apps/frontend/src/sticker-creation/layers/layerState.ts";
 
 const base = [
-  { tool: "brush", color: "#db244b", T: 0, pts: [30, 90, 30, 0, 230, 90, 30, 300] },
-  { tool: "brush", color: "#207cbe", T: 0, pts: [120, 30, 23, 0, 120, 210, 23, 300] },
+  {
+    tool: "brush",
+    layer: FIRST_LAYER,
+    color: "#db244b",
+    T: 0,
+    pts: [30, 90, 30, 0, 230, 90, 30, 300],
+  },
+  {
+    tool: "brush",
+    layer: FIRST_LAYER,
+    color: "#207cbe",
+    T: 0,
+    pts: [120, 30, 23, 0, 120, 210, 23, 300],
+  },
 ];
 function make() {
-  const canvas = document.createElement("canvas");
-  const surface = new InkSurface(canvas);
-  return { canvas, surface };
+  const surface = new LayerInk();
+  return {
+    surface,
+    get canvas() {
+      const canvas = surface.layerCanvas(FIRST_LAYER);
+      if (!canvas) throw new Error("Expected ink on the first layer");
+      return canvas;
+    },
+  };
 }
 const read = (c: HTMLCanvasElement) =>
   c.getContext("2d")!.getImageData(0, 0, c.width, c.height).data;
@@ -42,15 +66,21 @@ export function runPixels() {
   for (const tool of ["brush", "eraser"] as const) {
     const live = make(),
       replay = make();
+    const host = document.createElement("div");
+    document.body.append(host);
+    const display = new LayerDisplay(host, live.surface);
     let commit: any = null;
-    let frame: ((t: number) => void) | null = null;
+    const scheduled: { frame: ((t: number) => void) | null } = { frame: null };
     const engine = new InkEngine(
       live.surface,
+      display,
       {
         tool,
+        fillReference: "layer",
         color: "#262020",
         size: 16,
         smoothing: 35,
+        postCorrection: FIRST_POST_CORRECTION,
         locked: false,
         paused: false,
         panelOpen: false,
@@ -64,22 +94,29 @@ export function runPixels() {
           commit = structuredClone(op);
         },
         onBlocked() {},
-        onDismissPanel() {},
+        onBlockedHidden() {},
+        onLayers() {},
+        onInkFailed(error) {
+          throw error;
+        },
         onPen() {},
         onHover() {},
       },
-      (cb) => {
-        frame = cb;
-        return () => {
-          frame = null;
-        };
+      {
+        now: () => 360,
+        request(cb) {
+          scheduled.frame = cb;
+          return () => {
+            scheduled.frame = null;
+          };
+        },
       },
     );
     engine.fit({ width: 374, height: 748 }, 1);
     replay.surface.setFrame(engine.frame!);
     base.forEach((op) => {
-      live.surface.apply(op as any);
-      replay.surface.apply(op as any);
+      live.surface.apply(op as any, FIRST_LAYERS);
+      replay.surface.apply(op as any, FIRST_LAYERS);
     });
     const at = (i: number) => ({
       pointerId: 1,
@@ -97,19 +134,21 @@ export function runPixels() {
     engine.down(at(0));
     for (let i = 1; i <= 45; i++) {
       engine.move(at(i));
-      const cb = frame;
-      frame = null;
+      const cb = scheduled.frame;
+      scheduled.frame = null;
       cb?.(i * 8);
     }
-    engine.up(at(45));
+    engine.up({ ...at(45), pressure: 0, buttons: 0 });
     if (!commit) throw new Error("Missing terminal operation");
-    replay.surface.apply(commit);
+    replay.surface.apply(commit, FIRST_LAYERS);
     results.push({
       test: "current_engine_terminal_vs_final_operation_replay",
       tool,
       ...compare(live.canvas, replay.canvas),
     });
     engine.dispose();
+    replay.surface.releaseAll();
+    host.remove();
   }
   for (const tool of ["brush", "eraser"] as const) {
     const live = make(),
@@ -117,28 +156,30 @@ export function runPixels() {
       stale = make();
     [live, replay, stale].forEach(({ surface }) => {
       surface.setFrame(shape);
-      base.forEach((op) => surface.apply(op as any));
+      base.forEach((op) => surface.apply(op as any, FIRST_LAYERS));
     });
-    const before = live.surface.snapshot();
+    const before = live.surface.hold(FIRST_LAYER);
     const provisional = {
       tool,
+      layer: FIRST_LAYER,
       color: "#28201b",
       T: 0,
       pts: [40, 65, 17, 0, 130, 95, 17, 100, 210, 135, 17, 200],
     };
     const corrected = {
       tool,
+      layer: FIRST_LAYER,
       color: "#28201b",
       T: 0,
       pts: [40, 65, 17, 0, 130, 115, 17, 100, 210, 135, 17, 200],
     };
-    live.surface.apply(provisional);
-    stale.surface.apply(provisional);
-    live.surface.restore(before);
-    live.surface.apply(corrected);
-    live.surface.discard(before);
-    replay.surface.apply(corrected);
-    stale.surface.apply(corrected);
+    live.surface.apply(provisional, FIRST_LAYERS);
+    stale.surface.apply(provisional, FIRST_LAYERS);
+    live.surface.restore(FIRST_LAYER, before);
+    live.surface.apply(corrected, FIRST_LAYERS);
+    live.surface.release(before);
+    replay.surface.apply(corrected, FIRST_LAYERS);
+    stale.surface.apply(corrected, FIRST_LAYERS);
     results.push({
       test: "explicit_terminal_replacement_vs_corrected_replay",
       tool,
@@ -149,12 +190,13 @@ export function runPixels() {
       tool,
       ...compare(stale.canvas, replay.canvas),
     });
+    [live, replay, stale].forEach(({ surface }) => surface.releaseAll());
   }
   return {
     browser: navigator.userAgent,
     results,
     boundary:
-      "Real Canvas2D via exported InkEngine/InkSurface/paintStroke. Explicit correction is synthetic; no CSP offline correction or generalized production terminal replacement is implemented. No device input or display timing measured.",
+      "Real Canvas2D via current InkEngine/LayerInk/LayerDisplay/paintStroke. Comparison reads committed layer pixels, not display screenshots. Explicit correction remains synthetic; it does not run the separate reconstructed post-correction pipeline. No device input or display timing measured.",
   };
 }
 (globalThis as any).runPixels = runPixels;

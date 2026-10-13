@@ -1,0 +1,109 @@
+{
+  "scope": "Standalone native debugger wait benchmark; no CSP attachment or input. Not a measurement of CSP capture throughput.",
+  "reports": [
+    {
+      "mode": "event",
+      "workers": 0,
+      "stop_count": 192,
+      "elapsed_seconds": 0.924904834,
+      "median_resume_to_stop_seconds": 0.003976666999999989,
+      "exit_status": 0
+    },
+    {
+      "mode": "event",
+      "workers": 24,
+      "stop_count": 192,
+      "elapsed_seconds": 2.491392417,
+      "median_resume_to_stop_seconds": 0.011247792000000034,
+      "exit_status": 0
+    },
+    {
+      "mode": "poll",
+      "workers": 0,
+      "stop_count": 192,
+      "elapsed_seconds": 1.4161385410000005,
+      "median_resume_to_stop_seconds": 0.006794000000000189,
+      "exit_status": 0
+    },
+    {
+      "mode": "poll",
+      "workers": 24,
+      "stop_count": 192,
+      "elapsed_seconds": 3.6345932079999996,
+      "median_resume_to_stop_seconds": 0.016843749500000005,
+      "exit_status": 0
+    }
+  ],
+  "files": [
+    {
+      "path": "evidence/debugger-access/stop-wait-benchmark-20261011/poll-0.json",
+      "sha256": "93013147609101dd440d0784a84741324ff0a27099894e20f7128b6497891dd9"
+    },
+    {
+      "path": "evidence/debugger-access/stop-wait-benchmark-20261011/event-0.log",
+      "sha256": "bc3a88fccf6759665fef8cbe7f9d6c6da4d4fa790aa80c19cb76c80fe22935ae"
+    },
+    {
+      "path": "evidence/debugger-access/stop-wait-benchmark-20261011/poll-0.log",
+      "sha256": "3de7558eeaed8a96b64975066d4fcf2a167c76177a9d3b47b9ac53b8c40fb7a4"
+    },
+    {
+      "path": "evidence/debugger-access/stop-wait-benchmark-20261011/poll-24.log",
+      "sha256": "843f4abb12de4094ea4065137a2b24f5b102e8a429f412881d1a0659c9a34380"
+    },
+    {
+      "path": "evidence/debugger-access/stop-wait-benchmark-20261011/poll-24.json",
+      "sha256": "76629fb646ad88886a11f1e19649a7dba3698258f00c4970fa81df05753816c1"
+    },
+    {
+      "path": "evidence/debugger-access/stop-wait-benchmark-20261011/event-24.json",
+      "sha256": "c591eadeb71786c78d9ef6d6abb2a7b8969969ef09aaf681e07f243e06438555"
+    },
+    {
+      "path": "evidence/debugger-access/stop-wait-benchmark-20261011/benchmark_stop_wait",
+      "sha256": "ffa31fbb98198fa2005bead90972ba11e448b6b8a273a2c5c532fddce89e9663"
+    },
+    {
+      "path": "evidence/debugger-access/stop-wait-benchmark-20261011/event-24.log",
+      "sha256": "060a782adf5a5e6000becb36e511c0ca329ed571a313255c415214a70634a216"
+    },
+    {
+      "path": "evidence/debugger-access/stop-wait-benchmark-20261011/event-0.json",
+      "sha256": "fbeca91381e34f02f49fe95dc52aede4596d468c7444334498feac73f71892b0"
+    },
+    {
+      "path": "evidence/debugger-access/stop-wait-benchmark-20261011/source-snapshot/benchmark_stop_wait.c",
+      "sha256": "3220b12512084e60c68634dea1074e71c7bf3d0b35390eaf17c649122a252e3c",
+      "original_source_path": "spikes/live-capture/benchmark_stop_wait.c"
+    },
+    {
+      "path": "evidence/debugger-access/stop-wait-benchmark-20261011/source-snapshot/benchmark_stop_wait.py",
+      "sha256": "44c0c364e77d2b8b21b4b6108e6472d63b67e71de3b128b2a7b472a62c0a9c4b",
+      "original_source_path": "spikes/live-capture/benchmark_stop_wait.py"
+    },
+    {
+      "path": "spikes/live-capture/capture_live_contract.py",
+      "sha256": "8be826104a46c8332c105c83fdb1b73c26a4468eeb3b100a7e9f1defa662afcb"
+    },
+    {
+      "path": "spikes/live-capture/check_capture_helper.py",
+      "sha256": "568c3a6b274a8bd8baf777ca43378282199123dd6cc6a4e4bd3a16f8213fa171"
+    },
+    {
+      "path": "evidence/debugger-access/stop-wait-benchmark-20261011/README.md",
+      "sha256": "b40ea8493750ae775aa2a8cf6f5efa579b04278a5209312d8dedacc9ac644200"
+    },
+    {
+      "path": "evidence/debugger-access/stop-wait-benchmark-20261011/host-verification.txt",
+      "sha256": "2e42bf56cb8472f071e2a7f4f783bd70f2a915f2fd4dd46fd0d011ff5be07df7"
+    },
+    {
+      "path": "evidence/debugger-access/stop-wait-benchmark-20261011/launcher-verification.txt",
+      "sha256": "60bb849356ffbc091f601e17fc6ae0b2eb5e26d734d433da020c6e775efbf97f"
+    },
+    {
+      "path": "spikes/live-capture/record_tablet_stroke.py",
+      "sha256": "3875783afc79ba0a499dcc662759f4e7ea78519156881ebe014dd69aeb0315f4"
+    }
+  ]
+}

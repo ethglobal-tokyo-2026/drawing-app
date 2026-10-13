@@ -1,0 +1,42 @@
+[WebServer] (node:96958) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] Sticker chain mode is mock; nothing is minted or given on Sui
+[WebServer] The chat menu and the giver's messages are off under DEV_SIGN_IN=on
+[WebServer] ⚠ DEV_SIGN_IN=on: anyone can sign in as anyone. The REST API trusts dev access tokens without asking LINE.
+[WebServer] (node:97478) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 12 tests using 2 workers
+
+(node:97621) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:97620) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   2 [chromium] › e2e/pencil.e2e.ts:87:1 › a hovering pen rings where it will land, as wide as the stroke it draws, and the ring goes as it lands or leaves (6.2s)
+  ✓   1 [chromium] › e2e/pencil.e2e.ts:62:1 › a pen's first stroke brings the Pencil only tile; fingers then only tap, until the tile lets them draw (8.5s)
+  ✓   4 [chromium] › e2e/pencil.e2e.ts:146:1 › at Smooth, a pen's line trails its nib, stays still without new packets, and finishes on release (7.5s)
+  ✓   3 [chromium] › e2e/pencil.e2e.ts:118:1 › pen pressure: a pen whose pressure never moves draws by speed; then strokes widen as they press harder, and start as light as they land (10.3s)
+[WebServer] 3:51:39 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 3:51:39 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 3:51:43 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 3:51:43 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+  ✓   5 [chromium] › e2e/pencil.e2e.ts:182:1 › once a pen has drawn here, a palm never draws, and a resting palm doesn't hold up two-finger undo (8.8s)
+(node:99679) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   6 [chromium] › e2e/pencil.e2e.ts:212:1 › Settings shows Input and Pen pressure once a pen has drawn on the device, and Try it takes the pen (16.8s)
+(node:99762) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 3:52:00 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 3:52:00 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+  ✓   7 [webkit] › e2e/pencil.e2e.ts:62:1 › a pen's first stroke brings the Pencil only tile; fingers then only tap, until the tile lets them draw (11.9s)
+  ✓   8 [webkit] › e2e/pencil.e2e.ts:87:1 › a hovering pen rings where it will land, as wide as the stroke it draws, and the ring goes as it lands or leaves (9.9s)
+  ✓  10 [webkit] › e2e/pencil.e2e.ts:146:1 › at Smooth, a pen's line trails its nib, stays still without new packets, and finishes on release (8.1s)
+  ✓   9 [webkit] › e2e/pencil.e2e.ts:118:1 › pen pressure: a pen whose pressure never moves draws by speed; then strokes widen as they press harder, and start as light as they land (16.7s)
+[WebServer] 3:52:20 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 3:52:20 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 3:52:24 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+[WebServer] 3:52:24 PM [vite] (client) [console.warn] There's no Sui address: Privy is off under LIFF Mock
+  ✓  11 [webkit] › e2e/pencil.e2e.ts:182:1 › once a pen has drawn here, a palm never draws, and a resting palm doesn't hold up two-finger undo (11.8s)
+  ✓  12 [webkit] › e2e/pencil.e2e.ts:212:1 › Settings shows Input and Pen pressure once a pen has drawn on the device, and Try it takes the pen (22.4s)
+
+  12 passed (1.5m)

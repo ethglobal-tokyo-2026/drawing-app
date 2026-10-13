@@ -157,10 +157,28 @@ class StrokeContract:
             self.native_release_seen = True
             self.end_seen = True
 
+    def window_reset_at_source_return(self, raw):
+        """Recognize the observed terminal H=I change; its writer was not traced."""
+        if not (self.started and self.pending is None and self.pending_source_kind in (6, 9)
+                and self.final_pair is not None and not self.final_from_flush
+                and self.fixture_calls[-1] == self.final_pair
+                and self.previous_exit is not None and state(self.previous_exit) == 0
+                and state(raw) == 0 and raw != self.previous_exit):
+            return False
+        expected = bytearray(self.previous_exit)
+        # Configuration 0x102136764..768 has this effect. The capture establishes
+        # the boundary change, not that this particular setter executed.
+        initial = struct.unpack_from('<i', self.previous_exit, 0x50)[0]
+        if not 0 <= initial <= 1000:
+            return False
+        struct.pack_into('<d', expected, 0x58, float(initial))
+        return raw == bytes(expected)
+
     def source_return(self, raw):
         shared.require(self.started and self.pending_source_kind is not None and self.pending is None,
                        'Unmatched native source return')
-        shared.require(raw == self.previous_exit, 'Queue changed before native source returned')
+        shared.require(raw == self.previous_exit or self.window_reset_at_source_return(raw),
+                       'Queue changed before native source returned')
         shared.require(state(raw) in (0, 2), 'Ending source returned outside idle or pending-end state')
         if state(raw) == 0:
             shared.require(self.final_pair is not None, 'Ending source returned idle without final emitted phase')
@@ -450,7 +468,9 @@ class TabletCapture(shared.Capture):
         raw = self.memory(self.digitizer_queue, 236)
         values = self.active_globals()
         self.write('native_source_return', **saved, queue=shared.queue_record(self.digitizer_queue, raw),
-                   active_globals=values)
+                   active_globals=values,
+                   observed_terminal_window_reset=self.stroke.window_reset_at_source_return(raw),
+                   terminal_window_reset_writer_observed=False)
         self.check_globals(values)
         self.stroke.source_return(raw)
         self.source_boundary = None
@@ -510,22 +530,10 @@ class TabletCapture(shared.Capture):
         print('CSP tablet capture active; waiting for one new pen stroke. Instrumented capture <=30s.', flush=True)
         while True:
             last_stop = self.wait_capture_stop(last_stop)
-            hits = []
-            for index in range(self.process.GetNumThreads()):
-                thread = self.process.GetThreadAtIndex(index)
-                reason = thread.GetStopReason()
-                if reason == shared.lldb.eStopReasonNone:
-                    continue
-                data = [thread.GetStopReasonDataAtIndex(i) for i in range(thread.GetStopReasonDataCount())]
-                self.write('thread_stop', thread_id=thread.GetThreadID(), reason=int(reason), data=data)
-                shared.require(reason == shared.lldb.eStopReasonBreakpoint and len(data) == 2,
-                               f'Unexpected stop reason/data on thread {thread.GetThreadID()}')
-                shared.require(data[0] in self.callbacks, f'Unowned breakpoint {data[0]} stopped capture')
-                address, callback = self.callbacks[data[0]]
-                shared.require(thread.GetFrameAtIndex(0).GetPC() == address, 'Stopped PC differs from breakpoint')
-                hits.append((thread, callback))
-            shared.require(len(hits) == 1, 'Capture requires one unambiguous ordered breakpoint stop')
-            thread, callback = hits[0]
+            source_threads = set(self.latest_source_by_thread)
+            if self.source_boundary is not None:
+                source_threads.add(self.source_boundary['thread_id'])
+            thread, callback = self.collect_breakpoint_hit(self.callbacks, last_stop, source_threads)
             callback(thread)
             if self.stroke.complete:
                 shared.require(not any(self.pending.values()), 'Completed stroke retains unmatched calls')
@@ -633,6 +641,8 @@ def run(debugger, pid, output_path, timeout_seconds=30, max_calls=512, *,
                            initial_history_count=None if recorder.stroke.initial_history is None
                            else len(recorder.stroke.initial_history), unmatched_entries=unmatched,
                            cleanup_errors=recorder.cleanup_errors, cleanup_warnings=recorder.cleanup_warnings,
+                           workqueue_step_recoveries=recorder.workqueue_step_recoveries,
+                           capture_warnings=recorder.capture_warnings,
                            watchdog_error=recorder.watchdog_error, deadline_exceeded=overrun,
                            detach_request_succeeded=recorder.detach_request_succeeded,
                            detached_state_observed=recorder.detached_state_observed,
@@ -644,5 +654,7 @@ def run(debugger, pid, output_path, timeout_seconds=30, max_calls=512, *,
               f'detached_observed={recorder.detached_state_observed}', flush=True)
         return {'output_path': str(output_path), 'fixture_complete': recorder.capture_complete,
                 'paired_calls': recorder.pairs, 'stop_reason': recorder.stop_reason,
+                'workqueue_step_recoveries': recorder.workqueue_step_recoveries,
+                'capture_warnings': recorder.capture_warnings,
                 'detached_state_observed': recorder.detached_state_observed,
                 'cleanup_errors': recorder.cleanup_errors, 'resume_independently_verified': False}

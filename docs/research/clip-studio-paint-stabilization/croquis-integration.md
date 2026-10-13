@@ -1,5 +1,27 @@
 # Croquis pen pipeline: implementation handoff
 
+**October 11 integration:** The former One Euro filter below has been replaced
+by the shared reconstructed CSP queue. Pen input now offers fixed (default),
+slow-drawing adjustment at strengths 0–30, and fast-drawing adjustment from
+strength 3; outside those ranges the respective choice uses fixed behavior.
+Mouse and touch remain fixed. The choice is captured at stroke start and kept
+with the session; older sessions default to fixed. Read the [current controls
+and verification](spikes/croquis-post-correction/README.md) and the [initial live
+integration](spikes/croquis-stabilization/README.md) for production files,
+browser input choices, scope and performance. Four automated
+[joined native captures](spikes/post-joined/native-validation-20261011.md) now
+match the selected ordinary Bézier-off profile. The deployed implementation uses
+its captured endpoint responses, with 1,530 further exact standalone native
+comparisons. Source cache/copy selection is observed rather than replayed;
+browser/OS acquisition and natural feel remain unproved. Feature `d229c59e` was
+merged, pushed, and deployed normally. The public check found a WebKit width
+rounding difference; follow-up main `b6128209` fixes only Croquis attribute
+transfer and passes 2,567 frontend tests and 22 browser cases. It is deployed
+at https://stickeroo.art/ with five served assets byte-exact and both public
+browser worker checks passing; see the [delivery record](spikes/post-joined/delivery-20261011.md).
+The remainder of this document
+preserves the dated source audit; its old filter equations are historical.
+
 Read-only source audit on 2026-10-09. No app files were changed and no app test suite was run. The audited source checkout reports HEAD ebe0d143f134d7e28cd2da386044a8327f0fe10b. Exact commands and numbered source output, including the constants below, are in [croquis-source.txt](evidence/croquis-source.txt). Source line numbers refer to that snapshot.
 
 “Existing” below means observed in Croquis source. “Recovered” means reported by the separate installed-CSP static-analysis artifacts; this audit did not independently trace that executable. “Recommendation” means a proposed integration choice, not an existing behavior or proof of equivalence to CSP.

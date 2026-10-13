@@ -1,0 +1,230 @@
+[
+  {
+    "address": "0x1042e93c4",
+    "text": "N5boost3_bi6bind_tINS0_11unspecifiedENS_4_mfi2mfIMN12Planeswalker4Urza21URBrushSizeControllerEFjRNS5_7PWEventEEjS7_JS9_EEENS0_4listIJNS0_5valueIPS7_EENS_3argILi1EEEEEEEE"
+  },
+  {
+    "address": "0x1042ee83f",
+    "text": "?N12Planeswalker4Urza21URBrushSizeControllerE"
+  },
+  {
+    "address": "0x1042ee86d",
+    "text": "N12Planeswalker13PWControllerTINS_4Urza16URBrushSizeModelENS_12PWControllerEEE"
+  },
+  {
+    "address": "0x1042ee8bd",
+    "text": "N5boost6detail17sp_counted_impl_pIN12Planeswalker4Urza21URBrushSizeControllerEEE"
+  },
+  {
+    "address": "0x1042eea00",
+    "text": "N12Planeswalker4Urza16URBrushSizeModelE"
+  },
+  {
+    "address": "0x1042eea29",
+    "text": "N5boost6detail17sp_counted_impl_pIN12Planeswalker4Urza16URBrushSizeModelEEE"
+  },
+  {
+    "address": "0x1042eead7",
+    "text": "N5boost3_bi6bind_tINS0_11unspecifiedENS_4_mfi2mfIMN12Planeswalker4Urza16URBrushSizeModelEFjRNS5_7PWEventEEjS7_JS9_EEENS0_4listIJNS0_5valueIPS7_EENS_3argILi1EEEEEEEE"
+  },
+  {
+    "address": "0x1042eebd1",
+    "text": "N12Planeswalker4Urza15URBrushSizeViewE"
+  },
+  {
+    "address": "0x1042eebf8",
+    "text": "N5boost6detail17sp_counted_impl_pIN12Planeswalker4Urza15URBrushSizeViewEEE"
+  },
+  {
+    "address": "0x1042eec43",
+    "text": "N5boost3_bi6bind_tINS0_11unspecifiedENS_4_mfi2mfIMN12Planeswalker4Urza15URBrushSizeViewEFjRNS5_7PWEventEEjS7_JS9_EEENS0_4listIJNS0_5valueIPS7_EENS_3argILi1EEEEEEEE"
+  },
+  {
+    "address": "0x1045528ee",
+    "text": "I@N12Planeswalker17PWBrushSizeChangeE"
+  },
+  {
+    "address": "0x104566198",
+    "text": "N5boost6detail17sp_counted_impl_pIN12Planeswalker17PWBrushSizeChangeEEE"
+  },
+  {
+    "address": "0x1045e1c55",
+    "text": "palettekindbrushsize"
+  },
+  {
+    "address": "0x1045e2a8a",
+    "text": "BrushSize"
+  },
+  {
+    "address": "0x1045e31d4",
+    "text": "brushsizeviewinfosettingversion"
+  },
+  {
+    "address": "0x1045e31f4",
+    "text": "brushsizeviewinfoopendetailkey"
+  },
+  {
+    "address": "0x1045e3213",
+    "text": "brushsizepreset"
+  },
+  {
+    "address": "0x1045e3223",
+    "text": "brushsizebrushsize"
+  },
+  {
+    "address": "0x1045e3236",
+    "text": "brushsizeviewindex"
+  },
+  {
+    "address": "0x1045e3249",
+    "text": "URBrushSizeView"
+  },
+  {
+    "address": "0x1045e33a9",
+    "text": "brushSize"
+  },
+  {
+    "address": "0x1045e9701",
+    "text": "windowshowbrushsizepalette"
+  },
+  {
+    "address": "0x1045e9d3c",
+    "text": "windowbubblebrushsizepalette"
+  },
+  {
+    "address": "0x1045ea2ea",
+    "text": "windowbubbleshowbrushsizepalette"
+  },
+  {
+    "address": "0x1045ea929",
+    "text": "windowbubblehidebrushsizepalette"
+  },
+  {
+    "address": "0x1045eaf4d",
+    "text": "phonebubblebrushsizepalette"
+  },
+  {
+    "address": "0x1045eb4a9",
+    "text": "phonebubbleshowbrushsizepalette"
+  },
+  {
+    "address": "0x1045ebab5",
+    "text": "phonebubblehidebrushsizepalette"
+  },
+  {
+    "address": "0x1045ec6cd",
+    "text": "brushsizevisibleslider"
+  },
+  {
+    "address": "0x1045ec6e4",
+    "text": "brushsizeaddpreset"
+  },
+  {
+    "address": "0x1045ec6f7",
+    "text": "brushsizedeletepreset"
+  },
+  {
+    "address": "0x1045ec70d",
+    "text": "brushsizedeletepresetcontext"
+  },
+  {
+    "address": "0x1045ef912",
+    "text": "brushsize.png"
+  },
+  {
+    "address": "0x1045f5c17",
+    "text": "drawonrulerbrushsize"
+  },
+  {
+    "address": "0x1045f8550",
+    "text": "brushsize"
+  },
+  {
+    "address": "0x1045f8739",
+    "text": "mixpalettebrushsizesmall"
+  },
+  {
+    "address": "0x1045f8752",
+    "text": "mixpalettebrushsizemiddle"
+  },
+  {
+    "address": "0x1045f876c",
+    "text": "mixpalettebrushsizelarge"
+  },
+  {
+    "address": "0x1045fa3b7",
+    "text": "OptionShowBrushSize"
+  },
+  {
+    "address": "0x1045fce0c",
+    "text": "SetBrushSize"
+  },
+  {
+    "address": "0x1045fcf1e",
+    "text": "IsToolBrushSizeAvailable"
+  },
+  {
+    "address": "0x1045fcf4c",
+    "text": "CurrentToolBrushSize"
+  },
+  {
+    "address": "0x1045feb1c",
+    "text": "toolbrushsizeparent"
+  },
+  {
+    "address": "0x1045fecee",
+    "text": "toolbrushsizepaletteparent"
+  },
+  {
+    "address": "0x1046012a2",
+    "text": "kObservableViewIDUXBrusSliderViewBrushSizeSliderSet"
+  },
+  {
+    "address": "0x10464ab70",
+    "text": "UseBrushSizeDisturb"
+  },
+  {
+    "address": "0x10464ab84",
+    "text": "BrushSizeDisturb"
+  },
+  {
+    "address": "0x10464d4bb",
+    "text": "BrushSizeUnit"
+  },
+  {
+    "address": "0x10464d4c9",
+    "text": "BrushSizeEffector"
+  },
+  {
+    "address": "0x10464d4db",
+    "text": "BrushSizeSyncViewScale"
+  },
+  {
+    "address": "0x10464d963",
+    "text": "BrushSpraySizeSyncBrushSize"
+  },
+  {
+    "address": "0x10464dd9e",
+    "text": "SyncDualBrushSize"
+  },
+  {
+    "address": "0x10464e147",
+    "text": "DualSpraySizeSyncBrushSize"
+  },
+  {
+    "address": "0x10464f02f",
+    "text": "StreamBrushSize"
+  },
+  {
+    "address": "0x10464f03f",
+    "text": "StreamBrushSizeUnit"
+  },
+  {
+    "address": "0x10464f053",
+    "text": "StreamUseBrushSizeDisturb"
+  },
+  {
+    "address": "0x10464f06d",
+    "text": "StreamBrushSizeDisturb"
+  }
+]

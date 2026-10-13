@@ -1,0 +1,9 @@
+{
+  "utc": "2026-10-11T18:00:35.957188+00:00",
+  "pid": 80238,
+  "scope": "No-input startup/timeout/cleanup check, not a stroke test.",
+  "source_sha256": {
+    "capture_live_contract.py": "ca93a5daff62c6633385cb38d750e04c13d5077e3fbc9cd4f09e57d4634ae9b8",
+    "capture_tablet_stroke.py": "9c6ced09d6ba81df54764f1b4d8d87b6ae5162d1d775959d4baa6bf2e41f2dbb"
+  }
+}

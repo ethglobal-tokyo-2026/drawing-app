@@ -1,0 +1,15 @@
+{
+  "operator_report": "User may have tapped the screen before the intended drawing and requested another recording.",
+  "capture_interpretation": "The recorder stops after the first complete contact/release candidate. This saved short input may be that tap; do not label it the intended curve.",
+  "ingestion_comparison": "All8 included ingestion calls match the research queue model in diagnostic-ingestions.json. Original fixture remains incomplete because the source-return H reset was rejected.",
+  "source_return_change": {
+    "offset": "0x58",
+    "field": "window_H",
+    "after_ingestion": 5.5,
+    "at_source_return": 2,
+    "initial_window": 2,
+    "all_other_common_prefix_bytes_identical": true
+  },
+  "remaining_boundary": "Observed H reset after final phase; exact dynamic writer not directly captured.",
+  "raw_sha256": "d643666eb8a70906e32b5d63cdc128505b5f5d22efd82de292d9bf3a83812186"
+}

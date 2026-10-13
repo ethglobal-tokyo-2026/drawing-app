@@ -1,0 +1,28 @@
+{
+  "pid": 49423,
+  "verified_process": [
+    "49423",
+    "S",
+    "/Users/adoll/Applications/CSP Research/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT"
+  ],
+  "requested_settings": {
+    "stabilization_numeric": 20,
+    "speed_stabilization": false,
+    "post_correction": false,
+    "taper_numeric": 0
+  },
+  "settings_source": "User confirmed Ready-settings changed after explicit request for stabilization20/postoff/taper0.",
+  "device": "Wacom Cintiq Pro 27",
+  "wacom_driver": "6.4.15-1",
+  "command": [
+    "/usr/bin/xcrun",
+    "lldb",
+    "--batch",
+    "-o",
+    "process attach --pid 49423",
+    "-o",
+    "script import sys; sys.dont_write_bytecode=True; sys.path.insert(0, '/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-capture'); import capture_tablet_stroke as tablet; tablet.run(lldb.debugger, 49423, '/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/tablet-live-s20-20261011T165317Z/tablet.jsonl', timeout_seconds=30, max_calls=512)",
+    "-o",
+    "quit"
+  ]
+}

@@ -1,0 +1,117 @@
+✖ distance preserves the native fused square sum before square root (2.186416ms)
+✖ ending threshold preserves both native fused subtractions (0.302959ms)
+✖ ending detects a negative fused dot product lost by separate rounding (0.876416ms)
+✖ ending compares fused lengths when separate square sums are equal (0.16675ms)
+✔ configuration recovers initial window, flag precedence, reciprocal, and scales (1.905625ms)
+✔ fixed growth includes +1 in its numerator and clamps excess H (0.158958ms)
+✔ fast reduction uses packet distance, with a separate timestamp rejection (0.198583ms)
+✔ uniform average gives only the oldest selected sample fractional weight (0.317959ms)
+✔ history pads the last recent sample, accepts age 1000, and freezes at a gap (1.343292ms)
+✔ slow mode uses positive segments, quarter steps, and catch-up half steps (11.042125ms)
+✔ slow mode's history-minus-one cap is skipped in catch-up (0.6255ms)
+✔ stationary ordinary slow mode skips all caps; stationary catch-up still adjusts (0.411583ms)
+✔ first-segment pressure boundary resets H before slow adjustment (0.155792ms)
+✔ slow scan includes the boundary segment and does not seed from newest pressure (0.25275ms)
+✔ pressure extrapolation clips to [-0.2, 0] and is conditional (0.454417ms)
+✔ ending threshold subtracts both products; equality of motion lengths continues (0.175708ms)
+✔ phase-3 transition defers geometry, but zero pressure can terminate immediately (0.334708ms)
+✔ output gate distinguishes timestamp and remembered skip-count conditions (0.182542ms)
+✔ event mapping and terminal count use numeric evidence without event-name guesses (0.327584ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 15
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 481.805709
+
+✖ failing tests:
+
+test at docs/research/clip-studio-paint-stabilization/live-reference.test.ts:41:1
+✖ distance preserves the native fused square sum before square root (2.186416ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + '3fd81802d1cdd2e2'
+  - '3fd81802d1cdd2e1'
+                    ^
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/live-reference.test.ts:42:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '3fd81802d1cdd2e2',
+    expected: '3fd81802d1cdd2e1',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at docs/research/clip-studio-paint-stabilization/live-reference.test.ts:48:1
+✖ ending threshold preserves both native fused subtractions (0.302959ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + '3ff3d4d5599df48a'
+  - '3ff3d4d5599df48b'
+                    ^
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/live-reference.test.ts:49:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '3ff3d4d5599df48a',
+    expected: '3ff3d4d5599df48b',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at docs/research/clip-studio-paint-stabilization/live-reference.test.ts:52:1
+✖ ending detects a negative fused dot product lost by separate rounding (0.876416ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/live-reference.test.ts:53:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at docs/research/clip-studio-paint-stabilization/live-reference.test.ts:65:1
+✖ ending compares fused lengths when separate square sums are equal (0.16675ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/live-reference.test.ts:68:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

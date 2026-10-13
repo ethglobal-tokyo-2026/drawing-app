@@ -1,0 +1,31 @@
+{
+  "recording": "tablet-manual-20261011T173815.294680Z-bf864636",
+  "scope": "Instrumented tablet capture status and timing; not a complete fixture or natural pen latency.",
+  "raw_sha256": "8ce3b3a390c7a57b7321e900aa7df17953b510c97751a38639cc3499c6d3c91e",
+  "paired_calls": 172,
+  "entries": 173,
+  "included_confirmed_calls": 140,
+  "fixture_complete": false,
+  "native_release_seen": false,
+  "elapsed_seconds": 8.619202667,
+  "deadline_exceeded": false,
+  "stop_reason": "CaptureError: Unexpected stop reason/data on thread 10058914",
+  "cleanup_errors": [],
+  "detached_state_observed": true,
+  "resume_independently_verified": true,
+  "median_entry_interval_seconds": 0.04201683300000081,
+  "median_reported_running_to_stopped_seconds": 0.011923333000000369,
+  "unexpected_stops": [
+    {
+      "data": [
+        6,
+        1,
+        0
+      ],
+      "elapsed_seconds": 8.616556374999998,
+      "kind": "thread_stop",
+      "reason": 6,
+      "thread_id": 10058914
+    }
+  ]
+}

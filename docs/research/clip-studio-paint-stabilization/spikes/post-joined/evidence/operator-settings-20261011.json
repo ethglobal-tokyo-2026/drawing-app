@@ -1,0 +1,14 @@
+{
+  "source": "User-provided screenshot in this conversation",
+  "sha256": "cdd6271b40e083d527bd5299235262810952fce461a6288d1f719263649f6ecc",
+  "observed": {
+    "stabilization": 20,
+    "postCorrectionEnabled": true,
+    "postCorrectionBar": "fifth requested; internal numeric k requires capture",
+    "postAdjustSpeed": false,
+    "postAdjustMagnification": false,
+    "bezier": false,
+    "taper": 0
+  },
+  "nativeCaptureVerified": false
+}

@@ -3,7 +3,8 @@ import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stickerBoard } from "../../i18n/strings/stickerBoard";
 import { keepDrawingHand, type DrawingHand } from "../../sticker-creation/drawingSettings";
-import { refusingStorage, renderInHost } from "../../ui/testing";
+import { keepPointerIndicators } from "../../ui/pointerIndicatorsSetting";
+import { inLanguage, refusingStorage, renderInHost } from "../../ui/testing";
 import { DrawingSettings } from "./DrawingSettings";
 
 const words = stickerBoard.settings.drawing;
@@ -15,6 +16,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   // A refused write holds until the page goes, and the next test would see it.
   keepDrawingHand("right");
+  keepPointerIndicators(false);
   localStorage.clear();
 });
 
@@ -40,6 +42,36 @@ const shown = (host: HTMLElement) =>
   host.querySelector('[role="radio"][aria-checked="true"]')?.textContent;
 
 describe("Settings' Drawing group", () => {
+  it("offers pointer and tap indicators before a pen has drawn, off until chosen", () => {
+    const host = render();
+    const indicator = host.querySelector<HTMLInputElement>('[role="switch"]');
+    expect(indicator).not.toBeNull();
+    expect(indicator?.checked).toBe(false);
+    expect(indicator?.closest("label")?.textContent).toBe("Show pointer and taps");
+    act(() => indicator?.click());
+    expect(indicator?.checked).toBe(true);
+    unmount();
+    expect(render().querySelector<HTMLInputElement>('[role="switch"]')?.checked).toBe(true);
+  });
+
+  it("says when this device couldn't keep pointer and tap indicators, which still apply", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubGlobal("localStorage", refusingStorage);
+    const host = render();
+    const indicator = host.querySelector<HTMLInputElement>('[role="switch"]');
+    act(() => indicator?.click());
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe(words.notKept.en);
+    expect(indicator?.checked).toBe(true);
+  });
+
+  it("names pointer and tap indicators in Japanese", async () => {
+    await inLanguage("ja");
+    const host = render();
+    expect(host.querySelector('[role="switch"]')?.closest("label")?.textContent).toBe(
+      "ポインターとタップを表示する",
+    );
+  });
+
   it("keeps the drawing hand on this device for the next visit", () => {
     const host = render();
     expect(shown(host)).toBe(words.hand.right.en);

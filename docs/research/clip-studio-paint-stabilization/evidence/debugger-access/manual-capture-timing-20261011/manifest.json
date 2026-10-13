@@ -1,0 +1,54 @@
+{
+  "created_utc": "2026-10-11T17:24:04.733216+00:00",
+  "path_base": "docs/research/clip-studio-paint-stabilization",
+  "files": {
+    "evidence/debugger-access/manual-capture-timing-20261011/README.md": {
+      "sha256": "2326bad1656031676c23e6b15b5caba860b308d5df925f790d22a032c3466666",
+      "size_bytes": 6217
+    },
+    "evidence/debugger-access/manual-capture-timing-20261011/analysis.json": {
+      "sha256": "2ac08f83f131bfacf41c0df1bcdba0d2f3744cf8a09bcdda544e1f7b06d81a18",
+      "size_bytes": 7659
+    },
+    "evidence/debugger-access/manual-capture-timing-20261011/timing-measurements.json": {
+      "sha256": "4d50b6c0c6cdf2f719b5f32480041ffb0430dd87e938678a2af8ec21b8618c0a",
+      "size_bytes": 17075
+    },
+    "evidence/debugger-access/tablet-live-s20-20261011T165317Z/compare-recorded-ingestions.mjs": {
+      "sha256": "fd65a98140e5c4952d9b44787cf34b4048700e9167bffd3c8bf3d0b46aa69f85",
+      "size_bytes": 6050
+    },
+    "spikes/live-replay/queue.ts": {
+      "sha256": "e302ac6ed23b3e6c58fab5c62afaa814787318fa0711ce133d2f0012b9c78ed8",
+      "size_bytes": 9791
+    },
+    "spikes/live-replay/compare.ts": {
+      "sha256": "2107d8e6f7158a4cd42defd523ac9eb93bcb818620ea8f691126c66f40dea9c5",
+      "size_bytes": 9800
+    },
+    "spikes/live-replay/reader.ts": {
+      "sha256": "21e55a7a1792e866c238c6a381edcde6f9da8ca91a13a861c9b8b60a631d30db",
+      "size_bytes": 32399
+    },
+    "live-reference.ts": {
+      "sha256": "2cc18473317bdcc9876bdac1a73b9e3be0bee526919866a0e4d69393c5da74b0",
+      "size_bytes": 17618
+    },
+    "evidence/debugger-access/tablet-manual-20261011T171306.937948Z-8cdfbb39/tablet.jsonl": {
+      "sha256": "457dc2855e5e8a3eb667abd6233d8df2b67b74c522312a9377f236781533bc5f",
+      "size_bytes": 4659114
+    },
+    "evidence/debugger-access/tablet-manual-20261011T171306.937948Z-8cdfbb39/diagnostic-ingestions.json": {
+      "sha256": "02fdf3539b7b5a2818e98a9b9303923052665463ee6ff99d7f37eb53be4395b6",
+      "size_bytes": 3368439
+    },
+    "evidence/debugger-access/tablet-manual-20261011T171422.944399Z-33211c35/tablet.jsonl": {
+      "sha256": "944b7d16933eaef5d787493de2ed7f61ed6c95faa2236761440ca755a6723947",
+      "size_bytes": 4116078
+    },
+    "evidence/debugger-access/tablet-manual-20261011T171422.944399Z-33211c35/diagnostic-ingestions.json": {
+      "sha256": "d5fa956c33fc2d50f156b0193fb1ea94fb64530bc0edcc0b8aef298fbdc162a0",
+      "size_bytes": 2770055
+    }
+  }
+}

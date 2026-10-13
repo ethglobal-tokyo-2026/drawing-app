@@ -1,0 +1,119 @@
+{
+  "measuredAt": "2026-10-11T19:45:35.660Z",
+  "node": "v24.21.0",
+  "host": {
+    "architecture": "arm64",
+    "platform": "darwin",
+    "release": "27.0.0",
+    "cpu": "Apple M5 Max"
+  },
+  "scope": "Actual production Stabilizer and BigInt binary64 fusion. Host Node measurement excludes rendering, browser event delivery, and device latency; it is not an iPad or Safari benchmark.",
+  "logicalSampleBudgetMs": 4.166666666666667,
+  "logicalFourSampleFrameBudgetMs": 16.666666666666668,
+  "measurements": [
+    {
+      "strength": 0,
+      "samplesPerSecond": 240,
+      "inputCount": 2400,
+      "simulatedSeconds": 10,
+      "sample": {
+        "count": 2400,
+        "meanMs": 0.00411274916666726,
+        "medianMs": 0.0017499999999870397,
+        "p95Ms": 0.004041999999998325,
+        "p99Ms": 0.02087499999998954,
+        "maxMs": 1.4203749999999786
+      },
+      "fourSampleFrame": {
+        "count": 600,
+        "meanMs": 0.01645099666666904,
+        "medianMs": 0.007124999999945203,
+        "p95Ms": 0.017333000000007814,
+        "p99Ms": 0.218166999999994,
+        "maxMs": 1.4349990000000048
+      },
+      "releaseMs": 0.08237500000001319,
+      "terminalOutputs": 1,
+      "emitted": 2402,
+      "totalWallMs": 14.066332999999986
+    },
+    {
+      "strength": 20,
+      "samplesPerSecond": 240,
+      "inputCount": 2400,
+      "simulatedSeconds": 10,
+      "sample": {
+        "count": 2400,
+        "meanMs": 0.01187706291666668,
+        "medianMs": 0.003833000000014408,
+        "p95Ms": 0.009291999999987866,
+        "p99Ms": 0.11616699999999014,
+        "maxMs": 4.292833000000002
+      },
+      "fourSampleFrame": {
+        "count": 600,
+        "meanMs": 0.04750825166666672,
+        "medianMs": 0.015914999999978363,
+        "p95Ms": 0.07466600000000767,
+        "p99Ms": 0.8981679999999983,
+        "maxMs": 4.305666000000031
+      },
+      "releaseMs": 0.16800000000000637,
+      "terminalOutputs": 20,
+      "emitted": 2421,
+      "totalWallMs": 30.385959000000014
+    },
+    {
+      "strength": 35,
+      "samplesPerSecond": 240,
+      "inputCount": 2400,
+      "simulatedSeconds": 10,
+      "sample": {
+        "count": 2400,
+        "meanMs": 0.007418879999999533,
+        "medianMs": 0.0027499999999918145,
+        "p95Ms": 0.007791999999994914,
+        "p99Ms": 0.052874999999971806,
+        "maxMs": 3.4867080000000215
+      },
+      "fourSampleFrame": {
+        "count": 600,
+        "meanMs": 0.02967551999999813,
+        "medianMs": 0.01145900000005895,
+        "p95Ms": 0.04470800000012787,
+        "p99Ms": 0.3327920000000404,
+        "maxMs": 3.542124000000001
+      },
+      "releaseMs": 0.16508299999998144,
+      "terminalOutputs": 35,
+      "emitted": 2436,
+      "totalWallMs": 19.344083000000012
+    },
+    {
+      "strength": 100,
+      "samplesPerSecond": 240,
+      "inputCount": 2400,
+      "simulatedSeconds": 10,
+      "sample": {
+        "count": 2400,
+        "meanMs": 0.008963176666665854,
+        "medianMs": 0.003333999999995285,
+        "p95Ms": 0.008916999999996733,
+        "p99Ms": 0.063541999999984,
+        "maxMs": 3.3777089999999816
+      },
+      "fourSampleFrame": {
+        "count": 600,
+        "meanMs": 0.03585270666666342,
+        "medianMs": 0.013625999999987926,
+        "p95Ms": 0.06974999999994225,
+        "p99Ms": 0.27520800000002055,
+        "maxMs": 3.4535009999999033
+      },
+      "releaseMs": 0.508166000000017,
+      "terminalOutputs": 100,
+      "emitted": 2501,
+      "totalWallMs": 23.096167000000037
+    }
+  ]
+}

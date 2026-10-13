@@ -1,0 +1,28 @@
+{
+  "pid": 3101,
+  "operator_report": "CSP froze; user restarted it and requested rearming.",
+  "requested_settings": {
+    "stabilization_numeric": 20,
+    "speed_stabilization": false,
+    "post_correction": false,
+    "taper_numeric": 0
+  },
+  "settings_source": "Same requested settings; actual native values must be checked after restart.",
+  "recorder_snapshot": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/tablet-live-s20-curve-20261011T165932Z/recorder-snapshot",
+  "recorder_hashes": {
+    "capture_live_contract.py": "c209dee94267d08d404e9fadcd07877950ce6f6272041f27d92903336357e655",
+    "capture_tablet_stroke.py": "07ce8ff76e8de6043963957ca86b5bc55498a9744194f37495684cc6ac4960a6"
+  },
+  "known_recorder_limitation": "Final source-return H reset may be rejected; preserve raw outcome for later analysis.",
+  "command": [
+    "/usr/bin/xcrun",
+    "lldb",
+    "--batch",
+    "-o",
+    "process attach --pid 3101",
+    "-o",
+    "script import sys; sys.dont_write_bytecode=True; sys.path.insert(0, '/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/tablet-live-s20-curve-20261011T165932Z/recorder-snapshot'); import capture_tablet_stroke as tablet; tablet.run(lldb.debugger, 3101, '/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/evidence/debugger-access/tablet-live-restart-20261011T170215Z/tablet.jsonl', timeout_seconds=30, max_calls=512)",
+    "-o",
+    "quit"
+  ]
+}

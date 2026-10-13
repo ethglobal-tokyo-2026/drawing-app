@@ -1,0 +1,22 @@
+{
+  "written_at": "2026-10-11T16:46:21.740527+00:00",
+  "earlier_observed_os": {
+    "version": "27.0.1",
+    "build": "26A434"
+  },
+  "earlier_observed_wacom_version": "Wacom Tablet 6.4.11-2",
+  "earlier_observed_wacom_build": "6.4.11f2",
+  "detected_tablet": "Cintiq Pro 27",
+  "device_evidence": "IOHIDDevice listing: USB, Wacom Co.,Ltd., VendorID1386, ProductID960. Read-only enumeration.",
+  "driver_error_counts": {
+    "Undefined OS version": 6,
+    "tdIF->InternalInit()": 2,
+    "tdIF->mMessageSendPort.get()": 2
+  },
+  "required_macOS27_driver_minimum": "6.4.14-2",
+  "compatibility_source": "https://support.wacom.com/hc/en-us/articles/43537850453527-Wacom-Driver-for-macOS-27-Golden-Gate-Installation-Troubleshooting-Steps",
+  "conclusion": "Observed Wacom driver predates documented macOS27 minimum. Update is the strongest next step; sole causality is not proven. Cross-app behavior and vendor diagnostics remain pending.",
+  "subsequent_change": "A repeat read of the same Wacom driver Info.plist returned FileNotFoundError. The driver version above is the earlier observation, not a claim about a possibly ongoing installation. XP-Pen processes also absent in later process check. Cause of these external changes not established.",
+  "mutations": "No driver, permission, preference, application, or security changes made by this agent during diagnosis.",
+  "recording_status": "Incomplete; zero entries/source events; clean detach; separate OS process check confirms research CSP state S."
+}

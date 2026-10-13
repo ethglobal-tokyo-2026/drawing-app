@@ -1,0 +1,18 @@
+✔ unknown evaluator is unnecessary for geometry when both first segments exceed travel limit (147.907834ms)
+✔ unknown configuration fails before mutation when geometry needs its result (1.765208ms)
+✔ travel-limit equality does not justify ignoring an unknown evaluator (0.6155ms)
+✔ tiny spans are removed head first with the absent evaluator's native value one (0.481125ms)
+✔ zero amount retains short segments when evaluator values are constant (0.269959ms)
+✔ after a kept span, a later short span can be removed beyond cumulative 0.5 (0.233042ms)
+✔ a next-node corner permits deletion beyond cumulative 0.5 (0.145125ms)
+✔ configured evaluator receives native parameter and clamps finite values below one (0.151292ms)
+✔ spline length matches every retained standalone instruction output bit (3870.386417ms)
+✔ sampled spline length enforces the explicit research work bound (9.650292ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6045.59325

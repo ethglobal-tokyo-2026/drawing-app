@@ -1,0 +1,422 @@
+{
+  "originalSha256": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+  "scope": "Static original-image bytes only; mutable runtime fields are not observed.",
+  "types": [
+    {
+      "name": "N12Planeswalker15PWSnapOperationE",
+      "vtable": "0x104a70f30",
+      "prefix": {
+        "address": "0x104a70f28",
+        "size": 32,
+        "hex": "580fa704010000001c88ce02010000005888ce02010000009c88ce0201000000",
+        "sha256": "131b0b7ed47ae14acda067450fb7d4e72850ce6a74eca6a75ffd83371d3c42d7"
+      },
+      "rtti": {
+        "address": "0x104a70f58",
+        "size": 16,
+        "hex": "1000000000000000eb21560401000000",
+        "sha256": "a101512c4907973818882caf30052120690a1c315e0a51d48712a5ef039f4328"
+      },
+      "nameBytes": {
+        "address": "0x1045621eb",
+        "size": 34,
+        "hex": "4e3132506c616e657377616c6b657231355057536e61704f7065726174696f6e4500",
+        "sha256": "aff1b3a8da8dce79e548e9e728f64c35039cbb650e8a54f372517a59c166c0a5"
+      },
+      "slotOffset": "0x10",
+      "slot": {
+        "address": "0x104a70f40",
+        "size": 8,
+        "hex": "9c88ce0201000000",
+        "sha256": "0c74309b576da7e99f9ed968d102b1a533da25020ffe446569b745eae8d06aed"
+      },
+      "target": "0x102ce889c"
+    },
+    {
+      "name": "N12Planeswalker11PWSnapRulerE",
+      "vtable": "0x104a71008",
+      "prefix": {
+        "address": "0x104a71000",
+        "size": 32,
+        "hex": "3010a704010000000499ce02010000004c99ce02010000009c88ce0201000000",
+        "sha256": "64d139ffb4a196714b2d37563f49c7efcbc4e9c235133b1c1d469568f372c87c"
+      },
+      "rtti": {
+        "address": "0x104a71030",
+        "size": 16,
+        "hex": "10000000000000007f22560401000000",
+        "sha256": "0ca89cbaae836c4bcf42407b7acfe73a7ce84f56804d3cc5fc07735ca5a8404a"
+      },
+      "nameBytes": {
+        "address": "0x10456227f",
+        "size": 30,
+        "hex": "4e3132506c616e657377616c6b657231315057536e617052756c65724500",
+        "sha256": "985527bce209633adcbca7366406ecce6d568005ff9c60471acb058a09ee1073"
+      },
+      "slotOffset": "0x10",
+      "slot": {
+        "address": "0x104a71018",
+        "size": 8,
+        "hex": "9c88ce0201000000",
+        "sha256": "0c74309b576da7e99f9ed968d102b1a533da25020ffe446569b745eae8d06aed"
+      },
+      "target": "0x102ce889c"
+    },
+    {
+      "name": "N12Planeswalker27PWSnapRulerConcentricCircleE",
+      "vtable": "0x104a710b8",
+      "prefix": {
+        "address": "0x104a710b0",
+        "size": 32,
+        "hex": "e010a7040100000058acce02010000005cacce02010000009c88ce0201000000",
+        "sha256": "91551bcb3b802d08df367acedaa11ee109c30794de912fbe7023477a5d60501a"
+      },
+      "rtti": {
+        "address": "0x104a710e0",
+        "size": 16,
+        "hex": "1000000000000000df22560401000000",
+        "sha256": "27f3f1aa67aa65c8f6f345a85c1078c1587175f0d5e4d610de40c21d8b82bee7"
+      },
+      "nameBytes": {
+        "address": "0x1045622df",
+        "size": 46,
+        "hex": "4e3132506c616e657377616c6b657232375057536e617052756c6572436f6e63656e74726963436972636c654500",
+        "sha256": "c4bc8658793ffa625b98eb88790768f9e36420bce6da74fb644bc025d839d13d"
+      },
+      "slotOffset": "0x10",
+      "slot": {
+        "address": "0x104a710c8",
+        "size": 8,
+        "hex": "9c88ce0201000000",
+        "sha256": "0c74309b576da7e99f9ed968d102b1a533da25020ffe446569b745eae8d06aed"
+      },
+      "target": "0x102ce889c"
+    },
+    {
+      "name": "N12Planeswalker20PWSnapRulerCurveEmitE",
+      "vtable": "0x104a71168",
+      "prefix": {
+        "address": "0x104a71160",
+        "size": 32,
+        "hex": "9011a70401000000f0b6ce0201000000f4b6ce02010000009c88ce0201000000",
+        "sha256": "a6878d1e41ec5b1f7b6f38462d0de9e438726ef06750b136490fbf874d98c35e"
+      },
+      "rtti": {
+        "address": "0x104a71190",
+        "size": 16,
+        "hex": "10000000000000005f23560401000000",
+        "sha256": "88ea239aa9b40ebc3ecebbd9503359d80619f6143d3a8109a86b6df0cf253dd9"
+      },
+      "nameBytes": {
+        "address": "0x10456235f",
+        "size": 39,
+        "hex": "4e3132506c616e657377616c6b657232305057536e617052756c65724375727665456d69744500",
+        "sha256": "1ad92fd2c32036d5091dbd9e34f3e9a1707f3677f6eda33ec18352ec23280bd3"
+      },
+      "slotOffset": "0x10",
+      "slot": {
+        "address": "0x104a71178",
+        "size": 8,
+        "hex": "9c88ce0201000000",
+        "sha256": "0c74309b576da7e99f9ed968d102b1a533da25020ffe446569b745eae8d06aed"
+      },
+      "target": "0x102ce889c"
+    },
+    {
+      "name": "N12Planeswalker24PWSnapRulerCurveParallelE",
+      "vtable": "0x104a71218",
+      "prefix": {
+        "address": "0x104a71210",
+        "size": 32,
+        "hex": "4012a704010000005cc6ce020100000060c6ce02010000009c88ce0201000000",
+        "sha256": "ecb669af5a010289d63e902a3d1693f20fbdb475ce3325812ad257e7893e772b"
+      },
+      "rtti": {
+        "address": "0x104a71240",
+        "size": 16,
+        "hex": "1000000000000000d123560401000000",
+        "sha256": "b2b6d0534f60fc8f7192106578c3a5282a4d966867bb5066b3acdb34b3efdd3a"
+      },
+      "nameBytes": {
+        "address": "0x1045623d1",
+        "size": 43,
+        "hex": "4e3132506c616e657377616c6b657232345057536e617052756c65724375727665506172616c6c656c4500",
+        "sha256": "c883cc08b0b61de0674cd04a2785b97b0add3803afc271ac08e7621d73c862d0"
+      },
+      "slotOffset": "0x10",
+      "slot": {
+        "address": "0x104a71228",
+        "size": 8,
+        "hex": "9c88ce0201000000",
+        "sha256": "0c74309b576da7e99f9ed968d102b1a533da25020ffe446569b745eae8d06aed"
+      },
+      "target": "0x102ce889c"
+    },
+    {
+      "name": "N12Planeswalker15PWSnapRulerEmitE",
+      "vtable": "0x104a712c8",
+      "prefix": {
+        "address": "0x104a712c0",
+        "size": 32,
+        "hex": "f012a7040100000068dace02010000006cdace02010000009c88ce0201000000",
+        "sha256": "43c3816e61dd25e7e2b729d4b7ce67324d51d61ee9a9eafbfdf9b7b62a826ae6"
+      },
+      "rtti": {
+        "address": "0x104a712f0",
+        "size": 16,
+        "hex": "10000000000000004b24560401000000",
+        "sha256": "13c756dc57618aba73ea90fa1c042321e24bbf7cce3c8b807526bd831c39b6e4"
+      },
+      "nameBytes": {
+        "address": "0x10456244b",
+        "size": 34,
+        "hex": "4e3132506c616e657377616c6b657231355057536e617052756c6572456d69744500",
+        "sha256": "079a2a646025637bbe2c5aaa41866f9ba4c6f13cc679cd6abf46ce220e653fbb"
+      },
+      "slotOffset": "0x10",
+      "slot": {
+        "address": "0x104a712d8",
+        "size": 8,
+        "hex": "9c88ce0201000000",
+        "sha256": "0c74309b576da7e99f9ed968d102b1a533da25020ffe446569b745eae8d06aed"
+      },
+      "target": "0x102ce889c"
+    },
+    {
+      "name": "N12Planeswalker16PWSnapRulerGuideE",
+      "vtable": "0x104a71378",
+      "prefix": {
+        "address": "0x104a71370",
+        "size": 32,
+        "hex": "a013a7040100000024e2ce02010000006ce2ce02010000009c88ce0201000000",
+        "sha256": "bdac0f27ec48f66e83ba664dd07f96f1e869bccce7f81976516c72ae9746fbeb"
+      },
+      "rtti": {
+        "address": "0x104a713a0",
+        "size": 16,
+        "hex": "1000000000000000b324560401000000",
+        "sha256": "0cdbb1b72f237fdf7bb5c54da7bd2690469b2d4f3c73ffd795b68d3f7db866c1"
+      },
+      "nameBytes": {
+        "address": "0x1045624b3",
+        "size": 35,
+        "hex": "4e3132506c616e657377616c6b657231365057536e617052756c657247756964654500",
+        "sha256": "47a5baca76c1ac1d82e2616c03151836eaf686858f8b65d0aba6f465f34459ba"
+      },
+      "slotOffset": "0x10",
+      "slot": {
+        "address": "0x104a71388",
+        "size": 8,
+        "hex": "9c88ce0201000000",
+        "sha256": "0c74309b576da7e99f9ed968d102b1a533da25020ffe446569b745eae8d06aed"
+      },
+      "target": "0x102ce889c"
+    },
+    {
+      "name": "N12Planeswalker19PWSnapRulerParallelE",
+      "vtable": "0x104a71428",
+      "prefix": {
+        "address": "0x104a71420",
+        "size": 32,
+        "hex": "5014a704010000000cf0ce020100000010f0ce02010000009c88ce0201000000",
+        "sha256": "47fdfed5b5ff98c7ce7c4e36200929e3a0aafa99b2df76d3924a254fdfc01736"
+      },
+      "rtti": {
+        "address": "0x104a71450",
+        "size": 16,
+        "hex": "10000000000000001d25560401000000",
+        "sha256": "9205358da93c7d70cb87e824c8e6a48d0429b890bb41499bedbb224965aa8d09"
+      },
+      "nameBytes": {
+        "address": "0x10456251d",
+        "size": 38,
+        "hex": "4e3132506c616e657377616c6b657231395057536e617052756c6572506172616c6c656c4500",
+        "sha256": "c343f7dab03227381ffb9f00d1807c6e5552d07d438fdc02841ba7fae2207881"
+      },
+      "slotOffset": "0x10",
+      "slot": {
+        "address": "0x104a71438",
+        "size": 8,
+        "hex": "9c88ce0201000000",
+        "sha256": "0c74309b576da7e99f9ed968d102b1a533da25020ffe446569b745eae8d06aed"
+      },
+      "target": "0x102ce889c"
+    },
+    {
+      "name": "N12Planeswalker22PWSnapRulerPerspectiveE",
+      "vtable": "0x104a714d8",
+      "prefix": {
+        "address": "0x104a714d0",
+        "size": 32,
+        "hex": "0015a704010000005cf8ce020100000060f8ce020100000074f8ce0201000000",
+        "sha256": "73af4b6481a5f189459e5be5a8ed7f1c2ca7f81d5bf78c4e03a08016f34e29b9"
+      },
+      "rtti": {
+        "address": "0x104a71500",
+        "size": 16,
+        "hex": "10000000000000009c25560401000000",
+        "sha256": "587d8bd481c4bb3c5dc6a0f652899328b09c472e691b4244c97c17425427998f"
+      },
+      "nameBytes": {
+        "address": "0x10456259c",
+        "size": 41,
+        "hex": "4e3132506c616e657377616c6b657232325057536e617052756c657250657273706563746976654500",
+        "sha256": "919647b764dea175776a654913cfc9e6df271729dd281a1536dcb66b4f4dee2b"
+      },
+      "slotOffset": "0x10",
+      "slot": {
+        "address": "0x104a714e8",
+        "size": 8,
+        "hex": "74f8ce0201000000",
+        "sha256": "8e4f85bb78b7f45acf4cb23a854b83c86e5a60b08b8009553a7ea5a77848a7bc"
+      },
+      "target": "0x102cef874"
+    },
+    {
+      "name": "N12Planeswalker10PWSnapGridE",
+      "vtable": "0x104a70dd0",
+      "prefix": {
+        "address": "0x104a70dc8",
+        "size": 32,
+        "hex": "f80da704010000006070ce02010000006470ce02010000009c88ce0201000000",
+        "sha256": "975e81f893622d649894476511b39c03031437a63ac891239102ad4267fc7825"
+      },
+      "rtti": {
+        "address": "0x104a70df8",
+        "size": 16,
+        "hex": "10000000000000002321560401000000",
+        "sha256": "dfc02bf789646554a590f18204af39944bb48a7025fb386fbd2eddf37601ed78"
+      },
+      "nameBytes": {
+        "address": "0x104562123",
+        "size": 29,
+        "hex": "4e3132506c616e657377616c6b657231305057536e6170477269644500",
+        "sha256": "ee5a6cb2b746bb67d234745fa0a1ccd30766e4ce516e6f2d57bc3533141fab95"
+      },
+      "slotOffset": "0x10",
+      "slot": {
+        "address": "0x104a70de0",
+        "size": 8,
+        "hex": "9c88ce0201000000",
+        "sha256": "0c74309b576da7e99f9ed968d102b1a533da25020ffe446569b745eae8d06aed"
+      },
+      "target": "0x102ce889c"
+    },
+    {
+      "name": "N12Planeswalker12PWSnapVectorE",
+      "vtable": "0x104a717f8",
+      "prefix": {
+        "address": "0x104a717f0",
+        "size": 32,
+        "hex": "2018a704010000000c9fcf02010000003c9fcf02010000009c88ce0201000000",
+        "sha256": "6c7bb7c946e7685d528cc6f25f4a3c75b2255201a8db2ad67cc2d69cc9237e95"
+      },
+      "rtti": {
+        "address": "0x104a71820",
+        "size": 16,
+        "hex": "1000000000000000fc27560401000000",
+        "sha256": "2725de8e0cf214958c4224b83be3d34d4e07ac6b580c0b97f4da72b9e038d203"
+      },
+      "nameBytes": {
+        "address": "0x1045627fc",
+        "size": 31,
+        "hex": "4e3132506c616e657377616c6b657231325057536e6170566563746f724500",
+        "sha256": "7e375c9b623093657697e97d56e9210265b49ee841870d03692b9d5a744dc771"
+      },
+      "slotOffset": "0x10",
+      "slot": {
+        "address": "0x104a71808",
+        "size": 8,
+        "hex": "9c88ce0201000000",
+        "sha256": "0c74309b576da7e99f9ed968d102b1a533da25020ffe446569b745eae8d06aed"
+      },
+      "target": "0x102ce889c"
+    },
+    {
+      "name": "N12Planeswalker6PWViewE",
+      "vtable": "0x104a35690",
+      "prefix": {
+        "address": "0x104a35688",
+        "size": 32,
+        "hex": "485aa3040100000098c01b02010000007cc01b020100000080c01b0201000000",
+        "sha256": "c1309f7ee415c5b6a17ace2c06f491137aa8b127ecaa903296db8a9172a21109"
+      },
+      "rtti": {
+        "address": "0x104a35a48",
+        "size": 16,
+        "hex": "1000000000000000f8ac510401000000",
+        "sha256": "fdab9f36e1dde6bcff46c43c72df6d29fcb506f48899aafe4a8316e389d9d16d"
+      },
+      "nameBytes": {
+        "address": "0x10451acf8",
+        "size": 24,
+        "hex": "4e3132506c616e657377616c6b6572365057566965774500",
+        "sha256": "11d084e275ff0c8d29b1ee59f341c02c97eeeecf61534f9b35d7ed424b2db373"
+      },
+      "slotOffset": "0x358",
+      "slot": {
+        "address": "0x104a359e8",
+        "size": 8,
+        "hex": "b8731c0201000000",
+        "sha256": "92f5b608e6819f02ee4fc6f55e881f2e4ec284ebddb606fd11cb4d4991918f69"
+      },
+      "target": "0x1021c73b8"
+    },
+    {
+      "name": "N12Planeswalker12PWCanvasViewE",
+      "vtable": "0x104a5c418",
+      "prefix": {
+        "address": "0x104a5c410",
+        "size": 32,
+        "hex": "e8c7a5040100000064a4990201000000ac9c990201000000b09c990201000000",
+        "sha256": "9e03818c3d8b4bc60b04b9930979b0457f821dffe11608ff30b8b6424a41a042"
+      },
+      "rtti": {
+        "address": "0x104a5c7e8",
+        "size": 16,
+        "hex": "1000000000000000e44f550401000000",
+        "sha256": "86f0a8e4831e74050131242be489392e6e15c7b38e206b03309c0f00b29fb5be"
+      },
+      "nameBytes": {
+        "address": "0x104554fe4",
+        "size": 31,
+        "hex": "4e3132506c616e657377616c6b65723132505743616e766173566965774500",
+        "sha256": "e9a4963bdaa09192c6706ee51b3a304c2459d685b261832f81897d6bec61b3fa"
+      },
+      "slotOffset": "0x358",
+      "slot": {
+        "address": "0x104a5c770",
+        "size": 8,
+        "hex": "b8731c0201000000",
+        "sha256": "92f5b608e6819f02ee4fc6f55e881f2e4ec284ebddb606fd11cb4d4991918f69"
+      },
+      "target": "0x1021c73b8"
+    }
+  ],
+  "viewInfoTypeName": {
+    "address": "0x104555101",
+    "size": 26,
+    "hex": "4e3132506c616e657377616c6b65723856696577496e666f4500",
+    "sha256": "d4d6057fc6cec9e88ae81b54f5542bc2c01cd6aaeb56ce247f67e8cb5313e67d"
+  },
+  "constants": [
+    {
+      "address": "0x1042e7cc0",
+      "size": 16,
+      "hex": "00000000000000000100000000000000",
+      "sha256": "9d34149fbd1fe777eb238799054c8cbfbce372255f219f8740838def9bfd02db"
+    },
+    {
+      "address": "0x104484450",
+      "size": 8,
+      "hex": "9a9999999999a93f",
+      "sha256": "7f925b2036e92fe2f1f0697c3aedfff74d719c1ee2cb6b739d7c30484e75972c"
+    },
+    {
+      "address": "0x1042ee828",
+      "size": 8,
+      "hex": "7b14ae47e17a843f",
+      "sha256": "c738dd99fada954a0be83cb94069e65973256ed5a199cd293841c789ad3b0910"
+    }
+  ]
+}

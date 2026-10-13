@@ -1,0 +1,2371 @@
+{
+  "schema": "csp-post-spline-native/v1",
+  "image_sha256": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+  "fpcr": "0x0",
+  "method": "Standalone reassembly of extracted pure ARM64 functions; no CSP process or full pipeline replay",
+  "unchanged_instructions_checked": 666,
+  "functions": [
+    {
+      "start": "0x10359f580",
+      "name": "csp_eval",
+      "bytes": 460,
+      "code_sha256": "3126a1833c48c9102693227df2c2e2f881dd4e72f68995254405f0a59fb95e8f",
+      "relocations": {
+        "0x10359f598": "branch",
+        "0x10359f59c": "constant-page",
+        "0x10359f5a0": "constant-offset",
+        "0x10359f5a4": "constant-page",
+        "0x10359f5a8": "constant-offset",
+        "0x10359f5b0": "constant-page",
+        "0x10359f5b4": "constant-offset",
+        "0x10359f5bc": "constant-page",
+        "0x10359f5c0": "constant-offset",
+        "0x10359f63c": "branch",
+        "0x10359f640": "constant-page",
+        "0x10359f644": "constant-offset",
+        "0x10359f64c": "constant-page",
+        "0x10359f650": "constant-offset",
+        "0x10359f664": "constant-page",
+        "0x10359f668": "constant-offset",
+        "0x10359f674": "constant-page",
+        "0x10359f678": "constant-offset",
+        "0x10359f680": "constant-page",
+        "0x10359f684": "constant-offset",
+        "0x10359f68c": "constant-page",
+        "0x10359f690": "constant-offset",
+        "0x10359f69c": "constant-page",
+        "0x10359f6a0": "constant-offset",
+        "0x10359f6c4": "constant-page",
+        "0x10359f6c8": "constant-offset"
+      }
+    },
+    {
+      "start": "0x10359f8d4",
+      "name": "csp_neighbor",
+      "bytes": 120,
+      "code_sha256": "97a8a8550386996a8bfda9ed578ff2bd0e960dc9b9999ca49a14e11bc51883df",
+      "relocations": {
+        "0x10359f8f8": "branch",
+        "0x10359f91c": "branch"
+      }
+    },
+    {
+      "start": "0x10359fd24",
+      "name": "csp_measure",
+      "bytes": 356,
+      "code_sha256": "fb111a411f05909eb4414ec516acc6f2831f4b11af4077e8a6df7d4820736496",
+      "relocations": {
+        "0x10359fe40": "branch",
+        "0x10359fe50": "branch",
+        "0x10359fe60": "branch",
+        "0x10359fe70": "branch"
+      }
+    },
+    {
+      "start": "0x1035a01c0",
+      "name": "csp_sample",
+      "bytes": 360,
+      "code_sha256": "7a32e0169de6f1a57678460df493d90649a591afb5048d4a51a3e4c55c408698",
+      "relocations": {
+        "0x1035a022c": "branch",
+        "0x1035a02a4": "branch",
+        "0x1035a02b8": "branch",
+        "0x1035a02f0": "branch"
+      }
+    },
+    {
+      "start": "0x102193618",
+      "name": "csp_distance",
+      "bytes": 44,
+      "code_sha256": "205910f351a26db8755f4dc177aa6a47136d26cd6de26f545f894d8b3216d982",
+      "relocations": {}
+    },
+    {
+      "start": "0x10359bc34",
+      "name": "csp_quadratic_eval",
+      "bytes": 52,
+      "code_sha256": "710705be414575e735663846c8e9db60f26b94056c9b530e5ffb9f2345496aa2",
+      "relocations": {}
+    },
+    {
+      "start": "0x10359d408",
+      "name": "csp_quadratic_split",
+      "bytes": 84,
+      "code_sha256": "5bfa7822b340af24eddfefc5cc41c84eb9ea543f177d687382c41de5ca434799",
+      "relocations": {}
+    },
+    {
+      "start": "0x10359c378",
+      "name": "csp_quadratic_length",
+      "bytes": 28,
+      "code_sha256": "446f4aa76db057b35f4481a59817d9cb02052db555e300a1b7bb5690ba812326",
+      "relocations": {
+        "0x10359c390": "branch"
+      }
+    },
+    {
+      "start": "0x10359c394",
+      "name": "csp_bezier_length",
+      "bytes": 216,
+      "code_sha256": "259e7b6e2c85578835237af903209183e360f3d484ecac8630e584b72446fcaa",
+      "relocations": {
+        "0x10359c3d8": "branch",
+        "0x10359c3f8": "branch",
+        "0x10359c468": "branch"
+      }
+    },
+    {
+      "start": "0x10359c490",
+      "name": "csp_bezier_measure",
+      "bytes": 344,
+      "code_sha256": "5c7366512e76dc1ed3b83e26f35277afad3a2cf47a16a272aafc9b2a65bb211e",
+      "relocations": {
+        "0x10359c5a0": "branch",
+        "0x10359c5b0": "branch",
+        "0x10359c5c0": "branch",
+        "0x10359c5d0": "branch"
+      }
+    },
+    {
+      "start": "0x10359c60c",
+      "name": "csp_bezier_sampled_length",
+      "bytes": 320,
+      "code_sha256": "7a4f4749ee3f059dbfcbcfc41253ce1bfb2360ff5a4ec50e20a2e44d862b1079",
+      "relocations": {
+        "0x10359c634": "branch",
+        "0x10359c6fc": "branch",
+        "0x10359c71c": "branch",
+        "0x10359c720": "branch"
+      }
+    },
+    {
+      "start": "0x10359fc40",
+      "name": "csp_spline_length",
+      "bytes": 228,
+      "code_sha256": "222f6d98cb54ddaaf0506285f1e88d3639a560a0179ead300a45b7eaf630fcb8",
+      "relocations": {
+        "0x10359fc8c": "branch",
+        "0x10359fcac": "branch",
+        "0x10359fd20": "branch"
+      }
+    },
+    {
+      "start": "0x10359fe88",
+      "name": "csp_spline_sampled_length",
+      "bytes": 276,
+      "code_sha256": "dae970e9447cec2452790c1f95ebb649463980e1796f18013bd8902d967d81ec",
+      "relocations": {
+        "0x10359feb0": "branch",
+        "0x10359ff3c": "branch",
+        "0x10359ff4c": "branch",
+        "0x10359ff6c": "branch",
+        "0x10359ff70": "branch"
+      }
+    }
+  ],
+  "relocated_instructions_checked": 56,
+  "assembly_sha256": "87da00303738fd74eaa113067da927e6a7e5415a0b1a5d6425367d8b65a53755",
+  "driver_sha256": "998617835b024586747a5d49b41d4a9f5ba7e87c46d40bb3d26d9cc3873b1220",
+  "cases": [
+    {
+      "mode": "X",
+      "name": "length-0",
+      "inputBits": [
+        "403fd40675e719e0",
+        "c03c393f40c40888",
+        "40322e778ca6c4e0",
+        "403b746219bab4e0",
+        "40479bc7b8c95b48",
+        "c04dda53af8a7468",
+        "402efd32b7b5bed0",
+        "c056879528424e2a",
+        "4050af22e4c9651c",
+        "c01a955353dfc750",
+        "c030a5d9156068d0",
+        "c052d0ddc401b8a2",
+        "0000000000000000"
+      ],
+      "outputBits": ["404d5728461b707f"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-0",
+      "inputBits": [
+        "403fd40675e719e0",
+        "c03c393f40c40888",
+        "40322e778ca6c4e0",
+        "403b746219bab4e0",
+        "40479bc7b8c95b48",
+        "c04dda53af8a7468",
+        "402efd32b7b5bed0",
+        "c056879528424e2a",
+        "4050af22e4c9651c",
+        "c01a955353dfc750",
+        "c030a5d9156068d0",
+        "c052d0ddc401b8a2",
+        "bff0000000000000"
+      ],
+      "outputBits": ["0000000000000000"]
+    },
+    {
+      "mode": "X",
+      "name": "length-1",
+      "inputBits": [
+        "404650d0b6ae0e8c",
+        "c05769194a1601a1",
+        "c037a9d32c1c8414",
+        "c007c37ede07d4a0",
+        "c0417c5240189976",
+        "c057b11015b640b1",
+        "c0506dfe72806322",
+        "c038b1a47933f304",
+        "c0419f7288b01f3e",
+        "405209bbfbfe8bf4",
+        "c03e84c55548ae94",
+        "4037ab727cbcab90",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["4054efd6047e9c0a"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-1",
+      "inputBits": [
+        "404650d0b6ae0e8c",
+        "c05769194a1601a1",
+        "c037a9d32c1c8414",
+        "c007c37ede07d4a0",
+        "c0417c5240189976",
+        "c057b11015b640b1",
+        "c0506dfe72806322",
+        "c038b1a47933f304",
+        "c0419f7288b01f3e",
+        "405209bbfbfe8bf4",
+        "c03e84c55548ae94",
+        "4037ab727cbcab90",
+        "0000000000000000"
+      ],
+      "outputBits": ["0000000000000000"]
+    },
+    {
+      "mode": "X",
+      "name": "length-2",
+      "inputBits": [
+        "4052adfc8807f058",
+        "404fe015914bf114",
+        "4051544786d44c1e",
+        "c05258d4d4eff9a5",
+        "c04613daa9c104c6",
+        "4034078bc1140580",
+        "404887d24692c080",
+        "c01c9b7779960c10",
+        "405421a7add40ba6",
+        "c0313bcd20351e8c",
+        "c048a14f078ddbb5",
+        "c037b6ab058568b4",
+        "0000000000000000"
+      ],
+      "outputBits": ["405a1a9aec34d4f0"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-2",
+      "inputBits": [
+        "4052adfc8807f058",
+        "404fe015914bf114",
+        "4051544786d44c1e",
+        "c05258d4d4eff9a5",
+        "c04613daa9c104c6",
+        "4034078bc1140580",
+        "404887d24692c080",
+        "c01c9b7779960c10",
+        "405421a7add40ba6",
+        "c0313bcd20351e8c",
+        "c048a14f078ddbb5",
+        "c037b6ab058568b4",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["4058464b0c3b1a7c"]
+    },
+    {
+      "mode": "X",
+      "name": "length-3",
+      "inputBits": [
+        "c03043f15eaf63e4",
+        "c043909ef7e50410",
+        "404b4355e22aa34c",
+        "c019bb7201510ca0",
+        "40504736952eb518",
+        "c052b62fd28758ec",
+        "402fc2b8ffba87d0",
+        "404b78de56ea5470",
+        "c053689127a205d8",
+        "c056d25d68a8ebc0",
+        "c01b3567bdde7eb0",
+        "c04b525bb4b0f9c6",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["40622edefe8d5a36"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-3",
+      "inputBits": [
+        "c03043f15eaf63e4",
+        "c043909ef7e50410",
+        "404b4355e22aa34c",
+        "c019bb7201510ca0",
+        "40504736952eb518",
+        "c052b62fd28758ec",
+        "402fc2b8ffba87d0",
+        "404b78de56ea5470",
+        "c053689127a205d8",
+        "c056d25d68a8ebc0",
+        "c01b3567bdde7eb0",
+        "c04b525bb4b0f9c6",
+        "4008000000000000"
+      ],
+      "outputBits": ["4061daedebfdfb22"]
+    },
+    {
+      "mode": "X",
+      "name": "length-4",
+      "inputBits": [
+        "404b19b01db7ea14",
+        "c01a1b801e595300",
+        "403de2c377f20288",
+        "c010431a0dfd1d30",
+        "4055c2587d1394e4",
+        "40447afce8ea685c",
+        "c04767cd092c67b4",
+        "3feecde5a9114800",
+        "403f34dd82552af0",
+        "405224a93ed4b74e",
+        "403effedcf582ef8",
+        "4055fc586d2a6700",
+        "0000000000000000"
+      ],
+      "outputBits": ["4061899671d209ca"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-4",
+      "inputBits": [
+        "404b19b01db7ea14",
+        "c01a1b801e595300",
+        "403de2c377f20288",
+        "c010431a0dfd1d30",
+        "4055c2587d1394e4",
+        "40447afce8ea685c",
+        "c04767cd092c67b4",
+        "3feecde5a9114800",
+        "403f34dd82552af0",
+        "405224a93ed4b74e",
+        "403effedcf582ef8",
+        "4055fc586d2a6700",
+        "401c000000000000"
+      ],
+      "outputBits": ["406186882e9f8bef"]
+    },
+    {
+      "mode": "X",
+      "name": "length-5",
+      "inputBits": [
+        "c05784c8c8fbd4e6",
+        "c0329ff215c86bb4",
+        "c053958c92107e5e",
+        "404a468da1b53624",
+        "c049ad19afe7034d",
+        "404526e7a563a270",
+        "c0545732fdb62f50",
+        "4024b1cbea151be0",
+        "4052ff9204f71588",
+        "4052e4c83ad85f96",
+        "c032a90b8bde4294",
+        "c03f143019e539e8",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["404fb7be74dd047d"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-5",
+      "inputBits": [
+        "c05784c8c8fbd4e6",
+        "c0329ff215c86bb4",
+        "c053958c92107e5e",
+        "404a468da1b53624",
+        "c049ad19afe7034d",
+        "404526e7a563a270",
+        "c0545732fdb62f50",
+        "4024b1cbea151be0",
+        "4052ff9204f71588",
+        "4052e4c83ad85f96",
+        "c032a90b8bde4294",
+        "c03f143019e539e8",
+        "406fe00000000000"
+      ],
+      "outputBits": ["404fb7f4a084a560"]
+    },
+    {
+      "mode": "X",
+      "name": "length-6",
+      "inputBits": [
+        "c04e54f6d4869112",
+        "404b983d68210a78",
+        "c0563d03b6359336",
+        "c04d832523551f51",
+        "404df196668b15b8",
+        "c03bdc57fb657d34",
+        "405204cc8fea1da4",
+        "c04ab1a076eb8d0d",
+        "404314426c533fec",
+        "40310c26d96b430c",
+        "c03feed546162ad0",
+        "c057716d87492e60",
+        "0000000000000000"
+      ],
+      "outputBits": ["40491e5ecc99e290"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-6",
+      "inputBits": [
+        "c04e54f6d4869112",
+        "404b983d68210a78",
+        "c0563d03b6359336",
+        "c04d832523551f51",
+        "404df196668b15b8",
+        "c03bdc57fb657d34",
+        "405204cc8fea1da4",
+        "c04ab1a076eb8d0d",
+        "404314426c533fec",
+        "40310c26d96b430c",
+        "c03feed546162ad0",
+        "c057716d87492e60",
+        "4072c00000000000"
+      ],
+      "outputBits": ["40493c18b8d2a6ce"]
+    },
+    {
+      "mode": "X",
+      "name": "length-7",
+      "inputBits": [
+        "4056d1b6911e02da",
+        "404a0d698ee9fef4",
+        "c01772fcfaadcb10",
+        "4048ff82ba106f94",
+        "c04e1d3cb31d9a28",
+        "4050408be24d5846",
+        "40202efbe45eb488",
+        "4047e960a09e3980",
+        "4051773a62261904",
+        "c02e4db90b790a70",
+        "4052b7b22952ce0a",
+        "402e5471c684a858",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["4051ec8fd2bb1fbf"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-7",
+      "inputBits": [
+        "4056d1b6911e02da",
+        "404a0d698ee9fef4",
+        "c01772fcfaadcb10",
+        "4048ff82ba106f94",
+        "c04e1d3cb31d9a28",
+        "4050408be24d5846",
+        "40202efbe45eb488",
+        "4047e960a09e3980",
+        "4051773a62261904",
+        "c02e4db90b790a70",
+        "4052b7b22952ce0a",
+        "402e5471c684a858",
+        "4080000000000000"
+      ],
+      "outputBits": ["4051ec920e9c366f"]
+    },
+    {
+      "mode": "X",
+      "name": "length-8",
+      "inputBits": [
+        "404ebabb8e6b7568",
+        "c0576e9126b5489a",
+        "c048f6a2f47928b7",
+        "404ea8f3553df864",
+        "404e9c13f138f4f8",
+        "405880c281ad9aae",
+        "c0456fe1c2df3079",
+        "c0521bfb516bd4ea",
+        "c056751a4e02630d",
+        "404d4b9612dc9dfc",
+        "403089c7fa8d3e08",
+        "c053031f9306429c",
+        "0000000000000000"
+      ],
+      "outputBits": ["406a0de0a5480a5c"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-8",
+      "inputBits": [
+        "404ebabb8e6b7568",
+        "c0576e9126b5489a",
+        "c048f6a2f47928b7",
+        "404ea8f3553df864",
+        "404e9c13f138f4f8",
+        "405880c281ad9aae",
+        "c0456fe1c2df3079",
+        "c0521bfb516bd4ea",
+        "c056751a4e02630d",
+        "404d4b9612dc9dfc",
+        "403089c7fa8d3e08",
+        "c053031f9306429c",
+        "bff0000000000000"
+      ],
+      "outputBits": ["0000000000000000"]
+    },
+    {
+      "mode": "X",
+      "name": "length-9",
+      "inputBits": [
+        "c02e90b6169f2a68",
+        "4034b01797cf4cd0",
+        "4057477fb33d9746",
+        "c038cf5295d3ebec",
+        "402655f58c1df2a8",
+        "4051cc796fb02520",
+        "c0568671387ff3f8",
+        "4050d3c1296370c4",
+        "4044bc8aa93ceb9c",
+        "c030836cecc85444",
+        "40168b09661572e0",
+        "c031daf8861ecf40",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["405cd2071dfdd509"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-9",
+      "inputBits": [
+        "c02e90b6169f2a68",
+        "4034b01797cf4cd0",
+        "4057477fb33d9746",
+        "c038cf5295d3ebec",
+        "402655f58c1df2a8",
+        "4051cc796fb02520",
+        "c0568671387ff3f8",
+        "4050d3c1296370c4",
+        "4044bc8aa93ceb9c",
+        "c030836cecc85444",
+        "40168b09661572e0",
+        "c031daf8861ecf40",
+        "0000000000000000"
+      ],
+      "outputBits": ["0000000000000000"]
+    },
+    {
+      "mode": "X",
+      "name": "length-10",
+      "inputBits": [
+        "c0241caadb9021a0",
+        "4034f445d4f0f694",
+        "404d42fdae5e5718",
+        "c055e1cb9b6c0b7f",
+        "c053df02fa9e3170",
+        "c048147765826a63",
+        "c05114cdaebaf11b",
+        "c0419744471d7f5c",
+        "4039f0ba78601514",
+        "c0576a26cef995be",
+        "c0346a038968758c",
+        "40518d1f1d8ef3ce",
+        "0000000000000000"
+      ],
+      "outputBits": ["404cc4b5e7d28fd3"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-10",
+      "inputBits": [
+        "c0241caadb9021a0",
+        "4034f445d4f0f694",
+        "404d42fdae5e5718",
+        "c055e1cb9b6c0b7f",
+        "c053df02fa9e3170",
+        "c048147765826a63",
+        "c05114cdaebaf11b",
+        "c0419744471d7f5c",
+        "4039f0ba78601514",
+        "c0576a26cef995be",
+        "c0346a038968758c",
+        "40518d1f1d8ef3ce",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["40311dc2dbf73498"]
+    },
+    {
+      "mode": "X",
+      "name": "length-11",
+      "inputBits": [
+        "40500ebca7bf5354",
+        "c00a03c01d8606e0",
+        "c053f43cf2404efc",
+        "40031ecc02b8bec0",
+        "40534fe5f21f9034",
+        "404bf7a3b9e724d4",
+        "c025fa293f286210",
+        "40548d8c208abebc",
+        "3fdd060145b1a600",
+        "c051c332cb38bd71",
+        "c058163c576d76e1",
+        "c0491f609b6c8738",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["405c4fd8c1dbd363"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-11",
+      "inputBits": [
+        "40500ebca7bf5354",
+        "c00a03c01d8606e0",
+        "c053f43cf2404efc",
+        "40031ecc02b8bec0",
+        "40534fe5f21f9034",
+        "404bf7a3b9e724d4",
+        "c025fa293f286210",
+        "40548d8c208abebc",
+        "3fdd060145b1a600",
+        "c051c332cb38bd71",
+        "c058163c576d76e1",
+        "c0491f609b6c8738",
+        "4008000000000000"
+      ],
+      "outputBits": ["405ace79f6d49ae4"]
+    },
+    {
+      "mode": "X",
+      "name": "length-12",
+      "inputBits": [
+        "c04a8d743368a3a6",
+        "4055dfe19219cb50",
+        "c051dfc6f0e4ae85",
+        "c04612a10361b90d",
+        "40423ec3bf759bbc",
+        "c0541ca3b93ca818",
+        "405895ab5b7cbe92",
+        "c0436906b0e3e1f2",
+        "4043bfd1e4ea78cc",
+        "c0451397cb709756",
+        "4043d8eca59ecb88",
+        "4053d11253962588",
+        "0000000000000000"
+      ],
+      "outputBits": ["4053608892c76075"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-12",
+      "inputBits": [
+        "c04a8d743368a3a6",
+        "4055dfe19219cb50",
+        "c051dfc6f0e4ae85",
+        "c04612a10361b90d",
+        "40423ec3bf759bbc",
+        "c0541ca3b93ca818",
+        "405895ab5b7cbe92",
+        "c0436906b0e3e1f2",
+        "4043bfd1e4ea78cc",
+        "c0451397cb709756",
+        "4043d8eca59ecb88",
+        "4053d11253962588",
+        "401c000000000000"
+      ],
+      "outputBits": ["40535431586e6c4f"]
+    },
+    {
+      "mode": "X",
+      "name": "length-13",
+      "inputBits": [
+        "c04eb5290abc7918",
+        "c04b6073a0338a83",
+        "4056affb546d8612",
+        "c051246d4f4d5bb2",
+        "40437d9b66faba58",
+        "c0540933ce5e133a",
+        "4011289a145b6a70",
+        "c03e31fcfeaa21f0",
+        "4040ffd92a2fe8bc",
+        "40335281031bd3c4",
+        "4049b43f6b3d79e4",
+        "c00beff1e77c1da0",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["40506c479a6a6fae"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-13",
+      "inputBits": [
+        "c04eb5290abc7918",
+        "c04b6073a0338a83",
+        "4056affb546d8612",
+        "c051246d4f4d5bb2",
+        "40437d9b66faba58",
+        "c0540933ce5e133a",
+        "4011289a145b6a70",
+        "c03e31fcfeaa21f0",
+        "4040ffd92a2fe8bc",
+        "40335281031bd3c4",
+        "4049b43f6b3d79e4",
+        "c00beff1e77c1da0",
+        "406fe00000000000"
+      ],
+      "outputBits": ["40506c4b572dd3c6"]
+    },
+    {
+      "mode": "X",
+      "name": "length-14",
+      "inputBits": [
+        "403c7e1c54c10040",
+        "c0509fcf45cd5b9e",
+        "40393901d76f1318",
+        "404da819981f5c1c",
+        "4053829bd9c87dba",
+        "405427449a22dbc2",
+        "c04008be51d79270",
+        "c05854474002b733",
+        "c05117b4bab7b868",
+        "403ad9365aebaa88",
+        "c042031dad409e0a",
+        "c055d55f308dbcc7",
+        "0000000000000000"
+      ],
+      "outputBits": ["406aa4f1327658b0"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-14",
+      "inputBits": [
+        "403c7e1c54c10040",
+        "c0509fcf45cd5b9e",
+        "40393901d76f1318",
+        "404da819981f5c1c",
+        "4053829bd9c87dba",
+        "405427449a22dbc2",
+        "c04008be51d79270",
+        "c05854474002b733",
+        "c05117b4bab7b868",
+        "403ad9365aebaa88",
+        "c042031dad409e0a",
+        "c055d55f308dbcc7",
+        "4072c00000000000"
+      ],
+      "outputBits": ["406aa517afdebab4"]
+    },
+    {
+      "mode": "X",
+      "name": "length-15",
+      "inputBits": [
+        "402ddef35a8c1ef0",
+        "c047a4f2601bc28d",
+        "403a76e6514f9af4",
+        "c03cc8a781f90ffc",
+        "4042020a9cc8c3ec",
+        "4051067f1b904d0a",
+        "c052e4cee4eac050",
+        "c054b7601965bd99",
+        "401227650b4d2940",
+        "c04a38d0ebcccde6",
+        "c049a0dd1d3b69fa",
+        "c0463ed3604d9c8c",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["4067b13bd32d11bc"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-15",
+      "inputBits": [
+        "402ddef35a8c1ef0",
+        "c047a4f2601bc28d",
+        "403a76e6514f9af4",
+        "c03cc8a781f90ffc",
+        "4042020a9cc8c3ec",
+        "4051067f1b904d0a",
+        "c052e4cee4eac050",
+        "c054b7601965bd99",
+        "401227650b4d2940",
+        "c04a38d0ebcccde6",
+        "c049a0dd1d3b69fa",
+        "c0463ed3604d9c8c",
+        "4080000000000000"
+      ],
+      "outputBits": ["4067b13c0027b66a"]
+    },
+    {
+      "mode": "X",
+      "name": "length-16",
+      "inputBits": [
+        "40421d9aa2c2e81c",
+        "c046b42cf21c0dfd",
+        "4015611e83d835a0",
+        "c04553e8b683d868",
+        "4043cb4799290234",
+        "40413ba655d05564",
+        "c048f47b660fcd15",
+        "4035bfd9540a968c",
+        "c0517a1119001563",
+        "40560d5b2375628a",
+        "402b2d2b8b649578",
+        "4055b899e52dc560",
+        "0000000000000000"
+      ],
+      "outputBits": ["405740b41a066520"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-16",
+      "inputBits": [
+        "40421d9aa2c2e81c",
+        "c046b42cf21c0dfd",
+        "4015611e83d835a0",
+        "c04553e8b683d868",
+        "4043cb4799290234",
+        "40413ba655d05564",
+        "c048f47b660fcd15",
+        "4035bfd9540a968c",
+        "c0517a1119001563",
+        "40560d5b2375628a",
+        "402b2d2b8b649578",
+        "4055b899e52dc560",
+        "bff0000000000000"
+      ],
+      "outputBits": ["0000000000000000"]
+    },
+    {
+      "mode": "X",
+      "name": "length-17",
+      "inputBits": [
+        "4028ae5856e8f1a0",
+        "403ef7a094503000",
+        "40449b6d9a93b1d8",
+        "4043d5e3aba424b4",
+        "c0408a3399bfe9c0",
+        "4045aca4e4e066c8",
+        "c053df4c83677ccc",
+        "c036e82c72e30b08",
+        "c050f1d45576ab9a",
+        "40208521f8f14058",
+        "40581278f4ce9798",
+        "c0508c742185c7ab",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["40549675321956fd"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-17",
+      "inputBits": [
+        "4028ae5856e8f1a0",
+        "403ef7a094503000",
+        "40449b6d9a93b1d8",
+        "4043d5e3aba424b4",
+        "c0408a3399bfe9c0",
+        "4045aca4e4e066c8",
+        "c053df4c83677ccc",
+        "c036e82c72e30b08",
+        "c050f1d45576ab9a",
+        "40208521f8f14058",
+        "40581278f4ce9798",
+        "c0508c742185c7ab",
+        "0000000000000000"
+      ],
+      "outputBits": ["0000000000000000"]
+    },
+    {
+      "mode": "X",
+      "name": "length-18",
+      "inputBits": [
+        "4045893d392099d4",
+        "4058466c7e9aa9e6",
+        "c051e8dfbca41bf4",
+        "4027bf2f545a9110",
+        "c03949e118057d44",
+        "c043135de7366531",
+        "c0556373413b7235",
+        "c051960de8069b00",
+        "405462e1d56a53e4",
+        "403c263dae554358",
+        "404980e1e2b88b58",
+        "c04fe9640aa6e87d",
+        "0000000000000000"
+      ],
+      "outputBits": ["4054f37f43e5c874"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-18",
+      "inputBits": [
+        "4045893d392099d4",
+        "4058466c7e9aa9e6",
+        "c051e8dfbca41bf4",
+        "4027bf2f545a9110",
+        "c03949e118057d44",
+        "c043135de7366531",
+        "c0556373413b7235",
+        "c051960de8069b00",
+        "405462e1d56a53e4",
+        "403c263dae554358",
+        "404980e1e2b88b58",
+        "c04fe9640aa6e87d",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["405114ce27618397"]
+    },
+    {
+      "mode": "X",
+      "name": "length-19",
+      "inputBits": [
+        "c036b3183f32ee04",
+        "40402e1b364d25c8",
+        "403ec8e8f302fef8",
+        "c0575baf96ffb690",
+        "4038b8bbc3c06640",
+        "c055302c9d4c6fff",
+        "403ad0cf984178a0",
+        "404f2a8a7aace61c",
+        "402f948d68ed7c90",
+        "40588e82a3be9eec",
+        "c0551f52304bff57",
+        "4055c3e496af237c",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["406265f42c444066"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-19",
+      "inputBits": [
+        "c036b3183f32ee04",
+        "40402e1b364d25c8",
+        "403ec8e8f302fef8",
+        "c0575baf96ffb690",
+        "4038b8bbc3c06640",
+        "c055302c9d4c6fff",
+        "403ad0cf984178a0",
+        "404f2a8a7aace61c",
+        "402f948d68ed7c90",
+        "40588e82a3be9eec",
+        "c0551f52304bff57",
+        "4055c3e496af237c",
+        "4008000000000000"
+      ],
+      "outputBits": ["40626567c02e93af"]
+    },
+    {
+      "mode": "X",
+      "name": "length-20",
+      "inputBits": [
+        "4057c0a148170f42",
+        "c04604e424adc528",
+        "4043be5350151e84",
+        "c047938956674df5",
+        "4041e46ab7053f9c",
+        "c042bc08c37eddee",
+        "c04096ff22a8acb0",
+        "4036a965e4479ed0",
+        "c02e85016a806cd8",
+        "404a52bd49f73fbc",
+        "c0406278a38de930",
+        "c021f37c463c22e8",
+        "0000000000000000"
+      ],
+      "outputBits": ["405707ab4f61754a"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-20",
+      "inputBits": [
+        "4057c0a148170f42",
+        "c04604e424adc528",
+        "4043be5350151e84",
+        "c047938956674df5",
+        "4041e46ab7053f9c",
+        "c042bc08c37eddee",
+        "c04096ff22a8acb0",
+        "4036a965e4479ed0",
+        "c02e85016a806cd8",
+        "404a52bd49f73fbc",
+        "c0406278a38de930",
+        "c021f37c463c22e8",
+        "401c000000000000"
+      ],
+      "outputBits": ["40570552918c76b4"]
+    },
+    {
+      "mode": "X",
+      "name": "length-21",
+      "inputBits": [
+        "4054d2e788a03bc6",
+        "c04c99a6d12d351e",
+        "c04d21d39f894d18",
+        "c050730377ab8f14",
+        "c04ae57ac73c42b6",
+        "40454358f5218668",
+        "404ef1a8452c3fe4",
+        "c04bd7ed0d18ea84",
+        "3feadcb331b6d400",
+        "c01921bb942aeae0",
+        "4029e275dbe7ec60",
+        "c0578154ea34e7d4",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["4063478ba8ae4200"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-21",
+      "inputBits": [
+        "4054d2e788a03bc6",
+        "c04c99a6d12d351e",
+        "c04d21d39f894d18",
+        "c050730377ab8f14",
+        "c04ae57ac73c42b6",
+        "40454358f5218668",
+        "404ef1a8452c3fe4",
+        "c04bd7ed0d18ea84",
+        "3feadcb331b6d400",
+        "c01921bb942aeae0",
+        "4029e275dbe7ec60",
+        "c0578154ea34e7d4",
+        "406fe00000000000"
+      ],
+      "outputBits": ["4063478b502bf228"]
+    },
+    {
+      "mode": "X",
+      "name": "length-22",
+      "inputBits": [
+        "c03ff83c46a02408",
+        "c043af203b38ca8e",
+        "c020a16304ffe0c0",
+        "4046f21a4da59f24",
+        "404b4509412fcb40",
+        "c026021c9acab058",
+        "c050b968659b1196",
+        "c04ae70442b40840",
+        "c0521209d0e0e61a",
+        "c0534ba5eea1df4f",
+        "405697ab75d04ea0",
+        "c036b92d60b293f8",
+        "0000000000000000"
+      ],
+      "outputBits": ["40605cd2a41e0676"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-22",
+      "inputBits": [
+        "c03ff83c46a02408",
+        "c043af203b38ca8e",
+        "c020a16304ffe0c0",
+        "4046f21a4da59f24",
+        "404b4509412fcb40",
+        "c026021c9acab058",
+        "c050b968659b1196",
+        "c04ae70442b40840",
+        "c0521209d0e0e61a",
+        "c0534ba5eea1df4f",
+        "405697ab75d04ea0",
+        "c036b92d60b293f8",
+        "4072c00000000000"
+      ],
+      "outputBits": ["40605d1400b37a18"]
+    },
+    {
+      "mode": "X",
+      "name": "length-23",
+      "inputBits": [
+        "4026baa157a2e4e0",
+        "40134760c81cc6b0",
+        "c053700f86c47d92",
+        "c03bb9d4a7f7d2dc",
+        "4056d14967f48720",
+        "c0566fbdcc7847d6",
+        "c056f7eeb24d924c",
+        "404f7aa7abd7bfec",
+        "403209e5896f4748",
+        "4056275221f7e934",
+        "403329a182462fa4",
+        "c05606013cfe9f2f",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["406e0d9f252e4435"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-23",
+      "inputBits": [
+        "4026baa157a2e4e0",
+        "40134760c81cc6b0",
+        "c053700f86c47d92",
+        "c03bb9d4a7f7d2dc",
+        "4056d14967f48720",
+        "c0566fbdcc7847d6",
+        "c056f7eeb24d924c",
+        "404f7aa7abd7bfec",
+        "403209e5896f4748",
+        "4056275221f7e934",
+        "403329a182462fa4",
+        "c05606013cfe9f2f",
+        "4080000000000000"
+      ],
+      "outputBits": ["406e0d9f38e8805d"]
+    },
+    {
+      "mode": "X",
+      "name": "length-24",
+      "inputBits": [
+        "c01daee2edb09f50",
+        "c026ff6be8ecb988",
+        "403eebd8d4953dc8",
+        "40382c57181992b0",
+        "c04229484cb177fa",
+        "404c6bcaddb677c4",
+        "c04fc8116d1dd872",
+        "c0356ca0b9cf7f00",
+        "c05207236602491b",
+        "c0302c70172d0360",
+        "c04f9f721dbb9e30",
+        "c04239f0fcfd7538",
+        "0000000000000000"
+      ],
+      "outputBits": ["4055481e09460b04"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-24",
+      "inputBits": [
+        "c01daee2edb09f50",
+        "c026ff6be8ecb988",
+        "403eebd8d4953dc8",
+        "40382c57181992b0",
+        "c04229484cb177fa",
+        "404c6bcaddb677c4",
+        "c04fc8116d1dd872",
+        "c0356ca0b9cf7f00",
+        "c05207236602491b",
+        "c0302c70172d0360",
+        "c04f9f721dbb9e30",
+        "c04239f0fcfd7538",
+        "bff0000000000000"
+      ],
+      "outputBits": ["0000000000000000"]
+    },
+    {
+      "mode": "X",
+      "name": "length-25",
+      "inputBits": [
+        "c01f49f540c4f460",
+        "c03e49e4c1debc0c",
+        "bfd858f30565ce00",
+        "40562fd2e1ec75fe",
+        "404ddd2c19878ec0",
+        "c0550b4958e6193d",
+        "c033d09bb769d42c",
+        "405712b1917ca334",
+        "4037861604a1f548",
+        "4026ada943d1a070",
+        "c006f11efa1ddd00",
+        "4052194f0d9db5ea",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["40683fa60f820d49"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-25",
+      "inputBits": [
+        "c01f49f540c4f460",
+        "c03e49e4c1debc0c",
+        "bfd858f30565ce00",
+        "40562fd2e1ec75fe",
+        "404ddd2c19878ec0",
+        "c0550b4958e6193d",
+        "c033d09bb769d42c",
+        "405712b1917ca334",
+        "4037861604a1f548",
+        "4026ada943d1a070",
+        "c006f11efa1ddd00",
+        "4052194f0d9db5ea",
+        "0000000000000000"
+      ],
+      "outputBits": ["0000000000000000"]
+    },
+    {
+      "mode": "X",
+      "name": "length-26",
+      "inputBits": [
+        "c0005b9588ecec00",
+        "c0513d4c4eddc44e",
+        "404b7aa8f8b01b70",
+        "403ccff2ff715720",
+        "c0493baf20e1e378",
+        "c0495a8248ee98aa",
+        "4016d9acd59961f0",
+        "4052f4516010dd2c",
+        "c05843fcf3b8a31a",
+        "405457c865a89a7e",
+        "4019fa51f566ece0",
+        "c05833978d427792",
+        "0000000000000000"
+      ],
+      "outputBits": ["4061c2ddf2ccc175"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-26",
+      "inputBits": [
+        "c0005b9588ecec00",
+        "c0513d4c4eddc44e",
+        "404b7aa8f8b01b70",
+        "403ccff2ff715720",
+        "c0493baf20e1e378",
+        "c0495a8248ee98aa",
+        "4016d9acd59961f0",
+        "4052f4516010dd2c",
+        "c05843fcf3b8a31a",
+        "405457c865a89a7e",
+        "4019fa51f566ece0",
+        "c05833978d427792",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["40614df3d41212e6"]
+    },
+    {
+      "mode": "X",
+      "name": "length-27",
+      "inputBits": [
+        "4038f5055aaf8578",
+        "c05027789243753e",
+        "4041b35fdd7b7578",
+        "c05098be5026c4f8",
+        "c047ffe19cda1f0e",
+        "c052c363a578e0f4",
+        "4032065a36813408",
+        "c02812e9cf713628",
+        "c04f861f39dd7d27",
+        "4051136df9868cae",
+        "40396db4e0996a60",
+        "c026fb44a89a01b0",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["40581d6a55159076"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-27",
+      "inputBits": [
+        "4038f5055aaf8578",
+        "c05027789243753e",
+        "4041b35fdd7b7578",
+        "c05098be5026c4f8",
+        "c047ffe19cda1f0e",
+        "c052c363a578e0f4",
+        "4032065a36813408",
+        "c02812e9cf713628",
+        "c04f861f39dd7d27",
+        "4051136df9868cae",
+        "40396db4e0996a60",
+        "c026fb44a89a01b0",
+        "4008000000000000"
+      ],
+      "outputBits": ["4057a64599170aa0"]
+    },
+    {
+      "mode": "X",
+      "name": "length-28",
+      "inputBits": [
+        "4045994f74524b8c",
+        "4051d0c519d8fa96",
+        "c012d9a80d53e070",
+        "40540b0ea0f8fd7a",
+        "4053ece174d3e1e0",
+        "405874dcb08cb624",
+        "c049562be7c07d7a",
+        "403d20d324a91d78",
+        "c03d9a13260dc314",
+        "c0515ccfe2b02e5f",
+        "4055e7ab497b66c6",
+        "c03ef2a809cbc5d8",
+        "0000000000000000"
+      ],
+      "outputBits": ["40629b5929bef8f5"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-28",
+      "inputBits": [
+        "4045994f74524b8c",
+        "4051d0c519d8fa96",
+        "c012d9a80d53e070",
+        "40540b0ea0f8fd7a",
+        "4053ece174d3e1e0",
+        "405874dcb08cb624",
+        "c049562be7c07d7a",
+        "403d20d324a91d78",
+        "c03d9a13260dc314",
+        "c0515ccfe2b02e5f",
+        "4055e7ab497b66c6",
+        "c03ef2a809cbc5d8",
+        "401c000000000000"
+      ],
+      "outputBits": ["4062982cb9e5bf84"]
+    },
+    {
+      "mode": "X",
+      "name": "length-29",
+      "inputBits": [
+        "4040893f2ab7a81c",
+        "4052a43a6f138770",
+        "c042b9990db0859b",
+        "c0530cb5dc562eb4",
+        "4030bf3cca152530",
+        "c0526755bcfa67fc",
+        "c047a1891858c72c",
+        "c04efb548ea731ec",
+        "c04bb21e6e2a4296",
+        "4047e16d8f5b8d18",
+        "404a50accf5ba560",
+        "40516d1a9566baee",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["40512d68759c65ec"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-29",
+      "inputBits": [
+        "4040893f2ab7a81c",
+        "4052a43a6f138770",
+        "c042b9990db0859b",
+        "c0530cb5dc562eb4",
+        "4030bf3cca152530",
+        "c0526755bcfa67fc",
+        "c047a1891858c72c",
+        "c04efb548ea731ec",
+        "c04bb21e6e2a4296",
+        "4047e16d8f5b8d18",
+        "404a50accf5ba560",
+        "40516d1a9566baee",
+        "406fe00000000000"
+      ],
+      "outputBits": ["40512d7627475ed2"]
+    },
+    {
+      "mode": "X",
+      "name": "length-30",
+      "inputBits": [
+        "40223e3210b109e8",
+        "c040ab8f143b0c30",
+        "404f8d2b45cd2a74",
+        "c0498d303b2a8300",
+        "403b49356dd16998",
+        "4045a88c56ef633c",
+        "c05259169c68b958",
+        "4049589317288ee8",
+        "c04cf8958275986b",
+        "c0557451bb02fe87",
+        "c03be8d4b97f6418",
+        "c044558de2e6b1a4",
+        "0000000000000000"
+      ],
+      "outputBits": ["405c5ed8338397fd"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-30",
+      "inputBits": [
+        "40223e3210b109e8",
+        "c040ab8f143b0c30",
+        "404f8d2b45cd2a74",
+        "c0498d303b2a8300",
+        "403b49356dd16998",
+        "4045a88c56ef633c",
+        "c05259169c68b958",
+        "4049589317288ee8",
+        "c04cf8958275986b",
+        "c0557451bb02fe87",
+        "c03be8d4b97f6418",
+        "c044558de2e6b1a4",
+        "4072c00000000000"
+      ],
+      "outputBits": ["405c603045ffe8a7"]
+    },
+    {
+      "mode": "X",
+      "name": "length-31",
+      "inputBits": [
+        "c040a365555d5e08",
+        "4050c1cc04c7b6d6",
+        "40571f866afe07f2",
+        "40140151deb20c40",
+        "c05209c61fd3bf8f",
+        "4055e706cf7c8bca",
+        "403276ad4cc961a8",
+        "4022ab3917334e58",
+        "4048f2f6ae77cc1c",
+        "c04c9c69c8b4e70e",
+        "40373102a42d92e0",
+        "c047d336cc5f6f62",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["405fd9c2c2fe4ae7"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-31",
+      "inputBits": [
+        "c040a365555d5e08",
+        "4050c1cc04c7b6d6",
+        "40571f866afe07f2",
+        "40140151deb20c40",
+        "c05209c61fd3bf8f",
+        "4055e706cf7c8bca",
+        "403276ad4cc961a8",
+        "4022ab3917334e58",
+        "4048f2f6ae77cc1c",
+        "c04c9c69c8b4e70e",
+        "40373102a42d92e0",
+        "c047d336cc5f6f62",
+        "4080000000000000"
+      ],
+      "outputBits": ["405fd9cbe591b68a"]
+    },
+    {
+      "mode": "X",
+      "name": "length-32",
+      "inputBits": [
+        "c04c9a54331171dc",
+        "c04c1df50ceacebb",
+        "c04fcf64e758fc7d",
+        "40297430c3b921f8",
+        "c023ef45b40b53e0",
+        "4032dbc05b60e940",
+        "404759e4c01061c0",
+        "c04247b262ea1adb",
+        "4046ac69d5533a6c",
+        "3ff59e87714f1c40",
+        "404553255caf4f10",
+        "c054cdc42ac206d9",
+        "0000000000000000"
+      ],
+      "outputBits": ["4054049224de4b73"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-32",
+      "inputBits": [
+        "c04c9a54331171dc",
+        "c04c1df50ceacebb",
+        "c04fcf64e758fc7d",
+        "40297430c3b921f8",
+        "c023ef45b40b53e0",
+        "4032dbc05b60e940",
+        "404759e4c01061c0",
+        "c04247b262ea1adb",
+        "4046ac69d5533a6c",
+        "3ff59e87714f1c40",
+        "404553255caf4f10",
+        "c054cdc42ac206d9",
+        "bff0000000000000"
+      ],
+      "outputBits": ["0000000000000000"]
+    },
+    {
+      "mode": "X",
+      "name": "length-33",
+      "inputBits": [
+        "c056f0978aae8e2f",
+        "c0522dd2d90dc2a3",
+        "c054ee28972fd632",
+        "40515d05874e218e",
+        "404b21b0600d66b0",
+        "c057d6843a16f061",
+        "402f898241810c58",
+        "40448b649c5cb430",
+        "4047c181691f049c",
+        "40579ab47ff9b52e",
+        "4050fd49052d437a",
+        "c04b815cd3737745",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["4062b8ce95f01222"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-33",
+      "inputBits": [
+        "c056f0978aae8e2f",
+        "c0522dd2d90dc2a3",
+        "c054ee28972fd632",
+        "40515d05874e218e",
+        "404b21b0600d66b0",
+        "c057d6843a16f061",
+        "402f898241810c58",
+        "40448b649c5cb430",
+        "4047c181691f049c",
+        "40579ab47ff9b52e",
+        "4050fd49052d437a",
+        "c04b815cd3737745",
+        "0000000000000000"
+      ],
+      "outputBits": ["0000000000000000"]
+    },
+    {
+      "mode": "X",
+      "name": "length-34",
+      "inputBits": [
+        "c038a2a65e89b774",
+        "c0304a672303eb78",
+        "c058e7e86f6a83b7",
+        "c03324aa9601e3e8",
+        "4050da8f28141166",
+        "c0548e48b2a17fd2",
+        "4019c5b6dfd18400",
+        "4048788638a5af7c",
+        "404bc46e835bf468",
+        "c049541f6c8b0489",
+        "c0333af270295f74",
+        "40505c762945f30e",
+        "0000000000000000"
+      ],
+      "outputBits": ["4062d81757df3ae0"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-34",
+      "inputBits": [
+        "c038a2a65e89b774",
+        "c0304a672303eb78",
+        "c058e7e86f6a83b7",
+        "c03324aa9601e3e8",
+        "4050da8f28141166",
+        "c0548e48b2a17fd2",
+        "4019c5b6dfd18400",
+        "4048788638a5af7c",
+        "404bc46e835bf468",
+        "c049541f6c8b0489",
+        "c0333af270295f74",
+        "40505c762945f30e",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["4062149873557fa4"]
+    },
+    {
+      "mode": "X",
+      "name": "length-35",
+      "inputBits": [
+        "c0329ece253d70f8",
+        "400066080646e6c0",
+        "c0470aa852e05894",
+        "4047affdbcc4e3f0",
+        "c04834e440693f2b",
+        "c0412bfa3af26c18",
+        "3ff2db2bd1440c80",
+        "c042804aa72a19d6",
+        "4053fbfe96876732",
+        "c013bcd80d78e410",
+        "c01e94e9609fcbb0",
+        "4058e5db25a89112",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["404bedcb5bca57fc"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-35",
+      "inputBits": [
+        "c0329ece253d70f8",
+        "400066080646e6c0",
+        "c0470aa852e05894",
+        "4047affdbcc4e3f0",
+        "c04834e440693f2b",
+        "c0412bfa3af26c18",
+        "3ff2db2bd1440c80",
+        "c042804aa72a19d6",
+        "4053fbfe96876732",
+        "c013bcd80d78e410",
+        "c01e94e9609fcbb0",
+        "4058e5db25a89112",
+        "4008000000000000"
+      ],
+      "outputBits": ["404b887ef816a292"]
+    },
+    {
+      "mode": "X",
+      "name": "length-36",
+      "inputBits": [
+        "c057a81ce4023146",
+        "c01525b5d6ee3e30",
+        "403ac589b76bee50",
+        "c0500f00de94e670",
+        "405093ddcb17b4b2",
+        "405086fb981c3fa0",
+        "4047f80629013694",
+        "40509afe31cbcce8",
+        "4037f47cbfe62540",
+        "4046d336a8b1a0c0",
+        "4058d51ab533938c",
+        "c04100d8ef9a9a74",
+        "0000000000000000"
+      ],
+      "outputBits": ["4042ece537221e53"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-36",
+      "inputBits": [
+        "c057a81ce4023146",
+        "c01525b5d6ee3e30",
+        "403ac589b76bee50",
+        "c0500f00de94e670",
+        "405093ddcb17b4b2",
+        "405086fb981c3fa0",
+        "4047f80629013694",
+        "40509afe31cbcce8",
+        "4037f47cbfe62540",
+        "4046d336a8b1a0c0",
+        "4058d51ab533938c",
+        "c04100d8ef9a9a74",
+        "401c000000000000"
+      ],
+      "outputBits": ["4042ce330e5f00f7"]
+    },
+    {
+      "mode": "X",
+      "name": "length-37",
+      "inputBits": [
+        "c03eed83dbe80614",
+        "403cea6bb8060058",
+        "4048a40cbd1272b0",
+        "4009d45e06159b80",
+        "c04700eaea54cb09",
+        "4054293998ca628c",
+        "c0407f22ff618ae2",
+        "4046a8175cf732cc",
+        "4048a3f67311b754",
+        "c052635832713d22",
+        "c0305ddd210859c8",
+        "40442c18f1835178",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["404ed6bb0d717785"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-37",
+      "inputBits": [
+        "c03eed83dbe80614",
+        "403cea6bb8060058",
+        "4048a40cbd1272b0",
+        "4009d45e06159b80",
+        "c04700eaea54cb09",
+        "4054293998ca628c",
+        "c0407f22ff618ae2",
+        "4046a8175cf732cc",
+        "4048a3f67311b754",
+        "c052635832713d22",
+        "c0305ddd210859c8",
+        "40442c18f1835178",
+        "406fe00000000000"
+      ],
+      "outputBits": ["404ed6dccd0b1578"]
+    },
+    {
+      "mode": "X",
+      "name": "length-38",
+      "inputBits": [
+        "c04a5242f77f92e8",
+        "404d1ae36378457c",
+        "c0404505696572c0",
+        "40461c895b4b8164",
+        "40521ce9db5b73c8",
+        "c031746713323510",
+        "404a93be683af718",
+        "403f67f0c2bad9f8",
+        "404d6b19f386a570",
+        "402f4a54b428abc0",
+        "c05182fde9ffbf12",
+        "4046e854f67eeefc",
+        "0000000000000000"
+      ],
+      "outputBits": ["404d504778b68ad4"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-38",
+      "inputBits": [
+        "c04a5242f77f92e8",
+        "404d1ae36378457c",
+        "c0404505696572c0",
+        "40461c895b4b8164",
+        "40521ce9db5b73c8",
+        "c031746713323510",
+        "404a93be683af718",
+        "403f67f0c2bad9f8",
+        "404d6b19f386a570",
+        "402f4a54b428abc0",
+        "c05182fde9ffbf12",
+        "4046e854f67eeefc",
+        "4072c00000000000"
+      ],
+      "outputBits": ["404d5e0d524904f2"]
+    },
+    {
+      "mode": "X",
+      "name": "length-39",
+      "inputBits": [
+        "c000d663f8d70340",
+        "405291d323732400",
+        "404ab826d37f2218",
+        "404d88e243f075a0",
+        "404efa5d14371c84",
+        "c041036b77488190",
+        "c0219a95a24ae470",
+        "c048958bed6bb29a",
+        "c02fc9cf35e749f0",
+        "c03640e5765afbac",
+        "c0588e7c3c72d785",
+        "404abcb002c49ac8",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["405302c5cbf063be"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-39",
+      "inputBits": [
+        "c000d663f8d70340",
+        "405291d323732400",
+        "404ab826d37f2218",
+        "404d88e243f075a0",
+        "404efa5d14371c84",
+        "c041036b77488190",
+        "c0219a95a24ae470",
+        "c048958bed6bb29a",
+        "c02fc9cf35e749f0",
+        "c03640e5765afbac",
+        "c0588e7c3c72d785",
+        "404abcb002c49ac8",
+        "4080000000000000"
+      ],
+      "outputBits": ["405302ca0bbe2a3f"]
+    },
+    {
+      "mode": "X",
+      "name": "length-40",
+      "inputBits": [
+        "c04d20bbeecfb43a",
+        "c049ea073f5a9aee",
+        "c0531ce4f4c32028",
+        "c049b8c328838b44",
+        "c05708d99087785d",
+        "4044a69c7194f468",
+        "404b38f0d98b5608",
+        "40518ef844c9ba36",
+        "c02628a7e33abff0",
+        "c0432ab8f4e18a14",
+        "4036478588dbc690",
+        "c04387678edc8a06",
+        "0000000000000000"
+      ],
+      "outputBits": ["4063821bc928f6cb"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-40",
+      "inputBits": [
+        "c04d20bbeecfb43a",
+        "c049ea073f5a9aee",
+        "c0531ce4f4c32028",
+        "c049b8c328838b44",
+        "c05708d99087785d",
+        "4044a69c7194f468",
+        "404b38f0d98b5608",
+        "40518ef844c9ba36",
+        "c02628a7e33abff0",
+        "c0432ab8f4e18a14",
+        "4036478588dbc690",
+        "c04387678edc8a06",
+        "bff0000000000000"
+      ],
+      "outputBits": ["0000000000000000"]
+    },
+    {
+      "mode": "X",
+      "name": "length-41",
+      "inputBits": [
+        "c050cd4ca51dc552",
+        "4054954215e50f70",
+        "c02673b905d60630",
+        "405536e9121d3256",
+        "c03c8ab20b0cc68c",
+        "403c3be4754cc738",
+        "405240316883460e",
+        "c04a82f566ac37f3",
+        "c03ee6d972e6c41c",
+        "c03a7c777568a53c",
+        "c04e69723d1f3d1a",
+        "c019661deccb59f0",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["406063f849b51b3e"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-41",
+      "inputBits": [
+        "c050cd4ca51dc552",
+        "4054954215e50f70",
+        "c02673b905d60630",
+        "405536e9121d3256",
+        "c03c8ab20b0cc68c",
+        "403c3be4754cc738",
+        "405240316883460e",
+        "c04a82f566ac37f3",
+        "c03ee6d972e6c41c",
+        "c03a7c777568a53c",
+        "c04e69723d1f3d1a",
+        "c019661deccb59f0",
+        "0000000000000000"
+      ],
+      "outputBits": ["0000000000000000"]
+    },
+    {
+      "mode": "X",
+      "name": "length-42",
+      "inputBits": [
+        "c0434f0470d9493b",
+        "4046ac6c524f868c",
+        "40506f7b1cfb2ad2",
+        "4049a5b020959094",
+        "c051a02fd09a1ed4",
+        "c038fe7138d62800",
+        "c04584704e7ab8e3",
+        "4056b256c9f63796",
+        "4041fdebb50f4280",
+        "c05237a916ff436d",
+        "4043d3c27f5bfca4",
+        "c052e81194fe61e0",
+        "0000000000000000"
+      ],
+      "outputBits": ["4060f9a135bb0ba6"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-42",
+      "inputBits": [
+        "c0434f0470d9493b",
+        "4046ac6c524f868c",
+        "40506f7b1cfb2ad2",
+        "4049a5b020959094",
+        "c051a02fd09a1ed4",
+        "c038fe7138d62800",
+        "c04584704e7ab8e3",
+        "4056b256c9f63796",
+        "4041fdebb50f4280",
+        "c05237a916ff436d",
+        "4043d3c27f5bfca4",
+        "c052e81194fe61e0",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["405dbfa0fa89b743"]
+    },
+    {
+      "mode": "X",
+      "name": "length-43",
+      "inputBits": [
+        "c053b19cf830d7b1",
+        "c046b50e115549cc",
+        "c050fb5de8d24d93",
+        "c052f8efef2d1106",
+        "c039f0f3e11534d8",
+        "c03cfb3fe534f740",
+        "c05680af75aac67e",
+        "c050e55d9bceff6c",
+        "40508ccd2ee7b1b2",
+        "405138d841026430",
+        "c03dbf9b8324fa6c",
+        "4051a232451dfcc2",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["4055d6a5299779b1"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-43",
+      "inputBits": [
+        "c053b19cf830d7b1",
+        "c046b50e115549cc",
+        "c050fb5de8d24d93",
+        "c052f8efef2d1106",
+        "c039f0f3e11534d8",
+        "c03cfb3fe534f740",
+        "c05680af75aac67e",
+        "c050e55d9bceff6c",
+        "40508ccd2ee7b1b2",
+        "405138d841026430",
+        "c03dbf9b8324fa6c",
+        "4051a232451dfcc2",
+        "4008000000000000"
+      ],
+      "outputBits": ["4052dfb9f90c5aab"]
+    },
+    {
+      "mode": "X",
+      "name": "length-44",
+      "inputBits": [
+        "4051445cbf7405d0",
+        "c032d8d31ffc3f50",
+        "4038530cc254fd5c",
+        "4057178a9cef3698",
+        "c043f423b2cf0a42",
+        "c04d95f3c1340538",
+        "40587074c7d6a902",
+        "401c877ab98105e0",
+        "403a24a1ac8c394c",
+        "4057795b1bb955b6",
+        "4057218b25d82044",
+        "c04b29676eb5678f",
+        "0000000000000000"
+      ],
+      "outputBits": ["4064cb02644951df"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-44",
+      "inputBits": [
+        "4051445cbf7405d0",
+        "c032d8d31ffc3f50",
+        "4038530cc254fd5c",
+        "4057178a9cef3698",
+        "c043f423b2cf0a42",
+        "c04d95f3c1340538",
+        "40587074c7d6a902",
+        "401c877ab98105e0",
+        "403a24a1ac8c394c",
+        "4057795b1bb955b6",
+        "4057218b25d82044",
+        "c04b29676eb5678f",
+        "401c000000000000"
+      ],
+      "outputBits": ["4064b60a7e6c2f6b"]
+    },
+    {
+      "mode": "X",
+      "name": "length-45",
+      "inputBits": [
+        "40222ff7b68b25f8",
+        "c049108c5a0d644d",
+        "c0388726054ae7d8",
+        "405450dd88ce1a88",
+        "bfe27365a5d4df80",
+        "c055530638674126",
+        "403fe71e18a73560",
+        "c051478cfce8d06a",
+        "bff5b091be56f940",
+        "404a9849579aa89c",
+        "c052cf184ef670aa",
+        "40560650e6421410",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["4051a421cc3b7683"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-45",
+      "inputBits": [
+        "40222ff7b68b25f8",
+        "c049108c5a0d644d",
+        "c0388726054ae7d8",
+        "405450dd88ce1a88",
+        "bfe27365a5d4df80",
+        "c055530638674126",
+        "403fe71e18a73560",
+        "c051478cfce8d06a",
+        "bff5b091be56f940",
+        "404a9849579aa89c",
+        "c052cf184ef670aa",
+        "40560650e6421410",
+        "406fe00000000000"
+      ],
+      "outputBits": ["4051a4312ec8dd8e"]
+    },
+    {
+      "mode": "X",
+      "name": "length-46",
+      "inputBits": [
+        "405393275e72b8f2",
+        "403cc167da772498",
+        "c055da5f15e7898a",
+        "c054b847383e84c8",
+        "404cb03325032320",
+        "c04884acc7268a0d",
+        "c0300d2914bbf73c",
+        "4053f5a7606d1940",
+        "403c305afa5a4748",
+        "4037634e577ec3c4",
+        "c0573fd30b06bece",
+        "4057f3b31c55131e",
+        "0000000000000000"
+      ],
+      "outputBits": ["40635d3a42ae03ed"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-46",
+      "inputBits": [
+        "405393275e72b8f2",
+        "403cc167da772498",
+        "c055da5f15e7898a",
+        "c054b847383e84c8",
+        "404cb03325032320",
+        "c04884acc7268a0d",
+        "c0300d2914bbf73c",
+        "4053f5a7606d1940",
+        "403c305afa5a4748",
+        "4037634e577ec3c4",
+        "c0573fd30b06bece",
+        "4057f3b31c55131e",
+        "4072c00000000000"
+      ],
+      "outputBits": ["40635d9f0414419d"]
+    },
+    {
+      "mode": "X",
+      "name": "length-47",
+      "inputBits": [
+        "3ffded18903577c0",
+        "c0365145ef0010cc",
+        "404f4a9091420bd0",
+        "c04aee72370f8b50",
+        "405292762bed02ca",
+        "bf9ea609dbeea000",
+        "c0474a0f144d0bbe",
+        "c04ec7bce3dca92c",
+        "4046e8c8767de718",
+        "c03e7c01e8f27924",
+        "c0516c95a55ff460",
+        "4053122af56dd3ae",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["40613915ca46123e"]
+    },
+    {
+      "mode": "Z",
+      "name": "sampled-47",
+      "inputBits": [
+        "3ffded18903577c0",
+        "c0365145ef0010cc",
+        "404f4a9091420bd0",
+        "c04aee72370f8b50",
+        "405292762bed02ca",
+        "bf9ea609dbeea000",
+        "c0474a0f144d0bbe",
+        "c04ec7bce3dca92c",
+        "4046e8c8767de718",
+        "c03e7c01e8f27924",
+        "c0516c95a55ff460",
+        "4053122af56dd3ae",
+        "4080000000000000"
+      ],
+      "outputBits": ["40613916b050f244"]
+    },
+    {
+      "mode": "X",
+      "name": "linear-0-0.0",
+      "inputBits": [
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000"
+      ],
+      "outputBits": ["0000000000000000"]
+    },
+    {
+      "mode": "X",
+      "name": "linear-0-1.0",
+      "inputBits": [
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["0000000000000000"]
+    },
+    {
+      "mode": "X",
+      "name": "linear-0.01-0.0",
+      "inputBits": [
+        "bf947ae147ae147b",
+        "0000000000000000",
+        "bf847ae147ae147b",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "3f847ae147ae147b",
+        "0000000000000000",
+        "3f947ae147ae147b",
+        "0000000000000000",
+        "3f9eb851eb851eb8",
+        "0000000000000000",
+        "0000000000000000"
+      ],
+      "outputBits": ["3f847ae147ae147b"]
+    },
+    {
+      "mode": "X",
+      "name": "linear-0.01-1.0",
+      "inputBits": [
+        "bf947ae147ae147b",
+        "0000000000000000",
+        "bf847ae147ae147b",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "3f847ae147ae147b",
+        "0000000000000000",
+        "3f947ae147ae147b",
+        "0000000000000000",
+        "3f9eb851eb851eb8",
+        "0000000000000000",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["3f847ae147ae147b"]
+    },
+    {
+      "mode": "X",
+      "name": "linear-1-0.0",
+      "inputBits": [
+        "c000000000000000",
+        "0000000000000000",
+        "bff0000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "3ff0000000000000",
+        "0000000000000000",
+        "4000000000000000",
+        "0000000000000000",
+        "4008000000000000",
+        "0000000000000000",
+        "0000000000000000"
+      ],
+      "outputBits": ["3ff0000000000000"]
+    },
+    {
+      "mode": "X",
+      "name": "linear-1-1.0",
+      "inputBits": [
+        "c000000000000000",
+        "0000000000000000",
+        "bff0000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "3ff0000000000000",
+        "0000000000000000",
+        "4000000000000000",
+        "0000000000000000",
+        "4008000000000000",
+        "0000000000000000",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["3ff0000000000000"]
+    },
+    {
+      "mode": "X",
+      "name": "linear-2.5-0.0",
+      "inputBits": [
+        "c014000000000000",
+        "0000000000000000",
+        "c004000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "4004000000000000",
+        "0000000000000000",
+        "4014000000000000",
+        "0000000000000000",
+        "401e000000000000",
+        "0000000000000000",
+        "0000000000000000"
+      ],
+      "outputBits": ["4004000000000000"]
+    },
+    {
+      "mode": "X",
+      "name": "linear-2.5-1.0",
+      "inputBits": [
+        "c014000000000000",
+        "0000000000000000",
+        "c004000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "4004000000000000",
+        "0000000000000000",
+        "4014000000000000",
+        "0000000000000000",
+        "401e000000000000",
+        "0000000000000000",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["4004000000000000"]
+    },
+    {
+      "mode": "X",
+      "name": "linear-10-0.0",
+      "inputBits": [
+        "c034000000000000",
+        "0000000000000000",
+        "c024000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "4024000000000000",
+        "0000000000000000",
+        "4034000000000000",
+        "0000000000000000",
+        "403e000000000000",
+        "0000000000000000",
+        "0000000000000000"
+      ],
+      "outputBits": ["4024000000000000"]
+    },
+    {
+      "mode": "X",
+      "name": "linear-10-1.0",
+      "inputBits": [
+        "c034000000000000",
+        "0000000000000000",
+        "c024000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "4024000000000000",
+        "0000000000000000",
+        "4034000000000000",
+        "0000000000000000",
+        "403e000000000000",
+        "0000000000000000",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["4024000000000002"]
+    },
+    {
+      "mode": "X",
+      "name": "linear-20-0.0",
+      "inputBits": [
+        "c044000000000000",
+        "0000000000000000",
+        "c034000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "4034000000000000",
+        "0000000000000000",
+        "4044000000000000",
+        "0000000000000000",
+        "404e000000000000",
+        "0000000000000000",
+        "0000000000000000"
+      ],
+      "outputBits": ["4034000000000000"]
+    },
+    {
+      "mode": "X",
+      "name": "linear-20-1.0",
+      "inputBits": [
+        "c044000000000000",
+        "0000000000000000",
+        "c034000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "4034000000000000",
+        "0000000000000000",
+        "4044000000000000",
+        "0000000000000000",
+        "404e000000000000",
+        "0000000000000000",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["4034000000000002"]
+    },
+    {
+      "mode": "X",
+      "name": "linear-1000-0.0",
+      "inputBits": [
+        "c09f400000000000",
+        "0000000000000000",
+        "c08f400000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "408f400000000000",
+        "0000000000000000",
+        "409f400000000000",
+        "0000000000000000",
+        "40a7700000000000",
+        "0000000000000000",
+        "0000000000000000"
+      ],
+      "outputBits": ["408f400000000004"]
+    },
+    {
+      "mode": "X",
+      "name": "linear-1000-1.0",
+      "inputBits": [
+        "c09f400000000000",
+        "0000000000000000",
+        "c08f400000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "408f400000000000",
+        "0000000000000000",
+        "409f400000000000",
+        "0000000000000000",
+        "40a7700000000000",
+        "0000000000000000",
+        "3ff0000000000000"
+      ],
+      "outputBits": ["408f3ffffffffe24"]
+    }
+  ]
+}

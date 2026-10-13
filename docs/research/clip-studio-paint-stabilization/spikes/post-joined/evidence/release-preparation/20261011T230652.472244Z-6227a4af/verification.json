@@ -1,0 +1,311 @@
+{
+  "schema": "croquis-production-release-verification-v1",
+  "checkedAt": "2026-10-11T23:06:53.268922+00:00",
+  "baseCommit": "ba97e86f8dc2a08e94e3d83f3a7c156f82d1b55d",
+  "manifestSha256": "028b65a130a6dde2b294f7115b32ec7671845a5e3fec6cf3dc19c29bd4ec6025",
+  "patchSha256": "79881cd6895f6e97d0b57b02e5ae0e6daf813ebd4e6f4590829f8c7e9c5fe67b",
+  "reconstruction": "verification-tree contains only the 41 selected paths; modified files were initialized from baseCommit; added files were initially absent.",
+  "isolatedFromRepository": true,
+  "gitApplyCheckExitCode": 0,
+  "gitApplyExitCode": 0,
+  "gitApplyStderr": "",
+  "patchPathsExactlyMatchManifest": true,
+  "fileCount": 41,
+  "exactMatches": 41,
+  "files": [
+    {
+      "path": "apps/frontend/e2e/pencil.e2e.ts",
+      "sha256": "a61208b36af9b8f3406401ae4106e6f1f8a7e611eb124c8e0dffe649e79bb6b6",
+      "bytes": 19768,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/i18n/strings/stickerCreation.ts",
+      "sha256": "c647bd06bc447f575b4e555c9811e790d87e91370f25650065d53a6db7ceb7e6",
+      "bytes": 49661,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-board/stat-board/TryPenPressure.tsx",
+      "sha256": "1a0db0c9c048813015980ffe0b34625b632d77c62cb550956a2ba56746bf8105",
+      "bytes": 6043,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/DrawingScreen.test.tsx",
+      "sha256": "8ab0628cea3b0469935974238943586dacdbf8aba520db643a171f2bfd7eaf31",
+      "bytes": 81193,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/DrawingScreen.tsx",
+      "sha256": "f7d5f8d97c265dfc2d177dd4f5e89c7d418035b0b9856164ce650f9b37d9c111",
+      "bytes": 59045,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/brush.test.ts",
+      "sha256": "39df7535c6927434cee4a4e74e23e060719647a03928cd74ee3b868f13957aab",
+      "bytes": 13044,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/brush.ts",
+      "sha256": "8ac77a668833b3cca5e63a0f6ea6f6f3a92a120d019e8cbbfd044ced92353022",
+      "bytes": 12747,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/inkEngine.test.ts",
+      "sha256": "d94f80590247d560262b031ad45ff028e09fa13400f1c12058b066ef893c465c",
+      "bytes": 82549,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/inkEngine.ts",
+      "sha256": "8a21946de6cd4b9f4cdf16e28509f5ff14225e7878611a7340d197f4a8744c0f",
+      "bytes": 52626,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/core.test.ts",
+      "sha256": "2ba7398b3d16278cd08222f83566057f0dc899f1da9406c32bd6e6ea1e962b2c",
+      "bytes": 7982,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/core.ts",
+      "sha256": "9e52c98392f0e729a9594b42b15c5342ba516adc4973d93c79c20eb85d747793",
+      "bytes": 12717,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/endpoints.ts",
+      "sha256": "6172e3a97def942e199fdf5640964a4ee0593bc145874463e061ab1b9b3ac1fc",
+      "bytes": 5475,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/errors.ts",
+      "sha256": "6d2861c15f4c50c015c1e039a044fb38142ed06e0f57f3bacaf41ed9a4a30d82",
+      "bytes": 235,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/evaluator.ts",
+      "sha256": "8a777d4d8e7c2eb6d6052ddeed3bcafc545f1e9003f0277d21706886f938676d",
+      "bytes": 7576,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/input-table.ts",
+      "sha256": "e24b40576c687d99e722c8f8f13f47fb45dd387b3929d91671a252e80237a587",
+      "bytes": 1899,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/input.ts",
+      "sha256": "b89a67b7bb0d687e72874b9f9b51d29e7c3b3eadcfa041e866cb09000af30815",
+      "bytes": 7621,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/pipeline.ts",
+      "sha256": "ec1971eebd80d569f5b75238ec7a3ba3547a8ffe58453afbdf2ddb7808d3e4ce",
+      "bytes": 16756,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/protocol.ts",
+      "sha256": "7f86571d0e715aeb80cdbac276584db49702ae0900bbb641f27a6d74d4254861",
+      "bytes": 375,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/quadratic.ts",
+      "sha256": "b3be50f8568369dfcca4940b809a60cda34783f1ce3020aa169db83449c7bd64",
+      "bytes": 4102,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/reference.ts",
+      "sha256": "f906aa3be2bb0bbe2d2c463eac52cad6406c7716384bc65c5df86e3e62b19fe4",
+      "bytes": 9680,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/sampling.ts",
+      "sha256": "9cf39aa51b104e2657f43706fa01d56b1786f883cabb02bfaeb72eea2960f32a",
+      "bytes": 5081,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/service.test.ts",
+      "sha256": "1f1c14d3a4845ce6a1d60eae1e80632b9b0616bdd95d8487b5ca362d297e50b4",
+      "bytes": 4373,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/service.ts",
+      "sha256": "10c6cabaade2b540159966e9baf96aa1770911abb81543dd1dedb8e89cdb86b6",
+      "bytes": 4049,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/settings.ts",
+      "sha256": "d59c0ee68de0544f8f13954df2f9a2aa4bde29b8430d06ef8216947e3cc33bd1",
+      "bytes": 333,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/source.ts",
+      "sha256": "9517f8e124276129fdc19c04e206d03b789059bf29f510ea81365de7a852ee8a",
+      "bytes": 9836,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/spline-context.ts",
+      "sha256": "7c43e68539549ae8ff9e2961c151f93baa674e06eb335d1cdfe8e251b7d09f02",
+      "bytes": 3020,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/spline-length.ts",
+      "sha256": "d5c8999011d5d5c395f6375e415184b996c8d6f099f1c70c91f5589e82485df6",
+      "bytes": 1421,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/spline.ts",
+      "sha256": "a60359dcf677d24f5a6ccfa466ec798ac787e92953e9fe35db147f58d64e9884",
+      "bytes": 4329,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/validation.ts",
+      "sha256": "16bc33dd98b3efe1efd096a7566e7e81c110db20104e8c39638acaa2deee38cd",
+      "bytes": 979,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/post-correction/worker.ts",
+      "sha256": "9614faaed72c84aaede4d5b425da65333bfb49e7acd9ef9395272e9f074d0f91",
+      "bytes": 673,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/stabilization/arithmetic.ts",
+      "sha256": "40e6bc7ece073c7e27fc244b16ed5e6e13693c6f2c9482f7c47f5112f7f35d5e",
+      "bytes": 17779,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/stabilization/binary64.ts",
+      "sha256": "0399555ada69d27a21b58af52647695bf28c32f1b03a83b95a326fe08c85dea3",
+      "bytes": 4628,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/stabilization/queue.test.ts",
+      "sha256": "ee74de32573c45c99e5e2254727483bf963eb689212d9334813ef6213e6dc573",
+      "bytes": 1855,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/stabilization/queue.ts",
+      "sha256": "0b5f89c67ca9cbe9bce8ef82cfa780f16ced76f0b62de59a035bbde528834232",
+      "bytes": 7568,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/stabilizer.test.ts",
+      "sha256": "1f5d64c39c0f2817e462bf6d84b7bf3bc12395e86471e407960efdcf52015d19",
+      "bytes": 5428,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/stabilizer.ts",
+      "sha256": "bea957fd7ba78cf37e11533136eb2e2c033f62216dbf70e6bc23731481009ac4",
+      "bytes": 5943,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/session/keptSession.test.ts",
+      "sha256": "96c26cbf032496fc98729cceb8fb8a3f3463a7ddb2241d12c3a275e0462db888",
+      "bytes": 45739,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/session/keptSession.ts",
+      "sha256": "f6e147bd11baf23f93cc273195c1cd9022b7e72a89aaa669e7ca624abd5088df",
+      "bytes": 41408,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/tools/SmoothingBar.css",
+      "sha256": "91d5eb05e4b4f1deb99b0f8aae8938dd5e04364f3747d55c60ccd3c77000767f",
+      "bytes": 2714,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/tools/SmoothingBar.test.tsx",
+      "sha256": "95261bc956d352b95541dcfdb7de7a49d16734a8e37b75c1074213a455b73408",
+      "bytes": 5261,
+      "exactMatch": true,
+      "modeMatch": true
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/tools/SmoothingBar.tsx",
+      "sha256": "a49a7cfacf71a31d541127c265f7a68e586eec43c69d37ac3304c686ab45e09d",
+      "bytes": 7339,
+      "exactMatch": true,
+      "modeMatch": true
+    }
+  ],
+  "repositoryIndexSha256Before": "e7b560faff998df6cb244bbbf53a540bdcc382af3b110196e3da8be4f5b5a17c",
+  "repositoryIndexSha256After": "e7b560faff998df6cb244bbbf53a540bdcc382af3b110196e3da8be4f5b5a17c",
+  "repositoryIndexUnchanged": true,
+  "headUnchanged": true,
+  "frontendStatusUnchanged": true,
+  "frontendContentsUnchanged": true,
+  "limits": "This verifies exact patch reconstruction, not a new build or runtime test. Joined native observation remains pending."
+}

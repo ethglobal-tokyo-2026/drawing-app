@@ -1,0 +1,250 @@
+{
+  "binarySha256": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+  "note": "Task2 creation state; later authoritative production relocation may change source paths. Raw native vectors and original assembly remain retained.",
+  "files": [
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/post-endpoints.ts",
+      "sha256": "0a0916e72ddb87d99e17c491225793e429c8206bed69939033c002f006afeb6a"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/post-evaluator.test.ts",
+      "sha256": "d780b0c1efe8de6ec0131c1bdb49473c93947840b2cc41aca65b7affa3d99030"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/post-evaluator.ts",
+      "sha256": "64edb1c89aa8d74d69115a83d455b57673fd7af15e3760d2f532f08e9ac627b5"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-contract/evidence/1028889ac.asm",
+      "sha256": "5b2f0e9bfb3267db413aa2e2982de0f74a3b6b54b60f7adaa4571f687cb7bd32"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/README.md",
+      "sha256": "e7a42df5f31843507c913071f46b846dce172718df324e02c77b41508668cbad"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/1002a7c28.asm",
+      "sha256": "8f5bf97bbce1679604a27ccd9c15d9c94c6bf5333a9c9240b2295b0a9d9c580a"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/1002a7ee0.asm",
+      "sha256": "e0787dfdd8cf114422eeebee4ee4cdb691785f022c3da9c84245fa8aecd73d0e"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/1002fe2c8.asm",
+      "sha256": "5f58432261e0d48d8c004693c778432a7bb1db193dca5a6aab77241913d59398"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/10219455c.asm",
+      "sha256": "6c2c4fa1dcf33fa8c4139394e9b3c4dcacbc82d8c59275eae24ca681cb2d8172"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/1022180a0.asm",
+      "sha256": "9d686c7aeb7c7187dc78460701e7bfbb7433420704e7f3f5b34cb5a9484f8519"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/102218260.asm",
+      "sha256": "02d8ddd5b9d39b006bdf0a788d263f5084f75a9a541a3c3dedf3b78893830fee"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/1024a925c.asm",
+      "sha256": "a2ff1a998ec656f482ed8a346e3b4bab4ca0044fcf80a7fe0f1597f0e3269804"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/1024a9530.asm",
+      "sha256": "baf3e9d32c74c76a5da83086ef653082e403307680c1f0f2a6927f488f1dc856"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/1024a9740.asm",
+      "sha256": "7f7754922b3c12f4ef7731ad036a107a71365fc67d2f3b91c0e951fbc1f5d374"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/1024a98c8.asm",
+      "sha256": "bc23c30747c8ae53e0f369c77890d0a8e929e1f204dbfef2616bb67d1d40abc0"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/1024a9bb4.asm",
+      "sha256": "8096130aa029533f048f4ff4302e5837baee6f70a99d26f0135a16776177fd8d"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/1024ae78c.asm",
+      "sha256": "e52c246341f1f98be14baec3cbdc3ab2dc2ba0a3f9b3d0c09b16c7e276149307"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/1024af5ec.asm",
+      "sha256": "22905b1050a9c124049d5ea7c733a2450514e05c681e7dd0937cd61aee01ec1e"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/1024af628.asm",
+      "sha256": "f9657ebd658dce07cfa6d0c35716cfa983fe7cd820bb7e942ed3dbb495ea66ea"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/1024af65c.asm",
+      "sha256": "bc5d3c7c26d52e35142c21ab42c7c22b9de6222237d4344e988881958da225b4"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/1024af6f0.asm",
+      "sha256": "55db463456de5d755c942ed0e8b65ba812e71b38d2aed7602df2562a67f50f0f"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/1024af7f0.asm",
+      "sha256": "03ab89cf2781fc7eda8a2ef168408f469594f29d5dc7980cfd5de218ffc32a20"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/1024aff24.asm",
+      "sha256": "d22f63809c1e6757955d5853f8220e13d1f7092111ec7df2387b0d4e79e5e087"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/1024c0dc0.asm",
+      "sha256": "7abe90fe07793c584f4d400a29eab8c0be7bc42be53a3ce435dcf47af29cd1fb"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/1024c11e4.asm",
+      "sha256": "c8a4dbd424f67ff53de993e5edd8bba5b6b961a42580275062f9c09fd8e7923b"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/1024c497c.asm",
+      "sha256": "243c3b18427388604459ac8efeb38f633820f1da145c8d835a42fd343b838f29"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/1024cc404.asm",
+      "sha256": "d3275bdadcebae3d6b1bc4784ce1407396a88e7ebc9154cb595245967bf0dbe2"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/1024e8320.asm",
+      "sha256": "0440b6309c0e664adc638ef4471e463545ecfca8bd88d25fc4cc9d0a3a83ff68"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/10276b138.asm",
+      "sha256": "72b1c0c5fd39af27bce93d5fc0446a50d3e50f775b7dcd78c2679a84ae53127c"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/10278958c.asm",
+      "sha256": "f9e28c6ba52d592f300d01c3fa96da053ec73cb26b60efc343468583843cfa49"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/102789644.asm",
+      "sha256": "f186f3391de169071b186de52a89bba4ae651b80318cc59e5a8fd89d7cd99528"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/102789680.asm",
+      "sha256": "c9a8943736c3f4c33599fcbda9b7ad933f505bf4935c6a0780043110f7f6bf95"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/102789710.asm",
+      "sha256": "7915178e6c8d4f14832483cad42432d2e918cbd33a4e488cccacda377197aa13"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/1028da414.asm",
+      "sha256": "f19994cc578c633433c96e2d4d272c9c06d48c29e2a79b04ea3d291b5f9a5981"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/1028da58c.asm",
+      "sha256": "5934196440391165731aeb4bcb38e6a0d54cca1bae335435276d9e5179ee01c5"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/1028ebd40.asm",
+      "sha256": "27aac59a07cd95efe00e2f7c19a34bcb1fd9558551b00f457f40e76b853e3436"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/102915430.asm",
+      "sha256": "34c8c14ec7cbf88fdf979cdc72a33ecc573890a410aecfe652c58a6253157c2b"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/102992930.asm",
+      "sha256": "0e63dd92c03211f54f320099448c6ba1c9a6b349212b74bcc3db7ac8940b9530"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/10339dc98.asm",
+      "sha256": "22034c186aa81c48fdfc3c9dc82670c4c37d95e2253ca7afb6bde791aa6dee39"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/10359b494.asm",
+      "sha256": "f92d06dca90abc442d51ff37fe65f6e23b1e8d89e188645c0e4076d4a1c5dbe3"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/10359cf18.asm",
+      "sha256": "9028709e8909d92724c37e265628e7b0678b595baa61ca839299a9b3e67dd9bb"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/10359de0c.asm",
+      "sha256": "d3c4a8031802bd265f1b955e85354e02ab8710f0962320b20f1771f597cc5ee1"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/brush-settings.asm",
+      "sha256": "6f1c10d473d7557ff541791baaf9d771dd838db2aa1f0f5f774a5784ef361b80"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/brush-size-model.asm",
+      "sha256": "2d193b4f200ba16064c2dc4c37a7ec46a81e54d25cf0aa4d468a1dd9fee590ad"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/brush-size-string-references.txt",
+      "sha256": "2febd67648455cefd54c2017d26234061bec9e5e5669558fd47740759d07a188"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/brush-size-strings.json",
+      "sha256": "b3bb89ee3c2b6d403e2da58060cd512b76dcee31e5f8a53aac5ac5f13822e49a"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/configuration-constants.json",
+      "sha256": "41b7687fdf9f53f4759851ab4c14bf6e183f7abaaa75f67bfe093b5bbaeffec8"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/configuration-direct-callers.json",
+      "sha256": "5541a8e6900543f9f07682a7567120a222774b33802f9c12dc368f3c2a722394"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/direct-callers.json",
+      "sha256": "34be73975b125134d595645dc044c8842d05143bbfe2b7a652ff191d2dc653a5"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/extraction.json",
+      "sha256": "fb674777ebfb634b67203874fdc3d3a05ef01d44ff5854b4eba5dc2e36a44ec6"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/native-vectors.json",
+      "sha256": "b56d561563004ec30299139feee2cfcc945209ff279e5a62201d8331157fea6c"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/native.S",
+      "sha256": "f4f9cdfa2bc390be444052967fb33fbc41e0bf4790afc37543808e829d9c0bcf"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/native.c",
+      "sha256": "71b6357bb108ab068868eafecf88347d96300ba21a72b6a21bd4208eb103c66c"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/oracle-run.log",
+      "sha256": "172a0a804db14869a30e7d99e340f209767a30a851c638f7aa093b9d4db73d1c"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/path-endpoint-configuration.asm",
+      "sha256": "7be2200739e28a615e7729587bce7cc94ac65b20aeae7f988e1200a176d206b1"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/path-evaluator-setter.asm",
+      "sha256": "211a64562dc82c9fcb598ca9bcf77085175e447c565dc91763771f1fa0c20e3c"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/tests-after.txt",
+      "sha256": "c719496f04ef4533d94de13298ebc3dce3d02bb52625aab8938ce03a9631313c"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/tests-before.txt",
+      "sha256": "b06016d27b7e88d8e266741aafd0f87289b9d96d036edf4ec275e30d52bee1c3"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/tests-first-comparison.txt",
+      "sha256": "cc0656dfdf2f9de601826fed6b6d359b83f36bb9f54a03e86ffa76708e84fc85"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/evidence/types.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/post-evaluator/native_oracle.py",
+      "sha256": "82d40d977f8e9c7cea4db15e1e1963aad44b10dd125acf3fc5c71e009876e76d"
+    }
+  ]
+}

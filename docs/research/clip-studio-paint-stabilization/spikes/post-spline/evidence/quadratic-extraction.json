@@ -1,0 +1,259 @@
+{
+  "createdUtc": "2026-10-11T18:51:39.998587+00:00",
+  "scope": "Read-only static extraction for quadratic source subdivision, node removal and endpoint dependency analysis; no application execution.",
+  "originalPath": "/Users/adoll/Applications/CSP Research/original-arm64",
+  "originalSha256": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+  "originalBytes": 90229232,
+  "method": "LC_FUNCTION_STARTS boundaries and objdump through the preserved inspect_binary.py helper, with its reference path changed in memory; speculative string annotations removed.",
+  "functions": [
+    {
+      "address": "0x10277f8c8",
+      "endExclusive": "0x10277fa58",
+      "size": 400,
+      "bytesSha256": "752d33d76e9b526e146962135b26f8a9c1e9bc1f356274d725d2130b168457fd",
+      "assemblyFile": "quadratic-10277f8c8.asm",
+      "assemblySha256": "f3d2bed14738aa576311134aa08d91fdd90de7c9a42ffb8c337f58b469a03b7a"
+    },
+    {
+      "address": "0x10276ba84",
+      "endExclusive": "0x10276bab4",
+      "size": 48,
+      "bytesSha256": "d95822f97df7a08182c866cf08185382c3fc8520a422e6cacb84d5621cc5f0e9",
+      "assemblyFile": "quadratic-10276ba84.asm",
+      "assemblySha256": "7f1712ffb1773f1cb46c78d630c2272259096a7fe68038eafe2b4b7a6ba8439b"
+    },
+    {
+      "address": "0x102764de4",
+      "endExclusive": "0x102764df8",
+      "size": 20,
+      "bytesSha256": "2488915677d2f529c75ce2ed3ca53b66fdcf83d2b1edc592155f04816210e751",
+      "assemblyFile": "quadratic-102764de4.asm",
+      "assemblySha256": "fc5a5ba66b1f02b7347ab6ea6dc40b5f0e72aad2f26402209a0502f14e999592"
+    },
+    {
+      "address": "0x10359c378",
+      "endExclusive": "0x10359c394",
+      "size": 28,
+      "bytesSha256": "446f4aa76db057b35f4481a59817d9cb02052db555e300a1b7bb5690ba812326",
+      "assemblyFile": "quadratic-10359c378.asm",
+      "assemblySha256": "28f74f5b5ea347e91c86ed6a9f7dde872638f3d5e604ad8b1397894f7435d748"
+    },
+    {
+      "address": "0x10359c394",
+      "endExclusive": "0x10359c46c",
+      "size": 216,
+      "bytesSha256": "259e7b6e2c85578835237af903209183e360f3d484ecac8630e584b72446fcaa",
+      "assemblyFile": "quadratic-10359c394.asm",
+      "assemblySha256": "09ef1a95cb19782882554843630525a7cee9a5407afae69ff97560591e11d865"
+    },
+    {
+      "address": "0x10359c490",
+      "endExclusive": "0x10359c5e8",
+      "size": 344,
+      "bytesSha256": "5c7366512e76dc1ed3b83e26f35277afad3a2cf47a16a272aafc9b2a65bb211e",
+      "assemblyFile": "quadratic-10359c490.asm",
+      "assemblySha256": "23fb2d19a8d75f884e40f02d52b32d71339137d736610c4b16a2780da985bf8b"
+    },
+    {
+      "address": "0x10359c60c",
+      "endExclusive": "0x10359c74c",
+      "size": 320,
+      "bytesSha256": "7a4f4749ee3f059dbfcbcfc41253ce1bfb2360ff5a4ec50e20a2e44d862b1079",
+      "assemblyFile": "quadratic-10359c60c.asm",
+      "assemblySha256": "46977dcac78f42076afd5af4943a4903690fc9bf8032b4c7dd1cf0681e42c7d1"
+    },
+    {
+      "address": "0x102193618",
+      "endExclusive": "0x102193644",
+      "size": 44,
+      "bytesSha256": "205910f351a26db8755f4dc177aa6a47136d26cd6de26f545f894d8b3216d982",
+      "assemblyFile": "quadratic-102193618.asm",
+      "assemblySha256": "fc3230ce44ba577e05f5e24f77ffb86b41396d62015c866e09c53747ffe60a38"
+    },
+    {
+      "address": "0x10276dec8",
+      "endExclusive": "0x10276dfe8",
+      "size": 288,
+      "bytesSha256": "339429cad24c98de855c861a20deadf4129472a6e61e947ba12f4fc97b7b4285",
+      "assemblyFile": "quadratic-10276dec8.asm",
+      "assemblySha256": "91d2045646cace6cb4adf7b0da7d37ae93d165f9c54909a511f99d4da7bee8cf"
+    },
+    {
+      "address": "0x10276b714",
+      "endExclusive": "0x10276b944",
+      "size": 560,
+      "bytesSha256": "e11df269a9b452995b2d52e7e9a2981dbed31238b94bb00d9d65599a54f3217d",
+      "assemblyFile": "quadratic-10276b714.asm",
+      "assemblySha256": "90174cca438925c00b7ee7c10991c70cce67543d3d25f0e57d2de5e2f3b4b605"
+    },
+    {
+      "address": "0x102764db4",
+      "endExclusive": "0x102764dc8",
+      "size": 20,
+      "bytesSha256": "c63efb9599198cae967dfaebca3d9ace2b1d39c71ba71877d95241d058438669",
+      "assemblyFile": "quadratic-102764db4.asm",
+      "assemblySha256": "fc616c5266c46944daf8eb9be03aa0f3e82780eefbbdc54dd479ef5366a8e729"
+    },
+    {
+      "address": "0x10359bc34",
+      "endExclusive": "0x10359bc68",
+      "size": 52,
+      "bytesSha256": "710705be414575e735663846c8e9db60f26b94056c9b530e5ffb9f2345496aa2",
+      "assemblyFile": "quadratic-10359bc34.asm",
+      "assemblySha256": "e3c92a8384a1e34d6a7b17bf364502f59aee0c64c5d95ecc170f2c0a1f2ce2c7"
+    },
+    {
+      "address": "0x102765694",
+      "endExclusive": "0x1027656fc",
+      "size": 104,
+      "bytesSha256": "cc8f3a46fa828a4f519791de446b9b7d8222567c3cd5b2fe51ee2ee85fabba40",
+      "assemblyFile": "quadratic-102765694.asm",
+      "assemblySha256": "8d7a02096e692a3bcca45b3062d2f580f5d81416ce6f40a8315ef45895ae613b"
+    },
+    {
+      "address": "0x10359d408",
+      "endExclusive": "0x10359d45c",
+      "size": 84,
+      "bytesSha256": "5bfa7822b340af24eddfefc5cc41c84eb9ea543f177d687382c41de5ca434799",
+      "assemblyFile": "quadratic-10359d408.asm",
+      "assemblySha256": "8885f32aa204914e0fb9bb19bbb50517c3b05f1c71357c8d406ee66625a4f9ad"
+    },
+    {
+      "address": "0x10276b138",
+      "endExclusive": "0x10276b190",
+      "size": 88,
+      "bytesSha256": "5d569ff2e6cd389597bd801b25d517624093869502d8798e603ccddc0aa2c773",
+      "assemblyFile": "quadratic-10276b138.asm",
+      "assemblySha256": "72b1c0c5fd39af27bce93d5fc0446a50d3e50f775b7dcd78c2679a84ae53127c"
+    },
+    {
+      "address": "0x10276b190",
+      "endExclusive": "0x10276b1d4",
+      "size": 68,
+      "bytesSha256": "a31ae07d6dc059aad18e24b0a332d583a0dc6e3ea190bc168703c919cd8c7be7",
+      "assemblyFile": "quadratic-10276b190.asm",
+      "assemblySha256": "9f4f71dc1f903417647df9f9575185f74207171d9887aee099b310a2739a9349"
+    },
+    {
+      "address": "0x10276e704",
+      "endExclusive": "0x10276e708",
+      "size": 4,
+      "bytesSha256": "110f46b5b35c069160560c6ad6786f647dd44e8760a52a46fc22dbbcd7630b91",
+      "assemblyFile": "quadratic-10276e704.asm",
+      "assemblySha256": "488fc49c8b7b9a972169f9febd217e7b3aad0115e616bde8c3376f043075d674"
+    },
+    {
+      "address": "0x102788b10",
+      "endExclusive": "0x102788b84",
+      "size": 116,
+      "bytesSha256": "603577a3d87c993087c38278879691dc964257c12d4ead580ac7484e25c7b686",
+      "assemblyFile": "quadratic-102788b10.asm",
+      "assemblySha256": "6162183ed3bc6dfef8a3e2aac232662462682bf2b31ee90bc73731581ed6aeae"
+    },
+    {
+      "address": "0x10359fc40",
+      "endExclusive": "0x10359fd24",
+      "size": 228,
+      "bytesSha256": "222f6d98cb54ddaaf0506285f1e88d3639a560a0179ead300a45b7eaf630fcb8",
+      "assemblyFile": "quadratic-10359fc40.asm",
+      "assemblySha256": "f8c6e3a137234615fa7c2063f0bd79bfe4dd762802f50d616650acbc8663fafb"
+    },
+    {
+      "address": "0x10359fe88",
+      "endExclusive": "0x10359ff9c",
+      "size": 276,
+      "bytesSha256": "dae970e9447cec2452790c1f95ebb649463980e1796f18013bd8902d967d81ec",
+      "assemblyFile": "quadratic-10359fe88.asm",
+      "assemblySha256": "370b33b0b93c64a667b14efe2224b3c7878fcb824f9e14af04d6751877191cbb"
+    },
+    {
+      "address": "0x1024c497c",
+      "endExclusive": "0x1024c4ad8",
+      "size": 348,
+      "bytesSha256": "0a7653a93669cea74eb0a2650a87cc9de9178251282731ae14462090ffc1f716",
+      "assemblyFile": "quadratic-1024c497c.asm",
+      "assemblySha256": "243c3b18427388604459ac8efeb38f633820f1da145c8d835a42fd343b838f29"
+    },
+    {
+      "address": "0x102783068",
+      "endExclusive": "0x1027830a0",
+      "size": 56,
+      "bytesSha256": "d16722dfa3a3cccfdf4e4de7502b699e384bef35f306665f399f8acc6524ad4b",
+      "assemblyFile": "quadratic-102783068.asm",
+      "assemblySha256": "eb28dc410aa1d9e65cde81a6e765c5089960e8fb02cda73d731a9b7d50de7c56"
+    },
+    {
+      "address": "0x102789f24",
+      "endExclusive": "0x10278a14c",
+      "size": 552,
+      "bytesSha256": "551a2c72188bb358847bfaaff0aafd253e50a61c1e22e0878c2f6953f3ce30c9",
+      "assemblyFile": "quadratic-102789f24.asm",
+      "assemblySha256": "c986c6d0aff9b6f9b0d9572badbabf8e2d62937360ed9f40178f8b80f2aa88e4"
+    }
+  ],
+  "vtableEntries": [
+    {
+      "vtable": "0x104a527b0",
+      "slot": "0x68",
+      "address": "0x104a52818",
+      "bytesHex": "b44d760201000000",
+      "target": "0x102764db4"
+    },
+    {
+      "vtable": "0x104a527b0",
+      "slot": "0x78",
+      "address": "0x104a52828",
+      "bytesHex": "e44d760201000000",
+      "target": "0x102764de4"
+    },
+    {
+      "vtable": "0x104a527b0",
+      "slot": "0x108",
+      "address": "0x104a528b8",
+      "bytesHex": "9456760201000000",
+      "target": "0x102765694"
+    },
+    {
+      "vtable": "0x104a527b0",
+      "slot": "0x128",
+      "address": "0x104a528d8",
+      "bytesHex": "6859760201000000",
+      "target": "0x102765968"
+    },
+    {
+      "vtable": "0x104a53918",
+      "slot": "0x78",
+      "address": "0x104a53990",
+      "bytesHex": "108b780201000000",
+      "target": "0x102788b10"
+    },
+    {
+      "vtable": "0x104a53918",
+      "slot": "0x128",
+      "address": "0x104a53a40",
+      "bytesHex": "04e7760201000000",
+      "target": "0x10276e704"
+    },
+    {
+      "vtable": "0x104a53a78",
+      "slot": "0x88",
+      "address": "0x104a53b00",
+      "bytesHex": "9097780201000000",
+      "target": "0x102789790"
+    },
+    {
+      "vtable": "0x104a53a78",
+      "slot": "0x98",
+      "address": "0x104a53b10",
+      "bytesHex": "7497780201000000",
+      "target": "0x102789774"
+    },
+    {
+      "vtable": "0x104a53a78",
+      "slot": "0x100",
+      "address": "0x104a53b78",
+      "bytesHex": "249f780201000000",
+      "target": "0x102789f24"
+    }
+  ]
+}

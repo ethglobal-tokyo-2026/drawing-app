@@ -1,0 +1,58 @@
+{
+  "date": "2026-10-11T19:54:27.699Z",
+  "node": "v24.21.0",
+  "files": [
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/croquis-replay/pixels.ts",
+      "sha256": "fa3ddb0a73524aeab951c1465bfacc47c4bb461c5d918ec93cf2d221e57a08d2"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/croquis-replay/pixels.cjs",
+      "sha256": "c97d402e2f4a1f1b1e768b77617ea59bd193b343f55105837f1182a37982412f"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/inkEngine.ts",
+      "sha256": "9786b412ca0c83bff3d4bf7b3aa212dfe657c90f1478542196e950bca75db781"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/stabilizer.ts",
+      "sha256": "ed461c78d4264c084a30e93636159be9a2780763d35971b4d93f32d4db7fa1cf"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/brush.ts",
+      "sha256": "8ac77a668833b3cca5e63a0f6ea6f6f3a92a120d019e8cbbfd044ced92353022"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/strokeCurve.ts",
+      "sha256": "7cfd4c10db149a1846570dad0fe33137f85014710cd362e8f681052d20ddd6c3"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/stabilization/arithmetic.ts",
+      "sha256": "40e6bc7ece073c7e27fc244b16ed5e6e13693c6f2c9482f7c47f5112f7f35d5e"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/stabilization/binary64.ts",
+      "sha256": "f08af99e8b3ad726b030d803d17090a5133c3f5bd2b3b195106ce74d0b6c3ca4"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/stabilization/queue.ts",
+      "sha256": "0b5f89c67ca9cbe9bce8ef82cfa780f16ced76f0b62de59a035bbde528834232"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/layers/layerInk.ts",
+      "sha256": "2e7d1082f02ddc6b6058a4e7a708c8a72db023e807208747e5124ed84d48e4a7"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/layers/layerHistory.ts",
+      "sha256": "c1a8b3b281b5fff1ea6fad6de13182fc5783d80c496719c27945f1f251958b4e"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/layers/layerDisplay.ts",
+      "sha256": "db6848910bbb422362587c1b2441a76bfa5e006ee326244d17a240c2951cf7fc"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/paintStroke.ts",
+      "sha256": "6604f45c8d482ee080bb6a2d2ac1b52a7a101216637f27d98c018f8ca38e3a12"
+    }
+  ]
+}

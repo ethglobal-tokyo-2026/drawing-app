@@ -1,0 +1,4 @@
+{
+  "operator_report": "CSP froze and the user restarted it.",
+  "result": "137 paired hover calls; no confirmed stroke begin; unexpected stop on another thread, reason6/data[6,1,0]. Recorder detached cleanly. Freeze cause not established."
+}

@@ -1,0 +1,22 @@
+{
+  "pid": 80238,
+  "executable": "/Users/adoll/Applications/CSP Research/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT",
+  "original_arm64": "/Users/adoll/Applications/CSP Research/original-arm64",
+  "recorder_snapshot": {
+    "capture_tablet_stroke.py": {
+      "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-capture/capture_tablet_stroke.py",
+      "sha256": "9c6ced09d6ba81df54764f1b4d8d87b6ae5162d1d775959d4baa6bf2e41f2dbb"
+    },
+    "capture_live_contract.py": {
+      "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-capture/capture_live_contract.py",
+      "sha256": "ca93a5daff62c6633385cb38d750e04c13d5077e3fbc9cd4f09e57d4634ae9b8"
+    },
+    "record_tablet_stroke.py": {
+      "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-capture/record_tablet_stroke.py",
+      "sha256": "8c893aae014ba21597298b3586d40b90b133c7831ccc8aa32f19265ed0f95e93"
+    }
+  },
+  "outer_timeout_seconds": 45,
+  "capture_timeout_seconds": 30,
+  "settings": "Operator-controlled; inspect captured configuration before comparison."
+}

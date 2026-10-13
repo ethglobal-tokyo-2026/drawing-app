@@ -1,0 +1,66 @@
+{
+  "raw_sha256": "cf3bb7c761de415dea8286c9a3b1249c26b91adcc7ed529ec6043f3e2464876a",
+  "included_call_count": 115,
+  "excluded_prebegin_call_count": 32,
+  "initial_history_count": 746,
+  "actual_configuration": {
+    "distance_scale": 0.0,
+    "fast_motion": 0,
+    "initial_window": 0,
+    "maximum_pressure_decline": 1.0,
+    "retain_at_zero": 0,
+    "slow_motion": 0,
+    "slow_numerator": 200,
+    "slow_threshold": 25,
+    "stabilization": 0,
+    "taper": 0
+  },
+  "configuration_unchanged": true,
+  "input_ranges": {
+    "x": {
+      "min": -1452.625,
+      "max": -1249.09765625,
+      "distinct_values": 110
+    },
+    "y": {
+      "min": 357.21875,
+      "max": 751.23046875,
+      "distinct_values": 109
+    },
+    "pressure": {
+      "min": 0.0,
+      "max": 0.9058823585510254,
+      "distinct_values": 42
+    }
+  },
+  "native_timestamp_span_ms": 744,
+  "phase_counts": {
+    "2": 1,
+    "1": 113,
+    "3": 1
+  },
+  "emitted_count": 115,
+  "direct_input_output_bit_differences": [],
+  "direct_check_scope": "Each included emitted x/y/pressure equals its raw call input bit-for-bit. This is an independent no-stabilization observation, not the complete queue-state replay.",
+  "recording_cue": "Capture completed before root could issue Recording now. Operator confirmation of the stroke location is pending.",
+  "operator_requested_configuration": {
+    "stabilization": 20,
+    "taper": 0,
+    "fast_motion": false,
+    "slow_motion": false,
+    "post_correction": false
+  },
+  "scope": "Native moving pressure-sensitive digitizer baseline at actual S=0/T=0. Does not validate active smoothing, post correction, or pen feel.",
+  "initial_comparator_failure": "summary.owned_breakpoints must be an empty array. Recorder retains historical ownership IDs after deletion; reader fix under review.",
+  "native_cleanup": {
+    "fixture_complete": true,
+    "native_release_seen": true,
+    "native_release_returned": true,
+    "final_source_returned": true,
+    "terminal_wrapper_observed": false,
+    "cleanup_errors": [],
+    "detach_request_succeeded": true,
+    "detached_state_observed": true,
+    "elapsed_seconds": 5.2405634590000005
+  }
+}

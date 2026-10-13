@@ -1,0 +1,46 @@
+2026-10-10 preparation integration verification
+
+Scope: research recorders, saved-data readers, offline comparison, static evidence and documentation. No Croquis product source changed.
+
+Root-agent reruns:
+- Live replay: 33/33 tests passed, including the independently found final-flush/intervening-call regression.
+- Post replay: 18/18 tests passed.
+- Existing live arithmetic, post arithmetic and reference invariants: combined run with post replay passed 41 Node test cases; post arithmetic includes 1,005 exact comparisons with Python math.fma.
+- Strict TypeScript over both new analysis directories, including tests: exit 0, no diagnostics.
+- Shared, mouse and tablet recorder host checks: all passed, including 27 tablet cases.
+- New post recorder host checks: 8/8 passed. Explicit completion marker observed after all host suites; LLDB's process exit code alone was not used as success evidence.
+- Independent recorder-to-post-analyzer synthetic test: valid integrity, one pair, zero runtime helper comparisons, whole-curve equivalence not evaluated.
+- Post capture static evidence: 56 assembly extracts, 20 image-data records, 30 resource records passed saved-integrity and original-image checks.
+- Nine capture Python files compiled without cache output.
+- 232 local Markdown file links resolved. Initial checker incorrectly treated :line suffixes as part of filenames; corrected checker passed without altering those valid links.
+- Formatting check over edited docs and both analysis directories: exit 0, 24 files.
+- git diff --check: no whitespace findings.
+
+Independent review findings resolved:
+- Post recorder now selects node class using path type/vtable, independently of node attribute flags.
+- Full post wrapper instruction check includes all 0x11c bytes.
+- Post analyzer rejects oversized allocation headers and uses exclusive report creation, including against an input alias.
+- Live analyzer rejects an ingestion inserted after final flush before terminal completion; terminal comparison binds the actual final flush ID.
+
+Live runtime check:
+- Post no-input preflight verified instructions and both hardware breakpoints on the approved copy.
+- Expected capture timeout with zero pairs; clean detach in 5.120 seconds, within eight-second total budget.
+- Independent process inspection found the research executable in state S afterward.
+- Offline comparison correctly returned exit 2 for that incomplete recording and retained a report.
+
+Historical automated dry-run interruption:
+- Research app window access failed with timeoutReached/cgWindowNotFound before any mouse stroke or brush setting change. A UI-tool call stalled about 2,089 seconds despite a requested ten-second timeout.
+- Manual mouse input subsequently completed the check; see the native recording below.
+- No native tablet fixture, whole-curve prediction, final-render equality, natural cadence or pen-feel equivalence is claimed.
+
+Commands and complete individual outputs are in spikes/live-replay/verification.txt, spikes/post-replay/verification.txt, spikes/live-capture/README.md and evidence/debugger-access/post-preflight/verification.md. The preparation procedure is capture-preparation.md.
+
+Native mouse post-correction check, 2026-10-10T18:40:53Z:
+- Saved in evidence/debugger-access/post-mouse-manual-20261010T184049Z/.
+- PID 21351: one complete native pair, 99 source nodes to eight spline nodes; analyzer exit 0, valid integrity, no errors, one expected independent-configuration-fingerprint warning.
+- Actual arguments k=40, tolerance=160, speed flag=0, Bezier selector=0, lengthScale=8.097101964970545, closedMode=0.
+- User selected fifth indicator bar. The earlier instruction "strength 5" ambiguously meant numeric 5; bar values are configurable. Raw requested metadata is historical, and actual register values govern the fixture.
+- Native helper comparisons: 0 matches, 0 mismatches; four reference derivations only. Whole-curve equivalence remains not evaluated.
+- Clean detach after 1.716997875 seconds, no cleanup errors/warnings or budget overrun. Independently checked both research processes in state S after debugger completion.
+- Unused PID 21626: zero entries, expected capture deadline, clean detach after 27.11103525 seconds; analyzer correctly returned exit 2 and retained its incomplete report.
+- Earlier 18:38 attempt: user confirmed no stroke inside its recording window; both zero-entry files retained. No additional route diagnostic was needed.

@@ -63,10 +63,17 @@ export function createTrayPresses(
   const { reduced, listen, make, icon, words, zip, api, fly, stack, ui } = tray;
   const { Wb, Hb, trayTop, boardView } = tray;
   const { topF } = trayModel;
-  const { restAt, stackOnBoard, sheetEl, renderStack, holdsFocus, keepFocus, catchUp, sheetOf } =
+  const { restAt, stackHome, sheetEl, renderStack, holdsFocus, keepFocus, catchUp, sheetOf } =
     traySheets;
   const { page, bringToFront, settle, topSheet, sheetEls, depthOf } = trayPaging;
   const { startPeel, movePeel, dropPeel, putBack, lieDown, quickAdd, showOnBoard } = trayPeel;
+  /** A return keeps its sheet out of the stack until its paper reaches the stack's front. */
+  let returning: {
+    sheet: Pulled;
+    animation: Animation;
+    finished: Promise<void>;
+    finish: () => void;
+  } | null = null;
 
   /**
    * A pulled-out sheet at `x`, `y` (its top left) and this scale: growing from the stack's size, about
@@ -154,19 +161,20 @@ export function createTrayPresses(
    * Ends a press that wasn't let go, when its pointer is cancelled or its pulled-out sheet goes home:
    * nothing is tapped, paged or stuck on, and a sticker in hand goes back to its slot.
    */
-  async function callOff(g: Gesture) {
+  async function callOff(g: Gesture, goingHome = false) {
     if (ui.g === g) ui.g = null;
     freePress(g.slotEl);
     const pk = g.peel;
     if (g.mode === "peel" && pk) {
       // Its sheet is on its way home: the sticker lies straight back down on it and goes too.
-      if (g.pulled && g.pulled !== ui.pulled) lieDown(pk, g.pulled);
+      if (g.pulled && (goingHome || g.pulled !== ui.pulled)) lieDown(pk, g.pulled);
       else await putBack(pk);
     } else if (g.mode === "page") {
       const el = topSheet();
       if (el) await settle(el);
     } else if (g.mode === "pull") await sendHome({ quick: true });
-    else if (g.mode === "move" && g.pulled && g.pulled === ui.pulled) settlePulled(g.pulled);
+    else if (!goingHome && g.mode === "move" && g.pulled && g.pulled === ui.pulled)
+      settlePulled(g.pulled);
   }
   /** A page turn's lift in the stack's own pixels: on a grown stack, so its sheet keeps pace with the finger. */
   const liftOf = (g: Gesture) => (ui.fit.grow > 1 ? g.dy / ui.fit.scale : g.dy);
@@ -184,7 +192,7 @@ export function createTrayPresses(
     return i === null ? null : i + 1;
   }
   listen(stack, "pointerdown", (e) => {
-    if (e.button > 0 || ui.busy || ui.g || !zip.isOpen) return;
+    if (e.button > 0 || ui.busy || ui.g || returning || !zip.isOpen) return;
     const target = targetOf(e);
     if (target?.closest(".tray__depth")) return;
     const sheet = target?.closest<HTMLElement>(".tray__sheet");
@@ -388,6 +396,7 @@ export function createTrayPresses(
         fill: "forwards",
       }),
     );
+    if (ui.pulled !== p || returning?.sheet === p) return;
     for (const a of p.el.getAnimations()) a.cancel();
     p.x = x;
     p.y = y;
@@ -457,35 +466,69 @@ export function createTrayPresses(
         fill: "forwards",
       }),
     ).then(() => {
+      if (ui.pulled !== p || returning?.sheet === p) return;
       for (const a of p.el.getAnimations()) a.cancel();
       p.el.style.transform = to;
     });
   }
   /** Home: the sheet slides back into the mouth, in front of the stack, and the tray opens up again. */
-  async function sendHome({ quick = false, instant = false } = {}) {
+  function sendHome({ quick = false, instant = false } = {}): Promise<void> {
     const p = ui.pulled;
-    if (!p) return;
-    ui.pulled = null;
+    if (!p) return Promise.resolve();
+    if (returning?.sheet === p) {
+      const current = returning;
+      if (instant) {
+        current.animation.cancel();
+        current.finish();
+        returning = null;
+      }
+      return current.finished;
+    }
     // A press on it can't outlive its listeners: it's called off, and its sticker goes home on it.
-    if (ui.g?.pulled === p) void callOff(ui.g);
+    if (ui.g?.pulled === p) void callOff(ui.g, true);
     p.listening.abort();
     const focused = holdsFocus(p.el);
-    ui.order = [p.f, ...ui.order.filter((o) => o !== p.f)];
+    // A second return, or a redraw while it's flying, keeps this one sheet out of the stack.
+    p.el.classList.remove("is-out");
+    const animations = p.el.getAnimations();
+    const from = animations.length
+      ? tray.win.getComputedStyle(p.el).transform
+      : p.el.style.transform;
+    const paper = p.el.querySelector<HTMLElement>(".tray__paper");
+    const paperShadow = paper ? tray.win.getComputedStyle(paper).boxShadow : "";
+    for (const a of animations) a.cancel();
+    p.el.classList.add("is-returning");
     zip.relax(1);
-    const home = stackOnBoard();
-    if (!reduced() && !instant)
-      await ended(
-        p.el.animate(
-          [
-            { transform: p.el.style.transform },
-            { transform: pulledFrom(home.x, home.y, ui.fit.scale) },
-          ],
-          { duration: quick ? 180 : 320, easing: EASE_PEEL, fill: "forwards" },
-        ),
+    // Relaxing schedules the mouth's next frame: its current stack position still belongs to the
+    // sagged crack. Land where the open stack will stand, so the paper doesn't jump at the handoff.
+    const home = stackHome();
+    const finish = () => {
+      p.el.remove();
+      if (ui.pulled !== p || ui.destroyed) return;
+      ui.pulled = null;
+      ui.order = [p.f, ...ui.order.filter((o) => o !== p.f)];
+      renderStack();
+      if (focused && zip.isOpen) keepFocus(undefined);
+    };
+    if (reduced() || instant) {
+      finish();
+      return Promise.resolve();
+    }
+    const animation = p.el.animate(
+      [{ transform: from }, { transform: pulledFrom(home.x, home.y, ui.fit.scale) }],
+      { duration: quick ? 180 : 320, easing: EASE_PEEL, fill: "forwards" },
+    );
+    if (paper)
+      paper.animate(
+        [{ boxShadow: paperShadow }, { boxShadow: tray.win.getComputedStyle(paper).boxShadow }],
+        { duration: quick ? 180 : 320, easing: EASE_PEEL, fill: "forwards" },
       );
-    p.el.remove();
-    renderStack();
-    if (focused && zip.isOpen) keepFocus(undefined);
+    const finished = ended(animation).then(() => {
+      finish();
+      if (returning?.sheet === p) returning = null;
+    });
+    returning = { sheet: p, animation, finished, finish };
+    return finished;
   }
 
   return { sendHome };

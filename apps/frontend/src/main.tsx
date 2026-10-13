@@ -19,6 +19,7 @@ import { LineGate } from "./line/LineGate";
 import { startPerformanceRecorderAtBoot } from "./performance/performanceRecorder";
 import { installLight } from "./stickers/light";
 import { installPress } from "./ui/press";
+import { PointerIndicators } from "./ui/PointerIndicators";
 import { reloadOntoNewBuild } from "./ui/reloadOntoNewBuild";
 import { ToastProvider } from "./ui/ToastProvider";
 
@@ -50,6 +51,7 @@ createRoot(root).render(
     <IconContext.Provider value={ICON_DEFAULTS}>
       <ToastProvider>
         <AppCrashBoundary>
+          <PointerIndicators />
           <LineGate>
             <ApiRoot>
               <App />

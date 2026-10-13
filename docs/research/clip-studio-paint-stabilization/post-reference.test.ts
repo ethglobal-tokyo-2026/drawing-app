@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { fma64 } from "../../../apps/frontend/src/sticker-creation/canvas/stabilization/binary64.ts";
 import {
-  fma64,
   convertPostSettings,
   applyCallerCap,
   scalarLimits,

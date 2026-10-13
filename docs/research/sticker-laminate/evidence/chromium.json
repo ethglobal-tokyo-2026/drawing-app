@@ -1,0 +1,30 @@
+{
+  "engine": "chromium",
+  "comparison": {
+    "whiteInterior": {
+      "changed": 673,
+      "total": 1560,
+      "maxChannelDelta": 2,
+      "meanMaxChannelDelta": 0.4333
+    },
+    "grayInterior": {
+      "changed": 1440,
+      "total": 1440,
+      "maxChannelDelta": 18,
+      "meanMaxChannelDelta": 13.934
+    },
+    "unattendedSpecularChange": {
+      "changed": 1449,
+      "total": 67600,
+      "maxChannelDelta": 15,
+      "meanMaxChannelDelta": 0.0951
+    }
+  },
+  "animations": [
+    {
+      "name": "live-resin-sway",
+      "iterations": "Infinity",
+      "duration": 11000
+    }
+  ]
+}

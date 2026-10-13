@@ -414,7 +414,7 @@ const PEEK_MS = PEEK.wordAfterMs + PEEK.cloudStaggerMs + PEEK.wordMs + PEEK.hold
 
 test("Kyoto Seika Practice Mode: a tap that selects its sticker peeks at the pair, and a drag doesn't", async ({
   page,
-}) => {
+}, testInfo) => {
   await signIn(page, "peek", language);
   const { sticker, words } = await sealKyotoSeikaSticker(page);
   // Hidden from screen readers, so found by its class; the sticker's name says the pair instead.
@@ -427,6 +427,55 @@ test("Kyoto Seika Practice Mode: a tap that selects its sticker peeks at the pai
   await expect(sticker).toHaveAttribute("aria-pressed", "true");
   await expect(thought).toBeVisible();
   for (const word of words) await expect(thought).toContainText(word);
+  // Wait for the arrival transforms before measuring where the trails meet the sticker.
+  await page.waitForTimeout(PEEK.wordAfterMs + PEEK.cloudStaggerMs + PEEK.wordMs);
+  const gaps = await sticker.evaluate((selected) => {
+    const stage = selected.parentElement?.getBoundingClientRect();
+    if (!stage) throw new Error("The selected sticker has no board stage");
+    const style = getComputedStyle(selected);
+    const [ox, oy] = style.transformOrigin.split(" ").map(parseFloat);
+    const toSticker = new DOMMatrix()
+      .translate(stage.left + ox, stage.top + oy)
+      .multiply(new DOMMatrix(style.transform))
+      .translate(-ox, -oy)
+      .inverse();
+    const w = parseFloat(style.width);
+    const h = parseFloat(style.height);
+    const image = selected.querySelector<HTMLImageElement>(".sticker-figure__img");
+    if (!image?.complete) throw new Error("The sticker image has not loaded");
+    const cut = document.createElement("canvas");
+    cut.width = Math.ceil(w);
+    cut.height = Math.ceil(h);
+    const ink = cut.getContext("2d");
+    if (!ink) throw new Error("The sticker's cut could not be measured");
+    ink.drawImage(image, 0, 0, w, h);
+    const pixels = ink.getImageData(0, 0, cut.width, cut.height).data;
+    return [...document.querySelectorAll<SVGSVGElement>(".thought-layer .subject-trail")].map(
+      (trail) => {
+        const last = trail.lastElementChild;
+        const transform = last instanceof SVGGraphicsElement ? last.getScreenCTM() : null;
+        if (!transform) throw new Error("The thought trail has no last bubble");
+        const point = new DOMPoint().matrixTransform(transform).matrixTransform(toSticker);
+        let distance = Infinity;
+        for (
+          let y = Math.max(0, Math.floor(point.y - 7));
+          y < Math.min(cut.height, point.y + 7);
+          y++
+        )
+          for (
+            let x = Math.max(0, Math.floor(point.x - 7));
+            x < Math.min(cut.width, point.x + 7);
+            x++
+          )
+            if (pixels[(y * cut.width + x) * 4 + 3] > 0)
+              distance = Math.min(distance, Math.hypot(x + 0.5 - point.x, y + 0.5 - point.y));
+        return distance;
+      },
+    );
+  });
+  expect(gaps).toHaveLength(2);
+  for (const gap of gaps) expect(gap).toBeLessThanOrEqual(6);
+  await page.screenshot({ path: testInfo.outputPath("subject-thought-phone.png") });
   await expect(thought).toHaveCount(0, { timeout: PEEK_MS * 2 });
 
   // Let go of, then picked up by a drag: selected, with no peek.
@@ -446,4 +495,11 @@ test("Kyoto Seika Practice Mode: a tap that selects its sticker peeks at the pai
   await page.mouse.up();
   await page.waitForTimeout(arrived);
   expect(await thought.count()).toBe(0);
+
+  await page.keyboard.press("Escape");
+  await page.setViewportSize({ width: 1024, height: 900 });
+  await sticker.click();
+  await expect(thought).toBeVisible();
+  await page.waitForTimeout(arrived);
+  await page.screenshot({ path: testInfo.outputPath("subject-thought-large.png") });
 });

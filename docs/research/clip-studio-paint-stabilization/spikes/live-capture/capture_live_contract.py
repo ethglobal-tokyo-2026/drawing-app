@@ -22,7 +22,7 @@ import uuid
 import lldb
 
 
-ROOT = Path('/private/tmp/csp-debug-research-20261009')
+ROOT = Path.home() / 'Applications/CSP Research'
 EXECUTABLE = ROOT / 'CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT'
 ORIGINAL_ARM64 = ROOT / 'original-arm64'
 ORIGINAL_SHA256 = '6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd'
@@ -123,6 +123,10 @@ class Capture:
         self.detach_last_debugger_state = None
         self.cleanup_warnings = []
         self.initial_globals = None
+        self.workqueue_step_recoveries = []
+        self.capture_warnings = []
+        self.capture_thread_ids = set()
+        self.last_classified_stop_id = None
         self.listener = lldb.SBListener('csp-contract-' + uuid.uuid4().hex)
         self.timer = threading.Timer(max(0.0, self.capture_deadline - time.monotonic()),
                                      self.expire)
@@ -215,6 +219,7 @@ class Capture:
         Call after Continue. Public GetState can briefly remain stopped while
         LLDB steps past a breakpoint, so it must not authorize register reads.
         The returned stop ID is the next value to pass after continuing again.
+        Waiting for notification avoids adding a polling delay to every stop.
         """
         require(self.process is not None and self.process.IsValid(),
                 'invalid_capture_process')
@@ -225,9 +230,12 @@ class Capture:
             require(self.process.IsValid() and self.process.GetUniqueID() == process_unique_id,
                     'capture_process_identity_changed')
             event = lldb.SBEvent()
-            if not self.listener.GetNextEventForBroadcasterWithType(
-                    broadcaster, lldb.SBProcess.eBroadcastBitStateChanged, event):
-                time.sleep(0.005)
+            received = self.listener.WaitForEventForBroadcasterWithType(
+                1, broadcaster, lldb.SBProcess.eBroadcastBitStateChanged, event)
+            # An idle wait is bounded even if the watchdog cannot interrupt it.
+            # Never process an event that arrived after the capture deadline.
+            self.budget()
+            if not received:
                 continue
             require(lldb.SBProcess.EventIsProcessEvent(event), 'non_process_capture_event')
             event_process = lldb.SBProcess.GetProcessFromEvent(event)
@@ -252,6 +260,120 @@ class Capture:
             require(stop_id > last_stop_id, f'non_advancing_capture_stop: {stop_id} <= {last_stop_id}')
             self.budget()
             return stop_id
+
+    def workqueue_step_context(self, thread):
+        """Read and verify only the observed system workqueue startup location."""
+        frame = thread.GetFrameAtIndex(0)
+        pc = frame.GetPC()
+        address = frame.GetPCAddress()
+        module = address.GetModule()
+        symbol = address.GetSymbol()
+        require(module.IsValid() and symbol.IsValid(), 'Unresolved workqueue step location')
+        filespec = module.GetFileSpec()
+        module_path = str(Path(filespec.GetDirectory() or '') / (filespec.GetFilename() or ''))
+        module_uuid = module.GetUUIDString()
+        symbol_name = symbol.GetName()
+        symbol_start = symbol.GetStartAddress().GetLoadAddress(self.target)
+        require(module_path == '/usr/lib/system/libsystem_pthread.dylib' and bool(module_uuid),
+                'Unexpected workqueue step module')
+        require(symbol_name in ('start_wqthread', '_start_wqthread') and pc == symbol_start + 4,
+                'Unexpected workqueue step symbol or PC')
+        raw = self.memory(pc, 8)
+        branch, following = struct.unpack('<II', raw)
+        require(branch & 0xfc000000 == 0x94000000 and following == 0xd4200020,
+                'Workqueue startup must contain BL followed by BRK #1')
+        immediate = branch & 0x03ffffff
+        displacement = (immediate - (1 << 26) if immediate & (1 << 25) else immediate) * 4
+        destination = pc + displacement
+        resolved = self.target.ResolveLoadAddress(destination)
+        require(resolved.IsValid(), 'Unresolved workqueue startup BL target')
+        destination_module = resolved.GetModule()
+        destination_symbol = resolved.GetSymbol()
+        require(destination_module.IsValid() and destination_symbol.IsValid(),
+                'Unresolved workqueue startup BL symbol')
+        target_name = destination_symbol.GetName()
+        target_start = destination_symbol.GetStartAddress().GetLoadAddress(self.target)
+        require(destination_module.GetUUIDString() == module_uuid
+                and target_name in ('_pthread_wqthread', '__pthread_wqthread')
+                and target_start == destination, 'Unexpected workqueue startup BL target')
+        return {'pc': hex(pc), 'module_path': module_path, 'module_uuid': module_uuid,
+                'symbol_name': symbol_name, 'symbol_start': hex(symbol_start),
+                'instruction_bytes_le': raw.hex(), 'bl_target': hex(destination),
+                'bl_target_symbol': target_name, 'bl_target_symbol_start': hex(target_start),
+                'bl_target_module_uuid': destination_module.GetUUIDString()}
+
+    def collect_breakpoint_hit(self, callbacks, stop_id, source_thread_ids=()):
+        """Validate the complete stop before allowing a single owned callback.
+
+        XNU handle_sw_step_debug reports [6, 1, 0] after clearing single-step
+        state. Only the twice-observed secondary workqueue startup is accepted.
+        The origin remains unknown; every other exception still aborts capture.
+        https://github.com/apple-oss-distributions/xnu/blob/main/osfmk/arm64/sleh.c
+        """
+        self.budget()
+        require(self.process.GetStopID() == stop_id
+                and (self.last_classified_stop_id is None or stop_id > self.last_classified_stop_id),
+                'Stale or changed capture stop during classification')
+        hits, exceptions = [], []
+        for index in range(self.process.GetNumThreads()):
+            thread = self.process.GetThreadAtIndex(index)
+            reason = thread.GetStopReason()
+            if reason == lldb.eStopReasonNone:
+                continue
+            data = [thread.GetStopReasonDataAtIndex(i) for i in range(thread.GetStopReasonDataCount())]
+            self.write('thread_stop', thread_id=thread.GetThreadID(), reason=int(reason), data=data)
+            if reason == lldb.eStopReasonException and data == [6, 1, 0]:
+                exceptions.append((thread, reason, data))
+                continue
+            require(reason == lldb.eStopReasonBreakpoint and len(data) == 2,
+                    f'Unexpected stop reason/data on thread {thread.GetThreadID()}')
+            require(data[0] in callbacks, f'Unowned breakpoint {data[0]} stopped capture')
+            address, callback = callbacks[data[0]]
+            require(thread.GetFrameAtIndex(0).GetPC() == address, 'Stopped PC differs from breakpoint')
+            hits.append((thread, callback, data, address))
+        require(len(hits) == 1, 'Capture requires one unambiguous ordered breakpoint stop')
+        require(len(exceptions) <= 1, 'Multiple secondary exceptions stopped capture')
+        owned_thread, callback, owned_data, owned_pc = hits[0]
+        if exceptions:
+            thread, reason, data = exceptions[0]
+            tid = thread.GetThreadID()
+            require(tid != owned_thread.GetThreadID() and tid not in self.capture_thread_ids,
+                    'A capture thread cannot be recovered as a secondary workqueue thread')
+            require(tid not in self.pending and tid not in source_thread_ids,
+                    'Workqueue step thread has an ingestion or source role')
+            require(len(self.workqueue_step_recoveries) < 4, 'Workqueue step recovery limit reached')
+            require(all(item['thread_id'] != tid for item in self.workqueue_step_recoveries),
+                    'Repeated workqueue step exception on the same thread')
+            breakpoint = self.target.FindBreakpointByID(owned_data[0])
+            require(breakpoint.IsValid() and breakpoint.IsHardware(),
+                    'Workqueue recovery requires an owned hardware breakpoint')
+            location = breakpoint.FindLocationByID(owned_data[1])
+            require(location.IsValid() and location.GetAddress().GetLoadAddress(self.target) == owned_pc,
+                    'Workqueue recovery requires the reported owned breakpoint location')
+            context = self.workqueue_step_context(thread)
+            recovery = {'stop_id': stop_id, 'thread_id': tid, 'reason': int(reason), 'data': data,
+                        **context, 'owned_thread_id': owned_thread.GetThreadID(),
+                        'owned_breakpoint_id': owned_data[0],
+                        'owned_breakpoint_location_id': owned_data[1],
+                        'owned_breakpoint_pc': hex(owned_pc), 'owned_breakpoint_hardware': True,
+                        'secondary_pending_ingestion': False, 'secondary_source_role': False,
+                        'secondary_capture_role': False,
+                        'recovery_index': len(self.workqueue_step_recoveries) + 1, 'recovery_limit': 4,
+                        'action': 'preserve_owned_callback_and_resume_without_target_writes'}
+            self.budget()
+            require(self.process.GetStopID() == stop_id, 'Capture stop changed during recovery reads')
+            self.write('workqueue_step_recovery', **recovery)
+            self.workqueue_step_recoveries.append(recovery)
+            warning = ('Accepted a verified workqueue thread-start single-step notification; '
+                       'its origin remains unproved.')
+            if warning not in self.capture_warnings:
+                self.capture_warnings.append(warning)
+            print(f'WARNING: {warning} Recovery {len(self.workqueue_step_recoveries)}/4.', flush=True)
+        self.budget()
+        require(self.process.GetStopID() == stop_id, 'Capture stop changed before owned callback')
+        self.last_classified_stop_id = stop_id
+        self.capture_thread_ids.add(owned_thread.GetThreadID())
+        return owned_thread, callback
 
     def select_process(self):
         # Fresh PID attachment has no per-call timeout in this installed API.

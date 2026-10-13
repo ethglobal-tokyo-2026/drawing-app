@@ -1,0 +1,1 @@
+docs/research/clip-studio-paint-stabilization/post-source.test.ts(155,27): error TS2540: Cannot assign to 'x' because it is a read-only property.

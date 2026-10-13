@@ -1,0 +1,343 @@
+{
+  "schema": "croquis-production-smoke/v1",
+  "startedAt": "2026-10-11T23:33:03.993Z",
+  "mode": "check-local",
+  "source": "/Users/adoll/.codex/worktrees/csp-stabilization-release/drawing-app",
+  "origin": "https://stickeroo.art",
+  "output": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/post-joined/evidence/production-smoke-2026-10-11T23-33-03.991Z-e34753ab-207f-417f-b078-e8f3811b50f7",
+  "status": "passed",
+  "assets": [
+    {
+      "path": "/",
+      "localBytes": 5743,
+      "localSha256": "5918b9ee0e488ee7e4f54b381f83d4c3fbef5196431e9007c78d0896e5524e75"
+    },
+    {
+      "path": "/assets/index-CKTaydur.js",
+      "localBytes": 413613,
+      "localSha256": "7bee196cbb0eea36ed8e59b1146a5e60f762e7f4b4e1cdc2f054c804d8de5da7"
+    },
+    {
+      "path": "/assets/DrawingScreen-D7slqbsE.js",
+      "localBytes": 141656,
+      "localSha256": "9b71e0be93e910665e9189e2badac46ebfc4d5b3c92565a879c7683167485f93"
+    },
+    {
+      "path": "/assets/layerDisplay-D6VTRxLT.js",
+      "localBytes": 56455,
+      "localSha256": "ccfe2923a8a520eed6a761f45454e1d8cede4216c8e2e9ac19c4058898040709"
+    },
+    {
+      "path": "/assets/worker-DoXKbbeT.js",
+      "localBytes": 34071,
+      "localSha256": "d62e715b30e59d4954a14f98982ad6f814c0c0c3e49e8a0d8457f3d74882a8f2"
+    }
+  ],
+  "browsers": [],
+  "errors": [],
+  "scope": "Published asset identity and anonymous synthetic correction-worker execution. No sign-in, ticket use, drawing save, or native tablet/pen-feel claim.",
+  "commit": "d229c59e78da40497e6f467d34b68533f7cf5469",
+  "sourceHashes": {
+    "apps/frontend/src/sticker-creation/canvas/post-correction/core.ts": "8106b5497c3beecf266efbede2ba07f5180eb5f67adcd52f2d60fe220107b401",
+    "apps/frontend/src/sticker-creation/canvas/post-correction/settings.ts": "d59c0ee68de0544f8f13954df2f9a2aa4bde29b8430d06ef8216947e3cc33bd1",
+    "apps/frontend/src/sticker-creation/canvas/post-correction/profile.ts": "a2749a8dccfbe98c0f74aed118881cbf19f8f06f4e7b3932772d813470da448c",
+    "apps/frontend/src/sticker-creation/canvas/post-correction/core.test.ts": "643cec5ccf7036a04ff82cbe8a30f1d39358545b20dc6d7fe258f2b7a24cd847"
+  },
+  "cases": [
+    {
+      "name": "light",
+      "input": {
+        "packets": [
+          {
+            "x": 0,
+            "y": 0,
+            "pressure": 0.1,
+            "t": 100,
+            "phase": 2
+          },
+          {
+            "x": 0.2,
+            "y": 0.06,
+            "pressure": 0.1,
+            "t": 110,
+            "phase": 1
+          },
+          {
+            "x": 0.4,
+            "y": 0.2,
+            "pressure": 0.1,
+            "t": 120,
+            "phase": 1
+          },
+          {
+            "x": 0.6000000000000001,
+            "y": -0.04000000000000001,
+            "pressure": 0.1,
+            "t": 130,
+            "phase": 1
+          },
+          {
+            "x": 0.8,
+            "y": 0,
+            "pressure": 0.1,
+            "t": 140,
+            "phase": 1
+          },
+          {
+            "x": 1,
+            "y": 0.4,
+            "pressure": 0.1,
+            "t": 150,
+            "phase": 3
+          }
+        ],
+        "renderedPoints": [
+          0,
+          0,
+          1,
+          0,
+          0.2,
+          0.06,
+          2,
+          10,
+          0.4,
+          0.2,
+          3,
+          20,
+          0.6000000000000001,
+          -0.04000000000000001,
+          4,
+          30,
+          0.8,
+          0,
+          5,
+          40,
+          1,
+          0.4,
+          6,
+          50
+        ],
+        "settings": {
+          "strength": 1,
+          "adjustBySpeed": false,
+          "adjustByScale": true
+        },
+        "magnificationFraction": 1,
+        "brushSize": 29.5,
+        "pointerType": "pen",
+        "stabilization": 20
+      },
+      "expected": [
+        0,
+        0,
+        1,
+        0,
+        0.05946969696969698,
+        0.02577020202020202,
+        1.4081670635624128,
+        4,
+        0.15000000000000002,
+        0.065,
+        2.0252459211502267,
+        10,
+        0.24053030303030307,
+        0.10422979797979798,
+        2.556688467539488,
+        16,
+        0.30000000000000004,
+        0.13,
+        2.9057950775106764,
+        19,
+        0.43876262626262624,
+        0.18352272727272725,
+        3.5523966531836253,
+        26,
+        0.6499999999999999,
+        0.26500000000000007,
+        4.774085183565215,
+        38,
+        0.8612373737373737,
+        0.34647727272727274,
+        5.562686408148726,
+        46,
+        1,
+        0.4,
+        6,
+        50
+      ],
+      "expectedBits": [
+        "0000000000000000",
+        "0000000000000000",
+        "3ff0000000000000",
+        "0000000000000000",
+        "3fae72cfe72cfe74",
+        "3f9a6380fb8d650e",
+        "3ff687da2fd4e0f0",
+        "4010000000000000",
+        "3fc3333333333334",
+        "3fb0a3d70a3d70a4",
+        "400033b4222d94b9",
+        "4024000000000000",
+        "3fcec9b26c9b26cb",
+        "3fbaaecdd5978804",
+        "40047419155123c1",
+        "4030000000000000",
+        "3fd3333333333334",
+        "3fc0a3d70a3d70a4",
+        "40073f117d564a04",
+        "4033000000000000",
+        "3fdc14afd6a052bf",
+        "3fc77dac37dac37d",
+        "400c6b4eefbebf8a",
+        "403a000000000000",
+        "3fe4cccccccccccc",
+        "3fd0f5c28f5c28f7",
+        "401318a9c94eec4b",
+        "4043000000000000",
+        "3feb8f41ae49703a",
+        "3fd62caf02caf02d",
+        "40164030dda39c25",
+        "4047000000000000",
+        "3ff0000000000000",
+        "3fd999999999999a",
+        "4018000000000000",
+        "4049000000000000"
+      ]
+    },
+    {
+      "name": "firm",
+      "input": {
+        "packets": [
+          {
+            "x": 0,
+            "y": 0,
+            "pressure": 1,
+            "t": 100,
+            "phase": 2
+          },
+          {
+            "x": 0.2,
+            "y": 0.06,
+            "pressure": 1,
+            "t": 110,
+            "phase": 1
+          },
+          {
+            "x": 0.4,
+            "y": 0.2,
+            "pressure": 1,
+            "t": 120,
+            "phase": 1
+          },
+          {
+            "x": 0.6000000000000001,
+            "y": -0.04000000000000001,
+            "pressure": 1,
+            "t": 130,
+            "phase": 1
+          },
+          {
+            "x": 0.8,
+            "y": 0,
+            "pressure": 1,
+            "t": 140,
+            "phase": 1
+          },
+          {
+            "x": 1,
+            "y": 0.4,
+            "pressure": 1,
+            "t": 150,
+            "phase": 3
+          }
+        ],
+        "renderedPoints": [
+          0,
+          0,
+          1,
+          0,
+          0.2,
+          0.06,
+          2,
+          10,
+          0.4,
+          0.2,
+          3,
+          20,
+          0.6000000000000001,
+          -0.04000000000000001,
+          4,
+          30,
+          0.8,
+          0,
+          5,
+          40,
+          1,
+          0.4,
+          6,
+          50
+        ],
+        "settings": {
+          "strength": 1,
+          "adjustBySpeed": false,
+          "adjustByScale": true
+        },
+        "magnificationFraction": 1,
+        "brushSize": 29.5,
+        "pointerType": "pen",
+        "stabilization": 20
+      },
+      "expected": [
+        0.30000000000000004,
+        0.13,
+        1,
+        0,
+        0.43876262626262624,
+        0.18352272727272725,
+        2.2948998917863133,
+        13,
+        0.6499999999999999,
+        0.26500000000000007,
+        3.8172708008335396,
+        28,
+        0.8612373737373737,
+        0.34647727272727274,
+        5.372111287297599,
+        44,
+        1,
+        0.4,
+        6,
+        50
+      ],
+      "expectedBits": [
+        "3fd3333333333334",
+        "3fc0a3d70a3d70a4",
+        "3ff0000000000000",
+        "0000000000000000",
+        "3fdc14afd6a052bf",
+        "3fc77dac37dac37d",
+        "40025bf47976877c",
+        "402a000000000000",
+        "3fe4cccccccccccc",
+        "3fd0f5c28f5c28f7",
+        "400e89c5460c723e",
+        "403c000000000000",
+        "3feb8f41ae49703a",
+        "3fd62caf02caf02d",
+        "40157d0abdc5a9a0",
+        "4046000000000000",
+        "3ff0000000000000",
+        "3fd999999999999a",
+        "4018000000000000",
+        "4049000000000000"
+      ]
+    }
+  ],
+  "discovery": {
+    "entry": "/assets/index-CKTaydur.js",
+    "drawingScreen": "/assets/DrawingScreen-D7slqbsE.js",
+    "workerOwner": "/assets/layerDisplay-D6VTRxLT.js",
+    "workerAsset": "/assets/worker-DoXKbbeT.js"
+  },
+  "finishedAt": "2026-10-11T23:33:04.243Z"
+}

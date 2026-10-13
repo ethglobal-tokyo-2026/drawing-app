@@ -1,0 +1,44 @@
+{
+  "purpose": "Cross-engine consistency of actual production correction and attribute transfer; separate from native arithmetic validation.",
+  "test": "post correction preserves every output bit across browser engines",
+  "before": {
+    "chromium": "passed",
+    "webkit": "failed",
+    "widthUlpDifferencesPerFunction": 4,
+    "functions": [
+      "correctPostStroke",
+      "transferStrokeAttributes"
+    ],
+    "log": "cross-engine-red-20261011T233915Z.log"
+  },
+  "after": {
+    "chromium": "passed",
+    "webkit": "passed",
+    "testsPassed": 2,
+    "elapsedSeconds": 5.5,
+    "log": "cross-engine-green-20261011T234045Z.log"
+  },
+  "checks": {
+    "e2eTypeScript": "passed",
+    "focusedTypeAwareLint": "passed",
+    "gitDiffCheck": "passed"
+  },
+  "fixtures": {
+    "pressures": [
+      0.1,
+      1
+    ],
+    "inputPacketsPerCase": 6,
+    "assertions": [
+      "every binary64 output bit equals the same module in Node",
+      "light-pressure first point retained",
+      "firm-pressure first point removed",
+      "final endpoints preserved"
+    ]
+  },
+  "sourceSha256": {
+    "apps/frontend/e2e/pencil.e2e.ts": "a20de46a193de552c85d01ab0a0d605895256883e9e06ecd928325d451c584b1",
+    "apps/frontend/src/sticker-creation/canvas/post-correction/core.ts": "fd592cc95fdda8a0851682d6c61dc72bbb4cd3e792f448f8232439722539f3fd",
+    "apps/frontend/src/sticker-creation/canvas/post-correction/core.test.ts": "27ba17d17081cdcfa7a59680ca111140ac0c3be8dd9efd8c303014d67caee7ec"
+  }
+}
