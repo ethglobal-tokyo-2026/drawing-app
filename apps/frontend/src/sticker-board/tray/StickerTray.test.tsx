@@ -165,6 +165,7 @@ const media = (motion: MediaQueryList, large = false) => {
   vi.spyOn(window, "matchMedia").mockImplementation((query) =>
     query === LARGE_SCREEN ? screen : motion,
   );
+  return screen;
 };
 /**
  * Reduced motion until `animate` turns it off (or back on), and animations that end only when
@@ -1244,6 +1245,92 @@ describe("StickerTray", () => {
       expect(stackFoot).toBeLessThanOrEqual(mouthFoot);
       expect(mouthFoot - stackFoot).toBeLessThan(STACK_FOOT);
     });
+
+    it("enlarges the sticker and its press area when the window turns large, then restores the phone", async () => {
+      let large = false;
+      const screen = media(window.matchMedia("all"));
+      Object.defineProperty(screen, "matches", { get: () => large });
+      const observers = stubResizeObservers();
+      await openOn(666, 60);
+      const width = () => {
+        const slot = slotOf("s59");
+        if (!(slot instanceof HTMLElement))
+          throw new Error("The newest sticker isn't on its sheet");
+        return parseFloat(slot.style.width);
+      };
+      const phone = width();
+      const sheetNumbers = () =>
+        [...(stackEl()?.querySelectorAll<HTMLElement>(".tray__sheet") ?? [])].map(
+          (sheet) => sheet.dataset.f,
+        );
+      const phoneSheets = sheetNumbers();
+      act(() => {
+        large = true;
+        screen.dispatchEvent(new Event("change"));
+        const col = board.querySelector(".tray__col");
+        if (col) observers.resize(col);
+      });
+      expect(width()).toBeCloseTo(phone * 1.25, 0);
+      expect(sheetNumbers()).not.toEqual(phoneSheets);
+      const { stackFoot, mouthFoot } = openStack(666);
+      expect(stackFoot).toBeLessThanOrEqual(mouthFoot);
+
+      act(() => {
+        large = false;
+        screen.dispatchEvent(new Event("change"));
+        const col = board.querySelector(".tray__col");
+        if (col) observers.resize(col);
+      });
+      expect(width()).toBe(phone);
+      expect(sheetNumbers()).toEqual(phoneSheets);
+    });
+
+    it.each([
+      ["open", false],
+      ["gathering", true],
+    ])(
+      "closes a %s spread before a layout change repacks its sheets, and reopens all the current sheets",
+      async (_, gathering) => {
+        let large = false;
+        const motion = holdAnimations();
+        const screen = media(window.matchMedia("all"));
+        Object.defineProperty(screen, "matches", { get: () => large });
+        const observers = stubResizeObservers();
+        await openOn(666, 60);
+        spreadSheets();
+        const dialog = board.querySelector<HTMLElement>(".tray__spread");
+        const before = dialog?.querySelectorAll(".tray__cell").length ?? 0;
+        expect(before).toBeGreaterThan(3);
+        // Closing during a window resize must finish without waiting for a sheet-gathering animation.
+        motion.animate();
+        if (gathering) act(() => dialog?.querySelectorAll<HTMLElement>(".tray__cell")[2]?.click());
+        await act(async () => {
+          large = true;
+          screen.dispatchEvent(new Event("change"));
+          const col = board.querySelector(".tray__col");
+          if (col) observers.resize(col);
+        });
+        expect(dialog?.hidden).toBe(true);
+        expect(dialog?.querySelectorAll(".tray__cell")).toHaveLength(0);
+        expect(board.querySelector(".tray__col")?.hasAttribute("inert")).toBe(false);
+
+        spreadSheets();
+        const cells = dialog?.querySelectorAll(".tray__cell") ?? [];
+        expect(cells.length).toBeGreaterThan(before);
+        const ids = [...(dialog?.querySelectorAll<HTMLElement>(".tray__slot") ?? [])].map(
+          (slot) => {
+            const id = slot.dataset.id;
+            if (!id) throw new Error("A sticker preview has no ID");
+            return id;
+          },
+        );
+        expect(ids.sort((a, b) => a.localeCompare(b))).toEqual(
+          manyStickers(60)
+            .map((s) => s.id)
+            .sort((a, b) => a.localeCompare(b)),
+        );
+      },
+    );
 
     it("keeps a short large screen's stack about the phone's size", async () => {
       media(window.matchMedia("all"), true);

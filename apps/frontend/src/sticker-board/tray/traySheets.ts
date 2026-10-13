@@ -83,7 +83,8 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
   function fitOf(s: Slot): Size {
     const ar = s.width / s.height;
     const { w, h } = STICKER_FIT;
-    return ar >= w / h ? { w, h: w / ar } : { w: h * ar, h };
+    const size = ar >= w / h ? { w, h: w / ar } : { w: h * ar, h };
+    return { w: size.w * ui.fit.stickerScale, h: size.h * ui.fit.stickerScale };
   }
   function placeOf(s: Slot): Box {
     if (s.pos) return { x: s.pos.x, y: s.pos.y, r: s.pos.r, w: s.pos.w, h: s.pos.h };

@@ -145,15 +145,26 @@ export function createTraySpread(
   }
   /** The spread closing: a second tap or Escape meanwhile waits for it, and keeps the sheet tapped first. */
   let closing: Promise<void> | null = null;
+  /** An instant close during a layout change supersedes a gather already in flight. */
+  let gathering = 0;
   /** Back into the tray, with sheet `f`, the one tapped, in front. */
-  function closeSpread(f = topF()) {
+  function closeSpread(f = topF(), { instant = false } = {}) {
     if (!ui.spreadOpen) return Promise.resolve();
-    closing ??= gather(f).finally(() => {
+    if (instant) {
       closing = null;
-    });
+      for (const a of spreadLayer.getAnimations({ subtree: true })) a.cancel();
+      return gather(f, true);
+    }
+    if (!closing) {
+      const pending = gather(f, false).finally(() => {
+        if (closing === pending) closing = null;
+      });
+      closing = pending;
+    }
     return closing;
   }
-  async function gather(f: number) {
+  async function gather(f: number, instant: boolean) {
+    const current = ++gathering;
     const focused = spreadHasFocus();
     const cells = [...spreadLayer.querySelectorAll<HTMLElement>(".tray__cell")];
     const pick = cells.find((c) => Number(c.dataset.f) === f);
@@ -161,7 +172,7 @@ export function createTraySpread(
     // The stack's place among the cells, which scroll with the spread.
     const { x, y } = stackHome();
     const home = { x, y: y + spreadLayer.scrollTop };
-    if (!reduced()) {
+    if (!reduced() && !instant) {
       mat.animate([{ opacity: 1 }, { opacity: 0 }], {
         duration: 320,
         easing: "linear",
@@ -196,6 +207,7 @@ export function createTraySpread(
           ),
         );
     }
+    if (current !== gathering) return;
     const i = ui.order.indexOf(f);
     if (i > 0) ui.order = [...ui.order.slice(i), ...ui.order.slice(0, i)];
     renderStack();

@@ -94,13 +94,34 @@ describe("placement", () => {
       };
     };
 
-    it("run from half to twice its natural size", () => {
-      for (const board of BOARDS)
-        for (const art of [drawn(160), USUAL]) {
-          const { range, natural } = rangeOn(art, board);
-          expect(range.min).toBeCloseTo(natural / RESIZE_REACH);
-          expect(range.max).toBeCloseTo(natural * RESIZE_REACH);
+    it("run from half to twice its natural size on a phone", () => {
+      for (const art of [drawn(160), USUAL]) {
+        const { range, natural } = rangeOn(art, BOARDS[0]);
+        expect(range.min).toBeCloseTo(natural / RESIZE_REACH);
+        expect(range.max).toBeCloseTo(natural * RESIZE_REACH);
+      }
+    });
+
+    it.each([
+      [820, 1022, 780],
+      [1180, 662, 560],
+    ])(
+      "can enlarge small and usual stickers to the large board's limit at %s × %s",
+      (W, H, long) => {
+        const field = fieldOf(W, H);
+        for (const art of [drawn(120), USUAL]) {
+          const range = sRangeOf(art, "large", field, 390);
+          expect(range.max * 390).toBeCloseTo(long);
+          expect(range.min * 390).toBeCloseTo(Math.max(art.drawnWidth, art.drawnHeight) * 0.15625);
         }
+      },
+    );
+
+    it("keeps a rotated large sticker's entire box within the board when enlarged", () => {
+      const field = fieldOf(820, 1022);
+      const range = sRangeOf(drawn(120), "large", field, 390, 45);
+      // At 45°, a 3:4 sticker's box is 1.75 / sqrt(2) times its long side in both axes.
+      expect(range.max * 390).toBeCloseTo((764 * Math.SQRT2) / 1.75, 8);
     });
 
     it("stay inside the board's field, however big or thin the sticker", () => {

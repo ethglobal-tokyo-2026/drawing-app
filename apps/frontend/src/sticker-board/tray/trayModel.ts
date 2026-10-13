@@ -318,6 +318,8 @@ export const POUCH_LINING = 24;
 
 /** How the tray fits its board. */
 export interface TrayFit {
+  /** Sticker previews grow by a quarter on a large touch screen, within the same sheet and pouch. */
+  stickerScale: number;
   /**
    * The stack's scale: below 1 to fit a short board, above 1 to fill a large screen's room. The sheets
    * scale; the edges behind the front one, their dates and the +N button keep their size on screen.
@@ -333,7 +335,7 @@ export interface TrayFit {
 }
 
 /** Before the board has a size: the page at its least height. */
-const PHONE_FIT: TrayFit = { scale: 1, grow: 1, room: SHEET.h };
+const PHONE_FIT: TrayFit = { stickerScale: 1, scale: 1, grow: 1, room: SHEET.h };
 
 /**
  * The tray on its board. The stack shrinks until a deep stack of least-height pages fits the mouth
@@ -343,12 +345,14 @@ const PHONE_FIT: TrayFit = { scale: 1, grow: 1, room: SHEET.h };
  * of the slider.
  */
 export function trayFitFor(large: boolean, windowFoot: (short: number) => number | null): TrayFit {
+  const stickerScale = large ? 1.25 : 1;
   const foot = windowFoot(0);
-  if (foot === null) return PHONE_FIT;
+  if (foot === null) return { ...PHONE_FIT, stickerScale };
   // The scale whose deepest stack ends where the open mouth does.
   const fills = (foot - 2 - STACK_Y - STACK_FOOT) / SHEET.h;
   const scale = large && fills > 1 ? Math.min(fills, MAX_STACK_SCALE) : clamp(fills, MIN_SCALE, 1);
   return {
+    stickerScale,
     scale,
     grow: large ? Math.max(1, scale) : 1,
     room: foot - 2 - STACK_Y - POUCH_LINING,
@@ -472,13 +476,21 @@ export function createTrayModel(
   /* ---------------------------------------------------------------- where each sticker sits: on its cut line */
   /** The model whose sheets were last packed, and so drawn. */
   let packedModel: TrayState["model"] | null = null;
+  /** The sticker size used for those sheets; changing layouts repacks even a least-height page. */
+  let packedStickerScale = 0;
   /** Given stickers stay in the list, so the blanks they leave on their sheets stay put. */
   function packWith(shapes: readonly Shape[]) {
     const items = ui.model.slots.map((s, i) => ({ id: s.id, shape: shapes[i] }));
-    // Packed on the page's least height whatever the board, so a sticker's sheet never changes with the
+    // Packed on the page's least height for its layout, so a sticker's sheet never changes with the
     // board's height or the stickers after it; the drawn page, taller, spreads them over it.
     const packOn = (page: number) =>
-      packSheets(items, { sheet: SHEET, margin: PACK_MARGIN, spread: true, page });
+      packSheets(items, {
+        sheet: SHEET,
+        margin: PACK_MARGIN,
+        stickerScale: ui.fit.stickerScale,
+        spread: true,
+        page,
+      });
     let packed = packOn(SHEET.h);
     // A sheet pulled out over the board follows its oldest sticker to the sheet it's packed on now.
     const pulled = ui.pulled;
@@ -511,6 +523,7 @@ export function createTrayModel(
       }
     }
     ui.sheetH = sheetH;
+    packedStickerScale = ui.fit.stickerScale;
   }
   /** Packs at once when every cut line is known; until then, the stand-in spots stay. */
   function applyPack() {
@@ -533,8 +546,10 @@ export function createTrayModel(
    * packed when every cut line is known, else on stand-in spots from the page's foot. Whether it did.
    */
   function fitPages() {
-    if (pageHeight() === ui.sheetH) return false;
+    const resized = packedStickerScale !== ui.fit.stickerScale;
+    if (pageHeight() === ui.sheetH && !resized) return false;
     if (!applyPack()) ui.sheetH = pageHeight();
+    else if (resized) resetOrder();
     return true;
   }
   /** The stack as the filter deals it: its sheets, newest in front. */

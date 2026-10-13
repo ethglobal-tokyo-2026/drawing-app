@@ -8,12 +8,11 @@ import { REDUCED_MOTION } from "../ui/useReducedMotion";
 import { sheenIn, sweepSheen } from "./resinSheen";
 
 /**
- * The app's one light: `--lx` and `--ly` (-1 to 1) follow the phone's tilt where the browser shares it,
- * or a mouse or pen. A finger never moves it: a finger drags stickers, and the light sweeping with it
- * would change the gloss on every other sticker. They're set on each highlight that moves with them
- * rather than the root, so a move restyles only those; without them each rests at its own default.
- * The light listens only while a screen with stickers holds it, so the pointer and the motion sensor
- * rest everywhere else.
+ * The app's one light: `--lx` and `--ly` (-1 to 1) follow only the device's tilt where the browser
+ * shares it. Mouse, pen and finger interactions never move it. They're set on each highlight that
+ * moves with them rather than the root, so a move restyles only those; without them each rests at its
+ * own default. The light listens only while a screen with stickers holds it, so the motion sensor
+ * rests everywhere else.
  */
 
 /**
@@ -196,8 +195,6 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
   const reduced = win.matchMedia(REDUCED_MOTION);
   let x = 0;
   let y = 0;
-  /** The tilt aimed it, so it glides there; a mouse or pen is followed at once. */
-  let gliding = false;
   /** Where the light was last written, or null before it first moves. */
   let lit: { x: number; y: number } | null = null;
   let frame = 0;
@@ -241,7 +238,7 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     }
     const since = now - lastWrite;
     lastWrite = now;
-    if (!lit || !gliding) lit = { x, y };
+    if (!lit) lit = { x, y };
     else {
       // A low-pass on the tilt, by the time since the last write; close enough, it lands.
       const k = 1 - Math.exp(-since / GLIDE_MS);
@@ -253,18 +250,12 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     if (lit.x !== x || lit.y !== y) frame = win.requestAnimationFrame(write);
   };
 
-  const aim = (nx: number, ny: number, glide: boolean) => {
+  const aim = (nx: number, ny: number) => {
     if (reduced.matches) return;
     x = clamp11(nx);
     y = clamp11(ny);
-    gliding = glide;
     if (lit && Math.abs(x - lit.x) < STEP && Math.abs(y - lit.y) < STEP) return;
     if (!frame) frame = win.requestAnimationFrame(write);
-  };
-
-  const fromPointer = (e: PointerEvent) => {
-    if (e.pointerType === "touch") return;
-    aim((e.clientX / win.innerWidth) * 2 - 1, (e.clientY / win.innerHeight) * 2 - 1, false);
   };
 
   /** Across the screen, where the tilt last swept a sheen, or stood as the pause after it ended. */
@@ -275,7 +266,7 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
   const fromTilt = (e: DeviceOrientationEvent) => {
     if (e.gamma === null || e.beta === null) return;
     const to = lightForTilt(e.beta, e.gamma);
-    aim(to.x, to.y, true);
+    aim(to.x, to.y);
     const now = win.performance.now();
     // The first tilt, and any tilt in the pause, only marks where the next sweep is measured from.
     if (sweptFrom === null || now - lastSweep < SWEEP_PAUSE_MS || reduced.matches) {
@@ -304,13 +295,9 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
   const own = {
     on: () => {
       win.addEventListener("deviceorientation", fromTilt, passive);
-      win.addEventListener("pointermove", fromPointer, passive);
-      win.addEventListener("pointerdown", fromPointer, passive);
     },
     off: () => {
       win.removeEventListener("deviceorientation", fromTilt);
-      win.removeEventListener("pointermove", fromPointer);
-      win.removeEventListener("pointerdown", fromPointer);
       // A tilt from before the sensor rested isn't a change to sweep for.
       sweptFrom = null;
     },

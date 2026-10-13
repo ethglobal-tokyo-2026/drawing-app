@@ -86,15 +86,17 @@ test("a sticker over another shows the crease of the edge beneath, lit as the on
   await page.mouse.up();
   await expect(creaseOf(page, over.id)).toHaveCount(1);
 
-  // A mouse moves the one light, and the crease's lit side follows it: with the light at the screen's
-  // top left, the side it rests on; swung to the bottom right, the opposite side.
+  // Device tilt moves the one light, and the crease's lit side follows it: with the light at the
+  // screen's top left, the side it rests on; swung to the bottom right, the opposite side.
   const crease = creaseOf(page, over.id);
-  await page.mouse.move(0, 0);
+  await page.evaluate(() => {
+    window.dispatchEvent(Object.assign(new Event("deviceorientation"), { gamma: -32, beta: 8 }));
+  });
   await expect.poll(() => opacityOf(crease, "topLeft")).toBeCloseTo(1, 1);
   await expect.poll(() => opacityOf(crease, "bottomRight")).toBe(0);
-  const screen = page.viewportSize();
-  if (!screen) throw new Error("The page has no viewport");
-  await page.mouse.move(screen.width - 1, screen.height - 1, { steps: 4 });
+  await page.evaluate(() => {
+    window.dispatchEvent(Object.assign(new Event("deviceorientation"), { gamma: 90, beta: 72 }));
+  });
   await expect.poll(() => opacityOf(crease, "bottomRight")).toBeGreaterThan(0.3);
   await expect.poll(() => opacityOf(crease, "topLeft")).toBeLessThan(0.3);
 

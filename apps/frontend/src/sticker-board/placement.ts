@@ -137,7 +137,7 @@ export function naturalSOf(art: Pick<Art, "drawnWidth" | "drawnHeight">, layout:
   return layout === "large" ? s * LARGE_LANDING_GROWTH : s;
 }
 
-/** A resize takes a sticker down to its natural size over this, and up to its natural size times this. */
+/** A resize takes a sticker down to its natural size over this; a phone also caps growth at this multiple. */
 export const RESIZE_REACH = 2;
 
 /** The sizes a sticker can take, as `s`. */
@@ -147,20 +147,24 @@ export interface SRange {
 }
 
 /**
- * The sizes a sticker takes in `layout`, on a board with this field and unit: half to twice its
- * natural size, as long as it fits the field and the layout's ceiling, which win.
+ * The sizes a sticker takes in `layout`, on a board with this field and unit: from half its natural
+ * size to the field's fit and the layout's ceiling. A phone also caps growth at twice its natural
+ * size. `rotation` keeps a turned sticker's whole box inside the field while it grows.
  */
-export function sRangeOf(art: Art, layout: BoardLayout, field: Field, unit: number): SRange {
-  const wide = art.width >= art.height;
-  const shortShare = Math.min(art.width, art.height) / Math.max(art.width, art.height);
-  const fits = Math.min(
-    (wide ? field.w : field.h) / unit,
-    (wide ? field.h : field.w) / unit / shortShare,
-  );
+export function sRangeOf(
+  art: Art,
+  layout: BoardLayout,
+  field: Field,
+  unit: number,
+  rotation = 0,
+): SRange {
+  const { w, h } = sizeOf(unit, 1, art);
+  const { ex, ey } = extentsOf(w, h, rotation);
+  const fits = Math.min(field.w / (2 * ex), field.h / (2 * ey));
   const natural = naturalSOf(art, layout);
   return {
     min: natural / RESIZE_REACH,
-    max: Math.min(natural * RESIZE_REACH, fits, S_CEILING[layout]),
+    max: Math.min(layout === "phone" ? natural * RESIZE_REACH : Infinity, fits, S_CEILING[layout]),
   };
 }
 

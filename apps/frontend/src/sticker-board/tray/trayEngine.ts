@@ -343,6 +343,9 @@ export function createTrayEngine(
     if (fitting !== fittedFor) {
       fittedFor = fitting;
       const fit = trayFitFor(large.matches, (short) => zip.openWindow(short)?.bot ?? null);
+      // A spread's cells name the old sheets; close them before the new sticker size repacks those sheets.
+      if (fit.stickerScale !== was.stickerScale && ui.spreadOpen)
+        void traySpread.closeSpread(undefined, { instant: true });
       ui.fit = fit;
       if (fit.grow !== was.grow) {
         // The open stack isn't sized for the column a pulled-out sheet came from.
@@ -351,7 +354,11 @@ export function createTrayEngine(
       }
       if (Math.abs(fit.scale - was.scale) >= 0.001)
         stack.style.setProperty("--scale", fit.scale.toFixed(4));
-      if (fit.room !== was.room || fit.scale !== was.scale) {
+      if (
+        fit.room !== was.room ||
+        fit.scale !== was.scale ||
+        fit.stickerScale !== was.stickerScale
+      ) {
         fitPages();
         if (ui.order.length) redraw();
       }

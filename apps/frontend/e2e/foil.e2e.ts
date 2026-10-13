@@ -20,7 +20,45 @@ async function bandPixels(page: Page, foil: Locator) {
   return page.screenshot({ clip: box });
 }
 
-test("a foil holds still under a still light, and its bands slide as the light moves", async ({
+/** Shares a device tilt with the app, and waits for the foil to reach that light and settle. */
+async function tiltLight(page: Page, foil: Locator, gamma: number, lx: string) {
+  await page.evaluate((gamma) => {
+    window.dispatchEvent(Object.assign(new Event("deviceorientation"), { gamma, beta: 40 }));
+  }, gamma);
+  await expect(foil.locator(".sticker-foil__sheen")).toHaveCSS("--lx", lx);
+  await expect.poll(() => runningOn(foil)).toBe(0);
+}
+
+/** Mouse and Apple Pencil hover and contact leave the foil's current band pixels unchanged. */
+async function ignorePointers(page: Page, foil: Locator, still: Buffer) {
+  const screen = page.viewportSize();
+  if (!screen) throw new Error("The page has no viewport");
+  for (const pointerType of ["mouse", "pen"]) {
+    for (const type of ["pointermove", "pointerdown"]) {
+      await test.step(`${pointerType} ${type} leaves the foil still`, async () => {
+        await foil.dispatchEvent(type, {
+          pointerType,
+          pointerId: pointerType === "pen" ? 2 : 1,
+          buttons: type === "pointerdown" ? 1 : 0,
+          clientX: type === "pointermove" ? 0 : screen.width - 1,
+          clientY: type === "pointermove" ? 0 : screen.height - 1,
+        });
+        // Wait past a pointer-driven write and transition, so a delayed change cannot pass as still.
+        await page.waitForTimeout(500);
+        await expect.poll(() => runningOn(foil)).toBe(0);
+        expect((await bandPixels(page, foil)).equals(still)).toBe(true);
+        if (type === "pointerdown")
+          await foil.dispatchEvent("pointerup", {
+            pointerType,
+            pointerId: pointerType === "pen" ? 2 : 1,
+            buttons: 0,
+          });
+      });
+    }
+  }
+}
+
+test("a foil follows only device tilt, holding still through mouse and Apple Pencil hover and contact", async ({
   page,
 }) => {
   await signIn(page, "foil", language);
@@ -35,19 +73,18 @@ test("a foil holds still under a still light, and its bands slide as the light m
   // A copy of the sticker flies from the board to its place in the detail, over it, until it lands.
   await expect(page.locator(".detail-lift__flyer")).toHaveCount(0);
 
-  // The light holds where the last click left it, and nothing on the foil moves.
+  // Before the sensor shares a tilt, the foil holds its default light.
   await expect.poll(() => runningOn(foil)).toBe(0);
   const still = await bandPixels(page, foil);
   await page.waitForTimeout(500);
   expect((await bandPixels(page, foil)).equals(still)).toBe(true);
+  await ignorePointers(page, foil, still);
 
-  // A mouse swings the light across the top of the screen, and the bands slide with it.
-  const screen = page.viewportSize();
-  if (!screen) throw new Error("The page has no viewport");
-  await page.mouse.move(0, 0);
-  await expect.poll(() => runningOn(foil)).toBe(0);
+  // Device tilt swings the light across the screen, and the bands slide with it.
+  await tiltLight(page, foil, -32, "-1.000");
   const left = await bandPixels(page, foil);
-  await page.mouse.move(screen.width - 1, 0, { steps: 4 });
-  await expect.poll(() => runningOn(foil)).toBe(0);
-  expect((await bandPixels(page, foil)).equals(left)).toBe(false);
+  await tiltLight(page, foil, 32, "1.000");
+  const right = await bandPixels(page, foil);
+  expect(right.equals(left)).toBe(false);
+  await ignorePointers(page, foil, right);
 });

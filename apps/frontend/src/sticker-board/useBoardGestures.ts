@@ -1,3 +1,4 @@
+import { MAX_LARGE_SCALE } from "@drawing-app/api/client";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { formatNo } from "../stickers/format";
 import { sheenIn, sweepSheen } from "../stickers/resinSheen";
@@ -186,7 +187,10 @@ export function useBoardGestures(options: Options) {
     const rangeFor = (sticker: BoardSticker, field: Field) => {
       const { layout, size } = latest.current;
       const s = sticker.placement.s;
-      return size ? sRangeOf(sticker, layout, field, size.U) : { min: s, max: s };
+      if (!size) return { min: s, max: s };
+      const range = sRangeOf(sticker, layout, field, size.U);
+      // A large pinch can turn as it grows; heldOnField fits its final turn.
+      return layout === "large" ? { ...range, max: MAX_LARGE_SCALE } : range;
     };
     /**
      * `live` with its center held on the field, as a drag's is; grown past `from`'s size, it moves in
@@ -196,6 +200,14 @@ export function useBoardGestures(options: Options) {
       const held = { ...live, ...toPx(field, toFrac(field, live)) };
       const unit = latest.current.size?.U;
       if (!unit || held.s <= from.s) return held;
+      if (latest.current.layout === "large") {
+        // A saved sticker can outgrow the field after an orientation change; growth never shrinks it.
+        held.s = Math.max(
+          from.s,
+          Math.min(held.s, sRangeOf(sticker, "large", field, unit, held.r).max),
+        );
+        if (held.s <= from.s) return held;
+      }
       return { ...held, ...keptOnField(held, sizeOf(unit, held.s, sticker), field) };
     };
 

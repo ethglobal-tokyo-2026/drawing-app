@@ -399,7 +399,7 @@ The sticker board is free-form, not a grid, and Explore's pile is a heap of die-
 
 Depth is physical, from one light at the top left. Every cast shadow falls down and to the right in neutral Ink alpha, in two parts: a tight contact and a soft throw. Controls get depth from thickness, not shading: a key sits on a 6px lip, a label on 3px of paper, and the base casts the shadow. Stickers get their edge from the kiss-cut groove round their silhouette; on a foil sticker the band is the edge.
 
-Stickers, foils and the Gratitude heart also follow the app's one moving light. It tracks the phone's tilt, or a mouse or pen but never a finger, and idle-sways so stills look alive. Controls don't follow it.
+Stickers and foils follow the app's one moving light. It tracks only device tilt; mouse, pen and finger interactions never move it. With no tilt reading, or while the device is still, the light holds still. Controls don't follow it.
 
 ### Shadow Vocabulary
 

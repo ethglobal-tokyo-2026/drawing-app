@@ -97,13 +97,7 @@ window.reorderGlides = {
     };
   },
   moveLight: () =>
-    window.dispatchEvent(
-      new PointerEvent("pointermove", {
-        pointerType: "mouse",
-        clientX: 0,
-        clientY: innerHeight / 2,
-      }),
-    ),
+    window.dispatchEvent(Object.assign(new Event("deviceorientation"), { gamma: -32, beta: 40 })),
   positions,
   transitions: () => animations().filter((a) => a instanceof CSSTransition).length,
   animations: () => animations().length,

@@ -2,6 +2,7 @@ import { expect, type Locator, type Page } from "@playwright/test";
 import { naturalSOf, RESIZE_REACH, type Art } from "../src/sticker-board/placement.ts";
 import { boardSticker, sealFromBoard, signIn, test } from "./helpers.ts";
 import { FINGERTIP, hand, touchStroke, type At } from "./pen.ts";
+import { ipad } from "./ipad.ts";
 
 const language = "en";
 /** A fingertip's touch: the least a sticker takes, however small it was drawn. */
@@ -28,10 +29,10 @@ function numberIn(body: unknown, key: string, field: string): number {
 }
 
 /** The size the app saves for sticker `id` next. Ask before the gesture ends, so it isn't missed. */
-function savedScale(page: Page, id: string) {
+function savedScale(page: Page, id: string, layout: "placement" | "largePlacement" = "placement") {
   return page
     .waitForRequest((r) => r.method() === "PATCH" && r.url().endsWith(`/sticker-placements/${id}`))
-    .then((request) => numberIn(request.postDataJSON(), "placement", "scale"));
+    .then((request) => numberIn(request.postDataJSON(), layout, "scale"));
 }
 
 /** Seals a sticker from the board, its stroke `reach` times the usual; its number, ID, drawn size and element. */
@@ -109,4 +110,40 @@ test("a corner handle dragged in past its sticker's center leaves the sticker at
   const saved = savedScale(page, id);
   await dragCorner(page, el, corner, -1.2);
   expect(await saved).toBeCloseTo(naturalSOf(drawn, "phone") / RESIZE_REACH, 3);
+});
+
+test.describe("On an iPad", () => {
+  test.use(ipad);
+  for (const [orientation, viewport] of [
+    ["portrait", ipad.viewport],
+    ["landscape", { width: ipad.viewport.height, height: ipad.viewport.width }],
+  ] as const) {
+    test(`a small sticker enlarges beyond twice its landing size in ${orientation}, saves, and keeps its phone size`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await signIn(page, "ipadresize", language);
+      const { id, drawn, el } = await sealSized(page, 0.15);
+      const landed = await longSideOf(el);
+      await el.click();
+      const corner = el.locator(".placed-sticker__handle--ne");
+      await expect(corner).toBeVisible();
+      const saved = savedScale(page, id, "largePlacement");
+      const response = page.waitForResponse(
+        (r) => r.request().method() === "PATCH" && r.url().endsWith(`/sticker-placements/${id}`),
+      );
+      await dragCorner(page, el, corner, 6);
+      expect(await saved).toBeGreaterThan(naturalSOf(drawn, "large") * 4);
+      expect((await response).ok()).toBe(true);
+      const enlarged = await longSideOf(el);
+      expect(enlarged).toBeGreaterThan(landed * 4);
+
+      await page.reload();
+      await expect(el).toBeVisible();
+      await expect.poll(() => longSideOf(el)).toBeCloseTo(enlarged, 1);
+
+      await page.setViewportSize({ width: 390, height: 844 });
+      await expect.poll(() => longSideOf(el)).toBeCloseTo(naturalSOf(drawn, "phone") * 390, 1);
+    });
+  }
 });

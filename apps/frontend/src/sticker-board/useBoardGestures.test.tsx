@@ -201,6 +201,144 @@ describe("useBoardGestures", () => {
     expect(x + w / 2).toBeLessThanOrEqual(phoneField.left + phoneField.w + 0.05);
   });
 
+  it("enlarges a small sticker beyond twice its landing size while fitting the pinch's new rotation", () => {
+    const onCommit = vi.fn<Options["onCommit"]>();
+    const large = { W: 820, H: 1022, U: 390 };
+    const field = fieldOf(large.W, large.H);
+    const small = testBoardSticker({
+      id: "a",
+      width: 300,
+      height: 400,
+      drawnWidth: 90,
+      drawnHeight: 120,
+      placement: { ...sticker.placement, x: 1, s: 37.5 / 390 },
+    });
+    show({ stickers: [small], field, size: large, layout: "large", onCommit });
+    const el = stickerEl();
+    act(() => {
+      point(el, "pointerdown", 1, 300, 300);
+      point(el, "pointerdown", 2, 340, 300);
+      point(el, "pointermove", 2, 940, 940);
+      point(el, "pointerup", 1, 300, 300);
+      point(el, "pointerup", 2, 940, 940);
+    });
+    const [, placement] = onCommit.mock.calls[0];
+    expect(placement.r).toBe(45);
+    expect(placement.s * 390).toBeCloseTo((764 * Math.SQRT2) / 1.75, 1);
+    expect(parseFloat(el.style.height)).toBeGreaterThan(600);
+    const { x, y } = toPx(field, placement);
+    const halfBox = (placement.s * 390 * 1.75) / (2 * Math.SQRT2);
+    expect(x - halfBox).toBeGreaterThanOrEqual(field.left - 0.05);
+    expect(x + halfBox).toBeLessThanOrEqual(field.left + field.w + 0.05);
+    expect(y - halfBox).toBeGreaterThanOrEqual(field.top - 0.05);
+    expect(y + halfBox).toBeLessThanOrEqual(field.top + field.h + 0.05);
+  });
+
+  it.each(["resize", "pinch", "smaller", "bigger"] as const)(
+    "keeps a rotated large sticker's size continuous during %s in landscape",
+    (action) => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      const onCommit = vi.fn<Options["onCommit"]>();
+      const large = { W: 1180, H: 662, U: 390 };
+      const field = fieldOf(large.W, large.H);
+      const tall = testBoardSticker({
+        id: "a",
+        width: 100,
+        height: 400,
+        drawnWidth: 30,
+        drawnHeight: 120,
+        placement: { ...sticker.placement, x: 0.5, y: 0.5, s: 700 / 390, r: 90 },
+      });
+      show({ stickers: [tall], field, size: large, layout: "large", onCommit });
+      const el = stickerEl();
+      const { x, y } = toPx(field, tall.placement);
+      act(() => {
+        if (action === "resize") {
+          const handle = el.querySelector<HTMLElement>("[data-handle=scale]");
+          if (!handle) throw new Error("The sticker has no resize handle");
+          point(handle, "pointerdown", 1, x + 350, y);
+          point(el, "pointermove", 1, x + 332.5, y);
+          point(el, "pointerup", 1, x + 332.5, y);
+        } else if (action === "pinch") {
+          point(el, "pointerdown", 1, x - 20, y);
+          point(el, "pointerdown", 2, x + 20, y);
+          point(el, "pointermove", 2, x + 22, y);
+          point(el, "pointerup", 1, x - 20, y);
+          point(el, "pointerup", 2, x + 22, y);
+        } else {
+          el.focus();
+          keyDown(action === "smaller" ? "-" : "=");
+          vi.advanceTimersByTime(STEP_SAVE_IDLE_MS);
+        }
+      });
+      expect(onCommit).toHaveBeenCalledOnce();
+      const [, placement] = onCommit.mock.calls[0];
+      expect(placement.r).toBe(90);
+      const expected = { resize: 665, pinch: 735, smaller: 700 / 1.08, bigger: 700 * 1.08 };
+      expect(placement.s * 390).toBeCloseTo(expected[action], 1);
+      expect(placement.s > tall.placement.s).toBe(action === "pinch" || action === "bigger");
+    },
+  );
+
+  it("fits a large pinch at its final rotation when turning frees room to grow", () => {
+    const onCommit = vi.fn<Options["onCommit"]>();
+    const large = { W: 1180, H: 662, U: 390 };
+    const field = fieldOf(large.W, large.H);
+    const tall = testBoardSticker({
+      id: "a",
+      width: 100,
+      height: 400,
+      drawnWidth: 30,
+      drawnHeight: 120,
+      placement: { ...sticker.placement, x: 0.5, y: 0.5, s: 400 / 390, r: 0 },
+    });
+    show({ stickers: [tall], field, size: large, layout: "large", onCommit });
+    const el = stickerEl();
+    act(() => {
+      point(el, "pointerdown", 1, 300, 300);
+      point(el, "pointerdown", 2, 340, 300);
+      point(el, "pointermove", 2, 300, 380);
+      point(el, "pointerup", 1, 300, 300);
+      point(el, "pointerup", 2, 300, 380);
+    });
+    const [, placement] = onCommit.mock.calls[0];
+    expect(placement.r).toBe(90);
+    expect(placement.s * 390).toBe(780);
+  });
+
+  it.each(["smaller", "bigger"] as const)(
+    "%s keeps an existing large sticker continuous when orientation leaves less room",
+    (action) => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      const onCommit = vi.fn<Options["onCommit"]>();
+      const onStepsSettled = vi.fn<NonNullable<Options["onStepsSettled"]>>();
+      const large = { W: 1180, H: 662, U: 390 };
+      const field = fieldOf(large.W, large.H);
+      const tall = testBoardSticker({
+        id: "a",
+        width: 100,
+        height: 400,
+        drawnWidth: 30,
+        drawnHeight: 120,
+        placement: { ...sticker.placement, x: 0.8, y: 0.7, s: 700 / 390, r: 0 },
+      });
+      show({ stickers: [tall], field, size: large, layout: "large", onCommit, onStepsSettled });
+      act(() => {
+        stickerEl().focus();
+        keyDown(action === "smaller" ? "-" : "=");
+        vi.advanceTimersByTime(STEP_SAVE_IDLE_MS);
+      });
+      const [, placement] = onCommit.mock.calls[0];
+      expect(placement.s * 390).toBeCloseTo(action === "smaller" ? 700 / 1.08 : 700, 1);
+      expect(placement.x).toBe(tall.placement.x);
+      expect(placement.y).toBe(tall.placement.y);
+      expect(onStepsSettled).toHaveBeenCalledExactlyOnceWith({
+        step: action,
+        moved: action === "smaller",
+      });
+    },
+  );
+
   describe("a gesture the system takes, as iOS or LINE can", () => {
     /** Each gesture begun on the sticker, which moves it; returns the pointers it holds. */
     const gestures = {

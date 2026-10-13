@@ -39,6 +39,7 @@ const mixed = (n: number): PackItem[] =>
 const opts = { sheet: SHEET, margin: PACK_MARGIN, clearance: 6 };
 /** As the sticker tray packs: a sheet with room to spare spreads its stickers over its page. */
 const spread = { ...opts, spread: true };
+const large = { ...spread, stickerScale: 1.25 };
 
 /** Each sheet's cut lines as placed, in sheet pixels. */
 function placedCuts(list: PackItem[], options: PackOptions = opts) {
@@ -97,6 +98,7 @@ describe("packSheets", () => {
   it.each([
     ["packed", opts],
     ["spread", spread],
+    ["large", large],
   ])("keeps every cut line inside its sheet's margins, %s", (_, options) => {
     const { sheet, margin } = opts;
     for (const cuts of placedCuts(mixed(28), options))
@@ -111,6 +113,7 @@ describe("packSheets", () => {
   it.each([
     ["packed", opts],
     ["spread", spread],
+    ["large", large],
   ])("keeps cut lines at least the clearance apart, %s", (_, options) => {
     for (const cuts of placedCuts(mixed(28), options))
       cuts.forEach((a, i) =>

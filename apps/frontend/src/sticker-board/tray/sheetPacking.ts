@@ -63,6 +63,8 @@ export interface PackOptions {
   breathe?: number;
   /** The box each sticker's image is fitted into: the size stickers show at. */
   fit?: { w?: number; h?: number };
+  /** Enlarges sticker images and their least cut size, leaving the sheet and its gaps unchanged. */
+  stickerScale?: number;
   /** A cut's long side never drops below this. */
   minSize?: number;
   /** Size varies by up to this share either way, seeded per sticker. */
@@ -379,6 +381,7 @@ export function profileOf(sh: Shape, bw: number, bh: number, deg: number): Profi
 
 function options(opts: PackOptions): Resolved {
   const { margin } = opts;
+  const stickerScale = opts.stickerScale ?? 1;
   return {
     sheet: opts.sheet,
     page: Math.max(opts.page ?? opts.sheet.h, opts.sheet.h),
@@ -388,8 +391,11 @@ function options(opts: PackOptions): Resolved {
         : margin,
     clearance: opts.clearance ?? DEFAULTS.clearance,
     breathe: opts.breathe ?? DEFAULTS.breathe,
-    fit: { w: opts.fit?.w ?? DEFAULTS.fit.w, h: opts.fit?.h ?? DEFAULTS.fit.h },
-    minSize: opts.minSize ?? DEFAULTS.minSize,
+    fit: {
+      w: (opts.fit?.w ?? DEFAULTS.fit.w) * stickerScale,
+      h: (opts.fit?.h ?? DEFAULTS.fit.h) * stickerScale,
+    },
+    minSize: (opts.minSize ?? DEFAULTS.minSize) * stickerScale,
     vary: opts.vary ?? DEFAULTS.vary,
     turn: opts.turn ?? DEFAULTS.turn,
     inset: opts.inset ?? DEFAULTS.inset,
