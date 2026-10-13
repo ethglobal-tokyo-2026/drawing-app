@@ -1,8 +1,10 @@
+// @vitest-environment happy-dom
 import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { maskPixels } from "../../stickers/maskPixels";
 import { testStickerUrls } from "../../stickers/testStickerUrls";
 import {
   MAX_STACK_SCALE,
+  PACK_MARGIN,
   SHEET,
   createTrayModel,
   createTrayState,
@@ -10,8 +12,10 @@ import {
   mouthShortFor,
   sheetHeightFor,
   trayFitFor,
+  type Slot,
   type TraySticker,
 } from "./trayModel";
+import { outline, outlineShape } from "./sheetPacking";
 import type { TrayProblem } from "./trayProblem";
 
 vi.mock("../../stickers/maskPixels", () => ({ maskPixels: vi.fn() }));
@@ -41,6 +45,10 @@ const stickers = (n: number, name: string) =>
     };
   });
 const nothingToSay = { problem: () => {}, problemGone: () => {} };
+const positionOf = (s: Slot) => {
+  if (!s.pos) throw new Error(`Sticker ${s.no} has no packed position`);
+  return s.pos;
+};
 
 describe("trayFitFor", () => {
   it.each([
@@ -74,25 +82,14 @@ describe("trayFitFor", () => {
 });
 
 describe("packing the sheets", () => {
-  /** Each sticker's sheet, as the tray packs `n` stickers for an open pouch ending at `foot`. */
-  const sheetsOf = (n: number, large: boolean, foot: number) => {
+  /** A tray packed for an open pouch ending at `foot`, ready to resize or filter. */
+  const packedTray = (n: number, large: boolean, foot: number) => {
     const ui = createTrayState(modelOf(stickers(n, "packed"), new Set()));
     ui.fit = trayFitFor(large, () => foot);
-    createTrayModel(ui, new Set(), nothingToSay).applyPack();
-    return ui.model.slots.map((s) => s.sheet);
+    const model = createTrayModel(ui, new Set(), nothingToSay);
+    model.applyPack();
+    return { ui, model };
   };
-
-  it("never moves a sticker to another sheet as more arrive or its layout changes height", () => {
-    const most = 40;
-    for (const large of [false, true]) {
-      const sheets = sheetsOf(most, large, 640);
-      expect(new Set(sheets).size).toBeGreaterThan(2);
-      const heights = large ? [560, 800, 1100, 1400] : [420, 520, 640, 760, 900];
-      for (const foot of heights)
-        for (let n = 1; n <= most; n++)
-          expect(sheetsOf(n, large, foot)).toEqual(sheets.slice(0, n));
-    }
-  });
 
   it("enlarges the packed sticker cuts by a quarter on a large screen, keeping the pouch its size", () => {
     const packed = (large: boolean) => {
@@ -128,6 +125,105 @@ describe("packing the sheets", () => {
     ui.fit = trayFitFor(false, () => 500);
     expect(model.fitPages()).toBe(true);
     expect(ui.model.slots.map((s) => s.pos)).toEqual(phone);
+  });
+
+  it("fits more stickers on each sheet when the board has more page height", () => {
+    const short = packedTray(40, false, 420).ui;
+    const tall = packedTray(40, true, 1400).ui;
+    expect(short.model.count).toBe(6);
+    expect(tall.model.count).toBe(5);
+    expect(tall.model.slots.filter((s) => s.sheet === 0)).toHaveLength(9);
+  });
+
+  it("keeps a few stickers together instead of stretching their rows over the page", () => {
+    const { ui } = packedTray(3, true, 1200);
+    const ys = ui.model.slots.map((s) => positionOf(s).y);
+    expect(Math.max(...ys) - Math.min(...ys)).toBeLessThan(200);
+  });
+
+  it("reassigns sheets on resize while keeping the front and pulled sheet with their stickers", () => {
+    const { ui, model } = packedTray(40, true, 1425);
+    ui.order = [1, 3, 0];
+    ui.orderedFor = 4;
+    ui.pulled = {
+      f: 2,
+      el: document.createElement("div"),
+      x: 0,
+      y: 0,
+      g0: { x: 0, y: 0 },
+      out: true,
+      listening: new AbortController(),
+    };
+    ui.fit = trayFitFor(true, () => 1600);
+    model.fitPages();
+    expect(ui.model.count).toBe(4);
+    expect(ui.model.slots[9].sheet).toBe(0);
+    expect(ui.model.slots[19].sheet).toBe(1);
+    expect(ui.order).toEqual([0, 3, 2]);
+    expect(ui.pulled.f).toBe(1);
+  });
+
+  it("uses the filtered stack's room and keeps the result stable when count and height disagree", () => {
+    const { ui, model } = packedTray(27, false, 760);
+    expect(ui.model.count).toBe(2);
+    expect(ui.sheetH).toBe(632);
+    expect(mouthShortFor(ui.fit, 2, ui.sheetH)).toBe(15);
+    const before = ui.model.slots.map((s) => s.pos);
+    expect(model.fitPages()).toBe(false);
+    model.applyPack();
+    expect(ui.model.slots.map((s) => s.pos)).toEqual(before);
+
+    ui.model.slots[0].gift = true;
+    ui.filter = "gifts";
+    expect(model.fitPages()).toBe(true);
+    expect(ui.sheetH).toBe(662);
+    expect(model.sheetsMatching()).toBe(1);
+    expect(model.fitPages()).toBe(false);
+  });
+
+  it("keeps every cut line inside the same page height used to pack it", () => {
+    for (const [large, foot] of [
+      [false, 640],
+      [true, 1200],
+    ] as const) {
+      const { ui } = packedTray(40, large, foot);
+      for (const s of ui.model.slots) {
+        if (s.outline === undefined) throw new Error(`Sticker ${s.no} has no stored cut line`);
+        const shape = outlineShape(s.outline, s.width, s.height);
+        for (const [x, y] of outline(shape, positionOf(s))) {
+          expect(x).toBeGreaterThanOrEqual(PACK_MARGIN.left);
+          expect(x).toBeLessThanOrEqual(SHEET.w - PACK_MARGIN.right);
+          expect(y).toBeGreaterThanOrEqual(PACK_MARGIN.top);
+          expect(y).toBeLessThanOrEqual(ui.sheetH - PACK_MARGIN.bottom);
+        }
+      }
+      const sheets = ui.model.slots.map((s) => s.sheet);
+      expect(sheets).toEqual([...sheets].sort((a, b) => a - b));
+    }
+  });
+
+  it("keeps used and given stickers in their spaces when the sheet capacity changes", () => {
+    const { ui, model } = packedTray(40, false, 420);
+    ui.model.slots[1].state = "given";
+    ui.model.slots[2].state = "used";
+    ui.fit = trayFitFor(true, () => 1400);
+    model.fitPages();
+    expect(ui.model.count).toBe(5);
+    expect(ui.model.slots[1]).toMatchObject({ sheet: 0, state: "given" });
+    expect(ui.model.slots[2]).toMatchObject({ sheet: 0, state: "used" });
+    expect(ui.model.slots[3].pos?.n).toBe(3);
+  });
+
+  it("reserves label space for packed and sent gifts while keeping their sticker size", () => {
+    const { ui, model } = packedTray(2, true, 1200);
+    const before = ui.model.slots.map((s) => ({ w: positionOf(s).w, h: positionOf(s).h }));
+    ui.model.slots[0].state = "inTheBag";
+    ui.model.slots[1].state = "onItsWay";
+    model.applyPack();
+    expect(
+      Math.abs(positionOf(ui.model.slots[0]).y - positionOf(ui.model.slots[1]).y),
+    ).toBeGreaterThan(100);
+    expect(ui.model.slots.map((s) => ({ w: positionOf(s).w, h: positionOf(s).h }))).toEqual(before);
   });
 });
 

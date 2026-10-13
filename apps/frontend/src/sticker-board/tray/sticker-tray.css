@@ -461,6 +461,11 @@
   cursor: pointer;
 }
 
+/* Outgoing stickers remain inspectable, while their faded ink and foil say they cannot be placed. */
+.tray__slot:is([data-state="inTheBag"], [data-state="onItsWay"]) :is(.tray__img, .sticker-foil) {
+  opacity: 0.3;
+}
+
 /* The sleeve's frost over the sticker, inside its cut: the fit's own mask (--m), as the used
    sticker silhouette's. */
 .tray__frost {
@@ -533,8 +538,7 @@
 }
 
 /* A dot badge, stuck on by the same hand as every other. */
-.tray__new,
-.tray__gift-dot {
+.tray__new {
   position: absolute;
   display: inline-grid;
   place-items: center;
@@ -559,18 +563,33 @@
   letter-spacing: 0.02em;
 }
 
-/* A sticker in a gift wears a round Soda Aqua dot: the gift in the bag, the paper plane on its way.
-   It sits a little inside its cut line's top-right spot, as on the sticker's detail. */
-.tray__gift-dot {
-  left: calc(var(--spot-x) * 100% - 12px);
-  top: calc(var(--spot-y) * 100% - 8px);
-  width: 20px;
-  background: var(--aqua);
+/* Flat paper status centered over an outgoing sticker. Packing reserves its rectangle, including a
+   full 32-code-point handle, so it never covers a neighboring sticker. */
+.tray__gift-label {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  width: var(--gift-label-w);
+  padding: 5px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-paper);
+  background: var(--liner-lift);
+  color: var(--ink);
+  box-shadow: 1px 2px 3px rgba(28, 24, 36, 0.16);
+  font: 700 var(--fs-fine) / 1.15 var(--font-ui);
+  text-align: center;
+  overflow-wrap: anywhere;
+  pointer-events: none;
 }
 
-.tray__gift-dot .tray__ic {
-  width: 58%;
-  height: 58%;
+.tray__gift-label .tray__ic {
+  width: 14px;
+  height: 14px;
+  color: var(--graphite);
 }
 
 /* A used sticker silhouette: the kiss-cut outline with plain backing paper inside, a hair of shadow
@@ -870,7 +889,6 @@
    size, stuck on by the same hand as every other. */
 @media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
   .tray__new,
-  .tray__gift-dot,
   .tray__x {
     scale: calc(1 / var(--scale, 1));
   }

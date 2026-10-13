@@ -410,7 +410,7 @@ describe("StickerTray", () => {
     ["in the bag", "packed", "inTheBag"],
     ["on its way", "sent", "onItsWay"],
   ] as const)(
-    "shows a sticker %s under frost in its spot, with its dot, which a tap opens among your stickers and nothing peels",
+    "shows a sticker %s under frost with its centered status, which a tap opens among your stickers and nothing peels",
     async (_, status, state) => {
       const openYours = vi.fn();
       const place = vi.fn((_id: string) => Promise.resolve(null));
@@ -428,11 +428,8 @@ describe("StickerTray", () => {
       expect(spot?.querySelector(".tray__given-outline")).not.toBeNull();
       const dot = dotOf("gift");
       expect(dot?.querySelector("path")?.getAttribute("d")).toBe(ICONS[state]);
-      // It sticks on its cut line's corner, not on the empty corner of its image.
-      expect(["--spot-x", "--spot-y"].map((p) => Number(dot?.style.getPropertyValue(p)))).toEqual([
-        0.9, 0.125,
-      ]);
-      // Its dot lies over the newer sticker beside it, which comes before the dot in the page.
+      expect(dot?.className).toBe("tray__gift-label");
+      // Its status lies over the newer sticker beside it, which comes before the label in the page.
       const newer = slotOf("newer");
       if (!dot || !newer) throw new Error("The dot or the newer sticker isn't on the sheet");
       expect(newer.compareDocumentPosition(dot) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -447,6 +444,59 @@ describe("StickerTray", () => {
       expect(place).not.toHaveBeenCalled();
     },
   );
+
+  it.each([
+    ["en", "packed", undefined, "In the bag"],
+    ["en", "sent", undefined, "On its way"],
+    ["en", "sent", "bob", "On its way to @bob"],
+    ["ja", "packed", undefined, "ギフト袋の中"],
+    ["ja", "sent", undefined, "お届け中"],
+    ["ja", "sent", "bob", "@bobさんへお届け中"],
+  ] as const)(
+    "shows the outgoing gift's full status on its sheet in %s (%s, %s)",
+    async (language, status, to, expected) => {
+      await inLanguage(language);
+      render([sticker("gift", 3, false, { openGift: { id: "g", status, ...(to && { to }) } })]);
+      await openTray();
+      const label = frontSheet()?.querySelector(
+        '.tray__dot-spot[data-id="gift"] .tray__gift-label',
+      );
+      expect(label?.textContent).toBe(expected);
+      expect(label?.querySelector("svg")).not.toBeNull();
+    },
+  );
+
+  it("keeps a sent gift's full recipient visible on the sheet pulled out over the board", async () => {
+    endAnimationsAtOnce();
+    render([
+      sticker("gift", 3, false, {
+        openGift: { id: "g", status: "sent", to: "abcdefghijklmnopqrstuvwx" },
+      }),
+    ]);
+    await openTray();
+    const pulled = await pullOut();
+    expect(pulled?.querySelector(".tray__gift-label")?.textContent).toBe(
+      "On its way to @abcdefghijklmnopqrstuvwx",
+    );
+  });
+
+  it("makes the whole outgoing label inspectable even when its sticker is a thin strip", async () => {
+    render([
+      sticker("thin-gift", 3, false, {
+        width: 120,
+        height: 20,
+        outline: "M0 0L120 0L120 20L0 20Z",
+        openGift: { id: "g", status: "sent", to: "bob" },
+      }),
+    ]);
+    await openTray();
+    const spot = frontSheet()?.querySelector<HTMLElement>('.tray__slot[data-id="thin-gift"]');
+    expect(Number.parseFloat(spot?.style.width ?? "")).toBeGreaterThanOrEqual(100);
+    expect(Number.parseFloat(spot?.style.height ?? "")).toBeGreaterThanOrEqual(100);
+    expect(
+      Number.parseFloat(spot?.querySelector<HTMLElement>(".tray__fit")?.style.height ?? ""),
+    ).toBeLessThan(20);
+  });
 
   it("puts a sticker in hand back on its pulled-out sheet when the sheet is sent home", async () => {
     endAnimationsAtOnce();
@@ -940,7 +990,7 @@ describe("StickerTray", () => {
       expect(statusText()).toBe(
         i18next.t(($) => $.stickerBoard.tray.status.filtered, {
           filter: i18next.t(($) => $.stickerBoard.tray.filters.gifts),
-          count: 3,
+          count: 2,
         }),
       );
     });
@@ -1197,17 +1247,17 @@ describe("StickerTray", () => {
       return { scale, stackFoot, mouthFoot: height - trayTop() + mouthFootShift };
     };
 
-    it("packs the same sheets on a taller board, drawing them taller", async () => {
+    it("packs more stickers per sheet on a taller board", async () => {
       await openOn(523, 40);
       const onShort = sheetCount();
       act(() => root.unmount());
       root = createRoot(host);
       await openOn(900, 40);
       expect(pageH()).toBeGreaterThan(SHEET.h);
-      expect(sheetCount()).toBe(onShort);
+      expect(sheetCount()).toBeLessThan(onShort);
     });
 
-    it("keeps a pulled-out sheet's stickers on it as the board's height changes, as an iPad turns", async () => {
+    it("repacks a pulled-out sheet for a shorter board while following its oldest sticker", async () => {
       endAnimationsAtOnce();
       const observers = stubResizeObservers();
       await openOn(776, 40);
@@ -1221,7 +1271,8 @@ describe("StickerTray", () => {
       boardHeight = 560;
       const col = board.querySelector(".tray__col");
       if (col) act(() => observers.resize(col));
-      expect(onPulled()).toEqual(before);
+      expect(onPulled()).toContain(before[0]);
+      expect(onPulled()).not.toEqual(before);
     });
 
     it("fills the open pouch with the pages a folder tab deals, though it deals fewer", async () => {
@@ -1252,10 +1303,16 @@ describe("StickerTray", () => {
       Object.defineProperty(screen, "matches", { get: () => large });
       const observers = stubResizeObservers();
       await openOn(666, 60);
+      spreadSheets();
+      const firstSheet = board
+        .querySelector('.tray__cell .tray__slot[data-id="s0"]')
+        ?.closest<HTMLElement>(".tray__cell");
+      if (!firstSheet) throw new Error("The first sticker isn't in the spread");
+      await act(async () => firstSheet.click());
       const width = () => {
-        const slot = slotOf("s59");
-        if (!(slot instanceof HTMLElement))
-          throw new Error("The newest sticker isn't on its sheet");
+        const slot = slotOf("s0");
+        if (!(slot instanceof HTMLElement)) throw new Error("The first sticker isn't on its sheet");
+        expect(slot.querySelector<HTMLElement>(".tray__fit")?.style.width).toBe(slot.style.width);
         return parseFloat(slot.style.width);
       };
       const phone = width();

@@ -171,17 +171,31 @@ export function StickerDetail({
   const optedIn = useMyNsfwOptIn();
   useLight();
   const [shownId, setShownId] = useState(startId);
+  // A take-out that landed is available at once, before the board's reload drops its gift.
+  const [takenOut, setTakenOut] = useState<ReadonlySet<string>>(() => new Set());
+  // The strip ends with outgoing gifts, keeping the board's order within each group.
+  const ordered = useMemo(
+    () =>
+      mode === "yours"
+        ? stickers.toSorted(
+            (a, b) =>
+              Number(Boolean(a.openGift) && !takenOut.has(a.id)) -
+              Number(Boolean(b.openGift) && !takenOut.has(b.id)),
+          )
+        : stickers,
+    [stickers, mode, takenOut],
+  );
   // The shown sticker as last listed, and where: one a reload drops from the list, as when a friend
   // receives it, stays in view among the rest until the person pages or closes.
   const [lastListed, setLastListed] = useState<{ sticker: BoardStickerView; at: number } | null>(
     null,
   );
-  const listedAt = stickers.findIndex((s) => s.id === shownId);
-  const listedNow = stickers[listedAt];
+  const listedAt = ordered.findIndex((s) => s.id === shownId);
+  const listedNow = ordered[listedAt];
   if (listedNow && (lastListed?.sticker !== listedNow || lastListed.at !== listedAt))
     setLastListed({ sticker: listedNow, at: listedAt });
   const gone = listedAt < 0 && lastListed?.sticker.id === shownId ? lastListed : null;
-  const list = gone ? stickers.toSpliced(gone.at, 0, gone.sticker) : stickers;
+  const list = gone ? ordered.toSpliced(gone.at, 0, gone.sticker) : ordered;
   const index = Math.max(
     0,
     list.findIndex((s) => s.id === shownId),
@@ -200,10 +214,8 @@ export function StickerDetail({
   const [marks, setMarks] = useState<ReadonlyMap<string, Marking>>(() => new Map());
   // What the status line at the foot says about a mark that landed, under that sticker only.
   const [markedSaid, setMarkedSaid] = useState<{ stickerId: string; words: string } | null>(null);
-  // A gift in flight: the stickers whose take-out landed, until the board's reload drops their
-  // gift; the sticker whose Take it out confirm is up; and what the status line says once one lands,
-  // and whether it landed on the sticker shown.
-  const [takenOut, setTakenOut] = useState<ReadonlySet<string>>(() => new Set());
+  // A gift in flight: the sticker whose Take it out confirm is up; what the status line says once a
+  // take-out lands, and whether it landed on the sticker shown.
   const [takeOutAsk, setTakeOutAsk] = useState<string | null>(null);
   const [takenOutSaid, setTakenOutSaid] = useState<{
     stickerId: string;
@@ -213,6 +225,12 @@ export function StickerDetail({
   const takeOut = useTakeOut(sticker?.id ?? null);
   const openGift = sticker && !takenOut.has(sticker.id) ? sticker.openGift : null;
   const sent = openGift?.status === "sent";
+  const giftWords = (gift: NonNullable<BoardStickerView["openGift"]>) =>
+    gift.status === "packed"
+      ? t(($) => $.giving.inTheBag.title)
+      : gift.to
+        ? t(($) => $.stickerBoard.detail.onItsWayTo, { receiver: formatHandle(gift.to) })
+        : t(($) => $.stickerBoard.detail.onItsWay);
   const giftDot =
     mode === "yours" && sticker && openGift
       ? { status: openGift.status, spot: dotSpot(sticker) }
@@ -569,18 +587,38 @@ export function StickerDetail({
             : t(($) => $.stickerBoard.detail.yourStickers)
         }
       >
-        {list.map((s, i) => (
-          <button
-            key={s.id}
-            type="button"
-            className="sticker-detail__thumb"
-            aria-label={formatNo(s.no)}
-            aria-current={i === index ? "true" : undefined}
-            onClick={() => go(i)}
-          >
-            <img src={withMark(s).urls.png} alt="" draggable={false} />
-          </button>
-        ))}
+        {list.map((s, i) => {
+          const gift = mode === "yours" && !takenOut.has(s.id) ? s.openGift : null;
+          return (
+            <button
+              key={s.id}
+              type="button"
+              className="sticker-detail__thumb"
+              data-gift={gift?.status}
+              aria-label={
+                gift
+                  ? t(($) => $.stickerBoard.detail.thumbnailGiftLabel, {
+                      no: formatNo(s.no),
+                      status: giftWords(gift),
+                    })
+                  : formatNo(s.no)
+              }
+              aria-current={i === index ? "true" : undefined}
+              onClick={() => go(i)}
+            >
+              <img src={withMark(s).urls.png} alt="" draggable={false} />
+              {gift && (
+                <span className="sticker-detail__thumb-gift" aria-hidden="true">
+                  {gift.status === "sent" ? (
+                    <PaperPlaneTilt weight="fill" />
+                  ) : (
+                    <GiveIcon weight="fill" />
+                  )}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </nav>
 
       {/* The sticker's shape, which the column beside it reads to line up with its top edge. */}
@@ -771,21 +809,12 @@ export function StickerDetail({
               {mode === "yours" && openGift && (
                 <div className="sticker-detail__in-flight">
                   <p className="sticker-detail__on-its-way">
-                    <span
-                      className={`sticker-detail__sleeve ${sent ? "" : "is-open"}`}
-                      aria-hidden="true"
-                    >
-                      <img src={sticker.urls.png} alt="" draggable={false} />
-                    </span>
-                    <span>
-                      {!sent
-                        ? t(($) => $.giving.inTheBag.title)
-                        : openGift.to
-                          ? t(($) => $.stickerBoard.detail.onItsWayTo, {
-                              receiver: formatHandle(openGift.to),
-                            })
-                          : t(($) => $.stickerBoard.detail.onItsWay)}
-                    </span>
+                    {sent ? (
+                      <PaperPlaneTilt weight="fill" aria-hidden="true" />
+                    ) : (
+                      <GiveIcon weight="fill" aria-hidden="true" />
+                    )}
+                    <span>{giftWords(openGift)}</span>
                   </p>
                   {ownerId &&
                     (askingTakeOut ? (

@@ -6,8 +6,8 @@ import { i18next } from "../../i18n/i18n";
 import { formatMonthDay, formatNo } from "../../stickers/format";
 import { lightUp } from "../../stickers/light";
 import { clamp } from "../../ui/easing";
-import { STICKER_FIT } from "./sheetPacking";
-import { dotSpot, knownShape } from "./stickerShape";
+import { GIFT_LABEL_SIZE, STICKER_FIT } from "./sheetPacking";
+import { knownShape } from "./stickerShape";
 import {
   DEPTH_BUTTON_H,
   DEPTH_GAP,
@@ -52,6 +52,7 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
   const { newIds, matches, sheetItems, sheetMatches, topF, resetOrder } = trayModel;
   // The CSS draws every sheet, edge and +N button to these sizes.
   tray.root.style.setProperty("--sheet-w", px(SHEET.w));
+  tray.root.style.setProperty("--gift-label-w", px(GIFT_LABEL_SIZE.w));
   tray.root.style.setProperty("--peek", px(PEEK));
   tray.root.style.setProperty("--depth-h", px(DEPTH_BUTTON_H));
 
@@ -127,6 +128,7 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
   }
   function slotEl(s: Slot, isNew: boolean, use: SlotUse) {
     const q = placeOf(s);
+    const inAGift = s.state === "inTheBag" || s.state === "onItsWay";
     const el: HTMLElement = make(
       use === "picture" ? "span" : "button",
       `tray__slot${matches(s) ? "" : " is-out"}`,
@@ -137,7 +139,13 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     else if (use === "behind") el.setAttribute("inert", "");
     el.dataset.id = s.id;
     el.dataset.state = s.state;
-    placeAt(el, q);
+    // An outgoing label can be larger than its sticker: every part of it opens the same detail.
+    placeAt(
+      el,
+      inAGift
+        ? { ...q, w: Math.max(q.w, GIFT_LABEL_SIZE.w), h: Math.max(q.h, GIFT_LABEL_SIZE.h) }
+        : q,
+    );
     const no = { no: formatNo(s.no) };
     // A given sticker's spot shows only its cut line, faint, and takes the shared press.
     if (s.givenTo !== undefined) {
@@ -152,7 +160,6 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
       if (cut) el.append(cut);
       return el;
     }
-    const inAGift = s.state === "inTheBag" || s.state === "onItsWay";
     if (use !== "picture") {
       const name =
         s.state === "inTheBag"
@@ -242,25 +249,31 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     el.append(fit);
     if (inAGift) {
       const cut = cutLineEl(s, q);
-      if (cut) el.append(cut);
+      if (cut) fit.append(cut);
     }
     return el;
   }
   /**
-   * A sticker's dot badge, turned with its spot: NEW on its corner, or where its gift is (its spot's
-   * name says so too) on its cut line, as on its detail; null when it wears none.
+   * A sticker's label, turned with its spot: NEW on its corner, or its outgoing gift's status centered
+   * over the unavailable sticker. Its spot's name says the same for screen readers.
    */
   function dotOf(s: Slot, isNew: boolean) {
     let dot: HTMLElement | null = null;
     if (s.state === "inTheBag" || s.state === "onItsWay") {
+      const status =
+        s.state === "inTheBag"
+          ? i18next.t(($) => $.stickerBoard.tray.giftStatus.inTheBag)
+          : s.onItsWayTo === undefined
+            ? i18next.t(($) => $.stickerBoard.tray.giftStatus.onItsWay)
+            : i18next.t(($) => $.stickerBoard.tray.giftStatus.onItsWayTo, {
+                recipient: s.onItsWayTo,
+              });
       dot = make(
         "span",
-        "tray__gift-dot",
+        "tray__gift-label",
         icon(s.state === "inTheBag" ? ICONS.inTheBag : ICONS.onItsWay),
+        make("span", "", status),
       );
-      const at = dotSpot(s);
-      dot.style.setProperty("--spot-x", at.x.toFixed(4));
-      dot.style.setProperty("--spot-y", at.y.toFixed(4));
     } else if (isNew) dot = make("span", "tray__new", words.new);
     if (!dot) return null;
     const spot = make("span", `tray__dot-spot${matches(s) ? "" : " is-out"}`, dot);

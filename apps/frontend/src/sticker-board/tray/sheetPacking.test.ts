@@ -37,9 +37,8 @@ const items = (n: number): PackItem[] =>
 const mixed = (n: number): PackItem[] =>
   Array.from({ length: n }, (_, i) => ({ id: `m${i}`, shape: i % 3 === 1 ? diamond : square }));
 const opts = { sheet: SHEET, margin: PACK_MARGIN, clearance: 6 };
-/** As the sticker tray packs: a sheet with room to spare spreads its stickers over its page. */
-const spread = { ...opts, spread: true };
-const large = { ...spread, stickerScale: 1.25 };
+const tall = { ...opts, sheet: { ...SHEET, h: 700 } };
+const large = { ...tall, stickerScale: 1.25 };
 
 /** Each sheet's cut lines as placed, in sheet pixels. */
 function placedCuts(list: PackItem[], options: PackOptions = opts) {
@@ -68,6 +67,15 @@ const toSegment = (p: Point, a: Point, b: Point) => {
 };
 /** The least distance between two closed cut lines; 0 where they cross. */
 function gap(a: Point[], b: Point[]) {
+  const inside = (p: Point, poly: Point[]) =>
+    poly.reduce((hit, q, i) => {
+      const next = poly[(i + 1) % poly.length];
+      return q[1] > p[1] !== next[1] > p[1] &&
+        p[0] < q[0] + ((p[1] - q[1]) * (next[0] - q[0])) / (next[1] - q[1])
+        ? !hit
+        : hit;
+    }, false);
+  if (inside(a[0], b) || inside(b[0], a)) return 0;
   let least = Infinity;
   a.forEach((a1, i) => {
     const a2 = a[(i + 1) % a.length];
@@ -96,11 +104,61 @@ describe("packSheets", () => {
   });
 
   it.each([
-    ["packed", opts],
-    ["spread", spread],
+    { stickerScale: 1, w: 50.666666666666664, h: 76 },
+    { stickerScale: 1.25, w: 63.33333333333333, h: 95 },
+  ])(
+    "keeps outgoing labels clear without enlarging sticker images at scale $stickerScale",
+    ({ stickerScale, w, h }) => {
+      const thin: Shape = {
+        w: 80,
+        h: 120,
+        poly: [
+          [0.46, 0],
+          [0.54, 0],
+          [0.54, 1],
+          [0.46, 1],
+        ],
+      };
+      const list = Array.from({ length: 8 }, (_, i) => ({
+        id: `thin-${i}`,
+        shape: thin,
+        ...(i % 2 === 0 ? { label: { w: 100, h: 100 } } : {}),
+      }));
+      const packed = packSheets(list, { ...tall, stickerScale, vary: 0 });
+      const byId = new Map(list.map((it) => [it.id, it]));
+      for (const sheet of packed.sheets) {
+        const cuts = sheet.items.map((it) => {
+          expect(it.w).toBeCloseTo(w);
+          expect(it.h).toBe(h);
+          const cut = outline(thin, it);
+          const label = byId.get(it.id)?.label;
+          return label ? [cut, outline(square, { ...it, ...label })] : [cut];
+        });
+        for (const [x, y] of cuts.flat(2)) {
+          expect(x).toBeGreaterThanOrEqual(PACK_MARGIN.left);
+          expect(x).toBeLessThanOrEqual(SHEET.w - PACK_MARGIN.right);
+          expect(y).toBeGreaterThanOrEqual(PACK_MARGIN.top);
+          expect(y).toBeLessThanOrEqual(700 - PACK_MARGIN.bottom);
+        }
+        cuts.forEach((a, i) =>
+          cuts
+            .slice(i + 1)
+            .forEach((b) =>
+              a.forEach((aCut) =>
+                b.forEach((bCut) => expect(gap(aCut, bCut)).toBeGreaterThanOrEqual(6)),
+              ),
+            ),
+        );
+      }
+    },
+  );
+
+  it.each([
+    ["short page", opts],
+    ["tall page", tall],
     ["large", large],
   ])("keeps every cut line inside its sheet's margins, %s", (_, options) => {
-    const { sheet, margin } = opts;
+    const { sheet, margin } = options;
     for (const cuts of placedCuts(mixed(28), options))
       for (const [x, y] of cuts.flat()) {
         expect(x).toBeGreaterThanOrEqual(margin.left);
@@ -111,30 +169,14 @@ describe("packSheets", () => {
   });
 
   it.each([
-    ["packed", opts],
-    ["spread", spread],
+    ["short page", opts],
+    ["tall page", tall],
     ["large", large],
   ])("keeps cut lines at least the clearance apart, %s", (_, options) => {
     for (const cuts of placedCuts(mixed(28), options))
       cuts.forEach((a, i) =>
         cuts.slice(i + 1).forEach((b) => expect(gap(a, b)).toBeGreaterThanOrEqual(opts.clearance)),
       );
-  });
-});
-
-describe("packSheets, spread", () => {
-  it("spreads a page's few stickers over its height, not only its lower part", () => {
-    const tall = { ...spread, sheet: { ...opts.sheet, h: 600 } };
-    const ys = (placedCuts(mixed(3), tall)[0] ?? []).flat().map(([, y]) => y);
-    expect(Math.min(...ys)).toBeLessThan(tall.sheet.h / 2);
-    expect(Math.max(...ys)).toBeGreaterThan(tall.sheet.h / 2);
-  });
-
-  it("leaves a full page as packed", () => {
-    const list = mixed(12);
-    const packed = packSheets(list, spread);
-    expect(packed.sheets.length).toBeGreaterThan(1);
-    expect(packed.sheets[0]).toEqual(packSheets(list, opts).sheets[0]);
   });
 });
 

@@ -6,7 +6,13 @@ import { tokyoTicketDay } from "@drawing-app/api/client";
 import type { StickerUrls } from "../../stickers/stickerUrls";
 import { clamp } from "../../ui/easing";
 import { isCancelled } from "../../ui/webAnimations";
-import { packSheets, type PackedItem, type Shape } from "./sheetPacking";
+import {
+  GIFT_LABEL_SIZE,
+  packSheets,
+  type PackItem,
+  type PackedItem,
+  type Shape,
+} from "./sheetPacking";
 import { knownShape, stickerShape, unreadableCut } from "./stickerShape";
 import type { TrayProblem } from "./trayProblem";
 import { newSlots, type TraySlot } from "./traySlots";
@@ -476,40 +482,75 @@ export function createTrayModel(
   /* ---------------------------------------------------------------- where each sticker sits: on its cut line */
   /** The model whose sheets were last packed, and so drawn. */
   let packedModel: TrayState["model"] | null = null;
-  /** The sticker size used for those sheets; changing layouts repacks even a least-height page. */
-  let packedStickerScale = 0;
-  /** Given stickers stay in the list, so the blanks they leave on their sheets stay put. */
+  /** The board room and filter used for that packing, including a fit whose stack ends a little short. */
+  let packedFor = "";
+  const fitting = () => `${ui.fit.room}|${ui.fit.scale}|${ui.fit.stickerScale}|${ui.filter}`;
+  /** Given stickers stay in the list, so each layout reserves the spaces they leave. */
   function packWith(shapes: readonly Shape[]) {
-    const items = ui.model.slots.map((s, i) => ({ id: s.id, shape: shapes[i] }));
-    // Packed on the page's least height for its layout, so a sticker's sheet never changes with the
-    // board's height or the stickers after it; the drawn page, taller, spreads them over it.
-    const packOn = (page: number) =>
+    const previous = packedModel ?? ui.model;
+    const oldSheets = new Map(previous.slots.map((s) => [s.id, s.sheet]));
+    const frontId = previous.slots.find((s) => s.sheet === ui.order[0])?.id;
+    const pulled = ui.pulled;
+    const pulledId = pulled && previous.slots.find((s) => s.sheet === pulled.f)?.id;
+    const items: PackItem[] = ui.model.slots.map((s, i) => ({
+      id: s.id,
+      shape: shapes[i],
+      ...(s.state === "inTheBag" || s.state === "onItsWay" ? { label: GIFT_LABEL_SIZE } : {}),
+    }));
+    const slotsById = new Map(ui.model.slots.map((s) => [s.id, s]));
+    const packOn = (h: number) =>
       packSheets(items, {
-        sheet: SHEET,
+        sheet: { w: SHEET.w, h },
         margin: PACK_MARGIN,
         stickerScale: ui.fit.stickerScale,
-        spread: true,
-        page,
       });
-    let packed = packOn(SHEET.h);
-    // A sheet pulled out over the board follows its oldest sticker to the sheet it's packed on now.
-    const pulled = ui.pulled;
-    const followed = pulled && (packedModel ?? ui.model).slots.find((s) => s.sheet === pulled.f);
-    for (const s of ui.model.slots) {
+    const matchingCount = (packed: ReturnType<typeof packSheets>) =>
+      ui.filter === "all"
+        ? packed.sheets.length
+        : new Set(
+            [...packed.byId.values()]
+              .filter((it) => {
+                const s = slotsById.get(it.id);
+                return s !== undefined && s.state !== "given" && matches(s);
+              })
+              .map((it) => it.f),
+          ).size;
+    // The stack has only PEEKS + 2 foot sizes. Try each page height from tallest to shortest, keeping
+    // the first whose packed stack fits its reserved foot. A count/height cycle can end a little short
+    // of the mouth's bottom stop; choosing once from these bounded candidates prevents oscillation.
+    let sheetH = sheetHeightFor(ui.fit, 1);
+    let packed = packOn(sheetH);
+    for (
+      let sheets = 1;
+      sheets < PEEKS + 2 && stackFootFor(matchingCount(packed)) > stackFootFor(sheets);
+      sheets++
+    ) {
+      sheetH = sheetHeightFor(ui.fit, sheets + 1);
+      packed = packOn(sheetH);
+    }
+    const placed = ui.model.slots.map((s) => {
       const b = packed.byId.get(s.id);
-      if (b) s.sheet = b.f;
-    }
-    ui.model.count = Math.max(1, packed.sheets.length);
+      if (!b) throw new Error(`Packing the sticker sheets did not place sticker ${s.no} (${s.id})`);
+      return { s, b };
+    });
+    const count = Math.max(1, packed.sheets.length);
+    const changed =
+      ui.model.count !== count || placed.some(({ s, b }) => oldSheets.get(s.id) !== b.f);
+    ui.model.count = count;
+    for (const { s, b } of placed) s.sheet = b.f;
     packedModel = ui.model;
-    const f = followed ? itemOf(followed.id)?.sheet : undefined;
-    if (pulled && f !== undefined && f !== pulled.f) {
-      pulled.f = f;
+    packedFor = fitting();
+    const pulledF = pulledId ? itemOf(pulledId)?.sheet : undefined;
+    const pulledChanged = pulled && pulledF !== undefined && pulled.f !== pulledF;
+    if (pulledChanged) pulled.f = pulledF;
+    if (changed || pulledChanged) {
       resetOrder();
+      const frontF = frontId ? itemOf(frontId)?.sheet : undefined;
+      const frontAt = frontF === undefined ? -1 : ui.order.indexOf(frontF);
+      if (frontAt > 0) ui.order = [...ui.order.slice(frontAt), ...ui.order.slice(0, frontAt)];
     }
-    const sheetH = pageHeight();
-    if (sheetH !== SHEET.h) packed = packOn(sheetH);
-    for (const s of ui.model.slots) {
-      s.pos = packed.byId.get(s.id) ?? s.pos;
+    for (const { s, b } of placed) {
+      s.pos = b;
       // Said once, and taken back once the cut line is read, as from the fresh board's outline.
       const why = unreadableCut(s.id);
       const told = toldCuts.get(s.id);
@@ -523,7 +564,6 @@ export function createTrayModel(
       }
     }
     ui.sheetH = sheetH;
-    packedStickerScale = ui.fit.stickerScale;
   }
   /** Packs at once when every cut line is known; until then, the stand-in spots stay. */
   function applyPack() {
@@ -542,14 +582,12 @@ export function createTrayModel(
     return true;
   }
   /**
-   * Sets the stickers out on pages as tall as the stack the filter deals needs, when that changed:
+   * Sets the stickers out on pages as tall as the stack the filter deals needs, when its fit changed:
    * packed when every cut line is known, else on stand-in spots from the page's foot. Whether it did.
    */
   function fitPages() {
-    const resized = packedStickerScale !== ui.fit.stickerScale;
-    if (pageHeight() === ui.sheetH && !resized) return false;
+    if (packedModel === ui.model && packedFor === fitting()) return false;
     if (!applyPack()) ui.sheetH = pageHeight();
-    else if (resized) resetOrder();
     return true;
   }
   /** The stack as the filter deals it: its sheets, newest in front. */

@@ -369,6 +369,151 @@ describe("StickerDetail", () => {
     /** The gift state the big sticker's dot badge shows; undefined when it wears none. */
     const giftDot = () =>
       document.querySelector<HTMLElement>(".sticker-detail__slide [data-gift]")?.dataset.gift;
+    const thumbs = () => [
+      ...document.querySelectorAll<HTMLButtonElement>(".sticker-detail__thumb"),
+    ];
+    const thumbImages = () =>
+      thumbs().map((thumb) => thumb.querySelector("img")?.getAttribute("src"));
+
+    it("pages through available stickers before outgoing gifts without changing the opened sticker", async () => {
+      const list = [
+        inFlight(147, "packed"),
+        sticker(133, day(14)),
+        inFlight(117, "sent", "bob"),
+        sticker(100, day(10)),
+        inFlight(99, "sent"),
+      ];
+      open({ stickers: list, startId: "s-133", ownerId: you.id });
+      await settle();
+      expect(heading()).toBe("No.0133");
+      expect(thumbImages()).toEqual([
+        "blob:133.png",
+        "blob:100.png",
+        "blob:147.png",
+        "blob:117.png",
+        "blob:99.png",
+      ]);
+      key("ArrowRight");
+      expect(heading()).toBe("No.0100");
+      press(NEXT_STICKER);
+      expect(heading()).toBe("No.0147");
+      act(() => thumbs()[3].click());
+      expect(heading()).toBe("No.0117");
+      key("ArrowLeft");
+      expect(heading()).toBe("No.0147");
+      await settle();
+    });
+
+    it.each([
+      {
+        language: "en",
+        giftStatus: "packed",
+        to: undefined,
+        words: "In the bag",
+        label: "No.0133 · In the bag",
+      },
+      {
+        language: "en",
+        giftStatus: "sent",
+        to: undefined,
+        words: "On its way",
+        label: "No.0133 · On its way",
+      },
+      {
+        language: "en",
+        giftStatus: "sent",
+        to: "bob",
+        words: "On its way to @bob",
+        label: "No.0133 · On its way to @bob",
+      },
+      {
+        language: "ja",
+        giftStatus: "packed",
+        to: undefined,
+        words: "ギフト袋に入れました",
+        label: "No.0133・ギフト袋に入れました",
+      },
+      {
+        language: "ja",
+        giftStatus: "sent",
+        to: undefined,
+        words: "お届け中",
+        label: "No.0133・お届け中",
+      },
+      {
+        language: "ja",
+        giftStatus: "sent",
+        to: "bob",
+        words: "@bobさんへお届け中",
+        label: "No.0133・@bobさんへお届け中",
+      },
+    ] as const)(
+      "names a $giftStatus gift's status in its inspectable thumbnail in $language",
+      async ({ language, giftStatus, to, words, label }) => {
+        onTestFinished(() =>
+          act(async () => {
+            await i18next.changeLanguage("en");
+          }),
+        );
+        await act(async () => {
+          await i18next.changeLanguage(language);
+        });
+        openInFlight(inFlight(133, giftStatus, to));
+        await settle();
+        const thumb = thumbs()[0];
+        expect(thumb.getAttribute("aria-label")).toBe(label);
+        expect(thumb.dataset.gift).toBe(giftStatus);
+        expect(thumb.querySelector(".sticker-detail__thumb-gift svg")).not.toBeNull();
+        expect(thumb.disabled).toBe(false);
+        expect(thumb.getAttribute("aria-disabled")).toBeNull();
+        expect(document.querySelector(".sticker-detail__on-its-way svg")).not.toBeNull();
+        expect(note()).toBe(words);
+        await settle();
+      },
+    );
+
+    it("keeps the selected gift when a reload changes its position, then returns it among available stickers after take-out", async () => {
+      const available = [sticker(160, day(20)), sticker(150, day(19)), sticker(140, day(18))];
+      const props = { startId: "s-150", ownerId: you.id };
+      const client = detailApi({ startTakeOut: landsOut });
+      open({ ...props, stickers: available }, client);
+      const sent = [available[0], inFlight(150, "sent", "bob"), available[2]];
+      open({ ...props, stickers: sent }, client);
+      await settle();
+      expect(heading()).toBe("No.0150");
+      expect(thumbImages()).toEqual(["blob:160.png", "blob:140.png", "blob:150.png"]);
+      expect(thumbs()[2].getAttribute("aria-current")).toBe("true");
+      press(takeOut());
+      key("Escape");
+      expect(heading()).toBe("No.0150");
+      expect(giftDot()).toBe("sent");
+      press(takeOut());
+      press(takeOut());
+      await settle();
+      expect(heading()).toBe("No.0150");
+      expect(thumbImages()).toEqual(["blob:160.png", "blob:150.png", "blob:140.png"]);
+      expect(thumbs()[1].getAttribute("aria-label")).toBe("No.0150");
+      expect(thumbs()[1].dataset.gift).toBeUndefined();
+      expect(thumbs()[1].getAttribute("aria-current")).toBe("true");
+      expect(giftDot()).toBeUndefined();
+      expect(document.activeElement?.textContent).toBe(GIVE);
+      press(NEXT_STICKER);
+      expect(heading()).toBe("No.0140");
+      await settle();
+    });
+
+    it("keeps the supplied order and plain thumbnail names for stickers you gave", async () => {
+      const list = [inFlight(147, "packed"), sticker(133, day(14)), inFlight(117, "sent")];
+      open({ mode: "given", stickers: list, startId: "s-133" });
+      expect(thumbImages()).toEqual(["blob:147.png", "blob:133.png", "blob:117.png"]);
+      expect(thumbs().map((thumb) => thumb.getAttribute("aria-label"))).toEqual([
+        "No.0147",
+        "No.0133",
+        "No.0117",
+      ]);
+      expect(thumbs().every((thumb) => thumb.dataset.gift === undefined)).toBe(true);
+      await settle();
+    });
 
     it("sticks a dot badge on the big sticker that says whether its gift is in the bag or on its way", async () => {
       for (const status of ["packed", "sent"] as const) {

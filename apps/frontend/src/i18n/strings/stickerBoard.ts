@@ -583,6 +583,14 @@ export const stickerBoard = {
     },
     /** Sticker tray: the badge on a sticker the open tray hasn't shown before (hidden from screen readers) */
     new: { en: "NEW", ja: "NEW" },
+    giftStatus: {
+      /** Sticker tray: the centered paper label over an unavailable sticker packed in an unsent gift */
+      inTheBag: { en: "In the bag", ja: "ギフト袋の中" },
+      /** Sticker tray: the centered paper label over an unavailable sticker sent without a named recipient */
+      onItsWay: { en: "On its way", ja: "お届け中" },
+      /** Sticker tray: the centered paper label over an unavailable sticker sent to {{recipient}}, whose full handle wraps */
+      onItsWayTo: { en: "On its way to {{recipient}}", ja: "{{recipient}}さんへお届け中" },
+    },
     slot: {
       /** Sticker tray: screen readers' name for a used sticker silhouette, whose sticker is on the board; a tap makes that sticker pulse there */
       used: {
@@ -727,10 +735,12 @@ export const stickerBoard = {
       en: "You gave it to <receiver/> · {{day}}",
       ja: "<receiver/>さんに贈りました・{{day}}",
     },
-    /** Sticker detail, a sticker you've sent that hasn't been received: the note in place of Give, beside its sleeve */
+    /** Sticker detail, a sticker you've sent that hasn't been received: the aqua status label in place of Give and the thumbnail's spoken gift status */
     onItsWay: { en: "On its way", ja: "お届け中" },
-    /** Sticker detail, a sticker you've sent to someone in the app that hasn't been received: the note in place of Give, beside its sleeve */
+    /** Sticker detail, a sticker you've sent to someone in the app that hasn't been received: the aqua status label and the thumbnail's spoken gift status, naming its recipient */
     onItsWayTo: { en: "On its way to {{receiver}}", ja: "{{receiver}}さんへお届け中" },
+    /** Sticker detail, the left thumbnail strip: screen readers' name for an outgoing gift, naming its sticker number and gift status, including its recipient when known */
+    thumbnailGiftLabel: { en: "{{no}} · {{status}}", ja: "{{no}}・{{status}}" },
     /** Take it out, on the detail of a sticker in a gift you sent or packed. */
     takeOut: {
       /** Sticker detail, a sticker you sent: the in-place confirm Take it out opens, its title; {{no}} is its number, such as "No.0147" */
