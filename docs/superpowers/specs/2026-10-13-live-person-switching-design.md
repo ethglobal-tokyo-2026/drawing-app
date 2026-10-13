@@ -1,7 +1,7 @@
 # Live BIGWHEEL and Hana switching
 
 Date: 2026-10-13
-Status: Design for written-spec review; implementation is not authorized by this document.
+Status: The user confirmed actual transfers and private access for their account; implementation-plan review is pending.
 
 ## Intended outcome
 
@@ -27,13 +27,15 @@ The recording flow does not require reserve ticket purchases, account deletion, 
 
 ## Approaches considered
 
-| Approach                                           | Ownership and Gratitude                    | Main cost                                                   | Decision                                    |
-| -------------------------------------------------- | ------------------------------------------ | ----------------------------------------------------------- | ------------------------------------------- |
-| Restricted live selection with Hana's Privy wallet | Normal Sui transfers and live records      | Session, Privy identity, and controlled delivery must agree | Selected                                    |
-| Server-held Hana key                               | Real transfers can work                    | Adds a separate signing mechanism and secret ownership      | Rejected for this version                   |
-| Isolated API using `mockChain`                     | Separate simulated ownership and Gratitude | Cannot exchange the live stickers through Sui               | Rejected by the user's live-transfer choice |
+| Approach                                           | Ownership and Gratitude                    | Main cost                                                   | Decision                                                 |
+| -------------------------------------------------- | ------------------------------------------ | ----------------------------------------------------------- | -------------------------------------------------------- |
+| Restricted live selection with Hana's Privy wallet | Normal Sui transfers and live records      | Session, Privy identity, and controlled delivery must agree | Selected                                                 |
+| Server-held Hana key                               | Real transfers can work                    | Adds a separate signing mechanism and secret ownership      | Rejected for this version                                |
+| Isolated API using `mockChain`                     | Separate simulated ownership and Gratitude | Cannot exchange the live stickers through Sui               | Authorized contingency if real authentication is blocked |
 
 No Sui contract change is required by the selected approach. Giving and taking a sticker out require the selected giver's signature; Receiving already uses the server's claim signature and the recipient's wallet address.
+
+Actual transfers remain the primary implementation. The user also authorized mocking if real authentication cannot be made reliable. The existing local demo build and `mockChain` can supply that contingency; they do not yet provide private live access. Do not implement a second hosted application in parallel or silently replace real transfers. If the real Privy checkpoint fails, report the observed provider failure and develop the smallest isolated recording fallback: real BIGWHEEL authentication at entry and on requests, separate database and images, and the same Croquis screens and ordinary profile names. Simulated ownership and Gratitude stay in that separate database and never return to the live database. Until its private access and storage separation are implemented, the existing demo scripts remain local-only.
 
 ## Account authorization
 
@@ -104,7 +106,7 @@ A lost selection response is resolved by asking for the current session envelope
 
 Other tabs are told selection changed, stop mutations and JWT synchronization, and ask to reopen the selected person. They do not compete to authenticate different Privy users. The server's expected-version check remains authoritative even when a tab misses that notification.
 
-The API serializes selection changes and ownership-operation start or submission for the configured pair, then checks the expected account and version again inside that boundary. Use a consistent lock order before the existing sticker and gift locks. An operation already starting in another tab must not race selection before its transaction row exists. The selected pair's open Sui transaction rows also block selection across restarts until they settle or are reconciled. Server-signed claims and returns are identified through their gift participants, not only `sui_transactions.userId`, which is null for those kinds. Mint operations are identified through their sticker's Original Artist. A confirmed deposit with a sent gift awaiting its receiver permits switching; an unfinished transaction or unresolved deposit/delivery attempt does not.
+The API serializes selection changes and ownership-operation start or submission for the configured pair, then checks the expected account and version again inside that boundary. Use a consistent lock order before the existing sticker and gift locks. An operation already starting in another tab must not race selection before its transaction row exists. The selected pair's open Sui transaction rows also block selection across restarts until they settle or are reconciled. Server-signed claims and returns are identified through their gift participants, not only `sui_transactions.userId`, which is null for those kinds. A claim started by an authenticated recipient also records that recipient in a separate transaction field, so an ordinary token-first gift received by BIGWHEEL is covered before its gift row records a recipient. Mint operations are identified through their sticker's Original Artist. A confirmed deposit with a sent gift awaiting its receiver permits switching; an unfinished transaction or unresolved deposit/delivery attempt does not.
 
 AccountApiRoot already creates a client and provider lifetime for the accepted account. Preserve this boundary. Do not copy another person's query answers, board saves, drawing state, gift recovery records, or Gratitude outbox into the new lifetime.
 
@@ -162,7 +164,7 @@ No screen adds a demo badge or changes the ordinary names of either profile. Tec
 
 Implementation begins only after this spec is reviewed and the written implementation plan is reviewed and its execution method chosen.
 
-The first implementation milestone verifies that the real Privy integration can move between distinct custom-auth users without linking them, returning the wrong wallet, or losing the operator's LINE login. This is an integration uncertainty; source inspection and existing mocked tests do not establish its runtime behavior.
+The first live verification milestone establishes that the real Privy integration can move between distinct custom-auth users without linking them, returning the wrong wallet, or losing the operator's LINE login. This requires the existing live signer, issuer, JWKS, and Privy app; a locally generated key cannot establish it. Source inspection and existing mocked tests do not establish runtime behavior. The coordinated release has an operator-only verification setting that allows account selection and wallet authentication but rejects Hana mutations and controlled-pair transfers. Enable actual transfers only after this checkpoint passes. No sticker is deposited or claimed during this checkpoint.
 
 Required verification:
 
@@ -180,7 +182,7 @@ Acceptance is the operator performing the complete sequence in live Croquis with
 
 ## Deployment and rollback
 
-Ship the server authorization, protected auth-service support, frontend subject checks, controlled delivery, and catalog changes together. Keep switching disabled until both services validate configuration and the operator-only verification succeeds. Preserve deploy scripts' rejection of unrestricted `DEV_SIGN_IN`.
+Ship the server authorization, protected auth-service support, frontend subject checks, controlled delivery, and catalog changes together. Configuration has three explicit settings: off by default, verification with transfers blocked, and live after the real Privy checkpoint passes. Keep configuration off until both services validate the exact profiles and internal authentication. Verification may create Hana's own Privy wallet but must not mutate sticker ownership. Preserve deploy scripts' rejection of unrestricted `DEV_SIGN_IN`.
 
 The internal auth secret is generated and stored in each service's private configuration through deployment, never tracked or placed in a URL. Keep the API unable to read the auth service's Privy signing key. Verify the internal route cannot be reached through the public origin.
 
