@@ -146,6 +146,17 @@
     max-width: 144px;
   }
 
+  /* Quieter: a tab you're not on loses its outline, so the row that's always in view stays light and
+     the board's key stands out. Pressed, it still sinks; the current tab is as on a phone. */
+  .tab:not([aria-current="page"]),
+  .tab:not([aria-current="page"]):hover {
+    box-shadow: none;
+  }
+
+  .tab[data-press-state="down"]:not([aria-current="page"]) {
+    box-shadow: inset 0 2px 3px rgba(28, 24, 36, 0.16);
+  }
+
   /* The compact key's 48px face centers on the tabs, its 6px lip below their foot, but never inside the
      home indicator's safe area, not even when the first-visit hop's tilt tips a bottom corner below
      where it rests. It stacks over the screens, since a key's nudge and tickets reach up past the

@@ -80,8 +80,7 @@
   display: none;
 }
 
-/* Flip back at the top left, where the name that turns the board over sits on its front, then any
-   label after it. */
+/* Flip back stays by the name on the board's front; account actions sit across from it. */
 .stat-board__head {
   display: flex;
   flex-wrap: wrap;
@@ -591,10 +590,9 @@
   }
 }
 
-/* The way back, and logging out of LINE after it, as label stock on the cork. */
-.stat-board__flip-back,
+/* Account actions sit at the cork's top right, away from the way back. */
 .stat-board__logout {
-  gap: 8px;
+  margin-inline-start: auto;
 }
 
 /* Privy's sign-in starts its own part of the slip, as a sentence with Try again after a failure. */
@@ -673,7 +671,7 @@
   .stat-board__head {
     grid-area: head;
     align-self: start;
-    justify-self: start;
+    justify-self: stretch;
     margin: 0;
     padding: 10px 14px 16px;
   }
@@ -777,6 +775,7 @@
     position: absolute;
     top: 0;
     left: 0;
+    right: 0;
     z-index: 1;
   }
 }
