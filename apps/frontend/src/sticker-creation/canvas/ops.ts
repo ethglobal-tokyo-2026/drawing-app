@@ -43,7 +43,14 @@ export type Op = StrokeOp | FillOp;
 /** A change to the layers, one undo step each, `T` ms into the session; `tool` names the change. */
 export type LayerStep =
   /** `at`: the new layer's index from the back. */
-  | { tool: "add"; layer: LayerId; at: number; T: number }
+  | {
+      tool: "add";
+      layer: LayerId;
+      at: number;
+      /** A below insertion restores this selected layer on Undo; above derives it from `at`. */
+      previousCurrent?: LayerId;
+      T: number;
+    }
   | { tool: "delete"; layer: LayerId; T: number }
   /** Flattens the source and its immediate lower destination in their before-state. */
   | { tool: "merge"; layer: LayerId; into: LayerId; T: number }

@@ -782,6 +782,32 @@ describe("Fill input ordering", () => {
     ]);
   });
 
+  it("keeps below placement when adding a layer waits for Fill", async () => {
+    let sessionMs = 10;
+    const worker = controlledFill();
+    const run = setup({ tool: "fill", sessionMs: () => sessionMs }, undefined, worker.service);
+    run.engine.load([addLayer(2, 1), addLayer(3, 2)], framed(run.engine), 2);
+    run.engine.down(run.at("mouse", 1, 40, 40, 0));
+    run.runFrame();
+    sessionMs = 20;
+    run.engine.addLayer("below");
+    expect(run.engine.steps).toHaveLength(2);
+    sessionMs = 200;
+    for (let i = 0; i < 8; i++) {
+      if (worker.pending.length) await worker.answer();
+      run.runFrame();
+      await Promise.resolve();
+    }
+    expect(run.engine.steps.slice(-2)).toMatchObject([
+      { tool: "fill", layer: 2, T: 10 },
+      { tool: "add", layer: 4, at: 1, T: 20 },
+    ]);
+    expect(run.events.onLayers.mock.lastCall?.[0].state.layers.map((layer) => layer.id)).toEqual([
+      1, 4, 2, 3,
+    ]);
+    expect(run.events.onLayers.mock.lastCall?.[0].current).toBe(4);
+  });
+
   it("settles after the feedback threshold and clears feedback when completion ends", async () => {
     vi.useFakeTimers();
     const worker = controlledFill();
@@ -2179,6 +2205,42 @@ describe("InkEngine", () => {
     expect(engine.steps).toHaveLength(count);
   });
 
+  it.each([
+    {
+      position: "above" as const,
+      added: { tool: "add", layer: 4, at: 2, T: 0 },
+      ids: [1, 2, 4, 3],
+    },
+    {
+      position: "below" as const,
+      added: { tool: "add", layer: 4, at: 1, previousCurrent: 2, T: 0 },
+      ids: [1, 4, 2, 3],
+    },
+  ])(
+    "adds $position a middle layer and retains its place through history and reload",
+    ({ position, added, ids }) => {
+      const { engine, events } = setup();
+      engine.load([addLayer(2, 1), addLayer(3, 2)], framed(engine), 2);
+      engine.addLayer(position);
+      expect(engine.steps.at(-1)).toEqual(added);
+      expect(events.onLayers.mock.lastCall?.[0].state.layers.map((layer) => layer.id)).toEqual(ids);
+      expect(events.onLayers.mock.lastCall?.[0].current).toBe(4);
+      engine.undo();
+      expect(events.onLayers.mock.lastCall?.[0].state.layers.map((layer) => layer.id)).toEqual([
+        1, 2, 3,
+      ]);
+      engine.redo();
+      expect(events.onLayers.mock.lastCall?.[0].state.layers.map((layer) => layer.id)).toEqual(ids);
+      expect(events.onLayers.mock.lastCall?.[0].current).toBe(4);
+      const restored = setup();
+      restored.engine.load(engine.steps, framed(engine), 4);
+      expect(
+        restored.events.onLayers.mock.lastCall?.[0].state.layers.map((layer) => layer.id),
+      ).toEqual(ids);
+      expect(restored.events.onLayers.mock.lastCall?.[0].current).toBe(4);
+    },
+  );
+
   it("deletes toward the layer below, or toward the one above at the back", () => {
     const { engine, events } = setup();
     engine.addLayer();
@@ -2205,6 +2267,23 @@ describe("InkEngine", () => {
     engine.undo();
     expect(events.onLayers.mock.lastCall?.[0].current).toBe(2);
   });
+
+  it.each([1, 2])(
+    "undoing a layer created below layer %i restores that selection before and after reload",
+    (selected) => {
+      const { engine, events } = setup();
+      engine.load([addLayer(2, 1), addLayer(3, 2)], framed(engine), selected);
+      engine.addLayer("below");
+      engine.undo();
+      expect(events.onLayers.mock.lastCall?.[0].current).toBe(selected);
+      engine.redo();
+      expect(events.onLayers.mock.lastCall?.[0].current).toBe(4);
+      const restored = setup();
+      restored.engine.load(engine.steps, framed(engine), 4);
+      restored.engine.undo();
+      expect(restored.events.onLayers.mock.lastCall?.[0].current).toBe(selected);
+    },
+  );
 
   it("puts the kept current layer back, or the front layer when it is absent", () => {
     const { engine, events } = setup();

@@ -16,6 +16,7 @@ import { LabelButton } from "../../ui/LabelButton";
 import { deviceSetting } from "../../ui/deviceSetting";
 import type { LayerId } from "../canvas/ops";
 import { LayerChip } from "./LayerChip";
+import { NewLayerMenu } from "./NewLayerMenu";
 import type { LayerChipView, ThumbnailSource } from "./layerView";
 import "./LayerColumn.css";
 
@@ -26,9 +27,15 @@ export interface LayerColumnProps {
   canAdd: boolean;
   thumbnails: ThumbnailSource;
   optionsOpen: boolean;
+  addOpen: boolean;
+  onToggleAdd: () => void;
+  onCloseAdd: () => void;
+  /** A lifted chip keeps its options available while the list scrolls under it. */
+  reordering?: boolean;
+  dragEnabled?: boolean;
   /** The screen edge the column sits on; the options bar flies toward the other side. */
   edge: "left" | "right";
-  onAdd: () => void;
+  onAdd: (position: "above" | "below") => void;
   /** A tap on a chip that isn't current. */
   onSelect: (id: LayerId) => void;
   /** A tap on the current chip: opens or closes its options bar. */
@@ -62,8 +69,9 @@ const optionsLearned = deviceSetting<boolean>("draw.layerOptionsLearned", {
 
 /**
  * The layers as a column of chips at the screen edge away from the drawing hand, front on top, with
- * + over it. A tap on a chip makes its layer current; a tap on the current chip opens or closes its
- * options bar, which flies out beside it toward the sheet. The chips are a listbox: one Tab stop,
+ * New layer over it opens an above/below choice. A tap on a chip makes its layer current; a tap on
+ * the current chip opens or closes its options bar, which flies out beside it toward the sheet.
+ * The chips are a listbox: one Tab stop,
  * which lands on the current chip, and Up and Down between them. The list scrolls once the chips
  * outgrow the room the parent gives the column.
  */
@@ -73,6 +81,11 @@ export function LayerColumn({
   canAdd,
   thumbnails,
   optionsOpen,
+  addOpen,
+  onToggleAdd,
+  onCloseAdd,
+  reordering = false,
+  dragEnabled = true,
   edge,
   onAdd,
   onSelect,
@@ -87,12 +100,17 @@ export function LayerColumn({
   listRef,
 }: LayerColumnProps) {
   const { t } = useTranslation();
+  const orderKey = chips.map((chip) => chip.id).join(",");
   const optionsId = useId();
+  const addMenuId = useId();
+  const dragHintId = useId();
   const hintId = useId();
   const maximumId = useId();
   const overflowId = useId();
   const root = useRef<HTMLDivElement>(null);
   const optionsBox = useRef<HTMLDivElement>(null);
+  const addBox = useRef<HTMLDivElement>(null);
+  const focusAfterAdd = useRef(false);
   const hintBox = useRef<HTMLDivElement>(null);
   const recoveryBox = useRef<HTMLDivElement>(null);
   const learned = useSyncExternalStore(optionsLearned.subscribe, optionsLearned.get);
@@ -115,9 +133,12 @@ export function LayerColumn({
   // The chip focused by the arrow keys holds the Tab stop until focus leaves the list.
   const [focused, setFocused] = useState<LayerId | null>(null);
   const stop = chips.some((chip) => chip.id === focused) ? focused : current;
-  const showOptions = optionsOpen && options !== undefined;
-  const showRecovery = !optionsOpen && current !== hiddenCurrent && recovery !== undefined;
+  const showAdd = addOpen && canAdd;
+  const showOptions = !showAdd && optionsOpen && options !== undefined;
+  const showRecovery =
+    !showAdd && !optionsOpen && current !== hiddenCurrent && recovery !== undefined;
   const showHint =
+    !showAdd &&
     !learned &&
     !optionsOpen &&
     !showRecovery &&
@@ -131,8 +152,10 @@ export function LayerColumn({
 
   /** Keeps the open paper beside its chip, within the screen and above the column's foot. */
   const placePaper = () => {
-    const paper = optionsBox.current ?? recoveryBox.current ?? hintBox.current;
-    const chip = chipAt(root.current, current);
+    const paper = addBox.current ?? optionsBox.current ?? recoveryBox.current ?? hintBox.current;
+    const chip = addBox.current
+      ? root.current?.querySelector<HTMLElement>(".layer-add")
+      : chipAt(root.current, current);
     if (!root.current || !paper || !chip) return;
     const columnBox = root.current.getBoundingClientRect();
     const screenBox =
@@ -158,16 +181,16 @@ export function LayerColumn({
     paper.style.overflowY = paper.scrollHeight > heightAvailable ? "auto" : "visible";
     const chipBox = chip.getBoundingClientRect();
     const height = paper.getBoundingClientRect().height;
-    const desired = chipBox.top + chipBox.height / 2 - height / 2;
+    const desired = addBox.current ? chipBox.top : chipBox.top + chipBox.height / 2 - height / 2;
     const top = Math.max(upper, Math.min(desired, lower - height));
     paper.style.top = `${top - columnBox.top}px`;
   };
 
   useLayoutEffect(() => {
-    if (!showOptions && !showHint && !showRecovery) return;
+    if (!showAdd && !showOptions && !showHint && !showRecovery) return;
     placePaper();
     if (typeof ResizeObserver === "undefined") return;
-    const paper = optionsBox.current ?? recoveryBox.current ?? hintBox.current;
+    const paper = addBox.current ?? optionsBox.current ?? recoveryBox.current ?? hintBox.current;
     if (!paper || !root.current) return;
     const observer = new ResizeObserver(placePaper);
     observer.observe(root.current);
@@ -177,7 +200,13 @@ export function LayerColumn({
     return () => observer.disconnect();
   });
 
-  // A layer made current, by + among others, is brought into view. Only the list scrolls, where
+  useLayoutEffect(() => {
+    if (showAdd || !focusAfterAdd.current) return;
+    focusAfterAdd.current = false;
+    chipAt(root.current, current)?.focus({ preventScroll: true });
+  });
+
+  // A layer made current or reordered is brought into view. Only the list scrolls, where
   // scrollIntoView would scroll every box round it, the drawing screen's too.
   useLayoutEffect(() => {
     const list = root.current?.querySelector<HTMLElement>(".layer-list") ?? null;
@@ -189,7 +218,7 @@ export function LayerColumn({
       chip.offsetTop + chip.offsetHeight + parseFloat(paddingBottom) - list.clientHeight;
     if (list.scrollTop > above) list.scrollTop = above;
     else if (list.scrollTop < below) list.scrollTop = below;
-  }, [current]);
+  }, [current, orderKey]);
 
   // Recheck content changes and automatic selection scrolling before paint, then follow resizes.
   useLayoutEffect(measureScroll);
@@ -218,11 +247,36 @@ export function LayerColumn({
         className="layer-add"
         aria-label={t(($) => $.stickerCreation.layers.add)}
         aria-describedby={!canAdd ? maximumId : undefined}
+        aria-haspopup="menu"
+        aria-expanded={showAdd}
+        aria-controls={showAdd ? addMenuId : undefined}
         disabled={!canAdd}
-        onClick={onAdd}
+        onClick={onToggleAdd}
       >
         <NewLayerIcon size={34} weight="bold" />
       </LabelButton>
+      {showAdd && (
+        <div
+          ref={addBox}
+          id={addMenuId}
+          className="layer-add-menu"
+          role="menu"
+          aria-label={t(($) => $.stickerCreation.layers.addMenu, { number: current })}
+        >
+          <NewLayerMenu
+            onAdd={(position) => {
+              focusAfterAdd.current = true;
+              onAdd(position);
+            }}
+            onClose={() => {
+              root.current
+                ?.querySelector<HTMLElement>(".layer-add")
+                ?.focus({ preventScroll: true });
+              onCloseAdd();
+            }}
+          />
+        </div>
+      )}
       {!canAdd && (
         <span id={maximumId} className="layer-maximum">
           {t(($) => $.stickerCreation.layers.maximum, { count: chips.length })}
@@ -253,7 +307,7 @@ export function LayerColumn({
               const bottom = top + list.clientHeight;
               const visible = chipBox.bottom > top && chipBox.top < bottom;
               setHiddenCurrent(visible ? null : current);
-              if (!visible && showOptions) onCloseOptions();
+              if (!visible && showOptions && !reordering) onCloseOptions();
               if (!visible && showRecovery) onRecoveryHidden?.();
               else if (visible) placePaper();
             }}
@@ -270,10 +324,13 @@ export function LayerColumn({
                     chip={chip}
                     current={isCurrent}
                     thumbnails={thumbnails}
+                    dragReady={isCurrent && dragEnabled && chips.length > 1}
                     tabStop={chip.id === stop}
                     expanded={isCurrent ? showOptions : undefined}
                     controls={isCurrent && showOptions ? optionsId : undefined}
-                    describedBy={isCurrent && showHint ? hintId : undefined}
+                    describedBy={
+                      isCurrent && chips.length > 1 ? (showHint ? hintId : dragHintId) : undefined
+                    }
                     onPress={press}
                     onFocus={setFocused}
                   />
@@ -281,6 +338,9 @@ export function LayerColumn({
               })}
             </div>
           </div>
+          <span id={dragHintId} className="visually-hidden">
+            {t(($) => $.stickerCreation.layers.dragHint)}
+          </span>
           {overflowing && (
             <span id={overflowId} className="visually-hidden layer-overflow-description">
               {t(($) =>

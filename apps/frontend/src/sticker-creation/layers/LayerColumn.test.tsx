@@ -12,7 +12,9 @@ import { layOut } from "./layerListTesting";
 vi.mock("./layerThumbnails", () => ({ drawThumbnail: vi.fn() }));
 
 const { render, find, findAll, click, press } = testHost();
-const onAdd = vi.fn<() => void>();
+const onAdd = vi.fn<(position: "above" | "below") => void>();
+const onToggleAdd = vi.fn<() => void>();
+const onCloseAdd = vi.fn<() => void>();
 const onSelect = vi.fn<(id: LayerId) => void>();
 const onToggleOptions = vi.fn<() => void>();
 
@@ -40,6 +42,9 @@ const renderColumn = (props: Partial<LayerColumnProps> = {}) =>
       canAdd
       thumbnails={() => null}
       optionsOpen={false}
+      addOpen={false}
+      onToggleAdd={onToggleAdd}
+      onCloseAdd={onCloseAdd}
       edge="left"
       onAdd={onAdd}
       onSelect={onSelect}
@@ -56,6 +61,8 @@ const addTile = () =>
 beforeEach(() => {
   localStorage.clear();
   onAdd.mockReset();
+  onToggleAdd.mockReset();
+  onCloseAdd.mockReset();
   onSelect.mockReset();
   onToggleOptions.mockReset();
 });
@@ -147,6 +154,9 @@ describe("LayerColumn", () => {
           canAdd
           thumbnails={() => null}
           optionsOpen={false}
+          addOpen={false}
+          onToggleAdd={onToggleAdd}
+          onCloseAdd={onCloseAdd}
           edge="left"
           onAdd={onAdd}
           onSelect={onSelect}
@@ -221,6 +231,9 @@ describe("LayerColumn", () => {
             canAdd
             thumbnails={() => null}
             optionsOpen={optionsOpen}
+            addOpen={false}
+            onToggleAdd={onToggleAdd}
+            onCloseAdd={onCloseAdd}
             edge="left"
             onAdd={onAdd}
             onSelect={onSelect}
@@ -272,6 +285,9 @@ describe("LayerColumn", () => {
             canAdd
             thumbnails={() => null}
             optionsOpen
+            addOpen={false}
+            onToggleAdd={onToggleAdd}
+            onCloseAdd={onCloseAdd}
             edge={edge}
             onAdd={onAdd}
             onSelect={onSelect}
@@ -312,12 +328,58 @@ describe("LayerColumn", () => {
     expect(findAll('[role="option"]').map((el) => Number(el.dataset.layerChip))).toEqual([7, 1, 4]);
   });
 
-  it("adds a layer from +, and disables + once no more can be added", () => {
+  it("keeps the selected chip visible when reordering moves it beyond the list's foot", () => {
+    renderColumn({ current: 3 });
+    const list = find(".layer-list");
+    Object.defineProperty(list, "clientHeight", { value: 80 });
+    const selected = chip(3);
+    const parent = selected.parentElement;
+    if (!parent) throw new Error("The selected chip has no layer list");
+    parent.style.padding = "4px";
+    Object.defineProperties(selected, {
+      offsetTop: { get: () => [...parent.children].indexOf(selected) * 50 + 4 },
+      offsetHeight: { value: 46 },
+    });
+    renderColumn({ chips: chipsOf([3, 1, 2]), current: 3 });
+    expect(list.scrollTop).toBe(74);
+  });
+
+  it("opens the above/below choice from +, and disables + once no more can be added", () => {
     renderColumn();
     click(addTile());
-    expect(onAdd).toHaveBeenCalledOnce();
+    expect(onToggleAdd).toHaveBeenCalledOnce();
+    expect(onAdd).not.toHaveBeenCalled();
     renderColumn({ canAdd: false });
     expect(addTile().disabled).toBe(true);
+  });
+
+  it.each(["above", "below"] as const)(
+    "creates a layer %s only after choosing its menu item",
+    (position) => {
+      renderColumn({ addOpen: true });
+      const items = findAll('[role="menuitem"]');
+      expect(items.map((item) => item.textContent)).toEqual(["Create above", "Create below"]);
+      expect(addTile().getAttribute("aria-expanded")).toBe("true");
+      expect(addTile().getAttribute("aria-controls")).toBe(find('[role="menu"]').id);
+      expect(document.activeElement).toBe(items[0]);
+      click(items[position === "above" ? 0 : 1]);
+      expect(onAdd).toHaveBeenCalledExactlyOnceWith(position);
+    },
+  );
+
+  it("moves through the creation menu with arrows and returns to + on Escape", () => {
+    renderColumn({ addOpen: true });
+    const items = findAll('[role="menuitem"]');
+    press(items[0], "ArrowDown");
+    expect(document.activeElement).toBe(items[1]);
+    press(items[1], "ArrowDown");
+    expect(document.activeElement).toBe(items[0]);
+    press(items[0], "End");
+    expect(document.activeElement).toBe(items[1]);
+    press(items[1], "Escape");
+    expect(document.activeElement).toBe(addTile());
+    expect(onCloseAdd).toHaveBeenCalledOnce();
+    expect(onAdd).not.toHaveBeenCalled();
   });
 
   it("names each chip by its layer, then the states the catalog words", () => {
@@ -367,6 +429,9 @@ describe("LayerColumn", () => {
             canAdd
             thumbnails={() => null}
             optionsOpen={optionsOpen}
+            addOpen={false}
+            onToggleAdd={onToggleAdd}
+            onCloseAdd={onCloseAdd}
             edge="left"
             onAdd={onAdd}
             onSelect={onSelect}

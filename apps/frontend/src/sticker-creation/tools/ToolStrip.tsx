@@ -15,7 +15,7 @@ import type { Tool } from "../canvas/ops";
 import "./ToolStrip.css";
 
 /** What's open over the drawing: one of the tool strip's panels, or the current layer's options bar. */
-export type Panel = "color" | "smoothing" | "clear" | "layer" | null;
+export type Panel = "color" | "smoothing" | "clear" | "layer" | "layer-add" | null;
 
 const TOOLS: { tool: Tool; Icon: Icon }[] = [
   { tool: "brush", Icon: PaintBrush },

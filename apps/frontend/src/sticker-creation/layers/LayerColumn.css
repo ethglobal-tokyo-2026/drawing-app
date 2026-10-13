@@ -204,6 +204,15 @@
   color: var(--ink);
 }
 
+/* The selected chip owns a deliberate drag; other chips still scroll with a quick finger swipe. */
+.layer-chip[data-drag-ready] {
+  touch-action: none;
+  cursor: grab;
+}
+.layer-chip[data-drag-ready]:active {
+  cursor: grabbing;
+}
+
 /* An empty layer's chip is only its number; the padding recenters it past its letter-spacing. */
 .layer-chip.is-empty .layer-number {
   left: 0;
@@ -241,6 +250,7 @@
 
 /* Out beside the current chip, toward the sheet; the column keeps either paper inside the screen. */
 .layer-options,
+.layer-add-menu,
 .layer-options-hint,
 .layer-recovery-paper {
   --fly: -6px;
@@ -252,10 +262,45 @@
   animation: layer-options-in var(--t-pop) var(--ease-out);
 }
 
-.layer-column[data-edge="right"] :is(.layer-options, .layer-options-hint, .layer-recovery-paper) {
+.layer-column[data-edge="right"]
+  :is(.layer-options, .layer-add-menu, .layer-options-hint, .layer-recovery-paper) {
   --fly: 6px;
   left: auto;
   right: calc(100% + 8px);
+}
+
+.new-layer-menu {
+  padding: 4px;
+  min-width: 156px;
+  border-radius: var(--r-label);
+  background: var(--liner-lift);
+  box-shadow: var(--shadow-lift);
+}
+.new-layer-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--r-label);
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+  text-align: start;
+}
+.new-layer-menu button svg {
+  flex: none;
+}
+.new-layer-menu button:is(:hover, :active) {
+  background: var(--liner-deep);
+}
+.new-layer-menu button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
 }
 
 .layer-options-hint {
@@ -335,6 +380,9 @@
   color: var(--ink);
 }
 @media (prefers-reduced-motion: reduce) {
+  .layer-add-menu {
+    animation: none;
+  }
   .layer-recovery-paper {
     animation: none;
     transition: none;

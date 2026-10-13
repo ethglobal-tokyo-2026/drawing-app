@@ -79,6 +79,23 @@ describe("applyLayerStep", () => {
     });
   });
 
+  it.each([
+    { at: 0, previousCurrent: 1, ids: [3, 1, 2] },
+    { at: 1, previousCurrent: 2, ids: [1, 3, 2] },
+  ])(
+    "accepts selection metadata for a layer added below layer $previousCurrent",
+    ({ at, previousCurrent, ids }) => {
+      const added = applyLayerStep(stackOf(2), {
+        tool: "add",
+        layer: 3,
+        at,
+        previousCurrent,
+        T: 0,
+      });
+      expect(idsOf(added)).toEqual(ids);
+    },
+  );
+
   it("takes a deleted layer out, and a moved layer to the place it says", () => {
     const state = stackOf(3);
     expect(idsOf(applyLayerStep(state, deleteLayer(2)))).toEqual([1, 3]);
@@ -151,6 +168,36 @@ describe("applyLayerStep", () => {
     ["add behind the back", stackOf(3), addLayer(4, -1)],
     ["add between places", stackOf(3), addLayer(4, 1.5)],
     ["add to a sheet holding the most", full, addLayer(full.nextId, 0)],
+    [
+      "add below a prior selected layer the sheet hasn't got",
+      stackOf(3),
+      { tool: "add", layer: 4, at: 1, previousCurrent: 99, T: 0 },
+    ],
+    [
+      "add below its own new layer as the prior selection",
+      stackOf(3),
+      { tool: "add", layer: 4, at: 1, previousCurrent: 4, T: 0 },
+    ],
+    [
+      "add below a prior selected layer that was deleted",
+      used,
+      { tool: "add", layer: 4, at: 1, previousCurrent: 3, T: 0 },
+    ],
+    [
+      "add below another lower layer than its prior selection",
+      stackOf(3),
+      { tool: "add", layer: 4, at: 1, previousCurrent: 1, T: 0 },
+    ],
+    [
+      "add below another upper layer than its prior selection",
+      stackOf(3),
+      { tool: "add", layer: 4, at: 1, previousCurrent: 3, T: 0 },
+    ],
+    [
+      "add past its prior selected layer at the front",
+      stackOf(3),
+      { tool: "add", layer: 4, at: 3, previousCurrent: 3, T: 0 },
+    ],
     ["move past the front", stackOf(3), moveLayer(1, 3)],
     ["move behind the back", stackOf(3), moveLayer(1, -1)],
     ["set an opacity above full", stackOf(3), setOpacity(1, FULL_OPACITY + 1)],

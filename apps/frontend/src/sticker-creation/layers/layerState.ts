@@ -89,6 +89,8 @@ function applyStep(state: LayerState, step: LayerStep, stepIndex: number | null)
       throw refuse(`the sheet has used numbers up to ${state.nextId - 1}`);
     if (layers.length >= MAX_LAYERS) throw refuse(`a sheet holds ${MAX_LAYERS} layers at most`);
     if (!isCountUpTo(step.at, layers.length)) throw refuse(`the sheet has ${layers.length} layers`);
+    if ("previousCurrent" in step && layers[step.at]?.id !== step.previousCurrent)
+      throw refuse("the prior selected layer must be directly above the new layer");
     const added: Layer = { id: step.layer, opacity: FULL_OPACITY, locked: false, clipped: false };
     return {
       layers: [...layers.slice(0, step.at), added, ...layers.slice(step.at)],

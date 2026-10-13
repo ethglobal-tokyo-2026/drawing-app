@@ -1,7 +1,16 @@
 import { expect, test, type Page } from "@playwright/test";
 import type { Language } from "../src/i18n/language.ts";
 import { strings } from "../src/i18n/strings/index.ts";
-import { button, chip, line, openSheet, options, sheetBox, slider } from "./fillHelpers.ts";
+import {
+  button,
+  chip,
+  createLayer,
+  line,
+  openSheet,
+  options,
+  sheetBox,
+  slider,
+} from "./fillHelpers.ts";
 import { canvas, say } from "./helpers.ts";
 import { along, inkAt, inkShows, middle, pencil, penStroke } from "./pen.ts";
 
@@ -110,8 +119,7 @@ for (const variant of [
         { hand, language },
       );
       await openSheet(page, `g${language}${hand[0]}${width}`, language);
-      const add = button(page, copy.add, language);
-      for (let id = 2; id <= 10; id++) await add.click();
+      for (let id = 2; id <= 10; id++) await createLayer(page, "above", language);
       await chip(page, 1).scrollIntoViewIfNeeded();
       await chip(page, 1).click();
       await hideCurrent(page, 1, language);

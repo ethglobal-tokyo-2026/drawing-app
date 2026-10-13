@@ -185,7 +185,7 @@ export function DrawingCanvas({ ref, settings, active, under, label, ...events }
     () => ({
       undo: () => ink.current?.engine.undo(),
       redo: () => ink.current?.engine.redo(),
-      addLayer: () => ink.current?.engine.addLayer(),
+      addLayer: (position) => ink.current?.engine.addLayer(position),
       selectLayer: (id) => ink.current?.engine.selectLayer(id),
       deleteLayer: () => ink.current?.engine.deleteLayer(),
       mergeDown: () => ink.current?.engine.mergeDown(),

@@ -9,6 +9,8 @@ import { chipsIn, layerOf, measureRests, pitchOf, px, snap, type Rest } from "./
 export const LIFT_HOLD_MS = 400;
 /** How far a press may wander before the hold gives way to a scroll, px. */
 export const LIFT_SLOP_PX = 8;
+/** How far the selected chip must move vertically before a drag lifts it, px. */
+export const LIFT_DRAG_PX = 10;
 /** A lifted chip's size against its size at rest. */
 export const LIFT_SCALE = 1.06;
 /** How fast the list scrolls under a lifted chip held at its very edge, px per second. */
@@ -143,9 +145,9 @@ function edgeSpeed(l: Lift) {
 }
 
 /**
- * Hold a chip to lift it, drag it along the column and drop it to move its layer. Pointer events
- * only: the browser's drag and drop may not be on in LINE's web view. A press that moves before the
- * hold runs out is a scroll of the column, which the hook lets go. The chips move by transforms
+ * Drag the selected chip deliberately, or hold any chip to lift it, then drop it to move its layer.
+ * Pointer events only: the browser's drag and drop may not be on in LINE's web view. An unselected
+ * chip's press that moves before the hold runs out scrolls the column. The chips move by transforms
  * written straight to the DOM, so a drag renders nothing in React; only `lifted` is state.
  *
  * The chips' own click is left alone, except the one a lift's release brings.
@@ -154,6 +156,8 @@ export function useLayerDrag(
   list: RefObject<HTMLElement | null>,
   options: {
     enabled: boolean;
+    /** The selected chip can lift from a deliberate vertical drag as well as a hold. */
+    current: LayerId;
     /** The layers back to front, as the column shows them reversed (front on top). */
     order: readonly LayerId[];
     /** A drop: the layer goes to this index from the back. One call per drag, never per slot crossed. */
@@ -162,14 +166,14 @@ export function useLayerDrag(
     onLift: (lifted: boolean) => void;
   },
 ): { lifted: LayerId | null } {
-  const { enabled, order, onMove, onLift } = options;
+  const { enabled, current, order, onMove, onLift } = options;
   const reduced = useReducedMotion();
   const [lifted, setLifted] = useState<LayerId | null>(null);
   const orderKey = order.join(",");
   // Listeners installed once read the latest options through this.
-  const latest = useRef({ order, orderKey, onMove, onLift, reduced });
+  const latest = useRef({ current, order, orderKey, onMove, onLift, reduced });
   useLayoutEffect(() => {
-    latest.current = { order, orderKey, onMove, onLift, reduced };
+    latest.current = { current, order, orderKey, onMove, onLift, reduced };
   });
   const tail = useRef<Tail | null>(null);
   const controls = useRef<{ cancel: () => void } | null>(null);
@@ -285,10 +289,11 @@ export function useLayerDrag(
       now.onLift(false);
     };
 
-    const startLift = () => {
+    const startLift = (followPress = false) => {
       const p = press;
       press = null;
       if (!p) return;
+      clearTimeout(p.timer);
       const now = latest.current;
       finishTail(tail, el);
       const byLayer = new Map(chipsIn(el).map((chip) => [layerOf(chip), chip] as const));
@@ -311,7 +316,7 @@ export function useLayerDrag(
         rests,
         from,
         slot: from,
-        startY: p.lastY,
+        startY: followPress ? p.y : p.lastY,
         pointerY: p.lastY,
         scrollFrom: el.scrollTop,
         top: box.top,
@@ -348,7 +353,7 @@ export function useLayerDrag(
         if (!chip || !el.contains(chip) || latest.current.order.length < 2) return;
         const id = layerOf(chip);
         if (!latest.current.order.includes(id)) return;
-        const timer = window.setTimeout(startLift, LIFT_HOLD_MS);
+        const timer = window.setTimeout(() => startLift(), LIFT_HOLD_MS);
         press = { id, pointerId: e.pointerId, x: e.clientX, y: e.clientY, lastY: e.clientY, timer };
       },
       { signal },
@@ -362,7 +367,12 @@ export function useLayerDrag(
           ensureScrolling(lift);
         } else if (press && e.pointerId === press.pointerId) {
           press.lastY = e.clientY;
-          if (Math.hypot(e.clientX - press.x, e.clientY - press.y) > LIFT_SLOP_PX) clearPress();
+          const dx = Math.abs(e.clientX - press.x);
+          const dy = Math.abs(e.clientY - press.y);
+          if (press.id === latest.current.current) {
+            if (dx > LIFT_SLOP_PX && dx >= dy) clearPress();
+            else if (dy >= LIFT_DRAG_PX && dy > dx) startLift(true);
+          } else if (Math.hypot(dx, dy) > LIFT_SLOP_PX) clearPress();
         }
       },
       { signal },
@@ -390,7 +400,8 @@ export function useLayerDrag(
     el.addEventListener(
       "lostpointercapture",
       (e) => {
-        if (lift && e.pointerId === lift.pointerId) endLift("cancel");
+        // A touch first captured by its chip loses that capture when the list takes it.
+        if (e.target === el && lift && e.pointerId === lift.pointerId) endLift("cancel");
       },
       { signal },
     );

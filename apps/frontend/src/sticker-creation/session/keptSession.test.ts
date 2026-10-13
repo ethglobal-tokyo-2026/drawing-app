@@ -314,6 +314,27 @@ describe("the drawing kept on this device", () => {
     expect(await keptSteps(userId)).toEqual(steps);
   });
 
+  it("keeps the selected layer an add below restores on Undo", async () => {
+    const userId = someone();
+    const below = { tool: "add" as const, layer: 4, at: 1, previousCurrent: 2, T: 0 };
+    const steps: Step[] = [addLayer(2, 1), addLayer(3, 2), below];
+    draw(userId, steps);
+    expect(await keptSteps(userId)).toEqual(steps);
+  });
+
+  it("rejects saved below insertion metadata that selects a nonexistent layer, naming its step", async () => {
+    const userId = someone();
+    const steps: Step[] = [
+      addLayer(2, 1),
+      { tool: "add", layer: 3, at: 1, previousCurrent: 99, T: 0 },
+    ];
+    draw(userId, steps);
+    const kept = await loadKept(userId);
+    expect(kept.status).toBe("lost");
+    if (kept.status !== "lost") throw new Error(`The drawing came back ${kept.status}`);
+    expect(String(kept.error)).toContain("Step 1");
+  });
+
   it("brings a step kept before layers existed back on the first layer", async () => {
     const userId = someone();
     /** The steps the build before layers kept: none names a layer. */
@@ -362,6 +383,14 @@ describe("the drawing kept on this device", () => {
     ["a stroke with no layer and no time", { tool: "brush", color: "#1478C8", pts: [] }],
     ["a clear that names a layer but has no time", { tool: "clear", layer: FIRST_LAYER }],
     ["an add with no place", { tool: "add", layer: 2, T: 0 }],
+    [
+      "an add whose prior selected layer is numbered 0",
+      { tool: "add", layer: 2, at: 0, previousCurrent: 0, T: 0 },
+    ],
+    [
+      "an add whose prior selected layer isn't a number",
+      { tool: "add", layer: 2, at: 0, previousCurrent: "1", T: 0 },
+    ],
     ["a move to a place that isn't a number", { tool: "move", layer: 2, to: "front", T: 0 }],
     ["an opacity with no value", { tool: "opacity", layer: 2, T: 0 }],
     ["a lock whose switch isn't on or off", { tool: "lock", layer: 2, on: 1, T: 0 }],

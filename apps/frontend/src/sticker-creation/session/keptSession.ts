@@ -855,7 +855,12 @@ function readStep(v: unknown): Step | undefined {
     case "fill":
       return readOp(v, tool, layer, T);
     case "add":
-      return "at" in v && isFiniteNumber(v.at) ? { tool, layer, at: v.at, T } : undefined;
+      if (!("at" in v) || !isFiniteNumber(v.at)) return undefined;
+      if ("previousCurrent" in v) {
+        if (!isLayerId(v.previousCurrent)) return undefined;
+        return { tool, layer, at: v.at, previousCurrent: v.previousCurrent, T };
+      }
+      return { tool, layer, at: v.at, T };
     case "merge":
       return "into" in v && isLayerId(v.into) ? { tool, layer, into: v.into, T } : undefined;
     case "delete":

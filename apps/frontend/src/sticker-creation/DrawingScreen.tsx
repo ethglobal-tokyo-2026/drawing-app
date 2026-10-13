@@ -314,6 +314,7 @@ export function DrawingScreen({
     enabled:
       active && !controlsPending && (session.phase === "primed" || session.phase === "drawing"),
     order: layers.state.layers.map((layer) => layer.id),
+    current: layers.current,
     onMove: moveLayer,
     onLift: setReordering,
   });
@@ -1009,6 +1010,8 @@ export function DrawingScreen({
   if (startsNote && !waiting) setStartsNote(false);
   // Undo can take the sheet back to blank under an open clear bar, which then has nothing to clear.
   if (panel === "clear" && !layers.currentInked) setPanel(null);
+  // Redo can restore the tenth layer while the creation menu is open.
+  if (panel === "layer-add" && layers.state.layers.length >= MAX_LAYERS) setPanel(null);
 
   // A begun sheet in Kyoto Seika Practice Mode still disallows manual and seal-sheet pauses.
   const pausable = !kyotoSeikaSheet.begun;
@@ -1037,7 +1040,7 @@ export function DrawingScreen({
       color: toolsPausable && panel === "color",
       smoothing: toolsPausable && panel === "smoothing",
       clear: toolsPausable && panel === "clear",
-      layerOptions: toolsPausable && panel === "layer",
+      layerOptions: toolsPausable && (panel === "layer" || panel === "layer-add"),
       opacity: toolsPausable && opacityHeld,
       reorder: toolsPausable && reordering,
       size: toolsPausable && sizing,
@@ -1165,7 +1168,11 @@ export function DrawingScreen({
     changeAfterFill(
       `panel:${next}`,
       () => setPanel(next),
-      toolsPausable && next ? (next === "layer" ? "layerOptions" : next) : undefined,
+      toolsPausable && next
+        ? next === "layer" || next === "layer-add"
+          ? "layerOptions"
+          : next
+        : undefined,
     );
   const pickTool = (next: Tool) =>
     changeAfterFill(`tool:${next}`, () => {
@@ -1220,14 +1227,14 @@ export function DrawingScreen({
         ? smoothingBarId
         : panel === "clear"
           ? clearBarId
-          : panel === "layer"
+          : panel === "layer" || panel === "layer-add"
             ? "layer"
             : panel === "color" && large
               ? colorSheetId
               : null;
     if (!open) return;
     const own =
-      panel === "layer"
+      panel === "layer" || panel === "layer-add"
         ? ".layer-column"
         : `#${CSS.escape(open)}, [aria-controls="${open}"], .color-sheet`;
     if (!e.target.closest(own)) setPanel(null);
@@ -1462,8 +1469,16 @@ export function DrawingScreen({
             canAdd={chips.length < MAX_LAYERS}
             thumbnails={thumbnails}
             optionsOpen={panel === "layer"}
+            addOpen={panel === "layer-add"}
+            onToggleAdd={() => pickPanel(panel === "layer-add" ? null : "layer-add")}
+            onCloseAdd={() => pickPanel(null)}
+            reordering={reordering}
+            dragEnabled={!controlsPending}
             edge={edge}
-            onAdd={() => canvas.current?.addLayer()}
+            onAdd={(position) => {
+              setPanel(null);
+              canvas.current?.addLayer(position);
+            }}
             onSelect={(id) => {
               setPanel(null);
               canvas.current?.selectLayer(id);

@@ -7,8 +7,8 @@ import type { LayerView, ThumbnailSource } from "./layerView";
  * progress ends first, as clear ends it, and nothing changes while the sheet is locked.
  */
 export interface LayerControls {
-  /** A new layer just above the current one, made current; nothing at `MAX_LAYERS`. */
-  addLayer(): void;
+  /** A new layer beside the current one, above by default, made current; nothing at `MAX_LAYERS`. */
+  addLayer(position?: "above" | "below"): void;
   selectLayer(id: LayerId): void;
   /** Deletes the current layer: the one below it becomes current, or the one above when it was at the back. Nothing on the last layer. */
   deleteLayer(): void;

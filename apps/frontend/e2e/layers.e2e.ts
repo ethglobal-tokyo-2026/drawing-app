@@ -11,6 +11,7 @@ import {
   button,
   chip,
   color,
+  createLayer,
   fillAt,
   line,
   openSheet,
@@ -52,7 +53,7 @@ async function twoLayers(page: Page) {
     lower = await line(page, 0.35);
     await inkShows(page, lower);
   }).toPass();
-  await add(page).click();
+  await createLayer(page);
   await expect(chip(page, 2)).toHaveAttribute("aria-selected", "true");
   const upper = await line(page, 0.65);
   await inkShows(page, lower, upper);
@@ -135,7 +136,7 @@ test("layer setup survives a reload before the first mark, with the clock still 
   page,
 }) => {
   await openSheet(page);
-  await add(page).click();
+  await createLayer(page);
   await options(page, 2);
   await expect(button(page, copy.lock)).not.toHaveAttribute("aria-disabled", "true");
   await button(page, copy.lock).click();
@@ -264,7 +265,7 @@ test("fully erased ink offers recovery, and Undo restores a ready preview", asyn
 async function invisibleSheet(page: Page, kind: "erased" | "hidden" | "clipped") {
   await openSheet(page);
   if (kind === "clipped" || kind === "hidden") {
-    await add(page).click();
+    await createLayer(page);
     await button(page, copy.dismissOptionsHint).click();
   }
   await line(page, 0.5, 0.45, 0.55);
@@ -484,7 +485,7 @@ test("measures repeated empty previews with retained layer history", async ({
   await openSheet(page);
   for (let id = 1; id <= MAX_LAYERS; id++) {
     if (id > 1) {
-      await add(page).click();
+      await createLayer(page);
       if (id === 2) await button(page, copy.dismissOptionsHint).click();
     }
     await line(page, 0.5, 0.45, 0.55);
@@ -688,7 +689,7 @@ test("the layer cap prevents another add and the last layer cannot be deleted", 
   await expect(button(page, copy.delete)).toHaveAttribute("aria-disabled", "true");
   await chip(page, 1).click();
   for (let id = 2; id <= MAX_LAYERS; id++) {
-    await add(page).click();
+    await createLayer(page);
     await expect(chip(page, id)).toHaveAttribute("aria-selected", "true");
   }
   await expect(add(page)).toBeDisabled();
@@ -734,7 +735,7 @@ test("Fill defaults to this layer, and visible reference respects a lower bounda
   const box = await boundary(page);
   const inside = at(box, 0.5, 0.5);
   const outside = at(box, 0.15, 0.5);
-  await add(page).click();
+  await createLayer(page);
   await button(page, copy.dismissOptionsHint).click();
   await color(page, "red");
   await button(page, creation.tools.fill).click();
@@ -842,7 +843,7 @@ test("Clip enabled before painting masks a broad base and reveals retained outsi
   await button(page, creation.tools.fill).click();
   await fillAt(page, inside);
   await expect.poll(() => shownColor(page, inside)).toEqual([47, 107, 255, 255]);
-  await add(page).click();
+  await createLayer(page);
   await button(page, copy.dismissOptionsHint).click();
   await options(page, 2);
   await button(page, copy.clip).click();
@@ -861,7 +862,7 @@ test("Clip enabled before painting masks a broad base and reveals retained outsi
 
 test("Clip enabled over an empty base keeps new ink recoverable", async ({ page }) => {
   await openSheet(page);
-  await add(page).click();
+  await createLayer(page);
   await button(page, copy.dismissOptionsHint).click();
   await options(page, 2);
   await button(page, copy.clip).click();
@@ -880,7 +881,7 @@ test("clipping masks outside ink on screen and in the seal preview", async ({ pa
   await expect(async () => {
     await inkShows(page, await line(page, 0.5, 0.3, 0.7));
   }).toPass();
-  await add(page).click();
+  await createLayer(page);
   await button(page, copy.dismissOptionsHint).click();
   await color(page, "red");
   await line(page, 0.5, 0.4, 0.6);

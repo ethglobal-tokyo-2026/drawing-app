@@ -1,6 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
-import { add, chip, line, openSheet, slider, undo } from "./fillHelpers.ts";
+import { chip, createLayer, line, openSheet, slider, undo } from "./fillHelpers.ts";
 import { pencil, type At, type Pencil } from "./pen.ts";
 
 interface LayerFrame {
@@ -76,7 +76,7 @@ for (const variant of [
     await page.emulateMedia({ reducedMotion: reduced ? "reduce" : "no-preference" });
     await page.addInitScript((value) => localStorage.setItem("draw.hand", value), hand);
     await openSheet(page, `ps${hand[0]}${count}`);
-    for (let id = 2; id <= count; id++) await add(page).click();
+    for (let id = 2; id <= count; id++) await createLayer(page);
     await line(page, 0.35);
     const pen = await pencil(page);
     const list = page.locator(".layer-list");
@@ -173,8 +173,8 @@ test("Pencil taps select and open options, and an intentional hold still reorder
   page,
 }, testInfo) => {
   await openSheet(page, "pstap");
-  await add(page).click();
-  await add(page).click();
+  await createLayer(page);
+  await createLayer(page);
   await expect(chip(page, 3)).toHaveAttribute("aria-selected", "true");
   const pen = await pencil(page);
   const target = await chip(page, 2).boundingBox();

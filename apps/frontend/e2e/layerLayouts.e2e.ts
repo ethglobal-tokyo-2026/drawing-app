@@ -4,6 +4,7 @@ import {
 } from "@drawing-app/api/client";
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
+import { createLayer } from "./fillHelpers.ts";
 import {
   canvas,
   drawKeyName,
@@ -119,7 +120,7 @@ test("a left drawing hand mirrors the layer column, slider and options toward th
   if (!viewport) throw new Error("The page has no viewport");
   expect(columnBox.x).toBeGreaterThan(viewport.width / 2);
 
-  await page.getByRole("button", { name: say(stickerCreation.layers.add, language) }).click();
+  await createLayer(page, "above", language);
   await expect(chip(page, 2)).toBeVisible();
   await chip(page, 2).click();
   const slider = page.getByRole("slider", {
@@ -168,7 +169,7 @@ test("a begun Kyoto Seika clock holds for layer tools during recording and resum
     .click();
   await expect.poll(() => runningSeconds(page)).toBeGreaterThan(KYOTO_SEIKA_TIME_USED_S - 60);
 
-  await page.getByRole("button", { name: say(stickerCreation.layers.add, language) }).click();
+  await createLayer(page, "above", language);
   await chip(page, 2).click();
   await expect(
     page.getByRole("dialog", {
@@ -202,8 +203,7 @@ test("a begun Kyoto Seika clock holds for layer tools during recording and resum
     "1",
   );
   await clockContinues(page);
-  const add = page.getByRole("button", { name: say(stickerCreation.layers.add, language) });
-  for (let number = 3; number <= 10; number++) await add.click();
+  for (let number = 3; number <= 10; number++) await createLayer(page, "above", language);
   await expectCornerPrintClearOfLayers(page);
 });
 
@@ -249,8 +249,7 @@ test("the left-hand layer column scrolls above the Kyoto Seika corner print", as
       name: say(kyotoSeika.begin.label, language, { minutes: KYOTO_SEIKA_TIME_USED_S / 60 }),
     })
     .click();
-  const add = page.getByRole("button", { name: say(stickerCreation.layers.add, language) });
-  for (let number = 2; number <= 10; number++) await add.click();
+  for (let number = 2; number <= 10; number++) await createLayer(page, "above", language);
   await expect(chip(page, 10)).toBeVisible();
   await expect(page.locator(".corner-print")).toHaveClass(/is-long/);
   await testInfo.attach("left-hand-kyoto-seika-layers", {

@@ -30,6 +30,21 @@ export const undo = (page: Page) => button(page, creation.history.undo);
 export const slider = (page: Page) =>
   page.getByRole("slider", { name: say(creation.opacitySlider.label, "en") });
 
+/** Creates a layer in the requested position from the New layer menu. */
+export async function createLayer(
+  page: Page,
+  position: "above" | "below" = "above",
+  language: Language = "en",
+) {
+  await button(page, creation.layers.add, language).click();
+  await page
+    .getByRole("menuitem", {
+      name: say(creation.layers[position === "above" ? "createAbove" : "createBelow"], language),
+      exact: true,
+    })
+    .click();
+}
+
 /** Opens a fresh sheet after its ticket spend and opening motion finish. */
 export async function openSheet(
   page: Page,
@@ -184,7 +199,7 @@ export async function addLayer(page: Page) {
   const ids = await page
     .locator("[data-layer-chip]")
     .evaluateAll((chips) => chips.map((chip) => Number(chip.getAttribute("data-layer-chip"))));
-  await add(page).click();
+  await createLayer(page);
   await expect(page.locator("[data-layer-chip]")).toHaveCount(ids.length + 1);
   await expect(chip(page, Math.max(...ids) + 1)).toHaveAttribute("aria-selected", "true");
   const hint = button(page, creation.layers.dismissOptionsHint);

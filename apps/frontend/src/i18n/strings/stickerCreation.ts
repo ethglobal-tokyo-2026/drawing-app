@@ -467,14 +467,28 @@ export const stickerCreation = {
     locked: { en: "locked", ja: "透明ピクセルをロック中" },
     /** Drawing screen, layer column: read after a chip's name by screen readers while its layer clips to the layer below; {{base}} is the number of the layer it shows through */
     clippedTo: { en: "clipped to layer {{base}}", ja: "レイヤー{{base}}でクリッピング" },
-    /** Drawing screen, layer column: the + tile above the chips, which adds a layer over the current one, named for screen readers; dimmed at ten layers */
+    /** Drawing screen, layer column: opens the menu for creating a layer above or below the selected layer; dimmed at ten layers */
     add: { en: "New layer", ja: "新規レイヤー" },
+    /** Drawing screen, New layer menu: identifies the selected layer beside which the new layer will be created */
+    addMenu: {
+      en: "New layer beside layer {{number}}",
+      ja: "レイヤー{{number}}の上下に新規レイヤー",
+    },
+    /** Drawing screen, New layer menu: creates and selects a layer immediately above the selected layer */
+    createAbove: { en: "Create above", ja: "上に作成" },
+    /** Drawing screen, New layer menu: creates and selects a layer immediately below the selected layer */
+    createBelow: { en: "Create below", ja: "下に作成" },
+    /** Drawing screen, selected layer chip: describes deliberate dragging for reordering without changing its tap-to-options action */
+    dragHint: {
+      en: "Drag the selected layer up or down to reorder.",
+      ja: "選択中のレイヤーを上下にドラッグすると、順序を変更できます。",
+    },
     /** Drawing screen, beside the disabled new-layer button when the sheet has its maximum layer count */
     maximum: { en: "{{count}} layers · maximum", ja: "レイヤーは{{count}}枚まで" },
     /** Drawing screen, beside a new blank layer until its options have been discovered */
     optionsHint: {
-      en: "Tap the selected layer again for options.",
-      ja: "選択中のレイヤーをもう一度タップすると、設定が開きます。",
+      en: "Tap again for options. Drag up or down to reorder.",
+      ja: "もう一度タップすると設定が開きます。上下にドラッグすると順序を変更できます。",
     },
     /** Drawing screen, the close button on the first-use layer-options hint */
     dismissOptionsHint: { en: "Dismiss layer hint", ja: "レイヤーのヒントを閉じる" },

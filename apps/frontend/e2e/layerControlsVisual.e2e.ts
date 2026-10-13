@@ -6,6 +6,7 @@ import { mkdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
+import { createLayer } from "./fillHelpers.ts";
 import {
   canvas,
   chooseLanguage,
@@ -143,7 +144,7 @@ for (const variant of [
         .click();
     }
     await draw(page, variant.language);
-    await page.getByRole("button", { name: say(creation.layers.add, variant.language) }).click();
+    await createLayer(page, "above", variant.language);
     await expect(page.locator(".layer-options-hint")).toBeVisible();
     await expectLayerHintClearOfControls(page);
     await capture(page, `first-layer-hint-${variant.hand}-${variant.language}-${variant.height}`);
@@ -197,11 +198,11 @@ test("short phone controls stay readable over black ink at one and ten layers an
   await selectorFits(page, language);
   await capture(page, "phone-black-one-layer");
   const add = page.getByRole("button", { name: say(creation.layers.add, language) });
-  await add.click();
+  await createLayer(page, "above", language);
   await page
     .getByRole("button", { name: say(creation.layers.dismissOptionsHint, language) })
     .click();
-  for (let number = 3; number <= 10; number++) await add.click();
+  for (let number = 3; number <= 10; number++) await createLayer(page, "above", language);
   await expect(add).toBeDisabled();
   const list = page.locator(".layer-list");
   const well = page.locator(".layer-scroll-well");
@@ -243,7 +244,7 @@ test("left hand and Japanese keep the selector clear of the layer controls", asy
   await draw(page, language);
   await fillOnce(page, language);
   await selectorFits(page, language);
-  await page.getByRole("button", { name: say(creation.layers.add, language) }).click();
+  await createLayer(page, "above", language);
   await page
     .getByRole("button", { name: say(creation.layers.dismissOptionsHint, language) })
     .click();
@@ -276,11 +277,11 @@ test("short Kyoto Seika sheet keeps its corner print and Fill choices reachable"
   await page.getByRole("button", { name: say(creation.tools.fill, language) }).click();
   await selectorFits(page, language);
   const add = page.getByRole("button", { name: say(creation.layers.add, language) });
-  await add.click();
+  await createLayer(page, "above", language);
   await page
     .getByRole("button", { name: say(creation.layers.dismissOptionsHint, language) })
     .click();
-  for (let number = 3; number <= 10; number++) await add.click();
+  for (let number = 3; number <= 10; number++) await createLayer(page, "above", language);
   await expect(add).toBeDisabled();
   const [column, print] = await Promise.all([
     page.locator(".drawing-layer-column").boundingBox(),
@@ -301,7 +302,7 @@ test("touch tablet keeps Fill choices and focused opacity clear with reduced mot
   await draw(page, language);
   await chooseColor(page, language, "blue");
   await fillOnce(page, language);
-  await page.getByRole("button", { name: say(creation.layers.add, language) }).click();
+  await createLayer(page, "above", language);
   await page
     .getByRole("button", { name: say(creation.layers.dismissOptionsHint, language) })
     .click();

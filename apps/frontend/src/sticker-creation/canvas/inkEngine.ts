@@ -711,8 +711,8 @@ export class InkEngine implements LayerControls {
 
   /**
    * Nothing while the sheet is locked: a seal is cut from the ink as it stands. Undoing an add that
-   * made the current layer leaves the layer just below it current, and a delete undone makes the
-   * layer it brings back current.
+   * made the current layer restores the layer it was created beside, and a delete undone makes
+   * the layer it brings back current.
    */
   undo(): void {
     if (this.deferFill("undo", () => this.undo())) return;
@@ -724,7 +724,7 @@ export class InkEngine implements LayerControls {
     if (!step) return;
     const { state } = this.history;
     if (step.tool === "add" && step.layer === this.current)
-      this.current = (state.layers[step.at - 1] ?? frontOf(state)).id;
+      this.current = step.previousCurrent ?? (state.layers[step.at - 1] ?? frontOf(state)).id;
     else if (step.tool === "delete" || step.tool === "merge") this.current = step.layer;
     this.bump(
       new Set([
@@ -760,17 +760,18 @@ export class InkEngine implements LayerControls {
     this.changed();
   }
 
-  addLayer(): void {
-    if (this.deferFill("adding a layer", () => this.addLayer())) return;
+  addLayer(position: "above" | "below" = "above"): void {
+    if (this.deferFill("adding a layer", () => this.addLayer(position))) return;
     if (!this.beginChange()) return;
     const { state } = this.history;
     if (state.layers.length >= MAX_LAYERS) return;
     const layer = state.nextId;
-    const at = indexOf(state, this.current) + 1;
+    const at = indexOf(state, this.current) + (position === "above" ? 1 : 0);
     this.history.perform({
       tool: "add",
       layer,
       at,
+      ...(position === "below" ? { previousCurrent: this.current } : {}),
       T: this.actionTime ?? this.settings.sessionMs(),
     });
     this.current = layer;

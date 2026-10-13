@@ -16,6 +16,7 @@ const HIDDEN = 0.25;
 interface Props {
   chip: LayerChipView;
   current: boolean;
+  dragReady?: boolean;
   thumbnails: ThumbnailSource;
   /** Whether it's the list's one Tab stop. */
   tabStop: boolean;
@@ -37,6 +38,7 @@ interface Props {
 export function LayerChip({
   chip,
   current,
+  dragReady = false,
   thumbnails,
   tabStop,
   expanded,
@@ -78,6 +80,7 @@ export function LayerChip({
       role="option"
       className={classes.join(" ")}
       data-layer-chip={chip.id}
+      data-drag-ready={dragReady || undefined}
       aria-selected={current}
       aria-label={name}
       aria-expanded={expanded}

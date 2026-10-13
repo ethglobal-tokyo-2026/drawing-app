@@ -183,8 +183,8 @@ vi.mock("./canvas/DrawingCanvas", () => ({
         sheetCalls.cleared++;
         onHistory({ canUndo: true, canRedo: false, hasInk: false });
       },
-      addLayer() {
-        sheetCalls.steps.push({ tool: "add", layer: 2, at: 1, T: 0 });
+      addLayer(position: "above" | "below" = "above") {
+        sheetCalls.steps.push({ tool: "add", layer: 2, at: position === "above" ? 1 : 0, T: 0 });
         onHistory({ canUndo: true, canRedo: false, hasInk: false });
       },
       selectLayer(id: number) {
@@ -1108,9 +1108,64 @@ describe("the drawing screen's layers", () => {
     reopen({ ...keptAtTimeUp, elapsedMs: 0 });
     await settle();
     act(() => document.querySelector<HTMLButtonElement>(".layer-add")?.click());
+    act(() => buttonSaying("Create above")?.click());
     expect(save).toHaveBeenCalledWith([{ tool: "add", layer: 2, at: 1, T: 0 }], 0, FRAME);
     expect(await countedAfter(tapTimer)).toBe(0);
     save.mockRestore();
+  });
+
+  it("pauses the drawing clock while choosing where to create a layer, and resumes after dismissal", async () => {
+    reopen(keptHalfway);
+    await settle();
+    expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
+    expect(
+      await countedAfter(() => document.querySelector<HTMLButtonElement>(".layer-add")?.click()),
+    ).toBe(0);
+    expect(document.querySelector('[role="menu"]')).not.toBeNull();
+    expect(sheetCalls.steps).toEqual([]);
+    const sheet = document.querySelector(".ink-sheet");
+    expect(
+      await countedAfter(() =>
+        sheet?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerId: 7 })),
+      ),
+    ).toBeGreaterThan(0);
+    expect(document.querySelector('[role="menu"]')).toBeNull();
+    expect(sheetCalls.swallowed).toContain(7);
+  });
+
+  it("creates below only after choosing the menu item", async () => {
+    reopen(keptHalfway);
+    await settle();
+    act(() => document.querySelector<HTMLButtonElement>(".layer-add")?.click());
+    expect(sheetCalls.steps).toEqual([]);
+    act(() => buttonSaying("Create below")?.click());
+    expect(sheetCalls.steps).toEqual([{ tool: "add", layer: 2, at: 0, T: 0 }]);
+    expect(document.querySelector('[role="menu"]')).toBeNull();
+  });
+
+  it("closes the creation menu and releases its clock hold when layer history reaches the limit", async () => {
+    reopen(keptHalfway);
+    await settle();
+    expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
+    expect(
+      await countedAfter(() => document.querySelector<HTMLButtonElement>(".layer-add")?.click()),
+    ).toBe(0);
+    expect(
+      await countedAfter(() =>
+        sheetCalls.layers({
+          ...twoLayers,
+          state: {
+            layers: Array.from({ length: MAX_LAYERS }, (_, i) => ({
+              ...FIRST_LAYERS.layers[0],
+              id: i + 1,
+            })),
+            nextId: MAX_LAYERS + 1,
+          },
+        }),
+      ),
+    ).toBeGreaterThan(0);
+    expect(document.querySelector('[role="menu"]')).toBeNull();
+    expect(sheetCalls.settings?.panelOpen).toBe(false);
   });
 
   it("restores metadata-only layer history with the clock waiting for the first mark", async () => {
@@ -1356,6 +1411,7 @@ describe("the drawing screen's layers", () => {
     act(() => sheetCalls.inkFailed(new Error("out of memory")));
     expect(chip()).toContain(strings.stickerCreation.layers.inkFailed.en);
     act(() => document.querySelector<HTMLButtonElement>(".layer-add")?.click());
+    act(() => buttonSaying("Create above")?.click());
     expect(document.querySelector(".seal-chip.is-on")).toBeNull();
     error.mockRestore();
   });

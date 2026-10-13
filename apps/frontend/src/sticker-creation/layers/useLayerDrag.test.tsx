@@ -23,6 +23,7 @@ const ORDER = [1, 2, 3, 4, 5];
 
 const props = {
   enabled: true,
+  current: 1 as LayerId,
   order: ORDER as readonly LayerId[],
   onMove: vi.fn<(id: LayerId, to: number) => void>(),
   onLift: vi.fn<(lifted: boolean) => void>(),
@@ -31,7 +32,7 @@ const selected: LayerId[] = [];
 
 beforeEach(() => {
   useFakeClock();
-  Object.assign(props, { enabled: true, order: ORDER });
+  Object.assign(props, { enabled: true, current: 1, order: ORDER });
   props.onMove.mockReset();
   props.onLift.mockReset();
   selected.length = 0;
@@ -69,6 +70,52 @@ function touchmoveStopped(list: HTMLElement) {
 }
 
 describe("useLayerDrag", () => {
+  it("lifts the selected layer after a deliberate vertical drag without waiting for a hold", () => {
+    props.current = 4;
+    const column = mount();
+    pointer(column.chip(4), "pointerdown", { clientY: slotY(1) });
+    pointer(column.chip(4), "pointermove", { clientY: slotY(1) + 9 });
+    expect(column.result().lifted).toBeNull();
+    pointer(column.chip(4), "pointermove", { clientY: slotY(1) + 10 });
+    expect(column.result().lifted).toBe(4);
+    expect(column.list.hasPointerCapture(1)).toBe(true);
+    expect(shiftOf(column.chip(4))).toBe(10);
+    pointer(column.list, "pointerup", { clientY: slotY(3) });
+    expect(props.onMove).toHaveBeenCalledExactlyOnceWith(4, 1);
+    click(column.chip(4));
+    expect(selected).toEqual([]);
+  });
+
+  it("keeps a small selected-layer wobble as a tap and gives up on a horizontal gesture", () => {
+    props.current = 4;
+    const column = mount();
+    pointer(column.chip(4), "pointerdown", { clientY: slotY(1) });
+    pointer(column.chip(4), "pointermove", { clientY: slotY(1) + 9 });
+    pointer(column.chip(4), "pointerup", { clientY: slotY(1) + 9 });
+    click(column.chip(4));
+    expect(selected).toEqual([4]);
+    expect(props.onLift).not.toHaveBeenCalled();
+
+    pointer(column.chip(4), "pointerdown", { clientY: slotY(1) });
+    pointer(column.chip(4), "pointermove", { clientX: 11, clientY: slotY(1) + 2 });
+    pointer(column.chip(4), "pointermove", { clientX: 11, clientY: slotY(1) + 20 });
+    elapse(LIFT_HOLD_MS);
+    expect(column.result().lifted).toBeNull();
+    expect(props.onLift).not.toHaveBeenCalled();
+    expect(props.onMove).not.toHaveBeenCalled();
+  });
+
+  it("leaves an unselected layer's quick vertical gesture to scrolling", () => {
+    props.current = 4;
+    const column = mount();
+    pointer(column.chip(3), "pointerdown", { clientY: slotY(2) });
+    pointer(column.chip(3), "pointermove", { clientY: slotY(2) + 20 });
+    elapse(LIFT_HOLD_MS);
+    expect(column.result().lifted).toBeNull();
+    expect(props.onLift).not.toHaveBeenCalled();
+    expect(column.list.hasPointerCapture(1)).toBe(false);
+  });
+
   it("leaves a tap to the chip: no lift, no move, and its click still selects", () => {
     const column = mount();
     pointer(column.chip(4), "pointerdown", { clientY: slotY(1) });
@@ -183,6 +230,20 @@ describe("useLayerDrag", () => {
     for (const id of ORDER) expect(column.chip(id).style.transform).toBe("");
     expect(props.onLift).toHaveBeenLastCalledWith(false);
     expect(props.onMove).not.toHaveBeenCalled();
+  });
+
+  it("keeps dragging when the chip loses implicit touch capture to the list", () => {
+    props.current = 4;
+    const column = mount();
+    pointer(column.chip(4), "pointerdown", { clientY: slotY(1) });
+    pointer(column.chip(4), "pointermove", { clientY: slotY(1) + 10 });
+    expect(column.list.hasPointerCapture(1)).toBe(true);
+    // Native touch transfers its initial chip capture to the list after the lift begins.
+    pointer(column.chip(4), "lostpointercapture");
+    expect(column.result().lifted).toBe(4);
+    pointer(column.list, "pointermove", { clientY: slotY(3) });
+    pointer(column.list, "pointerup", { clientY: slotY(3) });
+    expect(props.onMove).toHaveBeenCalledExactlyOnceWith(4, 1);
   });
 
   it("puts the chip back when it is disabled mid-drag", () => {
