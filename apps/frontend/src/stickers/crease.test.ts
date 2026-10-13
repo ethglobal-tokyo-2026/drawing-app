@@ -19,21 +19,42 @@ const field = (value: (x: number, y: number) => number) => {
 };
 const everywhere = field(() => 1);
 
-/**
- * The crease of an unturned sticker covering the whole field over `layers`, at one pixel per CSS px:
- * its image lit from the one light at rest unless another is named.
- */
-function creaseOver(layers: Float32Array[], image: CreaseImage = "topLeft") {
+/** The finished crease images over separate supports, including the laminate's normal. */
+function pixelsOver(layers: Float32Array[], scale = 1) {
   const pixels = creasePixels({
     width: W,
     height: H,
-    surface: stackedSurface(layers, W, H, 1),
+    surface: stackedSurface(layers, W, H, scale),
     own: everywhere,
-    scale: 1,
+    scale,
     lights: CREASE_SIDES,
   });
-  if (!pixels) throw new Error("No crease over a step");
-  return pixels[image];
+  if (!pixels) throw new Error("The supported sticker lost its material geometry");
+  return pixels;
+}
+
+/** The crease's image lit from one side, or its base or normal. */
+const creaseOver = (layers: Float32Array[], image: CreaseImage = "topLeft") =>
+  pixelsOver(layers)[image];
+
+/** The strongest painted highlight or shadow over a column interval. */
+function peakTone(pixels: ReturnType<typeof pixelsOver>, x0 = 0, x1 = W) {
+  let peak = 0;
+  for (const side of ["base", "topLeft", "bottomRight", "topRight", "bottomLeft"] as const)
+    for (let y = 1; y < H - 1; y++)
+      for (let x = x0; x < x1; x++) peak = Math.max(peak, pixels[side][(y * W + x) * 4 + 3]);
+  return peak;
+}
+
+/** Whether any laminate pixel bends away from a flat plane over a column interval. */
+function bends(pixels: ReturnType<typeof pixelsOver>, x0 = 0, x1 = W) {
+  for (let y = 1; y < H - 1; y++)
+    for (let x = x0; x < x1; x++) {
+      const q = (y * W + x) * 4;
+      if (pixels.normal[q] !== 128 || pixels.normal[q + 1] !== 128 || pixels.normal[q + 2] !== 255)
+        return true;
+    }
+  return false;
 }
 
 /** The crease's lit (white) and shaded (ink) alpha, summed over a box. */
@@ -129,6 +150,76 @@ describe("crease", () => {
     };
     expect(dipAcross(RAMP / 2)).toBeLessThan(0.15);
     expect(dipAcross(RAMP * 4)).toBeGreaterThan(0.9);
+  });
+
+  it.each([false, true])(
+    "keeps touching supports flat in either stacking order (reverse %s)",
+    (reverse) => {
+      const supports = [field((x) => Number(x < 60)), field((x) => Number(x >= 60))];
+      if (reverse) supports.reverse();
+      const surface = stackedSurface(supports, W, H, 1);
+      expect(Math.min(...surface)).toBe(1);
+      expect(Math.max(...surface)).toBe(1);
+      const pixels = pixelsOver(supports);
+      expect(peakTone(pixels)).toBe(0);
+      expect(bends(pixels)).toBe(false);
+    },
+  );
+
+  it.each([1, 0.5])(
+    "bridges narrow gaps in both crease shading and laminate geometry at scale %s",
+    (scale) => {
+      for (const gap of [1, 2, 4]) {
+        const left = 60 - Math.floor((gap * scale) / 2);
+        const right = left + Math.round(gap * scale);
+        const supports = [field((x) => Number(x < left)), field((x) => Number(x >= right))];
+        for (const layers of [supports, [...supports].reverse()]) {
+          const pixels = pixelsOver(layers, scale);
+          expect(peakTone(pixels), `gap ${gap}`).toBe(0);
+          expect(bends(pixels), `gap ${gap}`).toBe(false);
+        }
+      }
+    },
+  );
+
+  it("bridges a narrow diagonal gap between separate supports", () => {
+    const pixels = pixelsOver([
+      field((x, y) => Number(x + y < 88)),
+      field((x, y) => Number(x + y >= 91)),
+    ]);
+    expect(peakTone(pixels)).toBe(0);
+    expect(bends(pixels)).toBe(false);
+  });
+
+  it("does not turn antialiased touching edges into a crease", () => {
+    const left = field((x) => Math.max(0, Math.min(1, (61 - x) / 2)));
+    const right = Float32Array.from(left, (value) => 1 - value);
+    for (const supports of [
+      [left, right],
+      [right, left],
+    ]) {
+      const pixels = pixelsOver(supports);
+      expect(peakTone(pixels)).toBe(0);
+      expect(bends(pixels)).toBe(false);
+    }
+  });
+
+  it("leaves a wide gap's two edges visible in both shading and reflection", () => {
+    const pixels = pixelsOver([field((x) => Number(x < 52)), field((x) => Number(x >= 68))]);
+    expect(peakTone(pixels, 44, 60)).toBeGreaterThan(0);
+    expect(peakTone(pixels, 60, 76)).toBeGreaterThan(0);
+    expect(bends(pixels, 44, 60)).toBe(true);
+    expect(bends(pixels, 60, 76)).toBe(true);
+  });
+
+  it("keeps a small supported sticker a full layer higher with a real crease at its edge", () => {
+    const small = field((x, y) => Number(x >= 55 && x < 65 && y >= 25 && y < 35));
+    const surface = stackedSurface([everywhere, small], W, H, 1);
+    expect(surface[30 * W + 60]).toBe(2);
+    expect(surface[30 * W + 40]).toBe(1);
+    const pixels = pixelsOver([everywhere, small]);
+    expect(peakTone(pixels)).toBeGreaterThan(0);
+    expect(bends(pixels)).toBe(true);
   });
 
   it("shows an edge directly beneath, and none of an edge buried under another sticker", () => {

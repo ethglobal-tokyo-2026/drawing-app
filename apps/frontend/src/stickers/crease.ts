@@ -123,6 +123,51 @@ function blur(field: Float32Array, width: number, height: number, sigma: number)
   }
 }
 
+/** A sliding maximum or minimum over a row or column, with the ends clamped. */
+function extremumPass(
+  src: Float32Array,
+  dst: Float32Array,
+  width: number,
+  height: number,
+  r: number,
+  across: boolean,
+  maximum: boolean,
+) {
+  const [lines, length, step, stride] = linesOf(width, height, across);
+  const queue = new Int32Array(length);
+  for (let line = 0; line < lines; line++) {
+    const base = line * stride;
+    let head = 0;
+    let tail = 0;
+    let next = 0;
+    for (let p = 0; p < length; p++) {
+      const end = Math.min(length - 1, p + r);
+      for (; next <= end; next++) {
+        const value = src[base + next * step];
+        while (tail > head) {
+          const last = src[base + queue[tail - 1] * step];
+          if (maximum ? last > value : last < value) break;
+          tail--;
+        }
+        queue[tail++] = next;
+      }
+      const start = Math.max(0, p - r);
+      while (queue[head] < start) head++;
+      dst[base + p * step] = src[base + queue[head] * step];
+    }
+  }
+}
+
+/** Close valleys narrower than the ramp at their support height, without lowering a real step. */
+function bridgeGaps(field: Float32Array, width: number, height: number, scale: number) {
+  const r = Math.max(1, Math.round((RAMP * scale) / 2));
+  const tmp = new Float32Array(field.length);
+  extremumPass(field, tmp, width, height, r, true, true);
+  extremumPass(tmp, field, width, height, r, false, true);
+  extremumPass(field, tmp, width, height, r, true, false);
+  extremumPass(tmp, field, width, height, r, false, false);
+}
+
 /** The lower envelope's scratch, grown to the longest line yet. */
 let envelope = { v: new Int32Array(1), z: new Float64Array(2), f: new Float64Array(1) };
 
@@ -175,8 +220,8 @@ function envelopePass(
 }
 
 /**
- * A stiff sheet laid over `field`: a closing by a parabola, so beside a step one sticker high it
- * ramps down over RAMP, and a gap much narrower than that is bridged, then rounded at the corners.
+ * A stiff sheet laid over `field`: narrow gaps are bridged level with their supports, then a
+ * closing by a parabola ramps down over RAMP beside a step and rounds the corners.
  */
 export function drape(
   field: Float32Array,
@@ -185,6 +230,7 @@ export function drape(
   scale: number,
 ): Float32Array {
   const out = Float32Array.from(field);
+  bridgeGaps(out, width, height, scale);
   const reach = RAMP * scale;
   // The parabola falls one sticker's thickness over the ramp.
   const k = 1 / (reach * reach);
@@ -198,8 +244,8 @@ export function drape(
 
 /**
  * The surface under a sticker, from the silhouettes beneath it, bottom to top, each 0 to 1. Each
- * sticker's top settles flat at its thickness over the mean height beneath it, so the edges under it
- * don't show through, and keeping the mean adds no false step at its own edge.
+ * sticker's top settles at its thickness over the mean height inside its own silhouette. The
+ * coverage-normalized mean keeps nearby stickers from lifting it unless they actually overlap.
  */
 export function stackedSurface(
   layers: readonly Float32Array[],
@@ -213,11 +259,14 @@ export function stackedSurface(
       surface.set(layer);
       return;
     }
-    const level = Float32Array.from(surface);
+    const level = new Float32Array(surface.length);
+    for (let i = 0; i < surface.length; i++) level[i] = surface[i] * layer[i];
+    const coverage = Float32Array.from(layer);
     blur(level, width, height, LEVEL * scale);
+    blur(coverage, width, height, LEVEL * scale);
     for (let i = 0; i < surface.length; i++) {
       const m = layer[i];
-      if (m > 0) surface[i] += m * (1 + level[i] - surface[i]);
+      if (m > 0) surface[i] += m * (1 + level[i] / coverage[i] - surface[i]);
     }
   });
   return surface;
