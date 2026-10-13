@@ -478,17 +478,21 @@ export const stickerCreation = {
     createAbove: { en: "Create above", ja: "上に作成" },
     /** Drawing screen, New layer menu: creates and selects a layer immediately below the selected layer */
     createBelow: { en: "Create below", ja: "下に作成" },
-    /** Drawing screen, selected layer chip: describes deliberate dragging for reordering without changing its tap-to-options action */
+    /** Drawing screen, every layer chip: describes deliberate dragging without requiring selection first */
     dragHint: {
-      en: "Drag the selected layer up or down to reorder.",
-      ja: "選択中のレイヤーを上下にドラッグすると、順序を変更できます。",
+      en: "Drag any layer up or down to reorder.",
+      ja: "どのレイヤーも上下にドラッグすると、順序を変更できます。",
     },
+    /** Drawing screen, below an overflowing layer list: scrolls to layers above without reordering */
+    scrollUp: { en: "Scroll layers up", ja: "レイヤーを上にスクロール" },
+    /** Drawing screen, below an overflowing layer list: scrolls to layers below without reordering */
+    scrollDown: { en: "Scroll layers down", ja: "レイヤーを下にスクロール" },
     /** Drawing screen, beside the disabled new-layer button when the sheet has its maximum layer count */
     maximum: { en: "{{count}} layers · maximum", ja: "レイヤーは{{count}}枚まで" },
     /** Drawing screen, beside a new blank layer until its options have been discovered */
     optionsHint: {
-      en: "Tap again for options. Drag up or down to reorder.",
-      ja: "もう一度タップすると設定が開きます。上下にドラッグすると順序を変更できます。",
+      en: "Tap again for options. Drag any layer to reorder.",
+      ja: "もう一度タップすると設定が開きます。どのレイヤーもドラッグすると順序を変更できます。",
     },
     /** Drawing screen, the close button on the first-use layer-options hint */
     dismissOptionsHint: { en: "Dismiss layer hint", ja: "レイヤーのヒントを閉じる" },

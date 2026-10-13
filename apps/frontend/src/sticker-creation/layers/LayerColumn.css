@@ -1,5 +1,5 @@
-/* The layer column: + over the chips, front on top. Its box passes touches to the sheet; only + and the
-   list take them, so a stroke starting beside them draws. */
+/* The layer column: + over the chips, front on top, with scroll controls at the foot when needed.
+   Its box passes touches to the sheet; only controls and the list take them. */
 .layer-column {
   position: relative;
   display: flex;
@@ -106,6 +106,39 @@
   display: none;
 }
 
+/* One row keeps every layer reachable by touch without taking two chips' room on a short phone. */
+.layer-scroll-controls {
+  display: flex;
+  flex: none;
+  width: 88px;
+  height: 44px;
+  border-radius: var(--r-label);
+  background: var(--liner-lift);
+  pointer-events: auto;
+}
+.layer-scroll-controls button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-label);
+  background: transparent;
+  color: var(--ink);
+  touch-action: manipulation;
+}
+.layer-scroll-controls button:disabled {
+  opacity: 0.35;
+}
+.layer-scroll-controls button:enabled:is(:hover, :active) {
+  background: var(--liner-deep);
+}
+.layer-scroll-controls button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -3px;
+}
+
 /* A lifted layer stays inside the content extent without changing the list's scroll range. */
 .layer-chips {
   position: relative;
@@ -204,7 +237,7 @@
   color: var(--ink);
 }
 
-/* The selected chip owns a deliberate drag; other chips still scroll with a quick finger swipe. */
+/* Every chip owns a deliberate drag; the list's scroll controls provide finger paging. */
 .layer-chip[data-drag-ready] {
   touch-action: none;
   cursor: grab;

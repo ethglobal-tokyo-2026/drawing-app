@@ -7,9 +7,9 @@ import { chipsIn, layerOf, measureRests, pitchOf, px, snap, type Rest } from "./
 
 /** How long a press holds still on a chip before it lifts, ms. Tuned by feel. */
 export const LIFT_HOLD_MS = 400;
-/** How far a press may wander before the hold gives way to a scroll, px. */
+/** How far a sideways press may wander before it gives up on reordering, px. */
 export const LIFT_SLOP_PX = 8;
-/** How far the selected chip must move vertically before a drag lifts it, px. */
+/** How far any chip must move vertically before a drag lifts it, px. */
 export const LIFT_DRAG_PX = 10;
 /** A lifted chip's size against its size at rest. */
 export const LIFT_SCALE = 1.06;
@@ -120,7 +120,7 @@ function settleReordered(
   dropped.chip.style.transition = "none";
   dropped.chip.style.transform = `translateY(${px(t.dy - newPlace)}) scale(${LIFT_SCALE})`;
   dropped.chip.style.boxShadow = LIFT_SHADOW;
-  dropped.chip.style.zIndex = "1";
+  dropped.chip.style.zIndex = "3";
   void list.offsetHeight;
   easeBack([dropped], list, tail);
 }
@@ -145,9 +145,8 @@ function edgeSpeed(l: Lift) {
 }
 
 /**
- * Drag the selected chip deliberately, or hold any chip to lift it, then drop it to move its layer.
- * Pointer events only: the browser's drag and drop may not be on in LINE's web view. An unselected
- * chip's press that moves before the hold runs out scrolls the column. The chips move by transforms
+ * Drag any chip deliberately, or hold it to lift it, then drop it to move its layer. Pointer events
+ * only: the browser's drag and drop may not be on in LINE's web view. The chips move by transforms
  * written straight to the DOM, so a drag renders nothing in React; only `lifted` is state.
  *
  * The chips' own click is left alone, except the one a lift's release brings.
@@ -156,8 +155,6 @@ export function useLayerDrag(
   list: RefObject<HTMLElement | null>,
   options: {
     enabled: boolean;
-    /** The selected chip can lift from a deliberate vertical drag as well as a hold. */
-    current: LayerId;
     /** The layers back to front, as the column shows them reversed (front on top). */
     order: readonly LayerId[];
     /** A drop: the layer goes to this index from the back. One call per drag, never per slot crossed. */
@@ -166,14 +163,14 @@ export function useLayerDrag(
     onLift: (lifted: boolean) => void;
   },
 ): { lifted: LayerId | null } {
-  const { enabled, current, order, onMove, onLift } = options;
+  const { enabled, order, onMove, onLift } = options;
   const reduced = useReducedMotion();
   const [lifted, setLifted] = useState<LayerId | null>(null);
   const orderKey = order.join(",");
   // Listeners installed once read the latest options through this.
-  const latest = useRef({ current, order, orderKey, onMove, onLift, reduced });
+  const latest = useRef({ order, orderKey, onMove, onLift, reduced });
   useLayoutEffect(() => {
-    latest.current = { current, order, orderKey, onMove, onLift, reduced };
+    latest.current = { order, orderKey, onMove, onLift, reduced };
   });
   const tail = useRef<Tail | null>(null);
   const controls = useRef<{ cancel: () => void } | null>(null);
@@ -330,7 +327,7 @@ export function useLayerDrag(
       for (const { chip } of rests) chip.style.transition = now.reduced ? "none" : SLIDE;
       const dragged = rests[from].chip;
       dragged.style.transition = "none";
-      dragged.style.zIndex = "1";
+      dragged.style.zIndex = "3";
       dragged.style.boxShadow = LIFT_SHADOW;
       place(l);
       document.addEventListener("keydown", onKey, true);
@@ -349,7 +346,7 @@ export function useLayerDrag(
         clearTimeout(swallowTimer);
         const chip =
           e.target instanceof Element ? e.target.closest<HTMLElement>("[data-layer-chip]") : null;
-        if (!e.isPrimary || (e.pointerType === "mouse" && e.button !== 0)) return;
+        if (!e.isPrimary || e.button !== 0) return;
         if (!chip || !el.contains(chip) || latest.current.order.length < 2) return;
         const id = layerOf(chip);
         if (!latest.current.order.includes(id)) return;
@@ -369,10 +366,8 @@ export function useLayerDrag(
           press.lastY = e.clientY;
           const dx = Math.abs(e.clientX - press.x);
           const dy = Math.abs(e.clientY - press.y);
-          if (press.id === latest.current.current) {
-            if (dx > LIFT_SLOP_PX && dx >= dy) clearPress();
-            else if (dy >= LIFT_DRAG_PX && dy > dx) startLift(true);
-          } else if (Math.hypot(dx, dy) > LIFT_SLOP_PX) clearPress();
+          if (dx > LIFT_SLOP_PX && dx >= dy) clearPress();
+          else if (dy >= LIFT_DRAG_PX && dy > dx) startLift(true);
         }
       },
       { signal },
