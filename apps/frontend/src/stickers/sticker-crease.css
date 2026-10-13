@@ -21,9 +21,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  /* Keep WebKit's crease fade from stalling when the light settles. */
   transform: translateZ(0);
-  animation: sticker-crease-in 360ms var(--ease-out) both;
 }
 
 .sticker-crease > i {
@@ -64,21 +62,10 @@
 /* Lifted in a hand, it clears the stickers it lay over. */
 .placed-sticker:is(.is-dragging, .is-handling) .sticker-crease {
   opacity: 0;
-  animation: none;
   transition: opacity 90ms linear;
 }
 
-@keyframes sticker-crease-in {
-  from {
-    opacity: 0;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .sticker-crease {
-    animation: none;
-  }
-
   .sticker-crease > i[data-side] {
     transition: none;
   }

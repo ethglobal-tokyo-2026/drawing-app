@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { ComponentProps } from "react";
+import { act, type ComponentProps } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { renderInHost } from "../ui/testing";
 import { StickerFigure } from "./StickerFigure";
@@ -42,7 +42,7 @@ describe("StickerFigure's foil", () => {
 });
 
 describe("StickerFigure's laminate", () => {
-  it("keeps the printed sticker and crease visible if its material renderer is unavailable", () => {
+  it("keeps the printed sticker and crease visible if its material renderer is unavailable", async () => {
     rendered = renderInHost(
       <StickerFigure
         urls={testStickerUrls("s")}
@@ -58,6 +58,9 @@ describe("StickerFigure's laminate", () => {
         }}
       />,
     );
+    await act(async () => {
+      await Promise.resolve();
+    });
     expect(rendered.host.querySelector(".sticker-laminate")?.getAttribute("data-state")).toBe(
       "failed",
     );

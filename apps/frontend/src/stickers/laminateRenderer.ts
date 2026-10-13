@@ -2,6 +2,11 @@ import { currentLight, subscribeLight } from "./light";
 import { notePerformance, timeOurWork } from "../performance/performanceRecorder";
 import { laminateFragment, laminateVertex } from "./laminateShader";
 import { releaseCanvas } from "../ui/releaseCanvas";
+import { REDUCED_MOTION } from "../ui/useReducedMotion";
+import { setCreaseRevealSize } from "./creaseRevealSize";
+
+/** The same short set-down timing as a board sticker's press. */
+const CREASE_REVEAL_MS = 220;
 
 export type LaminateFinish = "gloss" | "matte";
 export interface LaminateSurface {
@@ -14,6 +19,8 @@ export interface LaminateSurface {
   tiltY?: number;
   /** Covered Sticker Boards and clipped tray faces pause snapshots until exposed again. */
   active?: () => boolean;
+  /** The matching painted crease advances only after its laminate snapshot is ready. */
+  onCreaseProgress?: (normal: string, progress: number) => void;
 }
 
 /** One GPU context computes the coating; each visible sticker keeps its own 2D snapshot. */
@@ -30,11 +37,17 @@ class LaminateRenderer {
   >();
   readonly surfaces = new Set<MountedSurface>();
   readonly refreshes = new Set<MountedSurface>();
+  readonly reveals = new Set<MountedSurface>();
   refreshFrame = 0;
+  revealFrame = 0;
   readonly flat: WebGLTexture;
   readonly buffer: WebGLBuffer;
   readonly atlasLimit: number;
   readonly stopLight: () => void = () => {};
+  readonly reduced = matchMedia(REDUCED_MOTION);
+  readonly motionChanged = () => {
+    if (this.reduced.matches) for (const surface of [...this.reveals]) surface.finishCreaseReveal();
+  };
   lost = false;
   disposed = false;
   readonly contextLost = (event: Event) => {
@@ -95,6 +108,7 @@ class LaminateRenderer {
         "normalTransform",
         "pointTurn",
         "roughness",
+        "creaseReveal",
       ])
         this.uniforms.set(name, gl.getUniformLocation(program, name));
       gl.useProgram(program);
@@ -119,12 +133,14 @@ class LaminateRenderer {
       );
       this.canvas.addEventListener("webglcontextlost", this.contextLost);
       this.canvas.addEventListener("webglcontextrestored", this.contextRestored);
+      this.reduced.addEventListener("change", this.motionChanged);
     } catch (error) {
       // A constructor that throws never becomes the shared renderer; release its partial allocation.
       this.disposed = true;
       this.stopLight();
       this.canvas.removeEventListener("webglcontextlost", this.contextLost);
       this.canvas.removeEventListener("webglcontextrestored", this.contextRestored);
+      this.reduced.removeEventListener("change", this.motionChanged);
       if (!gl.isContextLost()) gl.getExtension("WEBGL_lose_context")?.loseContext();
       releaseCanvas(this.canvas);
       releaseCanvas(this.atlas);
@@ -251,36 +267,82 @@ class LaminateRenderer {
     this.refreshes.clear();
   }
 
+  /** Ready snapshots reveal on the compositor; no material copies are needed per animation frame. */
+  reveal(surface: MountedSurface) {
+    this.reveals.add(surface);
+    if (this.revealFrame) return;
+    this.revealFrame = requestAnimationFrame((now) => {
+      this.revealFrame = 0;
+      for (const item of [...this.reveals]) {
+        if (
+          document.hidden ||
+          !item.canvas.isConnected ||
+          (item.options.active && !item.options.active())
+        ) {
+          item.finishCreaseReveal();
+          continue;
+        }
+        item.showCreaseProgress(item.creaseProgress(now));
+        if (item.revealing) this.reveal(item);
+      }
+    });
+  }
+
+  stopReveal(surface: MountedSurface) {
+    this.reveals.delete(surface);
+    if (!this.reveals.size) {
+      cancelAnimationFrame(this.revealFrame);
+      this.revealFrame = 0;
+    }
+  }
+
   draw(surfaces: MountedSurface[]) {
-    if (this.disposed || this.lost || document.hidden) return;
+    if (this.disposed || this.lost) return;
+    if (document.hidden) {
+      for (const surface of surfaces) surface.finishCreaseReveal();
+      return;
+    }
     // Read geometry together before snapshots change, avoiding a layout read after each write.
     const jobs = surfaces.flatMap((surface) => {
       const { canvas } = surface;
       if (
         !surface.textures ||
         (!surface.hasSnapshot && surface.pendingNormal) ||
-        !canvas.isConnected ||
-        (surface.options.active && !surface.options.active())
+        (surface.revealing && surface.pendingPrintCut)
       )
         return [];
-      const box = canvas.getBoundingClientRect();
-      if (box.bottom < 0 || box.top > innerHeight || box.right < 0 || box.left > innerWidth)
+      if (!canvas.isConnected || (surface.options.active && !surface.options.active())) {
+        surface.finishCreaseReveal();
         return [];
-      const width = canvas.clientWidth,
-        height = canvas.clientHeight;
-      if (!width || !height) return [];
+      }
+      const box = surface.container.getBoundingClientRect();
+      if (box.bottom < 0 || box.top > innerHeight || box.right < 0 || box.left > innerWidth) {
+        surface.finishCreaseReveal();
+        return [];
+      }
+      const width = surface.container.clientWidth,
+        height = surface.container.clientHeight;
+      if (!width || !height) {
+        surface.finishCreaseReveal();
+        return [];
+      }
+      // The moving window keeps the unrounded local box, preserving the print's CSS sampling.
+      const style = getComputedStyle(surface.container);
       const ratio = Math.min(devicePixelRatio || 1, 2, 1024 / Math.max(width, height));
-      return [
-        {
-          surface,
-          width,
-          height,
-          w: Math.max(1, Math.round(width * ratio)),
-          h: Math.max(1, Math.round(height * ratio)),
-          x: 0,
-          y: 0,
-        },
-      ];
+      const job = {
+        surface,
+        width,
+        height,
+        revealWidth: parseFloat(style.width),
+        revealHeight: parseFloat(style.height),
+        w: Math.max(1, Math.round(width * ratio)),
+        h: Math.max(1, Math.round(height * ratio)),
+        x: 0,
+        y: 0,
+        target: canvas,
+        creaseProgress: 1,
+      };
+      return surface.revealing ? [{ ...job, target: null, creaseProgress: 0 }, job] : [job];
     });
     type Tile = (typeof jobs)[number];
     const limit = this.atlasLimit;
@@ -319,8 +381,12 @@ class LaminateRenderer {
       surface: MountedSurface;
       width: number;
       height: number;
+      revealWidth: number;
+      revealHeight: number;
       w: number;
       h: number;
+      creaseProgress: number;
+      target: HTMLCanvasElement | null;
       x: number;
       y: number;
     }[],
@@ -357,6 +423,7 @@ class LaminateRenderer {
     for (const tile of tiles) {
       const { options, textures } = tile.surface;
       if (!textures) continue;
+      setCreaseRevealSize(tile.surface.container, tile.revealWidth, tile.revealHeight);
       gl.viewport(tile.x, gl.drawingBufferHeight - tile.y - tile.h, tile.w, tile.h);
       for (let i = 0; i < 3; i++) {
         gl.activeTexture(gl.TEXTURE0 + i);
@@ -393,6 +460,7 @@ class LaminateRenderer {
         this.uniforms.get("roughness") ?? null,
         options.finish === "matte" ? 0.16 : 0.016,
       );
+      gl.uniform1f(this.uniforms.get("creaseReveal") ?? null, tile.creaseProgress);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
     if (this.atlas.width < width) this.atlas.width = width;
@@ -402,8 +470,8 @@ class LaminateRenderer {
     atlas.globalCompositeOperation = "copy";
     // One GPU-to-2D copy for this bounded batch, then ordinary 2D region copies.
     atlas.drawImage(this.canvas, 0, 0, width, height, 0, 0, width, height);
-    for (const { surface, x, y, w, h } of tiles) {
-      const { canvas } = surface;
+    for (const { surface, x, y, w, h, target } of tiles) {
+      const canvas = target ?? surface.flatSnapshot();
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w;
         canvas.height = h;
@@ -412,8 +480,15 @@ class LaminateRenderer {
       if (!context) throw new Error("The sticker snapshot 2D context is unavailable");
       context.globalCompositeOperation = "copy";
       context.drawImage(this.atlas, x, y, w, h, 0, 0, w, h);
-      surface.hasSnapshot = true;
-      if (canvas.dataset.state !== "ready") canvas.dataset.state = "ready";
+      if (canvas === surface.canvas) {
+        surface.hasSnapshot = true;
+        if (canvas.dataset.state !== "ready") canvas.dataset.state = "ready";
+        if (surface.revealing) {
+          surface.container.dataset.creaseReveal = "";
+          surface.showCreaseProgress(surface.reveal?.progress ?? 0);
+          this.reveal(surface);
+        } else surface.showCreaseProgress(1);
+      }
     }
   }
 
@@ -421,9 +496,13 @@ class LaminateRenderer {
     if (this.disposed) return;
     this.disposed = true;
     this.cancelRefresh();
+    cancelAnimationFrame(this.revealFrame);
+    this.revealFrame = 0;
+    this.reveals.clear();
     this.stopLight();
     this.canvas.removeEventListener("webglcontextlost", this.contextLost);
     this.canvas.removeEventListener("webglcontextrestored", this.contextRestored);
+    this.reduced.removeEventListener("change", this.motionChanged);
     for (const entry of this.textures.values()) {
       entry.abort.abort();
       // All owners are already disposed or are reloading after context restoration.
@@ -462,11 +541,18 @@ class MountedSurface {
   normalUrl?: string;
   normalTexture: WebGLTexture | null = null;
   pendingNormal: { url: string; gpu: LaminateRenderer } | null = null;
+  reveal: { normal: string; started: number | null; progress: number } | null = null;
+  completedNormal?: string;
+  flat: HTMLCanvasElement | null = null;
+  flatFrame: HTMLSpanElement | null = null;
   live = true;
   readonly canvas: HTMLCanvasElement;
+  readonly container: HTMLElement;
   readonly options: LaminateSurface;
   constructor(canvas: HTMLCanvasElement, options: LaminateSurface) {
     this.canvas = canvas;
+    const container = canvas.closest(".sticker-laminate-surface");
+    this.container = container instanceof HTMLElement ? container : canvas;
     this.options = options;
     this.reload();
   }
@@ -493,6 +579,7 @@ class MountedSurface {
     }
   }
   failed(why: string) {
+    this.finishCreaseReveal();
     this.canvas.dataset.state = "failed";
     this.canvas.dataset.error = why;
     console.error(`Rendering sticker laminate for ${this.options.print} failed: ${why}`);
@@ -505,8 +592,13 @@ class MountedSurface {
     if (errors) this.canvas.dataset.error = errors;
     else delete this.canvas.dataset.error;
     if (why) {
+      const completesReadyReveal =
+        kind === "printCut" && this.revealing && this.normalUrl === this.options.normal;
+      this.finishCreaseReveal();
       console.error(`Rendering sticker laminate for ${this.options.print} failed: ${why}`);
       notePerformance("laminate", why);
+      // A failed print upgrade can unblock a ready normal over the retained print and cut.
+      if (completesReadyReveal) this.draw();
     }
   }
   /** A sharp print replaces its cut with it, while the previous complete sticker remains visible. */
@@ -576,10 +668,12 @@ class MountedSurface {
     }
     if (this.normalUrl === url) {
       this.loadError("normal", null);
+      this.showCreaseProgress(this.reveal?.progress ?? 1);
       if (!this.hasSnapshot) this.draw();
       return;
     }
     if (!url) {
+      this.finishCreaseReveal();
       const old = this.normalUrl;
       this.normalUrl = undefined;
       this.normalTexture = gpu.flat;
@@ -602,6 +696,15 @@ class MountedSurface {
         if (this.textures) this.textures[2] = texture;
         if (old) gpu.release(old);
         this.loadError("normal", null);
+        gpu.stopReveal(this);
+        this.reveal =
+          this.options.onCreaseProgress &&
+          this.container !== this.canvas &&
+          !gpu.reduced.matches &&
+          CSS.supports("mix-blend-mode", "plus-lighter") &&
+          this.completedNormal !== url
+            ? { normal: url, started: null, progress: 0 }
+            : null;
         this.draw();
       },
       (error: unknown) => {
@@ -621,9 +724,67 @@ class MountedSurface {
     if (!this.textures) return;
     this.gpu?.refresh(this);
   }
+  get revealing() {
+    return this.reveal !== null;
+  }
+  /** One temporary flat snapshot keeps every part of the artwork visible beneath the bent one. */
+  flatSnapshot(): HTMLCanvasElement {
+    if (!this.flat) {
+      this.flat = document.createElement("canvas");
+      this.flat.className = "sticker-laminate-flat";
+      this.flat.setAttribute("aria-hidden", "true");
+      this.flatFrame = document.createElement("span");
+      this.flatFrame.className = "crease-reveal-frame crease-reveal-frame--flat";
+      const content = document.createElement("span");
+      content.className = "crease-reveal-content";
+      content.append(this.flat);
+      this.flatFrame.append(content);
+      this.container.prepend(this.flatFrame);
+    }
+    return this.flat;
+  }
+  /** Only a renderable ready generation spends time on the finite sweep. */
+  creaseProgress(now: number): number {
+    const reveal = this.reveal;
+    if (!reveal) return 1;
+    reveal.started ??= now;
+    const time = this.gpu?.reduced.matches
+      ? 1
+      : Math.min(1, (now - reveal.started) / CREASE_REVEAL_MS);
+    reveal.progress = 1 - (1 - time) ** 3;
+    if (time === 1) {
+      this.finishCreaseReveal();
+    }
+    return reveal.progress;
+  }
+  /** Publish after the snapshot copy, so the painted crease and reflected bend share a frame. */
+  showCreaseProgress(progress: number) {
+    if (this.normalUrl && this.normalUrl === this.options.normal) {
+      this.container.style.setProperty("--crease-reveal", String(progress));
+      this.options.onCreaseProgress?.(this.normalUrl, progress);
+    }
+  }
+  /** Hidden, retired, or failed material leaves no unfinished paint mask or ongoing frames. */
+  finishCreaseReveal() {
+    const normal = this.options.normal;
+    this.reveal = null;
+    this.gpu?.stopReveal(this);
+    delete this.container.dataset.creaseReveal;
+    if (this.flat) {
+      this.flatFrame?.remove();
+      releaseCanvas(this.flat);
+      this.flat = null;
+      this.flatFrame = null;
+    }
+    if (normal) {
+      this.completedNormal = normal;
+      this.options.onCreaseProgress?.(normal, 1);
+    }
+  }
   release() {
     if (!this.live) return;
     this.live = false;
+    this.finishCreaseReveal();
     const gpu = this.gpu;
     this.gpu = null;
     this.textures = null;
@@ -664,6 +825,7 @@ export function mountLaminate(canvas: HTMLCanvasElement, options: LaminateSurfac
   const entered = new IntersectionObserver((entries) => {
     // A held phone pose publishes nothing while scrolling; newly exposed surfaces still need a snapshot.
     if (entries.some((entry) => entry.isIntersecting)) surface.draw();
+    else surface.finishCreaseReveal();
   });
   entered.observe(canvas);
   const show = () => {
@@ -694,6 +856,8 @@ export function updateLaminate(
   if (!surface) return;
   const finishChanged = surface.options.finish !== options.finish;
   Object.assign(surface.options, options);
+  // A later bake still shows its paint when this mounted GPU surface could not recover.
+  if (!surface.gpu || surface.gpu.disposed || surface.gpu.lost) surface.finishCreaseReveal();
   surface.replacePrintCut(options.print, options.cut);
   surface.replaceNormal(options.normal);
   if (finishChanged) surface.draw();

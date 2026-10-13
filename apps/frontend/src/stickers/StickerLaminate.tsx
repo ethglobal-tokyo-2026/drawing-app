@@ -8,6 +8,7 @@ import {
   type LaminateFinish,
 } from "./laminateRenderer";
 import "./sticker-laminate.css";
+import "./crease-reveal.css";
 
 /** The printed paper and its clear film share one cut, independent of ink coverage. */
 export function StickerLaminate({
@@ -17,6 +18,7 @@ export function StickerLaminate({
   turn = 0,
   finish = "gloss",
   active = true,
+  onCreaseProgress,
 }: {
   print: string;
   cut: string;
@@ -25,11 +27,17 @@ export function StickerLaminate({
   finish?: LaminateFinish;
   /** An exposed surface draws; a covered one retains its last snapshot. */
   active?: boolean;
+  /** Paint follows the same ready normal and diagonal progress as the reflected bend. */
+  onCreaseProgress?: (normal: string, progress: number) => void;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const heldTurn = useRef(turn);
   const heldActive = useRef(active);
   const heldMaterial = useRef({ print, cut, normal, finish });
+  const heldCreaseProgress = useRef(onCreaseProgress);
+  useLayoutEffect(() => {
+    heldCreaseProgress.current = onCreaseProgress;
+  }, [onCreaseProgress]);
   useLayoutEffect(() => {
     heldMaterial.current = { print, cut, normal, finish };
   }, [print, cut, normal, finish]);
@@ -46,6 +54,10 @@ export function StickerLaminate({
       turn: heldTurn.current,
       finish: heldMaterial.current.finish,
       active: () => heldActive.current,
+      ...(heldCreaseProgress.current && {
+        onCreaseProgress: (normal: string, progress: number) =>
+          heldCreaseProgress.current?.(normal, progress),
+      }),
     });
     return () => {
       // A live board gesture can turn the surface before its saved placement reaches React.
@@ -65,12 +77,18 @@ export function StickerLaminate({
     if (active && ref.current) refreshLaminate(ref.current);
   }, [active]);
   return (
-    <canvas
-      ref={ref}
-      className="sticker-laminate"
-      data-finish={finish}
-      data-state="loading"
-      aria-hidden="true"
-    />
+    <span className="sticker-laminate-surface" aria-hidden="true">
+      <span className="crease-reveal-frame sticker-laminate-bend">
+        <span className="crease-reveal-content">
+          <canvas
+            ref={ref}
+            className="sticker-laminate"
+            data-finish={finish}
+            data-state="loading"
+            aria-hidden="true"
+          />
+        </span>
+      </span>
+    </span>
   );
 }

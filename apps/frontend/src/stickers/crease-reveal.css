@@ -1,0 +1,51 @@
+.crease-reveal-frame,
+.crease-reveal-content {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  transform-origin: 0 0;
+}
+
+/* A fixed feather moves diagonally; the inverse translation keeps the artwork in place. */
+:is(.crease-reveal-frame[data-crease-reveal], [data-crease-reveal] > .crease-reveal-frame) {
+  --crease-shift: calc(var(--crease-distance) * (var(--crease-reveal, 0) - 1));
+
+  inset: auto;
+  top: 0;
+  left: 0;
+  width: calc(var(--crease-width) + var(--crease-distance) + 2px);
+  height: calc(var(--crease-height) + var(--crease-distance) + 2px);
+  overflow: hidden;
+  transform: translate3d(var(--crease-shift), var(--crease-shift), 0);
+  will-change: transform;
+  mask-image: linear-gradient(
+    135deg,
+    #000 var(--crease-diagonal),
+    transparent calc(var(--crease-diagonal) * 1.2)
+  );
+}
+
+:is(.crease-reveal-frame[data-crease-reveal], [data-crease-reveal] > .crease-reveal-frame)
+  > .crease-reveal-content {
+  inset: auto;
+  top: 0;
+  left: 0;
+  width: var(--crease-width);
+  height: var(--crease-height);
+  transform: translate3d(calc(-1 * var(--crease-shift)), calc(-1 * var(--crease-shift)), 0);
+  will-change: transform;
+}
+
+:is(
+  .crease-reveal-frame[data-crease-reveal],
+  [data-crease-reveal] > .crease-reveal-frame
+).crease-reveal-frame--flat {
+  mask-image: linear-gradient(
+    135deg,
+    transparent var(--crease-diagonal),
+    #000 calc(var(--crease-diagonal) * 1.2)
+  );
+}

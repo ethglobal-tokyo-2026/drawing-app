@@ -1,6 +1,7 @@
-import { memo, useCallback, useState, type CSSProperties, type Ref } from "react";
+import { memo, useCallback, useRef, useState, type CSSProperties, type Ref } from "react";
 import { useTranslation } from "../i18n/react";
 import type { CreaseImage } from "./crease";
+import { setCreaseRevealSize } from "./creaseRevealSize";
 import { StickerLaminate } from "./StickerLaminate";
 import type { LaminateFinish } from "./laminateRenderer";
 import { madeFoil } from "./madeFoil";
@@ -81,6 +82,26 @@ export const StickerFigure = memo(function StickerFigure({
   const { t } = useTranslation();
   const { mask } = urls;
   const [img, setImg] = useState<HTMLImageElement | null>(null);
+  const creaseEl = useRef<HTMLSpanElement>(null);
+  const [readyCrease, setReadyCrease] = useState<Crease>();
+  const creaseReady = useCallback(() => setReadyCrease(crease), [crease]);
+  const showCrease = useCallback((normal: string, progress: number) => {
+    const el = creaseEl.current;
+    // An older texture's completion cannot reveal a replacement crease.
+    if (el?.dataset.normal !== normal) return;
+    const frame = el.closest(".sticker-crease-reveal");
+    const figure = el.closest(".sticker-figure");
+    if (!(frame instanceof HTMLElement) || !(figure instanceof HTMLElement)) return;
+    if (progress < 1) {
+      if (!frame.hasAttribute("data-crease-reveal")) {
+        const style = getComputedStyle(figure);
+        setCreaseRevealSize(frame, parseFloat(style.width), parseFloat(style.height));
+      }
+      frame.dataset.creaseReveal = "";
+    } else delete frame.dataset.creaseReveal;
+    frame.style.opacity = "1";
+    frame.style.setProperty("--crease-reveal", String(progress));
+  }, []);
   // Its sharp copy once it shows larger than its image holds: the detail, or a board sticker that big.
   const src = useSharpSrc(img, urls, width);
   // Stable, so React hands it the image only as it mounts and unmounts.
@@ -118,14 +139,17 @@ export const StickerFigure = memo(function StickerFigure({
         key={veiled ? "veiled" : "visible"}
         print={src}
         cut={mask}
-        normal={crease?.normal}
+        normal={readyCrease === crease ? crease?.normal : undefined}
         turn={turn}
         finish={laminate}
         active={laminateActive}
+        onCreaseProgress={showCrease}
       />
       {nsfw && <span className="sticker-figure__gloss" aria-hidden="true" />}
-      {/* Keyed by its images, so a rebaked crease presses in again. */}
-      {crease && <StickerCrease key={crease.topLeft} crease={crease} />}
+      {/* A rebaked crease waits for its matching laminate before both press in together. */}
+      {crease && (
+        <StickerCrease key={crease.topLeft} ref={creaseEl} crease={crease} onReady={creaseReady} />
+      )}
       {veiled && (
         <span className="sticker-figure__veil">
           <b className="nsfw-mark" role="img" aria-label={t(($) => $.stickers.nsfw.veiled)}>
