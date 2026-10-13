@@ -398,20 +398,6 @@
   gap: 6px;
   flex-wrap: wrap;
 }
-:is(.layer-hidden-recovery, .layer-hidden-options) button {
-  min-height: 44px;
-  padding: 8px;
-  border: 0;
-  border-radius: var(--r-label);
-  background: var(--ink);
-  color: var(--canvas);
-  font-size: 13px;
-  font-weight: 650;
-}
-.layer-hidden-recovery button + button {
-  background: var(--liner-deep);
-  color: var(--ink);
-}
 @media (prefers-reduced-motion: reduce) {
   .layer-add-menu {
     animation: none;

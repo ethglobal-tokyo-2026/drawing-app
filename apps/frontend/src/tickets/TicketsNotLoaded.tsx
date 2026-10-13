@@ -3,7 +3,7 @@ import type { ApiError } from "../api/apiClient";
 import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { useTranslation } from "../i18n/react";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
-import { ErrorDetail } from "../ui/ErrorLine";
+import { ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
 import { QuietLink } from "../ui/QuietLink";
 import { TearLine } from "../ui/TearLine";
@@ -28,12 +28,9 @@ export function TicketsNotLoaded({ error, onRetry, onBoard }: Props) {
         {error ? t(($) => $.tickets.notLoaded.couldntLoad) : t(($) => $.tickets.notLoaded.checking)}
       </h2>
       {error && (
-        <>
-          <p className="out-of-tickets__line" role="alert">
-            <strong>{errorMessage(error)}</strong>
-          </p>
-          <ErrorDetail text={errorDetail(error)} />
-        </>
+        <ErrorLine className="out-of-tickets__problem" detail={errorDetail(error)}>
+          {errorMessage(error)}
+        </ErrorLine>
       )}
       <TearLine />
       {error ? (

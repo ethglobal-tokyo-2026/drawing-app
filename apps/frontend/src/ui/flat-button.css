@@ -1,0 +1,47 @@
+.flat-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--r-label);
+  appearance: none;
+  background: transparent;
+  color: var(--ink);
+  font: 700 13px/1.2 var(--font-ui);
+  font-stretch: var(--w-ui);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.flat-btn svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.flat-btn:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.flat-btn:active {
+  background: var(--liner-deep);
+}
+
+@media (hover: hover) {
+  .flat-btn:not(:disabled):hover {
+    background: var(--liner-lift);
+  }
+}
+
+.flat-btn:disabled,
+.flat-btn[aria-disabled="true"] {
+  color: var(--graphite);
+  cursor: not-allowed;
+}

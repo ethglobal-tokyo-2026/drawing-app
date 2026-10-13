@@ -174,7 +174,6 @@ function ColorPicker({
         label={t(($) => $.stickerCreation.colorSheet.swatches)}
         colors={SWATCH_HEXES}
         color={color}
-        columns={10}
         onPick={onPick}
       />
     </div>
@@ -185,24 +184,30 @@ interface SwatchesProps {
   label: string;
   colors: readonly string[];
   color: string;
-  /** Arrow keys move by a row of this many; a single row by default. */
-  columns?: number;
   small?: boolean;
   onPick: (hex: string) => void;
 }
 
 /** A row or grid of color dots, one of which may be the current color. Arrow keys pick as they move. */
-function Swatches({ label, colors, color, columns, small = false, onPick }: SwatchesProps) {
+function Swatches({ label, colors, color, small = false, onPick }: SwatchesProps) {
   const current = Math.max(0, colors.indexOf(color));
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    const row = columns ?? colors.length;
-    const step = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: row, ArrowUp: -row }[e.key];
-    if (!step) return;
     const dots = [...e.currentTarget.querySelectorAll("button")];
     const at = dots.findIndex((dot) => dot === document.activeElement);
     if (at < 0) return;
+    // The grid fits as many full touch targets as the sheet can hold; arrows follow its laid-out rows.
+    const nextRow = dots.findIndex((dot) => dot.offsetTop > dots[0].offsetTop);
+    const row = nextRow < 0 ? colors.length : nextRow;
+    const column = at % row;
+    const lastInColumn = column + Math.floor((colors.length - 1 - column) / row) * row;
+    const next = {
+      ArrowRight: (at + 1) % colors.length,
+      ArrowLeft: (at - 1 + colors.length) % colors.length,
+      ArrowDown: at + row < colors.length ? at + row : column,
+      ArrowUp: at - row >= 0 ? at - row : lastInColumn,
+    }[e.key];
+    if (next === undefined) return;
     e.preventDefault();
-    const next = (at + step + colors.length) % colors.length;
     dots[next].focus();
     onPick(colors[next]);
   };

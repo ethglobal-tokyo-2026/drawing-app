@@ -58,6 +58,7 @@ export function TimelapseButton({ timelapse }: { timelapse: Timelapse }) {
         }
         aria-label={name}
         aria-disabled={busy || undefined}
+        aria-busy={busy || undefined}
         onClick={press}
       >
         {/* Every state's label in one cell, so the button keeps its width as they change. */}

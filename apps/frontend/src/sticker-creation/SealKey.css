@@ -1,10 +1,5 @@
 /* The key's own press moves `translate`; the spring-in here uses opacity, transform and scale. */
 .key.seal-key {
-  --lip: 4px;
-  --press-travel: 2px;
-  --cast: 0 1px 0 rgba(28, 24, 36, 0.1), 1px 4px 6px rgba(28, 24, 36, 0.15);
-  /* Keep the incumbent face and anchor while only shortening its base. */
-  height: calc(var(--size, 58px) + var(--key-lip));
   position: absolute;
   left: var(--near-left) 18px;
   right: var(--near-right) 18px;
@@ -57,22 +52,28 @@
   bottom: 92px;
   z-index: 3;
   max-width: min(300px, calc(100% - 102px));
-  padding: 7px 11px 8px;
-  border-radius: var(--r-label);
-  background: var(--liner-lift);
-  box-shadow:
-    inset 0 0 0 1px var(--rule),
-    var(--shadow-label);
-  font-size: 13px;
-  font-weight: 650;
-  line-height: 1.42;
-  color: var(--ink);
   opacity: 0;
   transform: translateY(6px);
   pointer-events: none;
   transition:
     opacity 160ms var(--ease-out),
     transform 220ms var(--ease-out);
+}
+
+.seal-chip > :is(.error-line, .seal-chip__status) {
+  box-shadow:
+    inset 0 0 0 1px var(--rule),
+    var(--shadow-label);
+}
+
+/* Accepted Fill progress keeps the plain stock while failures use the shared error line. */
+.seal-chip__status {
+  margin: 0;
+  padding: 7px 11px 8px;
+  border-radius: var(--r-label);
+  background: var(--liner-lift);
+  color: var(--ink);
+  font: 650 13px/1.42 var(--font-ui);
 }
 
 .seal-chip.is-on {
@@ -82,11 +83,6 @@
 
 /* A failed seal's words, for a report: the chip stays out of the drawing's way, but its Copy takes a
    tap while the chip shows. */
-.seal-chip .error-detail {
-  margin-top: 6px;
-  text-align: left;
-}
-
 .seal-chip .copyable-fine-print {
   justify-content: flex-start;
   margin-top: 4px;

@@ -27,7 +27,7 @@
   color: inherit;
   -webkit-tap-highlight-color: transparent;
 } /* keys and label stock keep their own type */
-.gr :focus-visible {
+.gr :focus-visible:where(:not(.key, .label-btn)) {
   outline: 2px solid var(--ink);
   outline-offset: 3px;
   border-radius: var(--r-label);

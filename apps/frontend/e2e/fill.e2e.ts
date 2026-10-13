@@ -476,7 +476,7 @@ test("a pending locked blank Fill never opens an empty seal sheet or records a F
   await installFillWorkerProbe(page);
   await openSheet(page, "fill-locked-empty");
   await options(page, 1);
-  await button(page, creation.layers.lock).click();
+  await page.getByRole("switch", { name: creation.layers.lock.en }).click();
   await page.keyboard.press("Escape");
   await selectFillReference(page, "layer");
   const before = await readKeptHistory(page);
@@ -554,7 +554,8 @@ for (const transition of ["brush", "color", "visible", "layer", "pause"] as cons
     if (transition === "visible") await expect(key).toBeChecked();
     if (transition === "color")
       await expect(page.getByRole("dialog", { name: creation.colorSheet.title.en })).toBeVisible();
-    if (transition === "layer") await expect(button(page, creation.layers.lock)).toBeVisible();
+    if (transition === "layer")
+      await expect(page.getByRole("switch", { name: creation.layers.lock.en })).toBeVisible();
     if (transition === "pause") await expect(button(page, creation.timer.resume)).toBeVisible();
     if (transition === "pause" || transition === "color" || transition === "layer") {
       await page.clock.runFor(1100);
@@ -633,7 +634,7 @@ async function wetFixture(page: Page, variant: WetVariant) {
   }
   if (variant === "lock") {
     await options(page, 1);
-    await button(page, creation.layers.lock).click();
+    await page.getByRole("switch", { name: creation.layers.lock.en }).click();
     await page.keyboard.press("Escape");
   }
   if (variant === "clipped") {
@@ -642,7 +643,7 @@ async function wetFixture(page: Page, variant: WetVariant) {
     await page.keyboard.press("Escape");
     await addLayer(page);
     await options(page, 2);
-    await button(page, creation.layers.clip).click();
+    await page.getByRole("switch", { name: creation.layers.clip.en }).click();
     await page.keyboard.press("Escape");
   }
   if (variant === "clipped-above") {
@@ -652,7 +653,7 @@ async function wetFixture(page: Page, variant: WetVariant) {
     await fillAt(page, center);
     await expect.poll(() => shownColor(page, center)).toEqual(blue);
     await options(page, 2);
-    await button(page, creation.layers.clip).click();
+    await page.getByRole("switch", { name: creation.layers.clip.en }).click();
     await page.keyboard.press("Escape");
     await chip(page, 1).click();
   }

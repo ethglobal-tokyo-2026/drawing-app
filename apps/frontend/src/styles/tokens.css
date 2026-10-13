@@ -16,6 +16,7 @@
   --font-ui: "Croquis Sans", "Zen Kaku Gothic New", system-ui, sans-serif;
   --font-puffy: "Dela Gothic One", var(--font-ui);
   --r-label: 6px;
+  --r-button: 8px;
   --r-paper: 4px; /* paper: the drawing sheet and the tray's loose sheets */
   --tilt: -4deg;
   --gutter: 12px;
@@ -74,6 +75,8 @@
   --tangerine-soft: color-mix(in srgb, var(--tangerine) 38%, var(--liner));
 
   /* One light, top-left: every shadow falls down and to the right */
+  --shadow-key-base: 0 1px 0 rgba(28, 24, 36, 0.1), 2px 6px 12px -3px rgba(28, 24, 36, 0.24);
+  --shadow-button-base: 0 1px 0 rgba(28, 24, 36, 0.06), 1px 3px 5px -2px rgba(28, 24, 36, 0.16);
   --shadow-label: 0 1px 0 rgba(28, 24, 36, 0.1), 1px 2px 3px rgba(28, 24, 36, 0.08);
   --shadow-lift: 1px 3px 4px rgba(28, 24, 36, 0.12), 3px 10px 22px rgba(28, 24, 36, 0.14);
   --shadow-sheet: 0 -1px 0 rgba(28, 24, 36, 0.06), 2px -8px 28px rgba(28, 24, 36, 0.12);

@@ -44,12 +44,18 @@
   flex-direction: column;
   align-items: center;
   gap: 6px;
+  min-height: 44px;
   padding: 8px 4px 8px;
   border: 1.5px solid transparent;
   border-radius: 10px;
   background: none;
   color: var(--ink-soft);
   touch-action: manipulation;
+}
+
+.pick:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
 }
 
 .pick img {
@@ -77,20 +83,25 @@
 }
 
 /* In the give sheet the grid scrolls on its own between the title and the key. Its padding gives
-   the picked tile's check and the stickers' shadows room the scroll would clip; the margins take
-   that room back from the sheet's gaps. */
+   focus rings, the picked tile's check and the stickers' shadows room the scroll would clip; the
+   margins take that room back from the sheet's gaps. */
 .giving__pinned .sticker-picker {
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
-  padding: 8px 8px 6px 0;
-  margin: -8px -8px -6px 0;
+  padding: 8px 8px 6px;
+  margin: -8px -8px -6px;
 }
 
 .pick.picked {
-  border-color: var(--aqua-deep);
+  border-color: var(--ink);
   background: var(--aqua-soft);
+  color: var(--ink);
+}
+
+/* Selected metadata is printed in Ink on the Aqua Soft field. */
+.pick.picked .fine {
   color: var(--ink);
 }
 

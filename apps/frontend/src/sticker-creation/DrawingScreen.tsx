@@ -1591,6 +1591,7 @@ export function DrawingScreen({
             sealProblem?.message ??
             (retrying ? t(($) => $.stickerCreation.seal.interrupted) : null)
           }
+          status={!fillProblem && (settlingFill || fillWork.settling)}
           detail={fillProblem || inkProblem ? null : sealProblem?.detail}
           onTap={() => {
             setSealProblem(null);

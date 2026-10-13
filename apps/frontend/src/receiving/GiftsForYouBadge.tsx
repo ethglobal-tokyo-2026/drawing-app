@@ -3,6 +3,7 @@ import { toPerson, toSticker } from "../api/views";
 import { Trans, useTranslation } from "../i18n/react";
 import { GiveIcon } from "../icons";
 import { handleOf } from "../stickers/format";
+import { LabelButton } from "../ui/LabelButton";
 import "../stickers/nsfw-mark.css";
 import "./gifts-for-you-badge.css";
 
@@ -30,10 +31,9 @@ export function GiftsForYouBadge({ gifts, onOpen, nudging = false }: Props) {
   const count = gifts.length;
   const nsfw = toSticker(newest.sticker).nsfw;
   return (
-    <button
-      type="button"
+    <LabelButton
+      tone="grape"
       className={nudging ? "gifts-for-you-badge is-nudging" : "gifts-for-you-badge"}
-      data-press
       aria-label={t(($) => $.receiving.giftsForYou.label, { count, name })}
       onClick={() => onOpen(newest)}
     >
@@ -58,6 +58,6 @@ export function GiftsForYouBadge({ gifts, onOpen, nudging = false }: Props) {
           />
         </span>
       </span>
-    </button>
+    </LabelButton>
   );
 }

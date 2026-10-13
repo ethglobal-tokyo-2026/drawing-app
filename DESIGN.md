@@ -451,6 +451,12 @@ Everything that isn't the key: the same construction at a third of the depth, wi
 
 ### The press
 
+Shared controls keep these roles distinct: `Key` is the screen's primary act, `LabelButton` is a
+secondary action, `QuietLink` is the quiet way out, and `FlatButton` is header or back navigation.
+Drawing tools, tabs, chips, and gestures retain their documented construction. Button corners and
+base shadows come from `--r-button`, `--shadow-key-base`, and `--shadow-button-base`; callers only
+set layout, never replace the face, lip, or press.
+
 One press for every key and label: the face drops as the lip compresses (4.5px on a key, 2px on a label), springs back if you slide off, and on release pops past rest, with the action firing 60ms into the pop. Only translate animates. Reduced motion halves the travel and drops the spring.
 
 ### Controls

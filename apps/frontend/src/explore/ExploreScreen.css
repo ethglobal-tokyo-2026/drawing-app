@@ -165,6 +165,13 @@
   touch-action: manipulation;
 }
 
+/* The row's ring stays inside the leaderboard's clipped edge. */
+.pressable.artist-row:focus-visible {
+  border-radius: var(--r-label);
+  outline: 2px solid var(--ink);
+  outline-offset: -3px;
+}
+
 .artist-row {
   display: flex;
   align-items: center;

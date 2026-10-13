@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslation } from "../i18n/react";
 import { describeLiffError } from "../line/liff";
 import { ErrorLine } from "../ui/ErrorLine";
+import { LabelButton } from "../ui/LabelButton";
 
 /** LINE's Add friends screen. LINE opens it on phones only. */
 const ADD_FRIENDS_URL = "https://line.me/R/nv/addFriends";
@@ -52,13 +53,7 @@ export function CantFindThem() {
     <>
       <p className="giving__sub keep-phrases">{t(($) => $.giving.cantFind.lead)}</p>
       <div className="giving__rows">
-        <button
-          type="button"
-          className="giving__row"
-          data-press
-          data-autofocus
-          onClick={addFriends}
-        >
+        <LabelButton block className="giving__row" data-autofocus onClick={addFriends}>
           <span className="giving__row-icon">
             <ArrowSquareOut size={20} />
           </span>
@@ -67,7 +62,7 @@ export function CantFindThem() {
             <small>{t(($) => $.giving.cantFind.notFriendsHint)}</small>
           </span>
           <CaretRight className="giving__row-chev" size={20} />
-        </button>
+        </LabelButton>
       </div>
       {reason !== null && (
         <ErrorLine className="giving__problem" detail={reason}>

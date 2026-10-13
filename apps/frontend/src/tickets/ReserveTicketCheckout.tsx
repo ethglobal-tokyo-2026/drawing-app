@@ -303,13 +303,13 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
         <h2 className="out-of-tickets__title out-of-tickets__title--top" id={`${id}-title`}>
           {t(($) => $.tickets.checkout.notAdded.title)}
         </h2>
-        <p className="out-of-tickets__line" role="alert">
+        <ErrorLine className="out-of-tickets__problem">
           <Trans
             i18nKey={($) => $.tickets.checkout.notAdded.line}
             values={{ reason: lost.reason }}
-            components={{ strong: <strong />, why: <span className="out-of-tickets__quiet" /> }}
+            components={{ strong: <strong />, why: <span /> }}
           />
-        </p>
+        </ErrorLine>
         <TearLine />
         <Key
           className="out-of-tickets__key"
@@ -337,13 +337,11 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
         <h2 className="out-of-tickets__title out-of-tickets__title--top" id={`${id}-title`}>
           {t(($) => $.tickets.checkout.paymentFailed)}
         </h2>
-        <p className="out-of-tickets__line" role="alert">
-          <strong>
-            {failure.kind === "app"
-              ? errorMessage(failure.error)
-              : t(($) => $.tickets.checkout.paymentFailure[failure.kind])}
-          </strong>
-        </p>
+        <ErrorLine className="out-of-tickets__problem" detail={failure.detail}>
+          {failure.kind === "app"
+            ? errorMessage(failure.error)
+            : t(($) => $.tickets.checkout.paymentFailure[failure.kind])}
+        </ErrorLine>
         <TearLine />
         <Key
           className="out-of-tickets__key"
@@ -353,7 +351,6 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
         >
           {t(($) => $.tickets.checkout.backToPacks)}
         </Key>
-        {failure.detail && <ErrorDetail text={failure.detail} />}
         {close}
       </>
     );
@@ -374,9 +371,9 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
               {t(($) => $.tickets.checkout.balance)}
             </span>
             {sui.problem ? (
-              <span role="alert">{sui.problem.line}</span>
+              <ErrorLine>{sui.problem.line}</ErrorLine>
             ) : jpyc.error ? (
-              <span role="alert">{t(($) => $.tickets.checkout.balanceProblem)}</span>
+              <ErrorLine>{t(($) => $.tickets.checkout.balanceProblem)}</ErrorLine>
             ) : jpyc.balance === null || !shop ? (
               <span className="reserve-checkout__loading">
                 <span className="visually-hidden" role="status">

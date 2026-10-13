@@ -20,14 +20,10 @@
 .layer-hidden-options {
   margin: 4px 6px 8px;
 }
-.layer-options-bar .layer-hidden-options button {
-  background: var(--ink);
-  color: var(--canvas);
-}
 .layer-options-heading-actions {
   display: flex;
 }
-.layer-options-bar button {
+.layer-options-bar button:where(:not(.label-btn)) {
   border: 0;
   background: transparent;
   color: inherit;
@@ -45,40 +41,18 @@
   display: flex;
   align-items: center;
   width: 100%;
+  min-height: 44px;
   gap: 8px;
   padding: 6px;
   text-align: start;
   font-weight: 600;
+  cursor: pointer;
 }
 .layer-option-toggle > svg {
   flex: none;
 }
-.layer-toggle-switch {
+.layer-option-toggle .switch {
   margin-left: auto;
-  flex: none;
-  position: relative;
-  width: 32px;
-  height: 20px;
-  border-radius: 20px;
-  background: var(--liner-deep);
-  box-shadow: inset 0 0 0 1px var(--rule-strong);
-}
-.layer-toggle-switch::after {
-  content: "";
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--graphite);
-}
-.layer-option-toggle[aria-pressed="true"] .layer-toggle-switch {
-  background: var(--ink);
-}
-.layer-option-toggle[aria-pressed="true"] .layer-toggle-switch::after {
-  left: 16px;
-  background: var(--canvas);
 }
 .layer-reorder {
   display: grid;
@@ -107,7 +81,8 @@
   padding: 6px;
   text-align: start;
 }
-.layer-options-bar button[aria-disabled="true"] {
+.layer-options-bar button[aria-disabled="true"],
+.layer-option-toggle:has(input[aria-disabled="true"]) {
   color: var(--graphite);
 }
 .layer-options-help {

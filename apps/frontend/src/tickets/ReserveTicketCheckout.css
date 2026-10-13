@@ -75,9 +75,7 @@
     inset 0 0 0 1px var(--rule-strong),
     var(--shadow-label);
   text-align: left;
-  transition:
-    background-color 140ms linear,
-    transform 140ms var(--ease-out);
+  transition: transform 140ms var(--ease-out);
 }
 
 .reserve-checkout__pack[aria-checked="true"] {

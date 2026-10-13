@@ -32,7 +32,6 @@ export function SwitchPersonControls() {
           <LabelButton
             key={name}
             block
-            tone="aqua"
             onClick={() => {
               // A Gift Message sent meanwhile opens as them, as its link would from their LINE chat.
               const giftPath = takeMockGiftMessage();

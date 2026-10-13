@@ -1,7 +1,7 @@
 import { CheckFat } from "../icons";
 import { useState } from "react";
 import { useTranslation } from "../i18n/react";
-import { ErrorDetail } from "../ui/ErrorLine";
+import { ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
 import "./SealKey.css";
 
@@ -11,6 +11,8 @@ interface Props {
   disabled?: boolean;
   /** What went wrong with the last seal, until the next tap. */
   problem: string | null;
+  /** Progress while accepted Fill finishes, shown as a status instead of a failure. */
+  status?: boolean;
   /** The words behind the problem, shown under it for a report with Copy, as every error line does. */
   detail?: string | null;
   onTap: () => void;
@@ -20,18 +22,35 @@ interface Props {
  * The seal check: the drawing screen's one key, a round one. It springs in once there's ink, and a
  * tap opens the seal sheet. A chip over it says what went wrong with the last seal.
  */
-export function SealKey({ shown, disabled = false, problem, detail, onTap }: Props) {
+export function SealKey({
+  shown,
+  disabled = false,
+  problem,
+  status = false,
+  detail,
+  onTap,
+}: Props) {
   const { t } = useTranslation();
   const chipDetail = problem ? (detail ?? null) : null;
   // The chip keeps what it said while it fades out.
-  const [said, setSaid] = useState({ words: problem, detail: chipDetail });
-  if (problem && (problem !== said.words || chipDetail !== said.detail))
-    setSaid({ words: problem, detail: chipDetail });
+  const [said, setSaid] = useState({ words: problem, detail: chipDetail, status });
+  if (problem && (problem !== said.words || chipDetail !== said.detail || status !== said.status))
+    setSaid({ words: problem, detail: chipDetail, status });
   return (
     <>
-      <div className={`seal-chip keep-phrases ${problem ? "is-on" : ""}`}>
-        <span role="status">{said.words}</span>
-        {said.detail && <ErrorDetail text={said.detail} />}
+      <div
+        className={`seal-chip keep-phrases ${problem ? "is-on" : ""}`}
+        aria-hidden={!problem || undefined}
+        inert={!problem}
+      >
+        {said.words &&
+          (said.status ? (
+            <p className="seal-chip__status" role="status">
+              {said.words}
+            </p>
+          ) : (
+            <ErrorLine detail={said.detail ?? undefined}>{said.words}</ErrorLine>
+          ))}
       </div>
       <Key
         disabled={disabled}

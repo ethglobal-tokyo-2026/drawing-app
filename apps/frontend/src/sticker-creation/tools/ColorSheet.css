@@ -93,14 +93,15 @@
 
 .color-recent-row {
   display: flex;
-  gap: 12px;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
 }
 
 /* A sheet of dot labels, a 44px row each. */
 .color-swatches {
   display: grid;
-  grid-template-columns: repeat(10, 1fr);
-  gap: 18px 0;
+  grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
   justify-items: center;
   padding: 9px 8px;
   margin-top: 12px;
@@ -113,12 +114,23 @@
 
 .swatch {
   position: relative;
-  width: 26px;
-  height: 26px;
+  flex: none;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: 0;
   border-radius: 50%;
+  background: transparent;
+}
+
+/* The color dot stays small inside a complete, non-overlapping touch target. */
+.swatch::before {
+  content: "";
+  position: absolute;
+  inset: 9px;
+  border-radius: 50%;
   background: var(--c);
+  pointer-events: none;
   box-shadow:
     inset 0 0 0 1px rgba(28, 24, 36, 0.1),
     0 0 0 2.5px var(--canvas),
@@ -128,27 +140,21 @@
     box-shadow 140ms var(--ease-out);
 }
 
-/* Each dot takes taps across its whole cell, 44px tall, so a tap in the gap between two still picks one. */
-.swatch::after {
-  content: "";
-  position: absolute;
-  inset: -9px -3px;
+.swatch.is-small::before {
+  inset: 11px;
 }
 
-.swatch.is-small {
-  width: 22px;
-  height: 22px;
+/* The recent strip scrolls: its focus ring stays inside the cell instead of being clipped at its edge. */
+.color-picker .swatch:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
 }
 
-.swatch.is-small::after {
-  inset: -11px -6px;
-}
-
-.swatch:active {
+.swatch:active::before {
   transform: scale(0.94);
 }
 
-.swatch[aria-checked="true"] {
+.swatch[aria-checked="true"]::before {
   transform: translateY(-1.5px) scale(1.1) rotate(var(--tilt));
   box-shadow:
     inset 0 0 0 1px rgba(28, 24, 36, 0.12),

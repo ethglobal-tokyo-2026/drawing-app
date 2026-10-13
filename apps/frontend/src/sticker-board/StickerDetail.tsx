@@ -41,6 +41,7 @@ import { useMyNsfwOptIn, veiledFor, withoutNsfwDrawings } from "../stickers/nsfw
 import { StickerFigure } from "../stickers/StickerFigure";
 import { EASE_OUT } from "../ui/easing";
 import { ErrorLine } from "../ui/ErrorLine";
+import { FlatButton } from "../ui/FlatButton";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { PhonePortal } from "../ui/PhonePortal";
@@ -571,9 +572,9 @@ export function StickerDetail({
       }}
     >
       <header className="sticker-detail__top">
-        <LabelButton icon={<StickerBoardIcon size={18} />} onClick={close}>
+        <FlatButton icon={<StickerBoardIcon size={18} />} onClick={close}>
           {t(($) => $.ui.backToBoard)}
-        </LabelButton>
+        </FlatButton>
       </header>
 
       <nav
@@ -907,6 +908,7 @@ export function StickerDetail({
                     )}
                     {onGive && (
                       <LabelButton
+                        tone="aqua"
                         size="sm"
                         icon={<GiveIcon size={18} />}
                         onClick={() => onGive(sticker)}

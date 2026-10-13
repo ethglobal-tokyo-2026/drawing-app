@@ -18,8 +18,8 @@ import { useTranslation } from "../../i18n/react";
 import { ArrowUUpLeft, GratitudeIcon, StreakIcon } from "../../icons";
 import { formatDay, formatHandle } from "../../stickers/format";
 import { ErrorLine } from "../../ui/ErrorLine";
+import { FlatButton } from "../../ui/FlatButton";
 import { HitCounter } from "../../ui/HitCounter";
-import { LabelButton } from "../../ui/LabelButton";
 import { QuietLink } from "../../ui/QuietLink";
 import { Skeleton } from "../../ui/Skeleton";
 import { useReducedMotion } from "../../ui/useReducedMotion";
@@ -198,15 +198,14 @@ export const StatCork = memo(function StatCork({
           {/* At the top left, where the name that turns the board over sits on its front, so it comes
               first for keyboards and screen readers too. */}
           <div className="stat-board__head">
-            <LabelButton
+            <FlatButton
               ref={flipBackRef}
-              size="sm"
               icon={<ArrowUUpLeft />}
               className="stat-board__flip-back"
               onClick={onFlipBack}
             >
               {t(($) => $.stickerBoard.statBoard.flipBack)}
-            </LabelButton>
+            </FlatButton>
             {afterFlipBack}
           </div>
           <div className="stat-board__stats">

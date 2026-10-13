@@ -10,7 +10,7 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   ref?: Ref<HTMLButtonElement>;
 }
 
-/** Label stock: every button that isn't the screen's key. */
+/** Secondary action stock; navigation, drawing tools, and selection controls stay flat. */
 export function LabelButton({
   tone = "plain",
   size = "md",

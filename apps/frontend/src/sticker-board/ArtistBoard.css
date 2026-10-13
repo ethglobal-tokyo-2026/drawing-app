@@ -16,30 +16,12 @@
   display: none;
 }
 
-/* The Explore back chip: a 32px Liner Lift pill with a caret, beside the name, 44px to touch. */
+/* Explore's flat back control stays beside the name in the board's header. */
 .explore-chip {
   position: absolute;
   z-index: 800;
-  top: 20px;
+  top: 14px;
   right: 14px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  height: 32px;
-  padding: 0 12px 0 9px;
-  border: 1px solid var(--rule-strong);
-  border-radius: 999px;
-  background: var(--liner-lift);
-  box-shadow: var(--shadow-label);
-  font-size: 13px;
-  font-weight: 700;
-  touch-action: manipulation;
-}
-
-.explore-chip::after {
-  content: "";
-  position: absolute;
-  inset: -7px -3px;
 }
 
 /* ---------- Viewing one of their stickers ---------- */
@@ -51,7 +33,7 @@
   display: flex;
   align-items: flex-end;
   padding: 10px;
-  background: rgb(28 24 36 / 45%);
+  background: var(--scrim);
   animation: scrim-in 0.3s;
 }
 

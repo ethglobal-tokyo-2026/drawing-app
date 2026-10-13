@@ -141,7 +141,7 @@ test("a left drawing hand mirrors the layer column, slider and options toward th
   if (!optionsBox) throw new Error("The layer options have no box");
   expect(optionsBox.x + optionsBox.width).toBeLessThan(chipBox.x);
   await expect(
-    options.getByRole("button", { name: say(stickerCreation.layers.clip, language) }),
+    options.getByRole("switch", { name: say(stickerCreation.layers.clip, language) }),
   ).toBeVisible();
 });
 

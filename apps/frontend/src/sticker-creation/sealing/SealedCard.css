@@ -61,7 +61,6 @@
 .sealed-card .sealed-card__key {
   display: flex;
   width: 100%;
-  min-height: 64px;
   padding: 0 20px;
 }
 

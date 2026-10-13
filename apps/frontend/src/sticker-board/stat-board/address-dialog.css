@@ -18,7 +18,7 @@
 .address-dialog__scrim {
   position: absolute;
   inset: 0;
-  background: rgba(28, 24, 36, 0.55);
+  background: var(--scrim);
   -webkit-tap-highlight-color: transparent;
 }
 

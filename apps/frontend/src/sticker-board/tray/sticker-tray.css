@@ -562,7 +562,6 @@
   transform: rotate(var(--tilt));
   box-shadow:
     inset 0 0 0 1px rgba(28, 24, 36, 0.14),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
     1px 2px 3px rgba(28, 24, 36, 0.16);
   pointer-events: none;
 }
@@ -577,7 +576,7 @@
   letter-spacing: 0.02em;
 }
 
-/* Flat paper status centered over an outgoing sticker. Packing reserves its rectangle, including a
+/* Flat aqua status centered over an outgoing sticker. Packing reserves its rectangle, including a
    full 32-code-point handle, so it never covers a neighboring sticker. */
 .tray__gift-label {
   position: absolute;
@@ -591,9 +590,9 @@
   padding: 5px;
   border: 1px solid var(--rule-strong);
   border-radius: var(--r-paper);
-  background: var(--liner-lift);
+  background: var(--aqua);
   color: var(--ink);
-  box-shadow: 1px 2px 3px rgba(28, 24, 36, 0.16);
+  box-shadow: var(--shadow-label);
   font: 700 var(--fs-fine) / 1.15 var(--font-ui);
   text-align: center;
   overflow-wrap: anywhere;
@@ -603,7 +602,7 @@
 .tray__gift-label .tray__ic {
   width: 14px;
   height: 14px;
-  color: var(--graphite);
+  color: var(--ink);
 }
 
 /* A used sticker silhouette: the kiss-cut outline with plain backing paper inside, a hair of shadow

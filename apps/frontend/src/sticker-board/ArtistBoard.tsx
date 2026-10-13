@@ -27,6 +27,7 @@ import { boardFoil } from "../stickers/madeFoil";
 import { useLight } from "../stickers/light";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { ErrorLine } from "../ui/ErrorLine";
+import { FlatButton } from "../ui/FlatButton";
 import { Key } from "../ui/Key";
 import { useLargeScreen } from "../ui/largeScreen";
 import { PhotoSticker } from "../ui/PhotoSticker";
@@ -323,16 +324,14 @@ export function ArtistBoard({ person, onBack }: Props) {
   };
 
   const backToExplore = (
-    <button
-      type="button"
+    <FlatButton
       className="explore-chip"
-      data-press
+      icon={<CaretLeft size={18} />}
       onClick={onBack}
       aria-label={t(($) => $.stickerBoard.artistBoard.backToExplore)}
     >
-      <CaretLeft size={14} />
       {t(($) => $.stickerBoard.artistBoard.explore)}
-    </button>
+    </FlatButton>
   );
 
   // Give takes Draw's slot as the board's one key; on a large screen it stands in the tabs' row, where

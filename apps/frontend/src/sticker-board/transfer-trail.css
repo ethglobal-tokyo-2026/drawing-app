@@ -125,7 +125,7 @@ p.transfer-trail__head:focus-visible {
 }
 
 .transfer-trail .transfer-trail__replay-skeleton {
-  border-radius: 999px;
+  border-radius: 8px;
 }
 
 /* The open row: a Liner Lift card with a pink outline, the amount in Figure type. */
@@ -140,7 +140,7 @@ p.transfer-trail__head:focus-visible {
 }
 
 .transfer-trail__row.is-open .transfer-trail__head {
-  min-height: 38px;
+  min-height: 44px;
   padding: 8px 0 4px;
 }
 
@@ -163,7 +163,6 @@ p.transfer-trail__head:focus-visible {
   rotate: var(--tilt);
   box-shadow:
     inset 0 0 0 1px rgba(28, 24, 36, 0.14),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
     1px 2px 3px rgba(28, 24, 36, 0.16);
 }
 
@@ -193,46 +192,10 @@ p.transfer-trail__head:focus-visible {
 }
 
 .transfer-trail__replay {
-  position: relative;
-  display: inline-flex;
   flex: none;
-  align-items: center;
-  gap: 8px;
-  height: 40px;
-  margin: 0;
-  padding: 0 15px 0 13px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--pink-soft);
-  box-shadow:
-    inset 0 0 0 1px rgba(28, 24, 36, 0.12),
-    0 1px 0 rgba(28, 24, 36, 0.12);
-  color: var(--ink);
-  font: 700 13px/1 var(--font-ui);
-  font-stretch: var(--w-ui);
-  cursor: pointer;
-  transition:
-    translate var(--t-press) linear,
-    background-color 140ms linear;
 }
 
-/* A 48px tap target. */
-.transfer-trail__replay::after {
-  content: "";
-  position: absolute;
-  inset: -4px -2px;
-}
-
-.transfer-trail__replay:active {
-  translate: 0 1px;
-}
-
-.transfer-trail__replay:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 2px;
-}
-
-/* Replay and Stop share one place, so the pill keeps its width as it turns. */
+/* Replay and Stop share one place, so the button keeps its width as it turns. */
 .transfer-trail__replay-words {
   display: grid;
 }
@@ -264,15 +227,10 @@ p.transfer-trail__head:focus-visible {
   button.transfer-trail__head:hover {
     background: rgba(28, 24, 36, 0.045);
   }
-
-  .transfer-trail__replay:hover {
-    background: color-mix(in srgb, var(--pink) 42%, var(--liner));
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  button.transfer-trail__head,
-  .transfer-trail__replay {
+  button.transfer-trail__head {
     transition: none;
   }
 }

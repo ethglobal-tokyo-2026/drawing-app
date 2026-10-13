@@ -1,26 +1,11 @@
 /* GiftsForYouBadge: gifts waiting for you. Grape label stock that asks to be opened, matching Accept and the sticker tray's Gifts section. */
 .gifts-for-you-badge {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 178px;
   max-width: 100%;
   min-height: 56px;
-  margin: 0;
   padding: 8px 12px 8px 8px;
-  border: 0;
-  border-radius: 10px;
   text-align: left;
-  color: var(--ink);
-  background: var(--grape-soft);
-  box-shadow:
-    inset 0 0 0 1.5px var(--grape),
-    var(--shadow-label);
-}
-
-.gifts-for-you-badge:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 3px;
 }
 
 /* A closed gift: the sticker inside stays a surprise until the pull tab. */
@@ -37,6 +22,11 @@
   box-shadow: inset 0 0 0 1.5px var(--ink);
 }
 
+.gifts-for-you-badge__bag svg {
+  width: 24px;
+  height: 24px;
+}
+
 /* The newest gift holds an NSFW sticker. Its pink foil mark sits on the grape bag tile, with an Ink ring keeping its edge clear. */
 .gifts-for-you-badge__nsfw {
   position: absolute;
@@ -50,18 +40,16 @@
   position: absolute;
   top: -5px;
   right: -7px;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 5px;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 8px;
   border-radius: 999px;
   color: var(--ink);
   background: var(--seal);
   box-shadow: inset 0 0 0 1.5px var(--ink);
-  font-size: 13px;
-  font-weight: 800;
-  line-height: 20px;
+  font: 400 13px/26px var(--font-puffy);
   text-align: center;
-  rotate: -4deg;
+  rotate: var(--tilt);
 }
 
 .gifts-for-you-badge__text {
@@ -76,7 +64,7 @@
   line-height: 1.2;
 }
 
-/* In Ink: Graphite reads only 3.5:1 on Grape Soft. */
+/* The field's fine print follows the Ink-on-color rule. */
 .gifts-for-you-badge__from {
   color: var(--ink);
   overflow: hidden;
@@ -85,8 +73,8 @@
 }
 
 /* Once the board has settled it lifts and settles a few times, like a parcel set down, then stays
-   put, so it's noticed without nagging. It moves by translate and rotate, leaving transform to the
-   shared press. Reduced motion holds it still. */
+   put, so it's noticed without nagging. Its transform leaves translate to the shared press.
+   Reduced motion holds it still. */
 @media (prefers-reduced-motion: no-preference) {
   .gifts-for-you-badge.is-nudging {
     animation: gifts-for-you-nudge 2.4s var(--ease-out) 0.4s 3;
@@ -97,15 +85,12 @@
   0%,
   30%,
   100% {
-    translate: 0 0;
-    rotate: 0deg;
+    transform: none;
   }
   10% {
-    translate: 0 -3px;
-    rotate: -1.5deg;
+    transform: translateY(-3px) rotate(-1.5deg);
   }
   20% {
-    translate: 0 0;
-    rotate: 0.8deg;
+    transform: rotate(0.8deg);
   }
 }

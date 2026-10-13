@@ -9,6 +9,7 @@ import { Trans, useTranslation } from "../i18n/react";
 import { formatMonthDay, handleOf } from "../stickers/format";
 import { EASE_OUT } from "../ui/easing";
 import { ErrorLine } from "../ui/ErrorLine";
+import { LabelButton } from "../ui/LabelButton";
 import { REVEAL } from "../ui/reveal";
 import { Skeleton } from "../ui/Skeleton";
 import { useReducedMotion } from "../ui/useReducedMotion";
@@ -63,7 +64,7 @@ export function TransferTrail({ rows, viewerId, artist, rises = false }: Props) 
   const open = rows.find((r) => r.giftId === openId);
   const dot = useRef<HTMLSpanElement>(null);
   const total = useRef<HTMLSpanElement>(null);
-  const pill = useRef<HTMLButtonElement>(null);
+  const replayButton = useRef<HTMLButtonElement>(null);
   const host = useRef<HTMLDivElement>(null);
   const replay = useGratitudeReplay({
     giftId: open?.gratitude ? open.giftId : null,
@@ -192,10 +193,12 @@ export function TransferTrail({ rows, viewerId, artist, rises = false }: Props) 
                   </span>
                 </span>
                 {/* One button throughout, Replay then Stop, so focus stays on it. */}
-                <button
-                  ref={pill}
-                  type="button"
+                <LabelButton
+                  ref={replayButton}
+                  tone="pink"
+                  size="sm"
                   className="transfer-trail__replay"
+                  icon={idle ? <Play size={18} aria-hidden /> : <Stop size={18} aria-hidden />}
                   aria-label={
                     !idle
                       ? t(($) => $.stickerBoard.transferTrail.replaying.stopLabel)
@@ -208,7 +211,6 @@ export function TransferTrail({ rows, viewerId, artist, rises = false }: Props) 
                   }
                   onClick={idle ? replay.play : replay.stop}
                 >
-                  {idle ? <Play size={16} aria-hidden /> : <Stop size={16} aria-hidden />}
                   <span className="transfer-trail__replay-words">
                     <span className={idle ? undefined : "is-off"}>
                       {t(($) => $.stickerBoard.transferTrail.replay)}
@@ -217,21 +219,21 @@ export function TransferTrail({ rows, viewerId, artist, rises = false }: Props) 
                       {t(($) => $.stickerBoard.transferTrail.replaying.stop)}
                     </span>
                   </span>
-                </button>
+                </LabelButton>
               </div>
               <ReplayStage
                 open={!idle}
                 reduced={reduced}
                 host={host}
-                returnFocus={() => pill.current}
+                returnFocus={() => replayButton.current}
               />
               {replay.failure?.kind === "load" && (
                 <ErrorLine
                   className="transfer-trail__replay-note"
                   detail={errorDetail(replay.failure.error)}
-                  // It goes as the replay starts, so focus moves to the pill, not the page.
+                  // It goes as the replay starts, so focus moves to Replay, not the page.
                   onRetry={() => {
-                    pill.current?.focus();
+                    replayButton.current?.focus();
                     replay.play();
                   }}
                 >
@@ -323,7 +325,7 @@ export function TransferTrailSkeleton({
                     <Line width="9em" />
                   </span>
                 </span>
-                <Skeleton width={92} height={40} className="transfer-trail__replay-skeleton" />
+                <Skeleton width={92} height={35} className="transfer-trail__replay-skeleton" />
               </div>
             </li>
           ) : (

@@ -10,6 +10,7 @@ import {
   X,
 } from "../../icons";
 import { useTranslation } from "../../i18n/react";
+import { Switch } from "../../ui/Switch";
 import type { LayerId } from "../canvas/ops";
 import { MAX_LAYERS, type mergeDownTarget } from "./layerState";
 import { OpacitySlider } from "./OpacitySlider";
@@ -135,31 +136,27 @@ export function LayerOptionsBar(props: Props) {
         onHold={props.onHoldOpacity}
       />
       {opacity === 0 && <HiddenLayerRecovery onShow={props.onShow} />}
-      <button
-        type="button"
-        className="layer-option-toggle"
-        aria-label={t(($) => $.stickerCreation.layers.lock)}
-        aria-pressed={locked}
-        aria-describedby={`${helpId}-lock`}
-        onClick={() => props.onLock(!locked)}
-      >
+      <label className="layer-option-toggle">
         <LockTransparentPixelsIcon size={22} weight={locked ? "fill" : "bold"} />
         <span>{t(($) => $.stickerCreation.layers.lock)}</span>
-        <span className="layer-toggle-switch" aria-hidden="true" />
-      </button>
-      <button
-        type="button"
-        className="layer-option-toggle"
-        aria-label={t(($) => $.stickerCreation.layers.clip)}
-        aria-pressed={clipped}
-        aria-disabled={clipBase === null || undefined}
-        aria-describedby={`${helpId}-clip`}
-        onClick={() => (clipBase === null ? unavailable() : props.onClip(!clipped))}
-      >
+        <Switch
+          checked={locked}
+          aria-label={t(($) => $.stickerCreation.layers.lock)}
+          aria-describedby={`${helpId}-lock`}
+          onChange={props.onLock}
+        />
+      </label>
+      <label className="layer-option-toggle">
         <ClipToLayerBelowIcon size={22} weight={clipped ? "fill" : "bold"} />
         <span>{t(($) => $.stickerCreation.layers.clip)}</span>
-        <span className="layer-toggle-switch" aria-hidden="true" />
-      </button>
+        <Switch
+          checked={clipped}
+          aria-label={t(($) => $.stickerCreation.layers.clip)}
+          aria-disabled={clipBase === null || undefined}
+          aria-describedby={`${helpId}-clip`}
+          onChange={(on) => (clipBase === null ? unavailable() : props.onClip(on))}
+        />
+      </label>
       <div className="layer-reorder">
         <button
           type="button"

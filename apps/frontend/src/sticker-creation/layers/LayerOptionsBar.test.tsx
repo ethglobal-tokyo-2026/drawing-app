@@ -59,6 +59,18 @@ describe("compact layer options", () => {
     renderBar({ opacity: 100 });
     expect(findAll(".layer-hidden-options")).toHaveLength(0);
   });
+  it("keeps pointer and keyboard recovery distinct when a label press dispatches its click", () => {
+    renderBar({ opacity: 0 });
+    const show = find<HTMLButtonElement>(".layer-hidden-options button");
+    act(() => {
+      show.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    });
+    click(show);
+    expect(handlers.onShow).toHaveBeenLastCalledWith(false);
+    press(show, "Enter");
+    click(show);
+    expect(handlers.onShow).toHaveBeenLastCalledWith(true);
+  });
   it("focuses opacity on opening, then keeps keyboard changes on that control", () => {
     renderBar();
     const slider = find("input");
@@ -85,7 +97,14 @@ describe("compact layer options", () => {
     click(named("Clip to layer below"));
     expect(handlers.onLock).toHaveBeenCalledExactlyOnceWith(false);
     expect(handlers.onClip).toHaveBeenCalledExactlyOnceWith(true);
-    expect(named("Lock transparent pixels").getAttribute("aria-pressed")).toBe("true");
+    const lock = find<HTMLInputElement>('[aria-label="Lock transparent pixels"]');
+    expect(lock.getAttribute("role")).toBe("switch");
+    expect(lock.checked).toBe(true);
+  });
+  it("flips a layer setting from anywhere on its labeled row", () => {
+    renderBar();
+    click(find("label.layer-option-toggle"));
+    expect(handlers.onLock).toHaveBeenCalledExactlyOnceWith(true);
   });
   it("names the destination and activates available Merge", () => {
     renderBar({ mergeTarget: { into: 7 } });
@@ -111,6 +130,7 @@ describe("compact layer options", () => {
     for (const label of ["Clip to layer below", "Delete layer", "Move forward"])
       click(named(label));
     expect(handlers.onClip).not.toHaveBeenCalled();
+    expect(find<HTMLInputElement>('[aria-label="Clip to layer below"]').checked).toBe(false);
     expect(handlers.onDelete).not.toHaveBeenCalled();
     expect(handlers.onMoveForward).not.toHaveBeenCalled();
     expect(find(".layer-options-help").textContent).toContain("Keep at least one layer");
