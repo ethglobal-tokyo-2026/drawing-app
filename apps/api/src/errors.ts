@@ -65,7 +65,6 @@ const REFUSAL_STATUS = {
   giving_limit_reached: 429,
   // Ticket purchases.
   pack_unknown: 400,
-  free_pack_used: 409,
   price_changed: 409,
   chain_unavailable: 502,
   purchase_not_found: 404,

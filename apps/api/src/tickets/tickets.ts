@@ -35,10 +35,10 @@ export const TICKET_PACKS = [
 export type TicketPack = (typeof TICKET_PACKS)[number];
 
 /**
- * The pack each person gets once at ¥0, the first time they take it; null sells every pack at its
- * price. A free pack never reaches Sui, since the payment vault refuses a zero payment.
+ * The pack sold at ¥0 while the offer is on, every time someone takes it; null ends the offer.
+ * A free pack never reaches Sui, since the payment vault refuses a zero payment.
  */
-export const FREE_FIRST_PACK_TICKETS: TicketPack["tickets"] | null = 3;
+export const FREE_PACK_TICKETS: TicketPack["tickets"] | null = 3;
 
 const PERCENT = 100;
 
@@ -50,38 +50,21 @@ export const jpycFor = (priceYen: number, decimals: number): bigint =>
 type DbOrTx = Db | Parameters<Parameters<Db["transaction"]>[0]>[0];
 
 /**
- * paid_jpyc of a purchase that paid nothing, which only a free first pack can be: the vault refuses
+ * paid_jpyc of a purchase that paid nothing, which only a free pack can be: the vault refuses
  * a zero payment. Its row keeps the pack's price in price_yen, whose check wants it above 0.
  */
 export const NOTHING_PAID = "0";
 
-/** Whether `userId` has had their free first pack. */
-export const hadFreePack = (db: DbOrTx, userId: string): boolean =>
-  db
-    .select({ id: ticketPurchases.id })
-    .from(ticketPurchases)
-    .where(and(eq(ticketPurchases.userId, userId), eq(ticketPurchases.paidJpyc, NOTHING_PAID)))
-    .get() !== undefined;
+/** `pack`'s price now: ¥0 while its free offer is on, otherwise its regular price. */
+export const priceYenFor = (pack: TicketPack): number =>
+  pack.tickets === FREE_PACK_TICKETS ? 0 : pack.priceYen;
 
-/** The pack of how many tickets is free for `userId` now: the free first pack, until they've had it. */
-const freePackFor = (db: DbOrTx, userId: string) =>
-  FREE_FIRST_PACK_TICKETS !== null && !hadFreePack(db, userId) ? FREE_FIRST_PACK_TICKETS : null;
-
-/** `pack`'s price for `userId`: ¥0 for the free first pack until they've had it. */
-export const priceYenFor = (db: DbOrTx, userId: string, pack: TicketPack): number =>
-  pack.tickets === freePackFor(db, userId) ? 0 : pack.priceYen;
-
-/** The ticket shop as `userId` sees it: its packs at their prices for them, and where they're paid. */
-export function ticketShop(
-  db: DbOrTx,
-  userId: string,
-  target: TicketPaymentTarget,
-  originalPackage: string,
-): TicketShop {
-  const free = freePackFor(db, userId);
+/** The ticket shop: its packs at their current prices, and where they're paid. */
+export function ticketShop(target: TicketPaymentTarget, originalPackage: string): TicketShop {
   return {
-    packs: TICKET_PACKS.map(({ tickets, priceYen: regular }) => {
-      const priceYen = tickets === free ? 0 : regular;
+    packs: TICKET_PACKS.map((pack) => {
+      const { tickets } = pack;
+      const priceYen = priceYenFor(pack);
       return {
         tickets,
         priceYen,

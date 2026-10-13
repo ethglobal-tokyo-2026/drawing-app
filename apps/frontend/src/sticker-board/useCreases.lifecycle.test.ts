@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testStickerUrls } from "../stickers/testStickerUrls";
 import type { CreaseBatch, CreaseReply } from "../stickers/creaseWorker";
 import { fieldOf, PHONE_BOARD, unitOf } from "./placement";
-import { keepCreasesShown, useCreases } from "./useCreases";
+import { useCreases } from "./useCreases";
 
 const field = fieldOf(PHONE_BOARD.W, PHONE_BOARD.H);
 const unit = unitOf("phone", PHONE_BOARD.W);
@@ -72,7 +72,7 @@ beforeEach(() => {
       }
     },
   );
-  keepCreasesShown(true);
+  localStorage.clear();
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -80,13 +80,22 @@ beforeEach(() => {
 
 afterEach(() => {
   act(() => root.unmount());
-  act(() => void keepCreasesShown(false));
+  localStorage.clear();
   host.remove();
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
 describe("shared crease worker lifetime", () => {
+  it("bakes despite a disabled preference left by an earlier version", () => {
+    localStorage.setItem("board.creases", "off");
+    show(true, false);
+    settle();
+
+    const batch = PaintWorker.instances[0]?.postMessage.mock.calls.at(-1)?.[0];
+    expect(batch?.jobs.map((job) => job.id)).toEqual(["top"]);
+  });
+
   it("stays alive for another board and terminates after the final board unmounts", () => {
     show(true, true);
     settle();
@@ -99,20 +108,6 @@ describe("shared crease worker lifetime", () => {
     expect(first.terminate).toHaveBeenCalledTimes(1);
 
     show(true, false);
-    settle();
-    expect(PaintWorker.instances).toHaveLength(2);
-    expect(PaintWorker.instances[1].terminate).not.toHaveBeenCalled();
-  });
-
-  it("terminates when every mounted board turns creases off, then recreates on demand", () => {
-    show(true, true);
-    settle();
-    const first = PaintWorker.instances[0];
-    expect(first).toBeDefined();
-
-    act(() => void keepCreasesShown(false));
-    expect(first.terminate).toHaveBeenCalledTimes(1);
-    act(() => void keepCreasesShown(true));
     settle();
     expect(PaintWorker.instances).toHaveLength(2);
     expect(PaintWorker.instances[1].terminate).not.toHaveBeenCalled();

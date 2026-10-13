@@ -21,7 +21,6 @@ import type { Crease } from "../stickers/StickerFigure";
 import { kyotoSeikaBandWidth } from "../stickers/kyotoSeikaFoil";
 import type { FoilTone } from "../stickers/StickerFoil";
 import type { StickerUrls } from "../stickers/stickerUrls";
-import { deviceSetting } from "../ui/deviceSetting";
 import { workerCanPaint } from "../ui/workerCanPaint";
 import { stickerBox, type Field, type Placement } from "./placement";
 
@@ -47,19 +46,6 @@ const SETTLE_MS = 90;
  * sample, never on a board).
  */
 export const FOIL_REACH = 5;
-
-/** Whether this device shows creases: only once its developer slip switches them on. */
-const creasesShown = deviceSetting<boolean>("board.creases", {
-  parse: (text) => text === "on",
-  serialize: (on) => (on ? "on" : null),
-  name: "Whether creases show",
-});
-
-/** Whether this device shows creases, as its developer slip last set it. */
-export const useCreasesShown = (): boolean =>
-  useSyncExternalStore(creasesShown.subscribe, creasesShown.get);
-/** Shows or hides creases on this device; says whether the device kept the choice. */
-export const keepCreasesShown = (on: boolean): boolean => creasesShown.set(on);
 
 type Box = { x: number; y: number; w: number; h: number; r: number };
 
@@ -315,8 +301,6 @@ export function useCrease(id: string): Crease | undefined {
 
 /** The mounted boards' stores, by the board id their batches carry back in the worker's replies. */
 const stores = new Map<string, CreaseStore>();
-/** Mounted boards that still show creases and may need another bake. */
-const showing = new Set<string>();
 let worker: Worker | null = null;
 /** Whether a worker can paint here, checked once, the first time it's asked. */
 let workerPaints: boolean | null = null;
@@ -393,8 +377,7 @@ function bakeNothingFor(board: string) {
 /**
  * Bakes the creases of a board's stickers off the main thread once the board holds still, again for
  * each sticker whose stack changes, and none for the sticker in hand. Returns the board's creases,
- * which its stickers read through `CreasesContext`. A device that hasn't switched creases on bakes
- * none, and switching them off takes every crease off the board.
+ * which its stickers read through `CreasesContext`.
  */
 export function useCreases<S extends CreaseSticker>({
   stickers,
@@ -414,21 +397,17 @@ export function useCreases<S extends CreaseSticker>({
 }): CreaseStore {
   const board = useId();
   const [store] = useState(() => new CreaseStore());
-  const shown = useCreasesShown();
   const scale = Math.min(MAX_SCALE, window.devicePixelRatio || 1);
-  // With creases off, as on most devices, there's nothing to bake, so no sticker is read.
-  const signature = shown
-    ? [
-        held,
-        field && `${field.left},${field.top},${field.w},${field.h}`,
-        unit,
-        scale,
-        ...stickers.map((s) => {
-          const p = s.placement;
-          return `${s.id}:${p.x},${p.y},${p.s},${p.r},${foilOf(s)}`;
-        }),
-      ].join("|")
-    : "off";
+  const signature = [
+    held,
+    field && `${field.left},${field.top},${field.w},${field.h}`,
+    unit,
+    scale,
+    ...stickers.map((s) => {
+      const p = s.placement;
+      return `${s.id}:${p.x},${p.y},${p.s},${p.r},${foilOf(s)}`;
+    }),
+  ].join("|");
 
   useEffect(() => {
     stores.set(board, store);
@@ -436,23 +415,16 @@ export function useCreases<S extends CreaseSticker>({
       stores.delete(board);
       store.clear();
       bakeNothingFor(board);
-    };
-  }, [board, store]);
-
-  useEffect(() => {
-    if (shown) showing.add(board);
-    return () => {
-      showing.delete(board);
-      if (!showing.size && worker) {
+      if (!stores.size && worker) {
         worker.terminate();
         worker = null;
       }
     };
-  }, [board, shown]);
+  }, [board, store]);
 
   const bake = useEffectEvent(() => {
     const jobs =
-      shown && field && unit
+      field && unit
         ? creaseJobs(
             stickers.filter((s) => s.id !== held),
             field,

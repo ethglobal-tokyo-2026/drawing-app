@@ -23,8 +23,6 @@ import {
 } from "../sui/transactions.ts";
 import { ticketPaymentReference } from "./paymentReference.ts";
 import {
-  FREE_FIRST_PACK_TICKETS,
-  hadFreePack,
   jpycFor,
   NOTHING_PAID,
   priceYenFor,
@@ -157,24 +155,22 @@ export async function followPayment(deps: AppDeps, row: SuiTransaction) {
 export type PurchaseStart =
   | Refusal<
       | "pack_unknown"
-      | "free_pack_used"
       | "price_changed"
       | "chain_unavailable"
       | "no_sui_wallet"
       | "payment_not_landed"
     >
   | { refusal: null; purchase: StartedTicketPurchase; payment: SponsoredTransaction }
-  /** The free first pack: nothing to pay, its tickets counted as it starts. */
+  /** A free pack: nothing to pay, its tickets counted as it starts. */
   | { refusal: null; purchase: StartedTicketPurchase; payment: null; tickets: Tickets };
 
 /**
- * Gives `userId` their free first pack, a purchase that paid nothing, counted at once. The check and
- * the insert share one immediate transaction, so two taps at once give one pack.
+ * Gives `userId` a free pack, a purchase that paid nothing, counted at once. Each request gives
+ * another pack while the offer is on.
  */
 function giveFreePack(deps: AppDeps, userId: string, pack: TicketPack): PurchaseStart {
   const given = deps.db.transaction(
     (tx) => {
-      if (hadFreePack(tx, userId)) return undefined;
       const { tickets, priceYen } = pack;
       return tx
         .insert(ticketPurchases)
@@ -184,12 +180,6 @@ function giveFreePack(deps: AppDeps, userId: string, pack: TicketPack): Purchase
     },
     { behavior: "immediate" },
   );
-  if (!given) {
-    return refuse(
-      "free_pack_used",
-      `priceYen: ${userId} has had their free pack of ${pack.tickets}, which is ¥${pack.priceYen} now`,
-    );
-  }
   logInfo("ticket_purchase.free_pack_given", { userId, purchaseId: given.id });
   return {
     refusal: null,
@@ -200,7 +190,7 @@ function giveFreePack(deps: AppDeps, userId: string, pack: TicketPack): Purchase
 }
 
 /**
- * Starts a purchase of a pack at the price the buyer saw. The free first pack is given at once,
+ * Starts a purchase of a pack at the price the buyer saw. A free pack is given at once,
  * without Sui. Any other: the server builds its payment, which Shinami sponsors, for the buyer's
  * Privy Sui wallet to sign. An earlier payment of theirs goes first: one that ran counts its
  * tickets, and one never sent is dropped with its purchase. Rejects with SponsorshipError when
@@ -216,16 +206,14 @@ export async function startTicketPurchase(
     const packs = TICKET_PACKS.map((offer) => offer.tickets).join(", ");
     return refuse("pack_unknown", `tickets: no pack has ${tickets}; packs have ${packs}`);
   }
-  if (priceYen === 0 && pack.tickets === FREE_FIRST_PACK_TICKETS) {
-    return giveFreePack(deps, userId, pack);
-  }
-  const price = priceYenFor(deps.db, userId, pack);
+  const price = priceYenFor(pack);
   if (priceYen !== price) {
     return refuse(
       "price_changed",
       `priceYen: the pack of ${tickets} is ¥${price} for ${userId}, not ¥${priceYen}`,
     );
   }
+  if (price === 0) return giveFreePack(deps, userId, pack);
   if (!deps.sui) return refuse("chain_unavailable", "This server runs without Sui");
   const chain = chainOf(deps);
   const payer = await deps.suiWallets.addressFor(userId);

@@ -39,7 +39,7 @@ interface Props {
   onClose: () => void;
 }
 
-/** What a purchase bought, and what it cost: ¥0 for the free first pack. */
+/** What a purchase bought, and what it cost: ¥0 for a free pack. */
 interface Bought {
   tickets: number;
   priceYen: number;
@@ -123,7 +123,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
   const id = useId();
 
   const pack = shop?.packs.find((p) => p.tickets === chosen);
-  // The free first pack pays nothing, so it needs neither JPYC nor a Sui account.
+  // A free pack pays nothing, so it needs neither JPYC nor a Sui account.
   const free = pack?.priceYen === 0;
   // A discounted pack's full price is its tickets at the server's price for one alone.
   const single = shop && singleTicketPrice(shop.packs);
@@ -158,7 +158,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
     }
   };
 
-  /** Takes the free first pack: nothing to sign, and the server adds its tickets as it starts it. */
+  /** Takes a free pack: nothing to sign, and the server adds its tickets as it starts it. */
   const takeFree = async (p: ReservePack) => {
     setStep("paying");
     setWaiting("adding");
@@ -171,7 +171,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
       setFailure(paymentFailureOf(e));
       setStep("error");
     } finally {
-      // It's free once, so the packs load again with what they cost now.
+      // Refresh the packs so the next claim uses the offer's current price.
       if (packs.state === "ready") packs.refresh();
     }
   };

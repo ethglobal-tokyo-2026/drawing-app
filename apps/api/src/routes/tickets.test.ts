@@ -18,6 +18,7 @@ import { bodyOf, refusalOf } from "../testing/responses.ts";
 import { insertSealedSticker } from "../testing/rows.ts";
 import { nextTokyoTicketDayStart, tokyoTicketDay } from "../ticketDays.ts";
 import { ticketPaymentReference } from "../tickets/paymentReference.ts";
+import * as ticketPrices from "../tickets/tickets.ts";
 import {
   PAID_PACK as PACK,
   payPurchase,
@@ -29,7 +30,7 @@ import {
 } from "../tickets/testPurchases.ts";
 import { spendBody } from "../tickets/testSpends.ts";
 import {
-  FREE_FIRST_PACK_TICKETS,
+  FREE_PACK_TICKETS,
   startedTicketPurchaseSchema,
   TICKET_PACKS,
   TICKET_PRICE_YEN,
@@ -51,8 +52,8 @@ const freeStartBodySchema = z.object({
 /** A sealed sticker's cut, for the ticket stubs. */
 const SEALED_CUT = { outline: "M0 0L4 0L4 2Z", width: 4, height: 2 };
 
-/** The pack each person's first one of is free, while the offer is on. */
-const FREE_PACK = TICKET_PACKS.find((pack) => pack.tickets === FREE_FIRST_PACK_TICKETS);
+/** The pack sold free while its offer is on. */
+const FREE_PACK = TICKET_PACKS.find((pack) => pack.tickets === FREE_PACK_TICKETS);
 /** The packs everyone pays for. */
 const PAID_PACKS = TICKET_PACKS.filter((pack) => pack !== FREE_PACK);
 /** More tickets than any pack holds. */
@@ -450,15 +451,38 @@ describe("tickets", () => {
     });
     expect(test.db.select().from(ticketPurchases).all()).toEqual([]);
   });
+
+  it("refuses a stale free price when the server prices the three-ticket pack at ¥270", async () => {
+    vi.spyOn(ticketPrices, "priceYenFor").mockReturnValue(270);
+    const stale = await startPurchase(test, userId, { tickets: 3, priceYen: 0 });
+    expect(stale.status).toBe(409);
+    expect(await refusalOf(stale)).toMatchObject({ status: 409, error: "price_changed" });
+    expect(test.db.select().from(ticketPurchases).all()).toEqual([]);
+    expect((await getTickets()).reserveLeft).toBe(0);
+  });
+
+  it.runIf(!FREE_PACK)("sells three-ticket packs at ¥270 after the free offer ends", async () => {
+    const pack = { tickets: 3, priceYen: 270 } as const;
+    expect((await getShop()).packs.find((offer) => offer.tickets === 3)).toMatchObject({
+      priceYen: 270,
+      priceJpyc: "270000000",
+    });
+    const stale = await startPurchase(test, userId, { tickets: 3, priceYen: 0 });
+    expect(stale.status).toBe(409);
+    expect(await refusalOf(stale)).toMatchObject({ error: "price_changed" });
+    expect(test.db.select().from(ticketPurchases).all()).toEqual([]);
+    expect((await getTickets()).reserveLeft).toBe(0);
+    expect((await buyPack(pack)).reserveLeft).toBe(3);
+  });
 });
 
-/** The free first pack, which these tests need the offer on for. */
+/** The free pack, which these tests need the offer on for. */
 function freePack() {
-  if (!FREE_PACK) throw new Error("The free first pack is off");
+  if (!FREE_PACK) throw new Error("The free pack offer is off");
   return FREE_PACK;
 }
 
-/** Starts the free first pack at ¥0, as `as`. */
+/** Starts a free pack at ¥0, as `as`. */
 const startFree = (as = userId, app = test) =>
   startPurchase(app, as, { tickets: freePack().tickets, priceYen: 0 });
 
@@ -466,33 +490,70 @@ const startFree = (as = userId, app = test) =>
 const shownPack = async (tickets: number) =>
   (await getShop()).packs.find((pack) => pack.tickets === tickets);
 
-describe.runIf(FREE_PACK)("the free first pack", () => {
-  it("is ¥0 for a new person, counts its tickets without Sui, and is back at its price after", async () => {
+describe.runIf(FREE_PACK)("the free pack offer", () => {
+  it("counts a free pack's tickets without Sui and keeps its shop price free", async () => {
     const free = freePack();
     expect(await shownPack(free.tickets)).toMatchObject({ priceYen: 0, priceJpyc: "0" });
     const taken = await bodyOf(await startFree(), freeStartBodySchema, 201);
     expect(taken.purchase).toMatchObject({ tickets: free.tickets, priceYen: 0 });
-    expect(taken.tickets.reserveLeft).toBe(free.tickets);
+    expect(taken.tickets.reserveLeft).toBe(3);
     expect(shop.chain.built).toEqual([]);
+    expect(purchaseRow(taken.purchase.id)).toMatchObject({
+      tickets: 3,
+      paidJpyc: "0",
+      verifiedAt: test.clock.now(),
+    });
+    expect(test.db.select().from(suiTransactions).all()).toEqual([]);
     expect(await shownPack(free.tickets)).toMatchObject({
-      priceYen: free.priceYen,
-      priceJpyc: jpycOf(free).toString(),
+      priceYen: 0,
+      priceJpyc: "0",
     });
     // Its tickets spend as bought ones do, once the daily tickets are gone.
     await spendTickets("daily", DAILY_TICKETS_PER_DAY);
     expect((await spendTicket("reserve")).tickets.reserveLeft).toBe(free.tickets - 1);
   });
 
-  it("is given once: starts at ¥0 after it, at once or one after another, are refused with free_pack_used", async () => {
-    const free = freePack();
+  it("adds another three reserve tickets each time the free pack is taken", async () => {
+    await bodyOf(await startFree(), freeStartBodySchema, 201);
+    const again = await bodyOf(await startFree(), freeStartBodySchema, 201);
+    expect(again.purchase).toMatchObject({ tickets: 3, priceYen: 0 });
+    expect(again.tickets.reserveLeft).toBe(6);
+    expect(test.db.select().from(ticketPurchases).all()).toHaveLength(2);
+    expect(test.db.select().from(suiTransactions).all()).toEqual([]);
+  });
+
+  it("counts both free packs when two purchases start together", async () => {
     const atOnce = await Promise.all([startFree(), startFree()]);
-    expect(atOnce.map((answer) => answer.status).toSorted((a, b) => a - b)).toEqual([201, 409]);
-    for (const again of [...atOnce.filter((answer) => answer.status === 409), await startFree()]) {
-      expect(await refusalOf(again)).toMatchObject({ status: 409, error: "free_pack_used" });
-    }
-    expect(test.db.select().from(ticketPurchases).all()).toHaveLength(1);
-    // At its price, it's bought like any other pack.
-    expect((await buyPack(free)).reserveLeft).toBe(2 * free.tickets);
+    expect(atOnce.map((answer) => answer.status)).toEqual([201, 201]);
+    expect((await getTickets()).reserveLeft).toBe(6);
+    expect(test.db.select().from(ticketPurchases).all()).toHaveLength(2);
+  });
+
+  it("keeps the offer free for someone with earlier paid and free purchases", async () => {
+    test.db
+      .insert(ticketPurchases)
+      .values([
+        { userId, tickets: 3, priceYen: 270, paidJpyc: "0", verifiedAt: test.clock.now() },
+        {
+          userId,
+          tickets: 3,
+          priceYen: 270,
+          paidJpyc: "270000000",
+          verifiedAt: test.clock.now(),
+        },
+      ])
+      .run();
+    expect(await shownPack(3)).toMatchObject({ priceYen: 0, priceJpyc: "0" });
+    const taken = await bodyOf(await startFree(), freeStartBodySchema, 201);
+    expect(taken.tickets.reserveLeft).toBe(9);
+  });
+
+  it("refuses a regular-price request for the pack while the offer makes it free", async () => {
+    expect(await refusalOf(await startPurchase(test, userId, freePack()))).toMatchObject({
+      status: 409,
+      error: "price_changed",
+    });
+    expect(test.db.select().from(ticketPurchases).all()).toEqual([]);
   });
 
   it("is given to each person, and in mock chain mode too, where nothing can be paid", async () => {

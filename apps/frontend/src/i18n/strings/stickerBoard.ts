@@ -290,8 +290,6 @@ export const stickerBoard = {
     },
     creases: {
       title: { en: "Creases" },
-      show: { en: "Show creases on this device" },
-      unkept: { en: "This device couldn’t keep it, so it lasts until the app reloads" },
       cantBake: { en: "This browser can’t paint in a worker, so no crease is baked here" },
     },
     demoPeople: {

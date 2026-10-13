@@ -3,7 +3,7 @@ import { createContext } from "react";
 import type { ApiClient, ApiError } from "../api/apiClient";
 
 /**
- * The requests a purchase sends: starting it, which adds the free first pack's tickets at once,
+ * The requests a purchase sends: starting it, which adds a free pack's tickets at once,
  * buying a pack, and loading the tickets once it's already counted.
  */
 export type TicketBuyer = Pick<ApiClient, "startTicketPurchase" | "buyTickets" | "tickets">;

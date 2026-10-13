@@ -20,7 +20,7 @@ import {
 /**
  * Tickets: the day's tickets, spending one, the ticket shop, and buying its packs with JPYC: a
  * purchase is started with its payment, which the server builds, then the buyer's wallet signs it
- * and the server submits it; the free first pack is given as it starts. Once a spend or a purchase
+ * and the server submits it; a free pack is given as it starts. Once a spend or a purchase
  * commits, the chat menu's Draw key catches up in the background: LINE never holds up the answer or
  * fails it.
  */
@@ -88,7 +88,7 @@ export const ticketRoutes = (deps: AppDeps) => {
       const originalPackage = deps.sui
         ? await deps.sui.paymentOriginalPackage()
         : ticketPayment.paymentPackage;
-      return c.json({ shop: ticketShop(db, c.var.userId, ticketPayment, originalPackage) }, 200);
+      return c.json({ shop: ticketShop(ticketPayment, originalPackage) }, 200);
     })
     .post("/ticket-purchases/start", validate("json", startPurchaseRequestSchema), async (c) => {
       const started = await startTicketPurchase(deps, c.var.userId, c.req.valid("json"));

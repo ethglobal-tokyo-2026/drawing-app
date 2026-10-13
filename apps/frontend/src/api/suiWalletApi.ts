@@ -33,7 +33,7 @@ export function withSuiWallet(api: ApiClient): ApiClient {
       await waitForSuiAddress();
       return api.receiveGiftForYou(giftId);
     },
-    // The free first pack is given without a payment, so it needs no wallet.
+    // A free pack is given without a payment, so it needs no wallet.
     startTicketPurchase: async (pack) => {
       if (pack.priceYen > 0) await waitForSuiAddress();
       return api.startTicketPurchase(pack);

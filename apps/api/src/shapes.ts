@@ -504,7 +504,7 @@ export const ticketShopSchema = z.object({
   packs: z.array(
     z.object({
       tickets: z.literal([1, 3, 5, 10]),
-      /** ¥0 for the free first pack, until this person has had it. */
+      /** ¥0 for a pack while its free offer is on. */
       priceYen: count,
       /** Off ¥100 per ticket. */
       discountPercent: count,

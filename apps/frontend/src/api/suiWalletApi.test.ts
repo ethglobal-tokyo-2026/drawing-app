@@ -83,7 +83,7 @@ describe("REST actions that need the person's Sui wallet", () => {
     expect(startTicketPurchase).toHaveBeenCalledExactlyOnceWith(pack);
   });
 
-  it("starts the free first pack without waiting, as it pays nothing", async () => {
+  it("starts a free pack without waiting, as it pays nothing", async () => {
     const startTicketPurchase = vi
       .fn<ApiClient["startTicketPurchase"]>()
       .mockRejectedValue(refused);

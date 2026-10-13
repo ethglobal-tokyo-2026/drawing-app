@@ -1,5 +1,5 @@
 import { PAID_PACK } from "@drawing-app/api/testing/purchases";
-import { FREE_FIRST_PACK_TICKETS } from "@drawing-app/api/tickets";
+import { FREE_PACK_TICKETS } from "@drawing-app/api/tickets";
 import { expect, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
 import { buyPackOnFakeSui } from "./fakeSuiPurchase.ts";
@@ -247,8 +247,8 @@ test("Back closes TicketsNotLoaded after the ticket request fails", async ({ pag
 test("Back during a free-pack request keeps checkout open, and a later Back closes it", async ({
   page,
 }) => {
-  const freePack = FREE_FIRST_PACK_TICKETS;
-  if (freePack === null) throw new Error("The free first reserve pack is off");
+  const freePack = FREE_PACK_TICKETS;
+  if (freePack === null) throw new Error("The free reserve pack offer is off");
   await signIn(page, "back-paying", language);
   const card = await openCheckoutFromShop(page, language);
   await checkoutPack(card, language, freePack).click();

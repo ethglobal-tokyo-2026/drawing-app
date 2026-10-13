@@ -386,7 +386,7 @@ const checkoutApi = (overrides: Partial<ApiClient> = {}) =>
     ...overrides,
   });
 
-/** SHOP as a new person sees it: the pack of 3 is their free first pack. */
+/** SHOP while the free offer is on: every pack of 3 is free. */
 const FREE_SHOP: Shop = {
   ...SHOP,
   packs: SHOP.packs.map((p) =>
@@ -472,19 +472,20 @@ describe("ReserveTicketCheckout", () => {
     expect(onDraw).toHaveBeenCalledOnce();
   });
 
-  it("shows the free first pack as Free with no discount, gives it with no JPYC and nothing to sign, then shows its price", async () => {
-    vi.mocked(getJpycBalance).mockResolvedValue(0n);
-    const shops = [FREE_SHOP, SHOP];
-    const started = vi.fn<ApiClient["startTicketPurchase"]>(() =>
-      Promise.resolve({
-        purchase: { ...purchaseFor(3), priceYen: 0 },
+  it("keeps the offered pack free after a claim and adds another pack without a Sui account or signing", async () => {
+    setPrivyStatus({ state: "off" });
+    let reserveLeft = 0;
+    const started = vi.fn<ApiClient["startTicketPurchase"]>(() => {
+      reserveLeft += 3;
+      return Promise.resolve({
+        purchase: { ...purchaseFor(3), id: 40 + reserveLeft, priceYen: 0 },
         payment: null,
-        tickets: tickets(3, 3),
-      }),
-    );
+        tickets: tickets(3, reserveLeft),
+      });
+    });
     await open(
       checkoutApi({
-        ticketShop: () => Promise.resolve(shops.shift() ?? SHOP),
+        ticketShop: () => Promise.resolve(FREE_SHOP),
         startTicketPurchase: started,
       }),
     );
@@ -502,17 +503,24 @@ describe("ReserveTicketCheckout", () => {
     expect(started).toHaveBeenCalledExactlyOnceWith({ tickets: 3, priceYen: 0 });
     expect(signSponsored).not.toHaveBeenCalled();
     click("Buy more tickets");
-    expect(priceOf("3 tickets")).toContain("¥270");
+    expect(priceOf("3 tickets")).toBe("Free");
+    click("Get it free");
+    await settle(500);
+    expect(title()).toBe("3 reserve tickets added");
+    expect(document.querySelector(".ticket-stub__badge")?.textContent).toBe("×6");
+    expect(started).toHaveBeenCalledTimes(2);
+    expect(started).toHaveBeenNthCalledWith(2, { tickets: 3, priceYen: 0 });
+    expect(signSponsored).not.toHaveBeenCalled();
   });
 
-  it("says so when the free first pack was already had, and shows the packs' prices now", async () => {
+  it("shows a price change when the free offer ends before claiming and returns to the current price", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const shops = [FREE_SHOP, SHOP];
     await open(
       checkoutApi({
         ticketShop: () => Promise.resolve(shops.shift() ?? SHOP),
         startTicketPurchase: () =>
-          Promise.reject(new ApiError(409, { error: "free_pack_used", detail: "had it" })),
+          Promise.reject(new ApiError(409, { error: "price_changed", detail: "offer ended" })),
       }),
     );
     click("3 tickets");
@@ -520,7 +528,7 @@ describe("ReserveTicketCheckout", () => {
     await settle(500);
     expect(title()).toBe("Payment didn’t go through");
     expect(document.querySelector("[role=alert]")?.textContent).toBe(
-      "You’ve already had your free pack.",
+      "This pack’s price has changed, so nothing was paid.",
     );
     click("Back to the packs");
     expect(buttonNamed("Pay ¥270")).toBeDefined();

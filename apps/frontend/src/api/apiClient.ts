@@ -69,8 +69,8 @@ interface SealRequest {
 export type GiftOpening = Omit<OpenGiftBody, "giftClaimToken"> & { giftClaimToken: string };
 
 /**
- * A purchase started: the purchase, and its payment for the person's wallet to sign; or the free
- * first pack, with nothing to pay and its tickets already added.
+ * A purchase started: the purchase, and its payment for the person's wallet to sign; or a free
+ * pack, with nothing to pay and its tickets already added.
  */
 type StartedPurchase =
   | { purchase: StartedTicketPurchase; payment: SponsoredTransaction }
@@ -131,7 +131,7 @@ export interface ApiClient {
   ticketShop: () => Promise<TicketShop>;
   /**
    * POST /api/ticket-purchases/start: records a purchase of a pack at the price the shop showed, and
-   * builds its payment, or gives the free first pack.
+   * builds its payment, or gives a free pack.
    */
   startTicketPurchase: (pack: StartPurchase) => Promise<StartedPurchase>;
   /** POST /api/ticket-purchases: a started purchase's signed payment, which the server runs and adds tickets for. */

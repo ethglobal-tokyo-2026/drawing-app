@@ -6,7 +6,7 @@ import { sponsoredTransactionSchema, type SponsoredTransaction } from "../shapes
 import { createChainTestApp, type TestApp } from "../testing/createTestApp.ts";
 import { bodyOf } from "../testing/responses.ts";
 import {
-  FREE_FIRST_PACK_TICKETS,
+  FREE_PACK_TICKETS,
   startedTicketPurchaseSchema,
   TICKET_PACKS,
   type StartPurchase,
@@ -32,7 +32,7 @@ export type PurchasesApp = Awaited<ReturnType<typeof purchasesApp>>;
 /** A pack of more than one ticket that's never free, so anyone buys it at its price. */
 export const PAID_PACK = (() => {
   const pack = TICKET_PACKS.find(
-    (offer) => offer.tickets > 1 && offer.tickets !== FREE_FIRST_PACK_TICKETS,
+    (offer) => offer.tickets > 1 && offer.tickets !== FREE_PACK_TICKETS,
   );
   if (!pack) throw new Error("No pack of more than one ticket is sold at its price");
   return pack;
