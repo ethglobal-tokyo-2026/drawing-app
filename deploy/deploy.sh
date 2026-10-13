@@ -37,8 +37,7 @@ done
 ssh "$TARGET" "mkdir -p '$DIR/site' '$AUTH_DIR/server'"
 # New files move into place together at the end, and old ones go after that, so someone opening the app mid-upload
 # never gets an index.html whose chunks are missing.
-# The approved Pencil test is published separately and stays available across app deploys.
-rsync -a --delay-updates --delete-after --exclude='.DS_Store' --exclude='/pointer-test/' "$DIST/" "$TARGET:$DIR/site/"
+rsync -a --delay-updates --delete-after --exclude='.DS_Store' "$DIST/" "$TARGET:$DIR/site/"
 
 # The server and its unit rarely change, so restart only when one did. By content, without times: a fresh checkout's
 # new timestamps alone would restart it.
