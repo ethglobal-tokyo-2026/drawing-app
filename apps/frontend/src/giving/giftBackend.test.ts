@@ -101,17 +101,19 @@ async function reload() {
   return import("./giftBackend");
 }
 
-/** Gives the sticker in a LINE chat on this page, with fake timers, until LINE's picker has `answer`ed. */
+/** Prepares the sticker, then sends it with a separate tap until LINE's picker has `answer`ed. */
 async function giveInLine(t: ReturnType<typeof setup>, answer: Promise<GiftSendOutcome>) {
   const flow = createGiveFlow({
     sticker: t.sticker,
     backend: t.backend,
     sender: { send: () => answer },
-    pickerDelayMs: 0,
     takeOutMs: 0,
     report: () => {},
   });
   flow.give();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(flow.getState().step).toBe("ready");
+  flow.sendInLine();
   await vi.advanceTimersByTimeAsync(0);
   return flow;
 }
@@ -434,7 +436,9 @@ describe("Giving through the Sui wallet", () => {
     vi.useFakeTimers();
     const t = setup();
     const flow = await giveInLine(t, Promise.resolve("cancelled"));
-    expect(flow.getState().step).toBe("notSent");
+    expect(flow.getState()).toMatchObject({ step: "ready", cancelled: true });
+    flow.dispose();
+    await vi.advanceTimersByTimeAsync(0);
     await expect(createApiGiftBackend(t.options).pack(t.sticker)).resolves.toMatchObject({
       giftId: t.packed.id,
     });

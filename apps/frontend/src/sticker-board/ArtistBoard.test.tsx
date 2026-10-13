@@ -236,8 +236,7 @@ describe("ArtistBoard's Give key", () => {
   }
 
   /**
-   * Picks your sticker on the give sheet and gives it, which swaps the give sheet for Giving; then,
-   * short of the long-wait notice and past the bag's beat, LINE's picker has opened and answered.
+   * Picks your sticker on the give sheet, prepares it, and taps Send in LINE so the picker answers.
    */
   async function giveYourSticker() {
     tap(".sticker-picker button");
@@ -245,6 +244,8 @@ describe("ArtistBoard's Give key", () => {
     await act(() => vi.dynamicImportSettled());
     expect(document.querySelector(".giving")).not.toBeNull();
     await act(() => vi.advanceTimersByTimeAsync(PREPARING_SLOW_MS - 1));
+    tap(".giving__acts .key");
+    await act(async () => {});
   }
 
   it("gets focus back when the give sheet closes", async () => {

@@ -400,10 +400,18 @@ export async function backToBoardOnceSent(page: Page, language: Language) {
   const bag = (state: "open" | "closed") =>
     page.getByRole("img", { name: startsWith(say(giving.giftBag.pictured[state], language)) });
   await expect(bag("open")).toBeVisible();
+  await sendPreparedGift(page, language);
   const sent = page.getByRole("dialog", { name: say(giving.sent.title, language) });
   await expect(bag("closed")).toBeVisible();
   await sent.getByRole("button", { name: say(ui.backToBoard, language) }).click();
   await expect(sent).toBeHidden();
+}
+
+/** Opens LINE's picker from a fresh tap after the server acknowledges gift preparation. */
+export async function sendPreparedGift(page: Page, language: Language) {
+  const send = page.getByRole("button", { name: say(giving.inTheBag.send, language), exact: true });
+  await expect(send).toBeEnabled();
+  await send.click();
 }
 
 /** Opens the Explore tab. */

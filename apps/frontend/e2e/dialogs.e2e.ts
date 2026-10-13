@@ -7,6 +7,7 @@ import {
   giftClaimTokenFrom,
   giftFrom,
   giveFromBoard,
+  sendPreparedGift,
   handleOf,
   openDetail,
   openTheirBoard,
@@ -68,6 +69,7 @@ test.describe("On an iPad", () => {
   }) => {
     const no = await signInWithASticker(page, "giver");
     await giveFromBoard(page, language, no);
+    await sendPreparedGift(page, language);
     const label = say(giving.sent.title, language);
     const card = page.getByRole("dialog", { name: label });
     await expectCardInTheMiddle(page, card);
@@ -200,6 +202,7 @@ test("a sent gift's detail says it's on its way, and Take it out asks before it 
 test("a sheet over the tabs pads the home indicator", async ({ page }) => {
   const no = await signInWithASticker(page, "giver");
   await giveFromBoard(page, language, no);
+  await sendPreparedGift(page, language);
   const sheet = page.getByRole("dialog", { name: say(giving.sent.title, language) });
   const footPadding = () => sheet.evaluate((el) => parseFloat(getComputedStyle(el).paddingBottom));
   const unpadded = await footPadding();

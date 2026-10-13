@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api/apiClient";
 import { errors } from "../i18n/strings/errors";
+import { PickerSendError } from "../line/friendPicker";
 import {
   GiftMessageOutError,
   GiftPackagingError,
@@ -10,9 +11,8 @@ import {
 } from "./giftBackend";
 import { buildGiftMessage, type GiftMessage } from "./giftMessage";
 import type { GiftSendOutcome } from "./giftSender";
-import { createGiveFlow, PICKER_ANSWER_MS, PICKER_RETURN_MS, PREPARING_SLOW_MS } from "./giveFlow";
+import { createGiveFlow, PICKER_ANSWER_MS, PREPARING_SLOW_MS } from "./giveFlow";
 
-const PICKER_DELAY = 1150;
 const TAKE_OUT = 380;
 const STICKER = { id: "s1", no: 147, timeUsed: 292 };
 
@@ -80,7 +80,6 @@ function setup({ backend }: { backend?: GiftBackend } = {}) {
         return picker.promise;
       },
     },
-    pickerDelayMs: PICKER_DELAY,
     takeOutMs: TAKE_OUT,
     report: () => {},
   });
@@ -111,10 +110,12 @@ function setup({ backend }: { backend?: GiftBackend } = {}) {
 /** Lets pending promises and due timers run. */
 const wait = (ms = 0) => vi.advanceTimersByTimeAsync(ms);
 
-/** Packs the sticker and waits until LINE's picker is open. */
+/** Prepares the sticker, then opens LINE's picker with a separate send. */
 async function openPicker(t: ReturnType<typeof setup>) {
   t.flow.give();
-  await wait(PICKER_DELAY);
+  await wait();
+  expect(t.step()).toBe("ready");
+  t.flow.sendInLine();
   expect(t.step()).toBe("picking");
 }
 
@@ -126,18 +127,77 @@ afterEach(() => {
 });
 
 describe("giving through a LINE chat", () => {
-  it("packs the sticker, then opens LINE's picker on its own", async () => {
+  it("prepares an acknowledged gift and opens LINE synchronously only on a separate send", async () => {
     const t = setup();
     t.flow.give();
-    await wait(PICKER_DELAY - 1);
-    expect(t.step()).toBe("packed");
-    expect(t.gifts()).toEqual(["packed"]);
+    await wait();
+    expect(t.step()).toBe("ready");
+    expect(t.gifts()).toEqual(["maybeSent"]);
     expect(t.messages).toHaveLength(0);
 
-    await wait(1);
+    await wait(30_000);
+    expect(t.step()).toBe("ready");
+    expect(t.messages).toHaveLength(0);
+    t.flow.sendInLine();
     expect(t.step()).toBe("picking");
     expect(t.messages).toHaveLength(1);
+    t.flow.sendInLine();
+    expect(t.messages).toHaveLength(1);
   });
+
+  it.each(["cancelled", "failed"] as const)(
+    "acknowledges a fresh attempt after %s before another direct send",
+    async (outcome) => {
+      const server = fakeBackend();
+      const acknowledgements: { id: string; pending: Deferred<void> }[] = [];
+      const t = setup({
+        backend: {
+          ...server.backend,
+          beginMessageAttempt: async (giftId, id) => {
+            const pending = new Deferred<void>();
+            acknowledgements.push({ id, pending });
+            await pending.promise;
+            await server.backend.beginMessageAttempt(giftId, id);
+          },
+        },
+      });
+      t.flow.give();
+      await wait();
+      expect(t.step()).toBe("preparing");
+      t.flow.sendInLine();
+      expect(t.messages).toHaveLength(0);
+      const first = acknowledgements[0];
+      if (!first) throw new Error("expected the first message attempt acknowledgement");
+      first.pending.resolve();
+      await wait();
+      expect(t.step()).toBe("ready");
+      t.flow.sendInLine();
+      expect(t.messages).toHaveLength(1);
+
+      if (outcome === "cancelled") t.picker().resolve("cancelled");
+      else t.picker().reject(new PickerSendError("CREATE_SUBWINDOW_FAILED", false));
+      await wait();
+      expect(t.step()).toBe("preparing");
+      expect(server.states()).toEqual(["packed"]);
+      expect(acknowledgements).toHaveLength(2);
+      const second = acknowledgements[1];
+      if (!second) throw new Error("expected the next message attempt acknowledgement");
+      expect(second.id).not.toBe(first.id);
+      t.flow.sendInLine();
+      expect(t.messages).toHaveLength(1);
+      second.pending.resolve();
+      await wait();
+      expect(t.state()).toMatchObject(
+        outcome === "cancelled"
+          ? { step: "ready", cancelled: true }
+          : { step: "ready", error: { detail: "CREATE_SUBWINDOW_FAILED" } },
+      );
+      t.flow.sendInLine();
+      expect(t.messages).toHaveLength(2);
+      expect(t.messages[1]).toEqual(t.messages[0]);
+      expect(server.states()).toEqual(["maybeSent"]);
+    },
+  );
 
   it("closes the bag only once LINE reports the gift message sent", async () => {
     const t = setup();
@@ -157,7 +217,7 @@ describe("giving through a LINE chat", () => {
     const pack = vi.fn(() => packing.promise);
     const t = setup({ backend: { ...server.backend, pack } });
     t.flow.give();
-    await wait(PICKER_DELAY);
+    await wait();
     expect(t.step()).toBe("preparing");
     expect(t.messages).toHaveLength(0);
 
@@ -168,6 +228,9 @@ describe("giving through a LINE chat", () => {
 
     packing.resolve(await server.backend.pack(STICKER));
     await wait();
+    expect(t.step()).toBe("ready");
+    expect(t.messages).toHaveLength(0);
+    t.flow.sendInLine();
     expect(t.step()).toBe("picking");
     expect(t.messages).toHaveLength(1);
     t.picker().resolve("sent");
@@ -181,7 +244,7 @@ describe("giving through a LINE chat", () => {
     const packing = new Deferred<Awaited<ReturnType<GiftBackend["pack"]>>>();
     const t = setup({ backend: { ...server.backend, pack: () => packing.promise } });
     t.flow.give();
-    await wait(PICKER_DELAY);
+    await wait();
     expect(t.step()).toBe("preparing");
 
     t.flow.takeOut();
@@ -210,16 +273,16 @@ describe("giving through a LINE chat", () => {
     });
     t.flow.give();
     heard("moving");
-    await wait(PICKER_DELAY);
+    await wait();
     expect(t.state()).toEqual({ step: "preparing", wait: "moving" });
 
-    await wait(PREPARING_SLOW_MS - PICKER_DELAY);
+    await wait(PREPARING_SLOW_MS);
     heard("asking");
     expect(t.state()).toEqual({ step: "preparing", wait: "asking", slow: true });
 
     packing.resolve(await server.backend.pack(STICKER));
     await wait();
-    expect(t.state()).toEqual({ step: "picking" });
+    expect(t.state()).toEqual({ step: "ready" });
     await wait(PREPARING_SLOW_MS);
     expect(t.state()).not.toHaveProperty("slow");
   });
@@ -229,18 +292,31 @@ describe("giving through a LINE chat", () => {
     await openPicker(t);
     t.picker().resolve("cancelled");
     await wait();
-    expect(t.step()).toBe("notSent");
-    expect(t.gifts()).toEqual(["packed"]);
+    expect(t.state()).toMatchObject({ step: "ready", cancelled: true });
+    expect(t.gifts()).toEqual(["maybeSent"]);
   });
 
-  it("shows what failed when the picker fails, in plain words before the SDK's own text, and keeps the gift in the bag", async () => {
+  it("preserves an uncertain SDK failure and its empty message without permitting another send", async () => {
     const t = setup();
     await openPicker(t);
-    t.picker().reject(new Error("EXCEPTION_IN_SUBWINDOW: the picker closed"));
+    const sdkError = Object.assign(new Error(""), { code: "EXCEPTION_IN_SUBWINDOW" });
+    t.picker().reject(
+      new PickerSendError(
+        "LINE’s friend picker failed: EXCEPTION_IN_SUBWINDOW: (empty message)",
+        true,
+        {
+          cause: sdkError,
+        },
+      ),
+    );
     await wait();
-    expect(t.failure().message).toMatch(/^No\.0147 wasn’t sent: Something went wrong\./);
+    expect(t.step()).toBe("maybeSent");
+    expect(t.failure().message).toBe("LINE’s friend picker couldn’t complete the send.");
     expect(t.failure().detail).toContain("EXCEPTION_IN_SUBWINDOW");
-    expect(t.gifts()).toEqual(["packed"]);
+    expect(t.failure().detail).toContain('"message": ""');
+    expect(t.gifts()).toEqual(["maybeSent"]);
+    t.flow.sendInLine();
+    expect(t.messages).toHaveLength(1);
   });
 
   it("names why a gift couldn't be packed in plain words, and keeps the developer's detail apart", async () => {
@@ -251,7 +327,7 @@ describe("giving through a LINE chat", () => {
     );
     const t = setup({ backend: { ...server.backend, pack: () => Promise.reject(noLink) } });
     t.flow.give();
-    await wait(PICKER_DELAY);
+    await wait();
     expect(t.failure().message).toMatch(
       /^No\.0147 couldn’t be packed: This gift came without a link to send\./,
     );
@@ -273,29 +349,16 @@ describe("giving through a LINE chat", () => {
     expect(t.gifts()).toEqual(["maybeSent"]);
   });
 
-  it("opens the picker once, at once, when Send in LINE beats the timer", async () => {
-    const t = setup();
-    t.flow.give();
-    t.flow.sendInLine();
-    await wait();
-    expect(t.messages).toHaveLength(1);
-
-    t.picker().resolve("cancelled");
-    await wait(PICKER_DELAY * 2);
-    expect(t.messages).toHaveLength(1);
-    expect(t.step()).toBe("notSent");
-  });
-
   it("takes the sticker out before the picker opens, and never opens it", async () => {
     const t = setup();
     t.flow.give();
-    await wait(PICKER_DELAY / 2);
+    await wait();
     t.flow.takeOut();
     expect(t.step()).toBe("takingOut");
 
     await wait(TAKE_OUT);
     expect(t.step()).toBe("takenOut");
-    await wait(PICKER_DELAY * 2);
+    await wait();
     expect(t.messages).toHaveLength(0);
     expect(t.gifts()).toEqual(["taken_out"]);
   });
@@ -314,7 +377,7 @@ describe("giving through a LINE chat", () => {
       },
     });
     t.flow.give();
-    await wait(PICKER_DELAY * 2);
+    await wait();
     expect(t.failure().message).toContain(errors.not_minted.en);
     expect(t.messages).toHaveLength(0);
     t.flow.takeOut();
@@ -337,7 +400,7 @@ describe("giving through a LINE chat", () => {
       .mockRejectedValueOnce(new Error("Take-out is still pending"));
     const t = setup({ backend: { ...server.backend, pack, takeOut } });
     t.flow.give();
-    await wait(PICKER_DELAY);
+    await wait();
     expect(t.failure().message).toContain(errors.deposit_not_landed.en);
 
     t.flow.takeOut();
@@ -363,7 +426,7 @@ describe("giving through a LINE chat", () => {
     t.flow.takeOut();
     await wait(TAKE_OUT);
     expect(t.failure().detail).toContain("Gas sponsorship failed");
-    expect(server.states()).toEqual(["packed"]);
+    expect(server.states()).toEqual(["maybeSent"]);
     t.flow.takeOut();
     await wait(TAKE_OUT);
     expect(t.step()).toBe("takenOut");
@@ -391,6 +454,9 @@ describe("giving through a LINE chat", () => {
     t.flow.sendInLine();
     await wait();
     expect(pack).toHaveBeenCalledTimes(2);
+    expect(t.step()).toBe("ready");
+    expect(t.messages).toHaveLength(1);
+    t.flow.sendInLine();
     expect(t.step()).toBe("picking");
     expect(t.messages).toHaveLength(2);
     expect(t.messages[1]).not.toEqual(previousMessage);
@@ -409,7 +475,7 @@ describe("giving through a LINE chat", () => {
     const t = setup();
     t.flow.give();
     t.flow.dispose();
-    await wait(PICKER_DELAY * 2);
+    await wait();
     expect(t.messages).toHaveLength(0);
     expect(t.gifts()).toEqual(["packed"]);
   });
@@ -432,7 +498,7 @@ describe("giving through a LINE chat", () => {
       backend: { ...server.backend, pack: () => packing.promise, takeOut },
     });
     t.flow.give();
-    await wait(PICKER_DELAY);
+    await wait();
     expect(t.step()).toBe("preparing");
     t.flow.dispose();
     packing.resolve(await server.backend.pack({ id: "s1", no: 147, timeUsed: 292 }));
@@ -444,7 +510,7 @@ describe("giving through a LINE chat", () => {
 
   it.each([
     ["sent", "sent", "sent"],
-    ["cancelled", "notSent", "packed"],
+    ["cancelled", "ready", "maybeSent"],
   ] as const)(
     "keeps a visible LINE picker pending until LINE confirms %s",
     async (outcome, step, gift) => {
@@ -474,57 +540,11 @@ describe("giving through a LINE chat", () => {
     expect(t.gifts()).toEqual(["maybeSent"]);
     t.flow.sendInLine();
     await wait();
+    expect(t.step()).toBe("maybeSent");
     expect(t.messages).toHaveLength(1);
     t.flow.takeOut();
     await wait(TAKE_OUT);
     expect(t.step()).toBe("takenOut");
-  });
-
-  it("counts LINE's answer as late only while the page is in view, and still hears it after", async () => {
-    const t = setup();
-    await openPicker(t);
-    t.flow.pageHidden();
-    await wait(PICKER_RETURN_MS);
-    expect(t.state()).toEqual({ step: "picking" });
-    t.flow.pageShown();
-    await wait(PICKER_RETURN_MS);
-    expect(t.state()).toMatchObject({ step: "picking", late: true });
-    expect(t.failure().message).toContain("LINE didn’t confirm that No.0147 was sent");
-    t.picker().resolve("cancelled");
-    await wait();
-    expect(t.step()).toBe("notSent");
-    expect(t.gifts()).toEqual(["packed"]);
-  });
-
-  it("counts nothing late while the page is hidden as LINE's picker is asked for", async () => {
-    const t = setup();
-    t.flow.give();
-    t.flow.pageHidden();
-    await wait(PICKER_DELAY + 30_000);
-    expect(t.state()).toEqual({ step: "picking" });
-    t.flow.pageShown();
-    await wait(PICKER_RETURN_MS);
-    expect(t.state()).toMatchObject({ step: "picking", late: true });
-    expect(t.failure().message).toContain("LINE didn’t confirm that No.0147 was sent");
-  });
-
-  it("lets the giver take it out once LINE's answer is late after returning to the page", async () => {
-    const t = setup();
-    await openPicker(t);
-    t.flow.pageHidden();
-    await wait(PICKER_RETURN_MS);
-    expect(t.state()).toEqual({ step: "picking" });
-    t.flow.pageShown();
-    await wait(PICKER_RETURN_MS);
-    expect(t.state()).toMatchObject({ step: "picking", late: true });
-    expect(t.failure().message).toContain("LINE didn’t confirm that No.0147 was sent");
-    t.flow.takeOut();
-    await wait(TAKE_OUT);
-    expect(t.step()).toBe("takenOut");
-    expect(t.gifts()).toEqual(["taken_out"]);
-    t.flow.sendInLine();
-    await wait();
-    expect(t.messages).toHaveLength(1);
   });
 
   it.each([
@@ -553,7 +573,7 @@ describe("giving through a LINE chat", () => {
         },
       });
       t.flow.give();
-      await wait(PICKER_DELAY);
+      await wait();
       expect(t.step()).toBe(step);
       expect(t.messages).toHaveLength(0);
     },
@@ -594,7 +614,7 @@ describe("giving through a LINE chat", () => {
       },
     });
     t.flow.give();
-    await wait(PICKER_DELAY);
+    await wait();
     expect(t.step()).toBe("maybeSent");
 
     t.flow.takeOut();
@@ -624,6 +644,52 @@ describe("giving through a LINE chat", () => {
 });
 
 describe("acknowledging a durable message attempt before LINE", () => {
+  it.each(["ready", "preparing"] as const)(
+    "cancels an acknowledged attempt closed while %s without moving the sticker",
+    async (step) => {
+      const server = fakeBackend();
+      const pending = new Deferred<void>();
+      const t = setup({
+        backend: {
+          ...server.backend,
+          beginMessageAttempt: async (giftId, id) => {
+            await pending.promise;
+            await server.backend.beginMessageAttempt(giftId, id);
+          },
+        },
+      });
+      t.flow.give();
+      await wait();
+      if (step === "ready") {
+        pending.resolve();
+        await wait();
+      }
+      expect(t.step()).toBe(step);
+      t.flow.dispose();
+      pending.resolve();
+      await wait();
+      expect(t.messages).toHaveLength(0);
+      expect(server.states()).toEqual(["packed"]);
+    },
+  );
+
+  it("preserves pending protection if closing an unused acknowledged attempt cannot be recorded", async () => {
+    const server = fakeBackend();
+    const t = setup({
+      backend: {
+        ...server.backend,
+        markCancelled: () => Promise.reject(new Error("cancel acknowledgement lost")),
+      },
+    });
+    t.flow.give();
+    await wait();
+    expect(t.step()).toBe("ready");
+    t.flow.dispose();
+    await wait();
+    expect(t.messages).toHaveLength(0);
+    expect(server.states()).toEqual(["maybeSent"]);
+  });
+
   it("opens no picker on a lost begin acknowledgement, and retries the same ID only before opening", async () => {
     const server = fakeBackend();
     const ids: string[] = [];
@@ -637,12 +703,15 @@ describe("acknowledging a durable message attempt before LINE", () => {
     };
     const t = setup({ backend });
     t.flow.give();
-    await wait(PICKER_DELAY);
+    await wait();
     expect(t.messages).toHaveLength(0);
     expect(t.step()).toBe("failed");
     fail = false;
     t.flow.sendInLine();
     await wait();
+    expect(t.step()).toBe("ready");
+    expect(t.messages).toHaveLength(0);
+    t.flow.sendInLine();
     expect(t.messages).toHaveLength(1);
     expect(ids).toHaveLength(2);
     expect(ids[0]).toMatch(/^0x[0-9a-f]{64}$/);
@@ -654,11 +723,14 @@ describe("acknowledging a durable message attempt before LINE", () => {
     const pending = new Deferred<void>();
     const t = setup({ backend: { ...server.backend, beginMessageAttempt: () => pending.promise } });
     t.flow.give();
-    await wait(PICKER_DELAY);
+    await wait();
     t.flow.sendInLine();
     expect(t.messages).toHaveLength(0);
     pending.resolve();
     await wait();
+    expect(t.step()).toBe("ready");
+    expect(t.messages).toHaveLength(0);
+    t.flow.sendInLine();
     expect(t.messages).toHaveLength(1);
   });
 });

@@ -60,7 +60,6 @@ interface Props {
 }
 
 /** Motion timings, in step with GiftBag.css: normal, then reduced. */
-const PICKER_DELAY = [1150, 300] as const;
 const TAKE_OUT = [380, 150] as const;
 /** The bag shows open for a beat before it closes. */
 const CLOSE_AFTER = [280, 0] as const;
@@ -104,41 +103,29 @@ export function Giving({
         .href,
       ...(forUserId && { forUserId }),
     }),
-    pickerDelayMs: PICKER_DELAY[motion],
     takeOutMs: TAKE_OUT[motion],
   }));
   const recipientMismatch =
     state.packedForUserId !== undefined && state.packedForUserId !== (forUserId ?? null);
   const screen = screenOf(state);
-  const unsent = state.step === "notSent" || state.step === "failed";
+  const unsent =
+    state.step === "failed" ||
+    (state.step === "ready" && (state.cancelled === true || state.error !== undefined));
   const [cantFind, setCantFind] = useState(false);
   const view: View = unsent && cantFind ? "cantFind" : screen;
   const preparing = state.step === "packed" || state.step === "preparing";
   const slow = (state.step === "packed" || state.step === "preparing") && state.slow === true;
-  // A late LINE answer shows an error while the flow still waits for a definitive outcome.
-  const late = state.step === "picking" && state.late === true;
   // Out of the bag, the sticker is back where it was given from, and Giving closes on it.
   const takenOut = state.step === "takenOut";
   const takingOut = state.step === "takingOut" || takenOut;
   // The gift's preparation and LINE's picker keep it open until their outcome is known.
-  const busy = preparing || (state.step === "picking" && !late) || takingOut;
+  const busy = preparing || state.step === "picking" || takingOut;
   // A long wait for the gift bag can be left by taking the sticker back out.
   const canTakeOut = !busy || slow;
 
   useEffect(() => {
     if (takenOut) onClose(false);
   }, [takenOut, onClose]);
-
-  // LINE's picker may cover the page, and its answer is due only once the page is in view.
-  useEffect(() => {
-    if (!flow) return;
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") flow.pageShown();
-      else flow.pageHidden();
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, [flow]);
 
   const close = () => {
     if (!busy) onClose(state.step === "sent");
@@ -168,7 +155,7 @@ export function Giving({
   // Without scrolling, since the sheet may still be rising from below the screen.
   useEffect(() => {
     body.current?.querySelector<HTMLElement>("[data-autofocus]")?.focus({ preventScroll: true });
-  }, [view, state.step, late]);
+  }, [view, state.step]);
 
   const [closed, setClosed] = useState(false);
   useEffect(() => {
@@ -183,7 +170,7 @@ export function Giving({
       fromHandle={fromHandle}
       {...(toHandle && !recipientMismatch && { toHandle })}
       state={bagState}
-      motion={state.step === "packed" ? "drop" : takingOut ? "takeOut" : undefined}
+      motion={takingOut ? "takeOut" : screen === "bag" ? "drop" : undefined}
       closedAt={closedAt}
       nsfw={sticker.nsfw}
     />
@@ -231,14 +218,11 @@ export function Giving({
         </LabelButton>
       </div>
     );
-  } else if (state.step === "maybeSent" || late) {
+  } else if (state.step === "maybeSent") {
     // No Send in LINE: if the gift message went out, a second one would put its link in two chats.
     title = t(($) => $.giving.lineSendError.title);
     lead = t(($) => $.giving.lineSendError.lead);
-    const error =
-      (state.step === "maybeSent" || state.step === "picking") && state.error
-        ? state.error
-        : { message: t(($) => $.giving.lineSendError.message, { no: formatNo(sticker.no) }) };
+    const error = state.error;
     head = titleHead(title);
     content = (
       <>
@@ -284,8 +268,8 @@ export function Giving({
     const problems: Problem[] =
       state.step === "failed"
         ? [state.error, ...(state.recordError ? [couldntRecord(state.recordError)] : [])]
-        : state.step === "notSent" && state.recordError
-          ? [couldntRecord(state.recordError)]
+        : state.step === "ready" && state.error
+          ? [state.error]
           : [];
     head = titleHead(title);
     content = (
@@ -304,6 +288,7 @@ export function Giving({
             tone="aqua"
             icon={<PaperPlaneTilt weight="fill" />}
             onClick={sendInLine}
+            data-press="off"
             {...busyKey}
             data-autofocus
           >
@@ -311,7 +296,9 @@ export function Giving({
               ? t(($) => $.giving.preparing.button)
               : takingOut
                 ? t(($) => $.giving.takingOut.button)
-                : t(($) => $.giving.inTheBag.send)}
+                : state.step === "failed"
+                  ? t(($) => $.giving.inTheBag.prepareAgain)
+                  : t(($) => $.giving.inTheBag.send)}
           </Key>
           {/* For a friend LINE's picker left out, before it opens again. */}
           {unsent && (

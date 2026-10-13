@@ -148,6 +148,8 @@ export const giving = {
   },
   /** The sticker in the open bag, until it's sent or taken out. */
   inTheBag: {
+    /** Giving's preparation error screen: retries gift preparation before a fresh Send in LINE tap. */
+    prepareAgain: { en: "Prepare again", ja: "もう一度準備する" },
     /** Giving, once the sticker drops into the open gift bag: the sheet's title while LINE's friend picker opens and is up; and the sticker detail of a sticker in a packed gift: its note */
     title: { en: "In the bag", ja: "ギフト袋に入れました" },
     /** Giving, with the sticker in the open gift bag: the line under "In the bag" */

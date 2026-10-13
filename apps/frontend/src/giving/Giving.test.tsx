@@ -116,9 +116,16 @@ const pressEscape = () =>
       ),
   );
 const giftOf = (stickerId: string) => giftStatus.get(stickerId);
-/** Lets LINE's picker open past the bag's beat, and cancels it: Giving says Not sent yet. */
+/** Sends from a fresh tap after preparation, with no asynchronous work before the picker call. */
+async function startPicker() {
+  await wait(0);
+  tap("Send in LINE");
+  await wait(0);
+}
+
+/** Opens LINE's picker from its key and cancels it: Giving says Not sent yet. */
 async function cancelPicker() {
-  await wait(1150);
+  await startPicker();
   await act(async () => answerPicker("cancelled"));
   await wait(0);
   expect(title()).toBe("Not sent yet");
@@ -140,11 +147,28 @@ afterEach(() => {
 });
 
 describe("Giving", () => {
-  it("packs the sticker as it opens, opens LINE's picker, and closes the bag once it's sent", async () => {
+  it("prepares before sending and opens LINE synchronously from a fresh Send tap", async () => {
+    const send = vi.spyOn(sender, "send");
+    try {
+      open("s-fresh-tap");
+      await wait(1150);
+      expect(giftOf("s-fresh-tap")).toBe("packed");
+      expect(send).not.toHaveBeenCalled();
+      const key = document.querySelector<HTMLButtonElement>(".giving__acts .key");
+      expect(key?.getAttribute("data-press")).toBe("off");
+      tap("Send in LINE");
+      expect(send).toHaveBeenCalledOnce();
+      await act(async () => answerPicker("cancelled"));
+    } finally {
+      send.mockRestore();
+    }
+  });
+
+  it("packs the sticker as it opens, sends from its key, and closes the bag once it's sent", async () => {
     open("s-sent");
     expect(title()).toBe("Preparing your gift");
     expect(document.querySelector(".gift-tag__name")?.textContent).toBe("@alice");
-    await wait(1150);
+    await startPicker();
     expect(giftOf("s-sent")).toBe("packed");
 
     await act(async () => answerPicker("sent"));
@@ -263,6 +287,8 @@ describe("Giving", () => {
 
     await act(async () => finishPacking());
     expect(title()).toBe("In the bag");
+    expect(send).not.toHaveBeenCalled();
+    tap("Send in LINE");
     expect(send).toHaveBeenCalledTimes(1);
     await act(async () => answerPicker("sent"));
     expect(title()).toBe("Closed and sent");
@@ -288,10 +314,12 @@ describe("Giving", () => {
   });
 
   it("tells the giver who can open an NSFW sticker's gift while it's being prepared", async () => {
-    open("s-nsfw", { nsfw: true });
+    const { api, finishPacking } = await slowPacking("s-nsfw");
+    open("s-nsfw", { nsfw: true, api });
     await act(async () => {});
     expect(title()).toBe("Preparing your gift");
     expect(shownText(".giving__nsfw-note")).toBe(giving.nsfw.whoCanOpen.en);
+    await act(async () => finishPacking());
   });
 
   it("shows Not sent yet when the picker is cancelled, and Take it out puts the sticker back and closes", async () => {
@@ -308,7 +336,7 @@ describe("Giving", () => {
 
   it("keeps waiting while the giver chooses a friend in a picker over the visible page", async () => {
     open("s-choosing");
-    await wait(1150);
+    await startPicker();
     await wait(30_000);
     expect(document.querySelector('[role="alert"]')).toBeNull();
     expect(document.querySelector(".key")?.getAttribute("aria-busy")).toBe("true");
@@ -323,7 +351,7 @@ describe("Giving", () => {
 
   it("keeps a LINE timeout error visible until LINE confirms the send", async () => {
     open("s-late");
-    await wait(1150);
+    await startPicker();
     await wait(PICKER_ANSWER_MS);
     expect(title()).toBe("LINE send error");
     const error = document.querySelector('[role="alert"]')?.textContent;
@@ -361,7 +389,7 @@ describe("Giving", () => {
     );
     try {
       open("s-empty-line-error");
-      await wait(1150);
+      await startPicker();
       expect(title()).toBe("LINE send error");
       await act(async () => tap("Copy"));
       expect(writeText).toHaveBeenCalledExactlyOnceWith(expect.stringContaining("(empty message)"));
@@ -376,7 +404,7 @@ describe("Giving", () => {
 
   it("keeps focus on the key and says the new step when the picker is cancelled", async () => {
     open("s-focus");
-    await wait(1150);
+    await startPicker();
     const key = document.querySelector(".key");
     expect(document.activeElement).toBe(key);
     await act(async () => answerPicker("cancelled"));
@@ -411,7 +439,7 @@ describe("Giving", () => {
         onClose={onClose}
       />,
     );
-    await wait(1150);
+    await startPicker();
     await act(async () => answerPicker("sent"));
     expect(packageGift).toHaveBeenCalledTimes(1);
     expect(takeOutGift).not.toHaveBeenCalled();

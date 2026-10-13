@@ -14,6 +14,7 @@ import {
   receivedRow,
   say,
   sealFromBoard,
+  sendPreparedGift,
   signIn,
   startsWith,
   test,
@@ -22,6 +23,63 @@ import {
 
 const { giving, receiving, stickerBoard, ui } = strings;
 const language = "en";
+
+test("LINE's picker starts inside the trusted Send tap after gift preparation", async ({
+  page,
+}) => {
+  await signIn(page, "fresh-send-giver", language);
+  const no = await sealFromBoard(page, language);
+  await page.evaluate(
+    (sendLabel) => {
+      const testWindow: Window & {
+        liffMock?: LiffMockApi;
+        pickerEntries?: { inClick: boolean; trusted: boolean; active: boolean }[];
+      } = window;
+      const mock = testWindow.liffMock;
+      if (!mock) throw new Error("LIFF Mock was not installed");
+      const entries: { inClick: boolean; trusted: boolean; active: boolean }[] = [];
+      testWindow.pickerEntries = entries;
+      let inClick = false;
+      let trusted = false;
+      document.addEventListener(
+        "click",
+        (event) => {
+          if (!(event.target instanceof Element)) return;
+          const key = event.target.closest(".giving__acts .key");
+          if (key?.textContent?.trim() !== sendLabel) return;
+          inClick = true;
+          trusted = event.isTrusted;
+          // DOM listener callbacks can have separate microtask checkpoints; the next task ends this tap.
+          setTimeout(() => (inClick = false), 0);
+        },
+        true,
+      );
+      mock.set((data) => ({
+        ...data,
+        getLineVersion: "14.0.0",
+        get shareTargetPicker(): { status: "success" } {
+          entries.push({ inClick, trusted, active: navigator.userActivation.isActive });
+          return { status: "success" };
+        },
+      }));
+    },
+    say(giving.inTheBag.send, language),
+  );
+  await giveFromBoard(page, language, no);
+  const send = page.getByRole("button", { name: say(giving.inTheBag.send, language), exact: true });
+  await expect(send).toBeEnabled();
+  const entries = () =>
+    page.evaluate(() => {
+      const testWindow: Window & {
+        pickerEntries?: { inClick: boolean; trusted: boolean; active: boolean }[];
+      } = window;
+      return testWindow.pickerEntries;
+    });
+  expect(await entries()).toEqual([]);
+  await send.tap();
+  await expect(page.getByRole("dialog", { name: say(giving.sent.title, language) })).toBeVisible();
+  expect(await entries()).toEqual([{ inClick: true, trusted: true, active: true }]);
+});
 
 test("Gift link: Alice gives from her board, and Bob opens the Gift Message's link and accepts", async ({
   page: alice,
@@ -224,7 +282,7 @@ async function pickerFailsAfterOpening(page: Page) {
     mock.set((data) => ({
       ...data,
       getLineVersion: "14.0.0",
-      get shareTargetPicker() {
+      get shareTargetPicker(): { status: "success" } {
         throw Object.assign(new Error("LINE's picker stopped before reporting its outcome"), {
           code: "EXCEPTION_IN_SUBWINDOW",
         });
@@ -249,6 +307,7 @@ test("A definitive cancellation permits one new attempt using the original gift 
   });
   const token = giftClaimTokenFrom(page);
   await giveFromBoard(page, language, no);
+  await sendPreparedGift(page, language);
   const unsent = page.getByRole("dialog", { name: say(giving.inTheBag.notSent, language) });
   await expect(unsent).toBeVisible();
   await pickerAnswers(page, "sent");
@@ -291,12 +350,17 @@ test("An unconfirmed LINE send stays an error after reload and keeps its recipie
   await giveSheet.getByRole("radio", { name: no }).click();
   await giveSheet.getByRole("button", { name: say(giving.give, language, { no }) }).click();
   const original = packagedGiftSchema.parse(await (await packaged).json());
+  await sendPreparedGift(alice, language);
   const sendError = alice.getByRole("dialog", {
     name: say(giving.lineSendError.title, language),
   });
   await expect(sendError).toBeVisible();
   const confirmationError = say(giving.lineSendError.message, language, { no });
-  await expect(sendError.getByRole("alert").filter({ hasText: confirmationError })).toBeVisible();
+  await expect(
+    sendError
+      .getByRole("alert")
+      .filter({ hasText: say(giving.lineSendError.pickerFailed, language) }),
+  ).toBeVisible();
   // A fresh page has no in-memory Gift Claim Token; the API's pending attempt controls recovery.
   await alice.goto("/");
   const other = await sealFromBoard(alice, language);

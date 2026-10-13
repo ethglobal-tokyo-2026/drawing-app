@@ -87,7 +87,6 @@ describe("Giving against the actual API", () => {
       sticker: t.sticker,
       backend,
       sender: { send },
-      pickerDelayMs: 0,
       takeOutMs: 0,
       report: () => {},
     });
