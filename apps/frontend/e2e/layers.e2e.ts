@@ -44,6 +44,8 @@ declare global {
 }
 const { stickerCreation: creation, stickerBoard, ui } = strings;
 const copy = creation.layers;
+const layerSwitch = (page: Page, name: { en: string; ja?: string }) =>
+  page.getByRole("switch", { name: say(name, language), exact: true });
 
 /** Two separated marks, on different layers: each can disappear without hiding the other. */
 async function twoLayers(page: Page) {
@@ -138,9 +140,9 @@ test("layer setup survives a reload before the first mark, with the clock still 
   await openSheet(page);
   await createLayer(page);
   await options(page, 2);
-  await expect(button(page, copy.lock)).not.toHaveAttribute("aria-disabled", "true");
-  await button(page, copy.lock).click();
-  await expect(button(page, copy.lock)).toHaveAttribute("aria-pressed", "true");
+  await expect(layerSwitch(page, copy.lock)).not.toHaveAttribute("aria-disabled", "true");
+  await layerSwitch(page, copy.lock).click();
+  await expect(layerSwitch(page, copy.lock)).toBeChecked();
   await button(page, copy.moveBack).click();
   await slider(page).press("ArrowDown");
   await expect(slider(page)).toHaveAttribute("aria-valuenow", "95");
@@ -165,7 +167,7 @@ test("layer setup survives a reload before the first mark, with the clock still 
   await chip(page, 2).click();
   await expect(timer).toHaveAccessibleDescription(description);
   await options(page, 2);
-  await expect(button(page, copy.lock)).toHaveAttribute("aria-pressed", "true");
+  await expect(layerSwitch(page, copy.lock)).toBeChecked();
   await chip(page, 2).click();
   await chip(page, 1).click();
   await line(page, 0.5);
@@ -211,15 +213,15 @@ for (const firstTool of ["brush", "fill"] as const) {
 test("Lock stays available before drawing and after full erasure", async ({ page }) => {
   await openSheet(page);
   await options(page, 1);
-  const lock = button(page, copy.lock);
+  const lock = layerSwitch(page, copy.lock);
   await expect(lock).not.toHaveAttribute("aria-disabled", "true");
-  await lock.press("Enter");
-  await expect(lock).toHaveAttribute("aria-pressed", "true");
+  await lock.press("Space");
+  await expect(lock).toBeChecked();
   await expect(lock).toHaveAccessibleDescription(
     "Keeps new marks inside this layer’s ink. Turn off to draw outside it.",
   );
-  await lock.press("Enter");
-  await expect(lock).toHaveAttribute("aria-pressed", "false");
+  await lock.press("Space");
+  await expect(lock).not.toBeChecked();
   await chip(page, 1).click();
   await line(page, 0.5, 0.4, 0.6);
   await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBeGreaterThan(0);
@@ -227,14 +229,14 @@ test("Lock stays available before drawing and after full erasure", async ({ page
   await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBe(0);
   await options(page, 1);
   await lock.click();
-  await expect(lock).toHaveAttribute("aria-pressed", "true");
+  await expect(lock).toBeChecked();
   await chip(page, 1).click();
   await button(page, creation.tools.brush).click();
   await line(page, 0.5);
   await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBe(0);
   await options(page, 1);
   await lock.click();
-  await expect(lock).toHaveAttribute("aria-pressed", "false");
+  await expect(lock).not.toBeChecked();
   await chip(page, 1).click();
   await line(page, 0.5);
   await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBeGreaterThan(0);
@@ -279,7 +281,7 @@ async function invisibleSheet(page: Page, kind: "erased" | "hidden" | "clipped")
   }
   if (kind === "clipped") {
     await options(page, 2);
-    await button(page, copy.clip).click();
+    await layerSwitch(page, copy.clip).click();
     await chip(page, 2).click();
   }
   await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBe(0);
@@ -330,7 +332,7 @@ test("clipping to an empty base preserves recoverable ink", async ({ page }) => 
   await expect(page.locator(".ink-sheet")).toBeVisible();
   await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBe(0);
   await options(page, 2);
-  await button(page, copy.clip).click();
+  await layerSwitch(page, copy.clip).click();
   await chip(page, 2).click();
   await openSealSheet(page, language);
   await expect(page.locator(".seal-preview__ink")).toBeVisible();
@@ -492,7 +494,7 @@ test("measures repeated empty previews with retained layer history", async ({
   }
   for (let stroke = 0; stroke < 14; stroke++) await line(page, 0.5, 0.45, 0.55);
   await options(page, MAX_LAYERS);
-  await button(page, copy.clip).click();
+  await layerSwitch(page, copy.clip).click();
   await chip(page, MAX_LAYERS).click();
   const beforeErasure = await numbers();
   for (let id = MAX_LAYERS; id >= 1; id--) {
@@ -706,15 +708,15 @@ test("locking transparent pixels recolors existing ink without extending it", as
   const center = at(box, 0.5, 0.5);
   await expect.poll(() => shownColor(page, center)).toEqual([47, 107, 255, 255]);
   await options(page, 1);
-  await button(page, copy.lock).click();
-  await expect(button(page, copy.lock)).toHaveAttribute("aria-pressed", "true");
+  await layerSwitch(page, copy.lock).click();
+  await expect(layerSwitch(page, copy.lock)).toBeChecked();
   await chip(page, 1).click();
   await page.reload();
   await button(page, stickerBoard.board.continueDrawing).click();
   await expect(chip(page, 1)).toHaveAttribute("aria-selected", "true");
   await expect.poll(() => shownColor(page, center)).toEqual([47, 107, 255, 255]);
   await options(page, 1);
-  await expect(button(page, copy.lock)).toHaveAttribute("aria-pressed", "true");
+  await expect(layerSwitch(page, copy.lock)).toBeChecked();
   await chip(page, 1).click();
   await button(page, creation.timer.resume).click();
   await expect(button(page, creation.timer.pause)).toBeVisible();
@@ -846,8 +848,8 @@ test("Clip enabled before painting masks a broad base and reveals retained outsi
   await createLayer(page);
   await button(page, copy.dismissOptionsHint).click();
   await options(page, 2);
-  await button(page, copy.clip).click();
-  await expect(button(page, copy.clip)).toHaveAttribute("aria-pressed", "true");
+  await layerSwitch(page, copy.clip).click();
+  await expect(layerSwitch(page, copy.clip)).toBeChecked();
   await chip(page, 2).click();
   await color(page, "red");
   await button(page, creation.tools.brush).click();
@@ -855,7 +857,7 @@ test("Clip enabled before painting masks a broad base and reveals retained outsi
   await expect.poll(() => shownColor(page, inside)).toEqual([232, 72, 79, 255]);
   await expect.poll(() => inkAt(page, outside)).toBe(0);
   await options(page, 2);
-  await button(page, copy.clip).click();
+  await layerSwitch(page, copy.clip).click();
   await chip(page, 2).click();
   await expect.poll(() => shownColor(page, outside)).toEqual([232, 72, 79, 255]);
 });
@@ -865,12 +867,12 @@ test("Clip enabled over an empty base keeps new ink recoverable", async ({ page 
   await createLayer(page);
   await button(page, copy.dismissOptionsHint).click();
   await options(page, 2);
-  await button(page, copy.clip).click();
+  await layerSwitch(page, copy.clip).click();
   await chip(page, 2).click();
   const point = await line(page, 0.5);
   await expect.poll(() => inkAt(page, point)).toBe(0);
   await options(page, 2);
-  await button(page, copy.clip).click();
+  await layerSwitch(page, copy.clip).click();
   await chip(page, 2).click();
   await inkShows(page, point);
 });
@@ -891,8 +893,8 @@ test("clipping masks outside ink on screen and in the seal preview", async ({ pa
   await expect.poll(() => shownColor(page, center)).toEqual([232, 72, 79, 255]);
   await inkShows(page, outside);
   await options(page, 2);
-  await button(page, copy.clip).click();
-  await expect(button(page, copy.clip)).toHaveAttribute("aria-pressed", "true");
+  await layerSwitch(page, copy.clip).click();
+  await expect(layerSwitch(page, copy.clip)).toBeChecked();
   await chip(page, 2).click();
   await expect.poll(() => inkAt(page, outside)).toBe(0);
   await expect.poll(() => shownColor(page, center)).toEqual([232, 72, 79, 255]);

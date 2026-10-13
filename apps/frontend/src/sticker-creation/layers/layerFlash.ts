@@ -110,6 +110,14 @@ export function flashLayer(parts: FlashParts): LayerFlash | null {
     outline.canvas.style.top = `${crop.raster.y / crop.density}px`;
     outline.canvas.style.width = `${crop.raster.w / crop.density}px`;
     outline.canvas.style.height = `${crop.raster.h / crop.density}px`;
+    // Clip at physical sheet corners and fractional bounds, without rounding crop corners.
+    outline.canvas.style.borderRadius = "0";
+    const radius = getComputedStyle(parts.sheet).borderRadius || "0px";
+    outline.canvas.style.clipPath = `inset(${-crop.raster.y / crop.density}px ${
+      (crop.raster.x + crop.raster.w) / crop.density - cssWidth
+    }px ${(crop.raster.y + crop.raster.h) / crop.density - cssHeight}px ${
+      -crop.raster.x / crop.density
+    }px round ${radius})`;
     const source = allocate(width, height, { willReadFrequently: true });
     // Each bilinear pass reads every source pixel. A single 3:1 reduction can skip a hairline.
     let reading = layer;
