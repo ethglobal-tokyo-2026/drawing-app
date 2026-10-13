@@ -1,5 +1,6 @@
 import { chatMenuBatches } from "./chatMenuBatches.ts";
 import { gifts } from "./gifts.ts";
+import { personSwitchSessions } from "./personSwitchSessions.ts";
 import { gratitude } from "./gratitude.ts";
 import { stickerPlacements } from "./stickerPlacements.ts";
 import { stickers, stickerTimelapses } from "./stickers.ts";
@@ -15,6 +16,7 @@ export {
   chatMenuBatches,
   gifts,
   gratitude,
+  personSwitchSessions,
   stickerPlacements,
   stickers,
   stickerTimelapses,
@@ -28,6 +30,7 @@ export {
 /** Every table: the updated_at triggers cover each one. */
 export const allTables = [
   users,
+  personSwitchSessions,
   stickers,
   stickerTimelapses,
   veiledImages,

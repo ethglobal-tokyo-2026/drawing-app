@@ -4,6 +4,7 @@ import type { AppDeps } from "../deps.ts";
 import { logFailure, logInfo } from "../diagnostics.ts";
 import { startMidnightJob, type Schedule } from "../midnightJob.ts";
 import { pngName } from "../services/imageStore.ts";
+import { withPersonBackgroundOwnership } from "../session/personOwnership.ts";
 import { stickerSealedIn } from "../sui/events.ts";
 import { oneAtATime } from "../sui/oneAtATime.ts";
 import {
@@ -174,7 +175,9 @@ export async function mintUnminted(deps: AppDeps): Promise<MintCatchUp> {
       if (sticker.artistDeletedAt !== null) {
         throw new MintBlockedError("no_live_person", `${sticker.artistId} deleted their account`);
       }
-      await mintSticker(deps, sticker.id);
+      await withPersonBackgroundOwnership(deps, [sticker.artistId], () =>
+        mintSticker(deps, sticker.id),
+      );
       tally.minted += 1;
     } catch (error) {
       if (error instanceof MintBlockedError) {

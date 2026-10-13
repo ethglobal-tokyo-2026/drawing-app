@@ -1,6 +1,6 @@
 import { MAX_LARGE_LAYOUT_BATCH, type StickerPlacement } from "@drawing-app/api/client";
 import { describe, expect, it, onTestFinished, vi } from "vitest";
-import { ApiError } from "../api/apiClient";
+import { ApiError, type ApiClient } from "../api/apiClient";
 import { boardSticker } from "../api/testFixtures";
 import { emptyApi, TEST_OWNER } from "../api/testing";
 import { toApiPlacement } from "../api/views";
@@ -27,6 +27,215 @@ const flush = async () => {
 };
 
 describe("BoardPlacementSaves", () => {
+  it("refuses to serialize non-finite positions into a different value", () => {
+    const diagnostics = vi.spyOn(console, "error").mockImplementation(() => {});
+    onTestFinished(() => diagnostics.mockRestore());
+    const write = vi.fn();
+    const storage = { getItem: () => null, setItem: write, removeItem: () => {} };
+    const saves = new BoardPlacementSaves(
+      emptyApi({ saveStickerPlacement: () => new Promise(() => {}) }),
+      TEST_OWNER.id,
+      storage,
+    );
+    saves.save(sticker, { phone: spot(Number.NaN) });
+    expect(saves.read().preservationError?.code).toBe(
+      "person_switch_placement_preservation_failed",
+    );
+    expect(write).not.toHaveBeenCalled();
+  });
+  it("keeps pending positions through a foreign selection and reload without applying them to Hana", async () => {
+    const values = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        values.set(key, value);
+      },
+      removeItem: (key: string) => {
+        values.delete(key);
+      },
+    };
+    const api = emptyApi({ saveStickerPlacement: () => new Promise(() => {}) });
+    const old = new BoardPlacementSaves(api, TEST_OWNER.id, storage);
+    const close = old.activate();
+    old.save(sticker, { phone: spot(0.2), large: spot(0.7) });
+    old.pauseNewWrites();
+    close();
+    const hanaApi = emptyApi();
+    const hanaSend = vi.spyOn(hanaApi, "saveStickerPlacement");
+    const hanaSaves = new BoardPlacementSaves(hanaApi, "hana", storage);
+    hanaSaves.activate();
+    expect(hanaSaves.pendingSpots().size).toBe(0);
+    expect(hanaSend).not.toHaveBeenCalled();
+    const returnedApi = emptyApi();
+    const returnedSend = vi.spyOn(returnedApi, "saveStickerPlacement");
+    const returned = new BoardPlacementSaves(returnedApi, TEST_OWNER.id, storage);
+    returned.activate();
+    expect(returned.pendingSpots().get("a")).toEqual({ phone: spot(0.2), large: spot(0.7) });
+    expect(returned.read().unsaved.get("a")?.layouts).toEqual(new Set(["phone", "large"]));
+    expect(returnedSend).not.toHaveBeenCalled();
+    await expect(returned.waitUntilSaved(new AbortController().signal)).rejects.toMatchObject({
+      code: "person_switch_placement_unsaved",
+    });
+    returned.save(sticker, { phone: spot(0.2), large: spot(0.7) });
+    await returned.waitUntilSaved(new AbortController().signal);
+    expect(values.get(`croquis.board-placement-saves.${TEST_OWNER.id}`)).toBeUndefined();
+  });
+
+  it("removes journal entries only after the matching latest position is acknowledged", async () => {
+    const values = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        values.set(key, value);
+      },
+      removeItem: (key: string) => {
+        values.delete(key);
+      },
+    };
+    const first = deferred<StickerPlacement>();
+    const second = deferred<StickerPlacement>();
+    const send = vi
+      .fn<ApiClient["saveStickerPlacement"]>()
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementationOnce(() => second.promise);
+    const saves = new BoardPlacementSaves(
+      emptyApi({ saveStickerPlacement: send }),
+      TEST_OWNER.id,
+      storage,
+    );
+    saves.activate();
+    saves.save(sticker, { phone: spot(0.2) });
+    saves.save(sticker, { phone: spot(0.4) });
+    first.resolve(boardSticker({ stickerId: "a" }));
+    await flush();
+    expect(values.get(`croquis.board-placement-saves.${TEST_OWNER.id}`)).toContain('"x":0.4');
+    second.resolve(boardSticker({ stickerId: "a" }));
+    await saves.waitUntilSaved(new AbortController().signal);
+    expect(values.size).toBe(0);
+  });
+
+  it.each(["read", "write"])(
+    "persists a %s preservation failure and refuses switching",
+    async (operation) => {
+      const diagnostics = vi.spyOn(console, "error").mockImplementation(() => {});
+      onTestFinished(() => diagnostics.mockRestore());
+      const storage = {
+        getItem: () => {
+          if (operation === "read") throw new Error("blocked");
+          return null;
+        },
+        setItem: () => {
+          throw new Error("full");
+        },
+        removeItem: () => {},
+      };
+      const saves = new BoardPlacementSaves(
+        emptyApi({ saveStickerPlacement: () => new Promise(() => {}) }),
+        TEST_OWNER.id,
+        storage,
+      );
+      saves.activate();
+      if (operation === "write") saves.save(sticker, { phone: spot(0.2) });
+      expect(saves.read().preservationError?.code).toBe(
+        "person_switch_placement_preservation_failed",
+      );
+      await expect(saves.waitUntilSaved(new AbortController().signal)).rejects.toMatchObject({
+        code: "person_switch_placement_preservation_failed",
+      });
+    },
+  );
+  it("pauses new position changes while allowing an already queued save to finish", async () => {
+    const request = deferred<StickerPlacement>();
+    const api = emptyApi({ saveStickerPlacement: () => request.promise });
+    const send = vi.spyOn(api, "saveStickerPlacement");
+    const saves = new BoardPlacementSaves(api, TEST_OWNER.id);
+    saves.activate();
+    saves.save(sticker, { phone: spot(0.2) });
+    const resume = saves.pauseNewWrites();
+    expect(() => saves.save(sticker, { phone: spot(0.4) })).toThrowError(
+      expect.objectContaining({ code: "session_account_changed" }),
+    );
+    const waiting = saves.waitUntilSaved(new AbortController().signal);
+    request.resolve(boardSticker({ stickerId: "a" }));
+    await waiting;
+    expect(send).toHaveBeenCalledOnce();
+    resume();
+    saves.save(sticker, { phone: spot(0.4) });
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+  it("waits for active placement saves even with an empty failure map", async () => {
+    const request = deferred<StickerPlacement>();
+    const saves = new BoardPlacementSaves(
+      emptyApi({ saveStickerPlacement: () => request.promise }),
+      TEST_OWNER.id,
+    );
+    saves.activate();
+    saves.save(sticker, { phone: spot(0.2) });
+    let settled = false;
+    const waiting = saves.waitUntilSaved(new AbortController().signal).then(() => {
+      settled = true;
+    });
+    await flush();
+    expect(saves.read().unsaved.size).toBe(0);
+    expect(settled).toBe(false);
+    request.resolve(boardSticker({ stickerId: "a", placement: toApiPlacement(spot(0.2)) }));
+    await waiting;
+    expect(settled).toBe(true);
+  });
+
+  it("drains queued revisions and derived batches before settling", async () => {
+    const first = deferred<StickerPlacement>();
+    const saves = new BoardPlacementSaves(
+      emptyApi({
+        saveStickerPlacement: vi
+          .fn<ApiClient["saveStickerPlacement"]>()
+          .mockImplementationOnce(() => first.promise)
+          .mockResolvedValue(boardSticker({ stickerId: "a" })),
+      }),
+      TEST_OWNER.id,
+    );
+    saves.activate();
+    saves.save(sticker, { phone: spot(0.2) });
+    saves.save(sticker, { phone: spot(0.4) });
+    const derived = saves.saveDerived([{ id: "a", placement: spot(0.7) }]);
+    const waiting = saves.waitUntilSaved(new AbortController().signal);
+    first.resolve(boardSticker({ stickerId: "a" }));
+    await Promise.all([waiting, derived]);
+    expect(saves.read().unsaved.size).toBe(0);
+  });
+
+  it("refuses settlement with the affected sticker and layout after a save failed", async () => {
+    const diagnostics = vi.spyOn(console, "error").mockImplementation(() => {});
+    onTestFinished(() => diagnostics.mockRestore());
+    const saves = new BoardPlacementSaves(
+      emptyApi({
+        saveStickerPlacement: async () => {
+          throw new Error("offline");
+        },
+      }),
+      TEST_OWNER.id,
+    );
+    saves.activate();
+    saves.save(sticker, { phone: spot(0.2) });
+    await flush();
+    await expect(saves.waitUntilSaved(new AbortController().signal)).rejects.toMatchObject({
+      detail: "sticker 1 (phone)",
+    });
+  });
+
+  it("stops settlement when its deadline aborts", async () => {
+    const saves = new BoardPlacementSaves(
+      emptyApi({ saveStickerPlacement: () => new Promise(() => {}) }),
+      TEST_OWNER.id,
+    );
+    saves.activate();
+    saves.save(sticker, { phone: spot(0.2) });
+    const deadline = new AbortController();
+    const waiting = saves.waitUntilSaved(deadline.signal);
+    deadline.abort();
+    await expect(waiting).rejects.toMatchObject({ code: "timeout" });
+  });
+
   it("keeps a failed phone revision when derived large initialization succeeds", async () => {
     const api = emptyApi();
     vi.spyOn(api, "saveStickerPlacement").mockRejectedValueOnce(new Error("offline"));

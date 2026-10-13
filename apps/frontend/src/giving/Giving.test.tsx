@@ -11,6 +11,7 @@ import { formatDay, formatDuration, formatNo } from "../stickers/format";
 import type { GiftSender, GiftSendOutcome } from "./giftSender";
 import { PICKER_ANSWER_MS, PREPARING_SLOW_MS } from "./giveFlow";
 import { Giving } from "./Giving";
+import { keepGift, keptReports } from "./keptGifts";
 import { GiveSheet } from "./GiveSheet";
 
 const stalePickerSend = vi.hoisted(() => vi.fn());
@@ -49,6 +50,7 @@ function giftsApi() {
       byGift.set(packed.id, stickerId);
       giftStatus.set(stickerId, "packed");
       return Promise.resolve({
+        delivery: "line",
         gift: packed,
         forUserId: forUserId ?? null,
         giftClaimToken: token,
@@ -554,6 +556,7 @@ it.each([
     const packageGift = vi.fn(async () => {
       packageCalls += 1;
       return {
+        delivery: "line" as const,
         gift: packageCalls === 1 ? originalGift : { ...originalGift, id: `${originalGift.id}-new` },
         forUserId: recipient,
         giftClaimToken: packageCalls === 1 ? null : token,
@@ -561,6 +564,7 @@ it.each([
         deposit: null,
       };
     });
+
     const startTakeOut = vi.fn(async () => ({
       gift: { ...originalGift, status: "taken_out" as const },
     }));
@@ -611,3 +615,129 @@ it.each([
     }
   },
 );
+
+describe("private delivery recipient action", () => {
+  for (const acknowledged of [true, false]) {
+    it(
+      acknowledged
+        ? "offers an explicit recipient switch after protected acknowledgment"
+        : "keeps recipient switching disabled while acknowledgment failed",
+      async () => {
+        const log = vi.spyOn(console, "error").mockImplementation(() => {});
+        const onSwitchRecipient = vi.fn();
+        const packed = gift({ id: "private-ui-gift", status: "packed", escrowStatus: "pending" });
+        const api = {
+          ...giftsApi(),
+          packageGift: async () => ({
+            gift: packed,
+            delivery: "person" as const,
+            forUserId: "recipient",
+            giftClaimToken: token,
+            messageAttempt: null,
+            deposit: null,
+          }),
+          giftDelivery: async () => ({ delivery: "person" as const }),
+          deliverPersonGift: async () => {
+            if (!acknowledged) throw new Error("Acknowledgment failed");
+            return { ...packed, status: "sent" as const };
+          },
+        };
+        view = renderWithApi(
+          <Giving
+            sticker={{
+              id: "private-ui-sticker",
+              no: 147,
+              timeUsed: 12,
+              createdAt: Date.now(),
+              url: "blob:x",
+              nsfw: false,
+            }}
+            fromHandle="giver"
+            sender={{ send: async () => "sent" }}
+            liffId="liff"
+            forUserId="recipient"
+            toHandle="recipient"
+            onClose={onClose}
+            onSwitchRecipient={onSwitchRecipient}
+          />,
+          api,
+        );
+        await wait(1150);
+        await wait(0);
+        const action = [...document.querySelectorAll("button")].find((button) =>
+          button.textContent?.includes("Switch to @recipient"),
+        );
+        expect(action).toBeDefined();
+        expect(action?.disabled).toBe(!acknowledged);
+        if (acknowledged) {
+          await act(async () => action?.click());
+          expect(onSwitchRecipient).toHaveBeenCalledWith("recipient", packed.id);
+        } else {
+          expect(onSwitchRecipient).not.toHaveBeenCalled();
+          expect(log).toHaveBeenCalled();
+          expect(document.body.textContent).toContain("Croquis couldn’t confirm delivery");
+          expect(title()).toBe("Delivery not confirmed");
+          expect(shownText(".giving__sub")).toBe(
+            "Croquis hasn’t confirmed delivery yet. Reopen the app to try recording it again.",
+          );
+          expect(document.body.textContent).not.toContain(
+            "Your gift is waiting on their sticker board.",
+          );
+        }
+        expect(document.body.textContent).not.toContain("It’s in your LINE chat now");
+        log.mockRestore();
+      },
+    );
+  }
+});
+
+it("recovers a kept private send and enables its recipient switch without sending again", async () => {
+  const packed = gift({ id: "private-recovery-gift", status: "packed", escrowStatus: "pending" });
+  const attemptId = `0x${"cd".repeat(32)}`;
+  keepGift(TEST_ME.id, packed.id, { message: "sent", attemptId });
+  const deliverPersonGift = vi.fn(async () => ({ ...packed, status: "sent" as const }));
+  const onSwitchRecipient = vi.fn();
+  const send = vi.fn(async () => "sent" as const);
+  const api = emptyApi({
+    packageGift: async () => ({
+      gift: packed,
+      delivery: "person",
+      forUserId: "recipient",
+      giftClaimToken: null,
+      messageAttempt: { id: attemptId, state: "pending" },
+      deposit: null,
+    }),
+    giftDelivery: async () => ({ delivery: "person" }),
+    deliverPersonGift,
+  });
+  view = renderWithApi(
+    <Giving
+      sticker={{
+        id: "recover-sticker",
+        no: 147,
+        timeUsed: 12,
+        createdAt: Date.now(),
+        url: "blob:x",
+        nsfw: false,
+      }}
+      fromHandle="giver"
+      sender={{ send }}
+      liffId="liff"
+      forUserId="recipient"
+      toHandle="recipient"
+      onClose={onClose}
+      onSwitchRecipient={onSwitchRecipient}
+    />,
+    api,
+  );
+  await wait(0);
+  expect(deliverPersonGift).toHaveBeenCalledWith(packed.id, attemptId);
+  expect(keptReports(TEST_ME.id)).not.toContainEqual([packed.id, expect.anything()]);
+  const action = [...document.querySelectorAll("button")].find((button) =>
+    button.textContent?.includes("Switch to @recipient"),
+  );
+  expect(action?.disabled).toBe(false);
+  await act(async () => action?.click());
+  expect(onSwitchRecipient).toHaveBeenCalledWith("recipient", packed.id);
+  expect(send).not.toHaveBeenCalled();
+});

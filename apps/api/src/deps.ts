@@ -1,17 +1,22 @@
 import type { Db } from "@drawing-app/db";
+import type { PrivyJwtService } from "./services/privyJwt.ts";
 import { z } from "zod";
 import type { ChatMenuLink } from "./chatMenu/menus.ts";
 import type { StickerImages, StickerPngKind, TicketShop } from "./shapes.ts";
 import type { GasStation, SuiChain, SuiWallets } from "./sui/types.ts";
+import type { PersonSwitchConfig } from "./session/sessionShapes.ts";
 
 /** Everything the routes reach beyond the request. server.ts builds the real ones; tests pass fakes. */
 export interface AppDeps {
   db: Db;
   /** Signs the session cookie. */
   sessionSecret: string;
+  personSwitch: PersonSwitchConfig;
+  lineChannelId: string;
   clock: Clock;
   ids: Ids;
   line: LineVerifier;
+  privyJwt: PrivyJwtService | null;
   images: ImageStore;
   /**
    * Null in mock chain mode: nothing is minted, a gift lands in the escrow at once, and ticket packs
@@ -113,7 +118,7 @@ export interface LineVerifier {
    * Asks LINE who the token names. Rejects with LineTokenInvalidError when LINE refuses the token;
    * any other rejection means LINE couldn't be asked.
    */
-  verifyAccessToken: (accessToken: string) => Promise<LineProfile>;
+  verifyAccessToken: (accessToken: string, signal?: AbortSignal) => Promise<LineProfile>;
 }
 
 /** A WebP the app shows a sticker by: its own, its veiled image's, or its sharp copy's. */

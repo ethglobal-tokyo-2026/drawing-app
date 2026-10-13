@@ -10,7 +10,9 @@ const braveExecutable = process.env.BRAVE_EXECUTABLE_PATH;
 export default defineConfig({
   testDir: "e2e",
   testMatch: "**/*.e2e.ts",
-  outputDir: fileURLToPath(new URL("../../data/e2e-results", import.meta.url)),
+  outputDir:
+    process.env.E2E_RESULTS_DIR ??
+    fileURLToPath(new URL("../../data/e2e-results", import.meta.url)),
   fullyParallel: true,
   // Each worker is a phone browser beside one API and one Vite server on a shared Mac; more than this
   // starves them, and E2E_WORKERS raises it on a quiet machine.
@@ -52,7 +54,7 @@ export default defineConfig({
     {
       // The API as its dev script runs it, minus a developer's private .env, on a database and image
       // folder wiped first, with LIFF Mock's dev ID tokens trusted and nothing sent to Sui.
-      command: `rm -rf "${E2E_DATA_DIR}" && mkdir -p "${E2E_DATA_DIR}/images" && exec node --env-file=.env.example src/server.ts`,
+      command: "exec node --env-file=.env.example ../frontend/e2e/startApi.ts",
       cwd: fileURLToPath(new URL("../api", import.meta.url)),
       url: `http://127.0.0.1:${E2E_API_PORT}/api/me`,
       reuseExistingServer: false,
@@ -63,6 +65,10 @@ export default defineConfig({
         IMAGE_BASE_URL: `${appOrigin}/api/images`,
         DEV_SIGN_IN: "on",
         STICKER_CHAIN_MODE: "mock",
+        E2E_DATA_DIR,
+        PERSON_SWITCHING_MODE: "live",
+        PERSON_SWITCH_OPERATOR_USER_ID: "d5984df6-db28-44f2-801c-2f2f5b565463",
+        PERSON_SWITCH_HANA_USER_ID: "bef03287-50ee-4e51-aaef-a9dc1303b854",
       },
     },
     {

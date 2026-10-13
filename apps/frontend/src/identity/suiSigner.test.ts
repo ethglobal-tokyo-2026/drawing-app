@@ -2,6 +2,8 @@ import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { fromHex, toBase64, toHex } from "@mysten/sui/utils";
 import { verifyTransactionSignature } from "@mysten/sui/verify";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { sessionEnvelope } from "../api/sessionTestFixtures";
+import { TEST_ME } from "../api/testing";
 import { PrivySuiSigner, suiPublicKeyFor } from "./suiSigner";
 
 const keypair = Ed25519Keypair.generate();
@@ -49,8 +51,10 @@ describe("signing waits for the Sui wallet and its signer", () => {
       import("./suiSigner"),
       import("./signingTimedOut"),
     ]);
+    const context = await import("../api/sessionContext");
+    context.acceptSession(sessionEnvelope(TEST_ME));
     privy.setPrivyStatus({ state: "signing-in" });
-    return { ...privy, ...suiWallet, ...suiSigner, ...timedOut };
+    return { ...privy, ...suiWallet, ...suiSigner, ...timedOut, ...context };
   };
   type Page = Awaited<ReturnType<typeof freshPage>>;
   const walletReady = (page: Page) =>
@@ -173,5 +177,14 @@ describe("signing waits for the Sui wallet and its signer", () => {
     expect(await now()).toBe("still signing");
     await vi.advanceTimersByTimeAsync(1);
     expect(await now()).toBeInstanceOf(page.SigningTimedOut);
+  });
+});
+
+it("refuses to start signing when the session has been suspended", async () => {
+  const { suspendSession } = await import("../api/sessionContext");
+  const { signSponsored } = await import("./suiSigner");
+  suspendSession();
+  await expect(signSponsored({ txBytes: "AA==", digest: "d" })).rejects.toMatchObject({
+    code: "session_account_changed",
   });
 });

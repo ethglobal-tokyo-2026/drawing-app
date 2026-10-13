@@ -524,9 +524,15 @@ async function tapHeart(heart: Locator, taps: number) {
 /**
  * From the ask to send `giverHandle` gratitude: Send, `taps` taps on the heart, and the X, which ends
  * the combo and sends it. Resolves with the combo as the app recorded it, and its receipt once it's
- * named sent, which is once the server has the combo.
+ * named sent once the server has the combo, or kept when testing a failed request.
  */
-export async function playCombo(page: Page, language: Language, giverHandle: string, taps: number) {
+export async function playCombo(
+  page: Page,
+  language: Language,
+  giverHandle: string,
+  taps: number,
+  receiptState: "sent" | "kept" = "sent",
+) {
   await gratitudeAsk(page, language, giverHandle)
     .getByRole("button", { name: say(receiving.sendGratitude.send, language) })
     .click();
@@ -537,7 +543,12 @@ export async function playCombo(page: Page, language: Language, giverHandle: str
   );
   // While the combo runs, the X ends it and sends it, rather than closing the screen.
   await page.getByRole("button", { name: say(gratitude.endAndSend, language) }).click();
-  const receipt = page.getByRole("region", { name: say(gratitude.receipt.label, language) });
+  const receipt = page.getByRole("region", {
+    name: say(
+      receiptState === "sent" ? gratitude.receipt.label : gratitude.receipt.labelKept,
+      language,
+    ),
+  });
   await expect(receipt).toBeVisible();
   return { combo: await combo, receipt };
 }

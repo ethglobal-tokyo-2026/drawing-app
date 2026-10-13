@@ -3,6 +3,14 @@ import type { ClientErrorStatusCode, ServerErrorStatusCode } from "hono/utils/ht
 import type { AppType } from "./app.ts";
 
 export type { AppType };
+export type { PrivyJwtResult } from "@drawing-app/line-auth/internalAssertion";
+export type {
+  AccountSelection,
+  AuthenticatedSession,
+  ResolvedSession,
+  SessionEnvelope,
+  PersonSwitchConfig,
+} from "./session/sessionShapes.ts";
 
 type Schema = ExtractSchema<AppType>;
 type Endpoint = { [Path in keyof Schema]: Schema[Path][keyof Schema[Path]] }[keyof Schema];
@@ -57,6 +65,8 @@ export type { KyotoSeikaSubject } from "@drawing-app/db";
 
 // The contract's shapes, for the app's screens: each is the type its route's schema checks.
 export type { ChatMenuLink } from "./chatMenu/menus.ts";
+export { pendingPersonOwnershipSchema } from "./session/personOwnershipShapes.ts";
+export type { PendingPersonOwnership } from "./session/personOwnershipShapes.ts";
 export type { ErrorBody } from "./errors.ts";
 export type { Explore, PilePage, PileSticker } from "./explore/explore.ts";
 export type { LeaderboardRow } from "./explore/leaderboards.ts";

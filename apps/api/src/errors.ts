@@ -4,6 +4,10 @@ import { bodyLimit } from "hono/body-limit";
 import { HTTPException } from "hono/http-exception";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "zod";
+import {
+  pendingPersonOwnershipSchema,
+  type PendingPersonOwnership,
+} from "./session/personOwnershipShapes.ts";
 import { ChainUnavailableError } from "./deps.ts";
 import { describeIssues, failureCause, logFailure, logInfo, type Issue } from "./diagnostics.ts";
 import { SignatureInvalidError } from "./sui/transactions.ts";
@@ -15,8 +19,20 @@ export const errorBodySchema = z.object({
   error: z.string(),
   /** Human-readable; for 400, names the field. */
   detail: z.string().optional(),
+  pendingOwnership: pendingPersonOwnershipSchema.optional(),
 });
 export type ErrorBody = z.infer<typeof errorBodySchema>;
+
+/** A selected account request can no longer proceed under its authenticated session. */
+export class PersonSessionError extends Error {
+  readonly code: "person_switch_forbidden" | "session_account_changed" | "person_switch_busy";
+  readonly pendingOwnership?: PendingPersonOwnership;
+  constructor(code: PersonSessionError["code"], pendingOwnership?: PendingPersonOwnership) {
+    super(code);
+    this.code = code;
+    this.pendingOwnership = pendingOwnership;
+  }
+}
 
 /** Answers with an ErrorBody. The status and code keep their literal types for Hono's typed client. */
 export function apiError<const Status extends ContentfulStatusCode, const Code extends string>(
@@ -24,11 +40,13 @@ export function apiError<const Status extends ContentfulStatusCode, const Code e
   status: Status,
   error: Code,
   detail?: string,
+  pendingOwnership?: PendingPersonOwnership,
 ) {
   logInfo("api.refused", { status, errorCode: error });
-  const body: { error: Code; detail?: string } = {
+  const body: { error: Code; detail?: string; pendingOwnership?: PendingPersonOwnership } = {
     error,
     ...(detail !== undefined && { detail }),
+    ...(pendingOwnership !== undefined && { pendingOwnership }),
   };
   return c.json(body, status);
 }
@@ -128,6 +146,21 @@ export const limitBody = (maxBytes: number) =>
 
 /** Answers what a route didn't catch: a malformed body is the client's error, anything else is ours. */
 export const onError: ErrorHandler = (error, c) => {
+  if (error instanceof PersonSessionError) {
+    if (error.pendingOwnership)
+      logInfo("person.selection.blocked", {
+        kind: error.pendingOwnership.kind,
+        ...(error.pendingOwnership.giftId && { giftId: error.pendingOwnership.giftId }),
+        ...(error.pendingOwnership.stickerId && { stickerId: error.pendingOwnership.stickerId }),
+      });
+    return apiError(
+      c,
+      error.code === "person_switch_forbidden" ? 403 : 409,
+      error.code,
+      undefined,
+      error.pendingOwnership,
+    );
+  }
   // Hono's validators throw a 400 for a body that doesn't parse as JSON or form data.
   if (error instanceof HTTPException && error.status === 400) {
     return apiError(c, 400, "invalid_request", error.message);

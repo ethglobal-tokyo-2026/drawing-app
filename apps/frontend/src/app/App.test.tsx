@@ -1,17 +1,19 @@
 // @vitest-environment happy-dom
-import type { GiftPreview, TicketShop } from "@drawing-app/api/client";
+import type { GiftPreview, TicketShop, SessionEnvelope } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { gift, people, sticker } from "../api/testFixtures";
+import { boardSticker, gift, people, sticker } from "../api/testFixtures";
 import { emptyApi, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
 import { SEARCH_AFTER_MS } from "../explore/ExploreScreen";
 import { keepGift } from "../giving/keptGifts";
+import { forgetNoticedHere, newestUnnoticed, noticeReceivesFromNow } from "../giving/noticedGifts";
 import { strings } from "../i18n/strings";
 import { PULL } from "../receiving/pullTab";
 import { forgetBoardComplete } from "../sticker-board/boardComplete";
 import { readKeptBoardAgain } from "../sticker-board/lastBoard";
 import { onTouchScreen } from "../ui/testing";
 import App from "./App";
+import { SessionEnvelopeContext } from "../api/sessionContext";
 
 vi.mock("@line/liff", () => ({
   default: {
@@ -73,6 +75,7 @@ beforeEach(() => {
   });
   vi.setSystemTime(new Date("2026-09-26T12:00:00.000Z"));
   localStorage.clear();
+  forgetNoticedHere();
   readKeptBoardAgain();
   forgetBoardComplete();
   history.replaceState(null, "", "/g/test-claim-token");
@@ -83,6 +86,78 @@ afterEach(async () => {
   unmount();
   history.replaceState(null, "", "/");
   vi.useRealTimers();
+  sessionStorage.clear();
+});
+
+it("opens the queued recipient gift after reload and keeps its destination until preview succeeds", async () => {
+  history.replaceState(null, "", "/");
+  const session: SessionEnvelope = {
+    me: TEST_ME,
+    authenticated: { ...TEST_ME, id: "bigwheel" },
+    allowedSelections: [TEST_OWNER],
+    selectionVersion: "second",
+    expectedPrivySubject: "me",
+    expectedSuiAddress: null,
+    personSwitchMode: "live",
+  };
+  noticeReceivesFromNow([]);
+  const previous = boardSticker({
+    placement: { onBoard: false, x: 0.5, y: 0.5, scale: 0.2, rotation: 0, z: 1 },
+    held: false,
+    givenTo: { receiver: people.bob, receivedAt: "2026-09-26T11:00:00.000Z" },
+  });
+  const gifted = sticker();
+  const waiting = {
+    gift: gift({ id: "gift-42", stickerId: gifted.id }),
+    giver: people.mika,
+    sticker: gifted,
+  };
+  sessionStorage.setItem(
+    "croquis.person-switch.destination",
+    JSON.stringify({ authenticatedUserId: "bigwheel", recipientUserId: "me", giftId: "gift-42" }),
+  );
+  let previewFinished!: (value: GiftPreview) => void;
+  const preview = vi.fn(
+    () =>
+      new Promise<GiftPreview>((resolve) => {
+        previewFinished = resolve;
+      }),
+  );
+  const view = renderWithApi(
+    <SessionEnvelopeContext value={session}>
+      <App />
+    </SessionEnvelopeContext>,
+    emptyApi({
+      stickerBoard: async () => ({ owner: TEST_OWNER, boardStickers: [previous] }),
+      giftsForYou: async () => ({ gifts: [waiting] }),
+      previewGiftForYou: preview,
+      ticketShop,
+    }),
+  );
+  unmount = view.unmount;
+  await act(() => vi.dynamicImportSettled());
+  await settle();
+  await act(() => vi.dynamicImportSettled());
+  expect(preview).toHaveBeenCalledWith("gift-42");
+  expect(view.host.querySelector(".gift-received-notice")).toBeNull();
+  expect(
+    newestUnnoticed([
+      { stickerId: previous.stickerId, receivedAt: Date.parse("2026-09-26T11:00:00.000Z") },
+    ]),
+  ).not.toBeNull();
+  expect(sessionStorage.getItem("croquis.person-switch.destination")).not.toBeNull();
+  await act(async () =>
+    previewFinished({
+      giver: waiting.giver,
+      expiresAt: waiting.gift.expiresAt,
+      receivable: true,
+      refusal: null,
+      sticker: gifted,
+    }),
+  );
+  expect(view.host.querySelector('[role="slider"]')).not.toBeNull();
+  expect(view.host.querySelector(".gift-received-notice")).toBeNull();
+  expect(sessionStorage.getItem("croquis.person-switch.destination")).toBeNull();
 });
 
 it("reports a Gift Message's send the server missed as the app starts", async () => {

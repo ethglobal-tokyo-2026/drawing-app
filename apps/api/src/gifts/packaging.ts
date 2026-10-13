@@ -3,6 +3,8 @@ import { GIFT_EXPIRY_MS, gifts, stickers, users, type Db } from "@drawing-app/db
 import { and, eq, inArray, or } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { PersonSessionError } from "../errors.ts";
+import { deliveryAtPackaging, giftDeliveryFor } from "./personDelivery.ts";
 import type { AppDeps } from "../deps.ts";
 import {
   bytes32Schema,
@@ -86,6 +88,7 @@ type PackageBody = z.infer<typeof packageBodySchema>;
 
 export const packagedGiftSchema = z.object({
   gift: giftSchema,
+  delivery: z.enum(["line", "person"]),
   /** Only the giver may recover the last Gift Message attempt. */
   messageAttempt: z
     .object({ id: bytes32Schema, state: z.enum(["pending", "cancelled", "sent"]) })
@@ -140,6 +143,7 @@ export type Packaging =
       | "own_gift"
       | "nsfw_not_opted_in"
       | "deposit_not_landed"
+      | "not_deposited"
       | "giving_limit_reached"
     >
   | { refusal: null; created: boolean; packaged: PackagedGift };
@@ -205,6 +209,7 @@ const packagedAgain = (gift: GiftRow, deposit: SuiTransaction | null): Packaged 
   refusal: null,
   created: false,
   packaged: {
+    delivery: gift.delivery,
     gift: toGift(gift),
     messageAttempt: messageAttemptOf(gift),
     forUserId: gift.forUserId,
@@ -222,16 +227,30 @@ export async function packageGift(
   userId: string,
   { stickerId, forUserId = null }: PackageBody,
 ): Promise<Packaging> {
+  const existing = giftHoldingSticker(deps.db, stickerId);
+  const destination = existing ? existing.forUserId : forUserId;
+  if (userId === deps.personSwitch.hanaUserId && destination !== deps.personSwitch.operatorUserId) {
+    throw new PersonSessionError("person_switch_forbidden");
+  }
   const sui = suiDepsOf(deps);
-  if (!sui) return packageOnMockChain(deps, userId, stickerId, forUserId);
-  return oneAtATime(`sticker:${stickerId}`, () =>
-    packageOnSui(deps, sui, userId, stickerId, forUserId),
-  );
+  const result = !sui
+    ? packageOnMockChain(deps, userId, stickerId, forUserId)
+    : await oneAtATime(`sticker:${stickerId}`, () =>
+        packageOnSui(deps, sui, userId, stickerId, forUserId),
+      );
+  if (result.refusal === null) {
+    result.packaged.delivery = giftDeliveryFor(deps.personSwitch, {
+      giverId: result.packaged.gift.giverId,
+      forUserId: result.packaged.forUserId,
+      delivery: result.packaged.delivery,
+    });
+  }
+  return result;
 }
 
 /** On the mock chain a gift is in the escrow from the start, so it has no deposit to sign. */
 function packageOnMockChain(
-  { db, clock }: AppDeps,
+  { db, clock, personSwitch }: AppDeps,
   userId: string,
   stickerId: string,
   forUserId: string | null,
@@ -247,6 +266,7 @@ function packageOnMockChain(
         .insert(gifts)
         .values({
           id: claim.giftId,
+          delivery: deliveryAtPackaging(personSwitch, { giverId: userId, forUserId }),
           stickerId,
           giverId: userId,
           forUserId,
@@ -257,6 +277,7 @@ function packageOnMockChain(
         .returning()
         .get();
       const packaged = {
+        delivery: gift.delivery,
         gift: toGift(gift),
         messageAttempt: messageAttemptOf(gift),
         forUserId: gift.forUserId,
@@ -295,6 +316,13 @@ async function packageOnSui(
   const terms = { sender, userId, stickerId, stickerObjectId };
   const { bagged } = checked;
   if (bagged) {
+    if (
+      bagged.escrowStatus === "pending" &&
+      deliveryAtPackaging(deps.personSwitch, bagged) === "person" &&
+      (await sui.sui.readGift(bagged.id)).status === "missing"
+    ) {
+      return refuse("not_deposited", `Gift ${bagged.id} has no escrow object to resume`);
+    }
     if (bagged.status === "sent") return packagedAgain(bagged, null);
     const again = await oneAtATime(`gift:${bagged.id}`, () => packageAgain(sui, bagged, terms));
     if (again) return again;
@@ -302,7 +330,12 @@ async function packageOnSui(
     const rechecked = checkPackaging(deps.db, userId, stickerId, forUserId);
     if (rechecked.refusal !== null) return rechecked;
   }
-  return packageNew(sui, forUserId, terms);
+  return packageNew(
+    sui,
+    forUserId,
+    terms,
+    deliveryAtPackaging(deps.personSwitch, { giverId: userId, forUserId }),
+  );
 }
 
 /**
@@ -368,6 +401,7 @@ async function packageNew(
   sui: SuiTransactionDeps,
   forUserId: string | null,
   terms: DepositTerms,
+  delivery: "line" | "person",
 ): Promise<Packaging> {
   const now = sui.clock.now();
   const limited = givingLimitRefusal(sui.db, terms.userId, now);
@@ -395,6 +429,7 @@ async function packageNew(
       tx.insert(gifts)
         .values({
           id: claim.giftId,
+          delivery,
           stickerId: terms.stickerId,
           giverId: terms.userId,
           forUserId,
@@ -408,6 +443,7 @@ async function packageNew(
     refusal: null,
     created: true,
     packaged: {
+      delivery,
       gift: toGift(currentGift(sui.db, claim.giftId)),
       messageAttempt: null,
       forUserId,
@@ -474,7 +510,7 @@ export function beginMessageAttempt(
 }
 
 /** LINE's definitive outcome resolves only the matching attempt. Sent cannot be downgraded. */
-export function reportShared(
+export function recordMessageOutcome(
   { db, clock }: AppDeps,
   userId: string,
   giftId: string,
@@ -515,4 +551,25 @@ export function reportShared(
     },
     { behavior: "immediate" },
   );
+}
+
+/** Ordinary LINE reports cannot first acknowledge a private pair delivery. */
+export function reportShared(
+  deps: AppDeps,
+  userId: string,
+  giftId: string,
+  attemptId: string,
+  outcome: SharedOutcome,
+): MessageStep {
+  const gift = deps.db.select().from(gifts).where(eq(gifts.id, giftId)).get();
+  if (
+    gift &&
+    gift.giverId === userId &&
+    outcome === "sent" &&
+    gift.status === "packed" &&
+    giftDeliveryFor(deps.personSwitch, gift) === "person"
+  ) {
+    throw new PersonSessionError("person_switch_forbidden");
+  }
+  return recordMessageOutcome(deps, userId, giftId, attemptId, outcome);
 }

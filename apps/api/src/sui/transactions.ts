@@ -56,7 +56,8 @@ export const isLive = (row: SuiTransaction, now: Date) =>
  */
 export type SuiTransactionSubject =
   | { kind: "mint"; stickerId: string }
-  | { kind: "claim" | "return"; giftId: string; stickerId?: string }
+  | { kind: "claim"; giftId: string; stickerId?: string; requestedByUserId: string }
+  | { kind: "return"; giftId: string; stickerId?: string }
   | { kind: "deposit"; sender: string; userId: string; stickerId: string; giftId: string }
   | { kind: "take_out"; sender: string; userId: string; giftId: string; stickerId?: string }
   | { kind: "payment"; sender: string; userId: string; purchaseId: number };

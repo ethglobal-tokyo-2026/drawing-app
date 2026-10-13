@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
+import { usePersonSwitchBlocker } from "../api/PersonSwitchProvider";
 import type { Problem } from "../i18n/errorMessage";
 import { Trans, useTranslation } from "../i18n/react";
 import { ArrowUUpLeft, PaperPlaneTilt, Question, StickerBoardIcon } from "../icons";
@@ -57,6 +58,8 @@ interface Props {
   toHandle?: string;
   /** Where focus goes once Giving closes, when it opened as the give sheet went and never saw the opener. */
   returnFocus?: () => HTMLElement | null;
+  /** Explicit action after acknowledged private delivery; the controller resumes this exact gift. */
+  onSwitchRecipient?: (userId: string, giftId: string) => void;
 }
 
 /** Motion timings, in step with GiftBag.css: normal, then reduced. */
@@ -84,6 +87,7 @@ export function Giving({
   forUserId,
   toHandle,
   returnFocus,
+  onSwitchRecipient,
 }: Props) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
@@ -121,6 +125,14 @@ export function Giving({
   const takingOut = state.step === "takingOut" || takenOut;
   // The gift's preparation and LINE's picker keep it open until their outcome is known.
   const busy = preparing || state.step === "picking" || takingOut;
+  usePersonSwitchBlocker(
+    !takenOut &&
+      (state.step !== "sent" ||
+        !!state.storageError ||
+        ("recordError" in state && !!state.recordError) ||
+        recipientMismatch),
+    sticker.id,
+  );
   // A long wait for the gift bag can be left by taking the sticker back out.
   const canTakeOut = !busy || slow;
 
@@ -198,8 +210,16 @@ export function Giving({
     head = <CantFindThemHead key={view} className={slide} onBack={() => setCantFind(false)} />;
     content = <CantFindThem />;
   } else if (state.step === "sent") {
-    title = t(($) => $.giving.sent.title);
-    lead = t(($) => $.giving.sent.lead);
+    const personDelivery = state.delivery === "person";
+    const unconfirmed = personDelivery && !!state.recordError;
+    title = unconfirmed
+      ? t(($) => $.giving.personDelivery.unconfirmedTitle)
+      : t(($) => $.giving.sent.title);
+    lead = unconfirmed
+      ? t(($) => $.giving.personDelivery.unconfirmedLead)
+      : personDelivery
+        ? t(($) => $.giving.personDelivery.sentLead)
+        : t(($) => $.giving.sent.lead);
     content = (
       <div className="giving__sent">
         <div className="giving__scroll giving__sent-body">
@@ -208,7 +228,11 @@ export function Giving({
           <p className="giving__sub keep-phrases">{lead}</p>
           {state.recordError && (
             <ErrorLine className="giving__problem" detail={state.recordError.detail}>
-              {t(($) => $.giving.sent.couldntRecord, { reason: state.recordError.message })}
+              {personDelivery
+                ? t(($) => $.giving.personDelivery.couldntRecord, {
+                    reason: state.recordError.message,
+                  })
+                : t(($) => $.giving.sent.couldntRecord, { reason: state.recordError.message })}
             </ErrorLine>
           )}
           {state.retryError && (
@@ -217,6 +241,27 @@ export function Giving({
             </ErrorLine>
           )}
         </div>
+        {personDelivery && onSwitchRecipient && state.packedForUserId && state.giftId && (
+          <LabelButton
+            block
+            disabled={!!state.recordError || !!state.storageError || recipientMismatch}
+            onClick={() => {
+              if (
+                !state.recordError &&
+                !state.storageError &&
+                !recipientMismatch &&
+                state.packedForUserId &&
+                state.giftId
+              ) {
+                onSwitchRecipient(state.packedForUserId, state.giftId);
+              }
+            }}
+          >
+            {t(($) => $.giving.personDelivery.switchRecipient, {
+              name: toHandle ? formatHandle(toHandle) : t(($) => $.giving.personDelivery.recipient),
+            })}
+          </LabelButton>
+        )}
         <LabelButton
           block
           icon={<StickerBoardIcon size={18} />}
@@ -291,7 +336,12 @@ export function Giving({
     } else if (takingOut) {
       lead = t(($) => $.giving.takingOut.lead);
     } else {
-      lead = unsent ? t(($) => $.giving.inTheBag.notSentLead) : t(($) => $.giving.inTheBag.lead);
+      lead =
+        state.delivery === "person"
+          ? t(($) => $.giving.personDelivery.inTheBag)
+          : unsent
+            ? t(($) => $.giving.inTheBag.notSentLead)
+            : t(($) => $.giving.inTheBag.lead);
     }
     const couldntRecord = ({ message, detail }: Problem): Problem => ({
       message: t(($) => $.giving.inTheBag.couldntRecord, { reason: message }),
@@ -330,10 +380,12 @@ export function Giving({
                 ? t(($) => $.giving.takingOut.button)
                 : state.step === "failed"
                   ? t(($) => $.giving.inTheBag.prepareAgain)
-                  : t(($) => $.giving.inTheBag.send)}
+                  : state.delivery === "person"
+                    ? t(($) => $.giving.personDelivery.send)
+                    : t(($) => $.giving.inTheBag.send)}
           </Key>
           {/* For a friend LINE's picker left out, before it opens again. */}
-          {unsent && (
+          {unsent && state.delivery !== "person" && (
             <QuietLink onClick={() => setCantFind(true)}>
               <Question /> {t(($) => $.giving.cantFind.title)}
             </QuietLink>

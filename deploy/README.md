@@ -1,6 +1,6 @@
 # Deployment
 
-One box serves the app behind HAProxy, with Fastly in front of it at `DEPLOY_URL` (CDN, below): `/api/` goes to the REST API, `/v1/auth/` and `/.well-known/jwks.json` to the LINE → Privy auth server, and everything else to the web app. Run the scripts from the repository root.
+One box serves the app behind HAProxy, with Fastly in front of it at `DEPLOY_URL` (CDN, below): `/api/` goes to the REST API, `/.well-known/jwks.json` to the protected Privy issuer, and everything else to the web app. Run the scripts from the repository root.
 
 ## Settings
 
@@ -18,9 +18,9 @@ Publishes everything, in order:
 
 1. `deploy-api.sh --preflight-only` checks the stickers package's IDs in `drawing-api.env` and the chain settings in `deploy/.env`.
 2. Builds the frontend, with the developer slip on, and the auth server.
-3. `deploy-api.sh` publishes the API (below).
-4. `install-node.sh` puts the pinned Node on the box for the auth server.
-5. Syncs the site and the auth server, makes the signing key if it's missing, and restarts `sticker-board` and `sticker-auth` when their files changed.
+3. `install-node.sh` puts the pinned Node on the box for the auth server; the release snapshots previous service/build assets.
+4. Installs private internal authentication, publishes and checks the protected issuer, preserving its existing signing key.
+5. `deploy-api.sh` publishes and checks the API, then the matching frontend publishes last.
 6. Checks that the box serves the build, purges the page Fastly keeps (CDN, below), then checks that `DEPLOY_URL` serves the build and both serve the auth server's JWKS.
 
 ## CDN
@@ -101,3 +101,19 @@ Each unit's file is `deploy/<unit>.service`, which the deploy scripts install in
 - The box serves other sites through the same HAProxy, in `/etc/haproxy/haproxy.cfg`; Croquis's part routes `stickeroo.art` by host, the Host Fastly sends; Fastly redirects `www`.
 - acme.sh, in the deploy account's home on the box, issues `origin.stickeroo.art`'s certificate, the one Fastly checks, answering Let's Encrypt on port 8888 behind HAProxy's `/.well-known/acme-challenge/` route, and its `haproxy` deploy hook installs each renewal in `/etc/haproxy/certs/`.
 - LINE opens the LIFF app's endpoint URL, set in the Login channel's LIFF tab, and Privy reads the auth server's keys from the JWKS URL in its dashboard; both name the domain.
+
+## Protected Privy release
+
+Set `PRIVY_JWT_INTERNAL_SECRET` only in private `deploy/.env`; generate one random value with `openssl rand -hex 32`. The installer accepts it through standard input and creates separate mode-0600 `privy-internal.env` files in the API and auth directories. Tracked configuration contains only the API's loopback `PRIVY_JWT_INTERNAL_URL`. Preserve each unit's exclusion of the other service directory. The API never reads the auth signing key.
+
+`deploy.sh` validates configuration, builds, snapshots the previous service assets, installs private internal authentication, publishes and checks the protected issuer, publishes and checks the API, and publishes the frontend last. It invokes `deploy-api.sh --restart` so the API reloads private authentication settings even when the build is unchanged. Standalone `deploy-api.sh` verifies matching existing private authentication files and issuer health before replacing API assets. A failed coordinated release restores the prior service assets; the database, images, session secret and auth signing key stay in place. Migrations are not reversed: review migration compatibility and take a consistent database backup before live rollout.
+
+A first release failure can restore an older auth artifact that exposes anonymous issuance. That artifact must stay stopped. The release checks the restored artifact's `croquisPrivyIssuance` metadata, writes persistent `issuance-recovery-required` instructions in the auth directory, and stops sign-in until the protected issuer is installed. Later protected releases can restore and restart the previous coherent service/build set. The anonymous endpoint is never enabled as a compatibility path.
+
+Before live release, explicitly deny `/_internal/privy-jwt` at the public edge and retire `/v1/auth/privy-jwt`. Verify origin and CDN routing/cache behavior separately; loopback binding and fixture tests do not prove public denial. The internal MAC remains required independently of edge routing. Existing visitors with retired API cookies can renew their API session through ordinary LINE authentication.
+
+## Private person switching rollout and recovery
+
+Deploy person switching as one coherent protected-auth/API/frontend release, initially `PERSON_SWITCHING_MODE=off` in the public `deploy/drawing-api.env`, installed as `/srv/drawing-api/api.env`. The retained exact pair IDs are committed in that same file. Reviewed operational changes to its mode field select `verify` or `live`, with an API restart through the existing deployment process; keep a single configuration source. Validate the exact BIGWHEEL/Hana rows before enabling; the API checks retained configuration even while off. Use `verify` for the actual Privy subject/address checkpoint while all pair transfers remain blocked, then `live` only after the checkpoint and explicit live-action authorization. Keep `STICKER_CHAIN_MODE=sui` and unrestricted dev sign-in off on the live API. A mocked browser pass or BIGWHEEL-only SDK baseline is insufficient to enable live transfers.
+
+Follow `docs/live-person-switching.md` for the same-browser rehearsal, stale-tab recovery, persistent failures, and pending-digest reconciliation. Snapshot the database consistently before migrations. If a release fails, restore the previous coherent protected service/build set; migrations stay applied. Pending ownership records must be reconciled through the transaction-status path before switching or retrying transfers. Never repair historical seed gifts or pending transfers by editing ownership. Keep switch mode off when the real provider checkpoint or a coherent protected release is unresolved.

@@ -1,3 +1,4 @@
+import { accountSelection } from "./sessionTestFixtures";
 import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { ApiError } from "./apiClient";
 import { createHttpApi, createServerClient, createSessionApi } from "./httpApi";
@@ -39,7 +40,7 @@ const refusalOf = (promise: Promise<unknown>) =>
 describe("the session client", () => {
   it("keeps its immutable account header and preserves route headers", async () => {
     const fetch = answering(200, { me });
-    const client = createServerClient(fetch, "alice");
+    const client = createServerClient(fetch, accountSelection("alice"));
     await client.me.$get(
       { header: { "x-line-user-id": "line-alice" } },
       { headers: { "x-croquis-user-id": "bob" } },
@@ -54,9 +55,9 @@ describe("the session client", () => {
   it("adds the expected account to authenticated session operations and background refresh", async () => {
     const fetch = answering(200, { me });
     const session = createSessionApi(createServerClient(fetch));
-    await session.signIn({ accessToken: "token", language: "en" }, "alice");
-    await session.setHandle("Alice", "alice");
-    await session.signOut("alice");
+    await session.signIn({ accessToken: "token", language: "en" }, accountSelection("alice"));
+    await session.setHandle("Alice", accountSelection("alice"));
+    await session.signOut(accountSelection("alice"));
     expect(
       fetch.mock.calls.map(([, init]) => new Headers(init?.headers).get("x-croquis-user-id")),
     ).toEqual(["alice", "alice", "alice"]);
@@ -84,7 +85,7 @@ describe("the session client", () => {
             });
           }),
       );
-      const api = createHttpApi(createServerClient(fetch, "alice"));
+      const api = createHttpApi(createServerClient(fetch, accountSelection("alice")));
       const result = refusalOf(
         api.recordGratitude(recordGratitudeBody(), { signal: external.signal }),
       );
@@ -126,7 +127,7 @@ describe("the session client", () => {
     const session = createSessionApi(
       createServerClient(answering(409, { error: "handle_taken", detail: "alice" })),
     );
-    const error = await refusalOf(session.setHandle("alice", me.id));
+    const error = await refusalOf(session.setHandle("alice", accountSelection(me.id)));
     expect(error).toMatchObject({ status: 409, code: "handle_taken", detail: "alice" });
   });
 
@@ -186,7 +187,7 @@ describe("a session found gone", () => {
     const lost = vi.fn();
     onTestFinished(onSessionLost(lost));
     const fetch = answering(409, { error: "session_account_changed" });
-    await refusalOf(createHttpApi(createServerClient(fetch, "alice")).tickets());
+    await refusalOf(createHttpApi(createServerClient(fetch, accountSelection("alice"))).tickets());
     expect(lost).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({ code: "session_account_changed" }),
       "alice",
@@ -199,7 +200,9 @@ describe("a session found gone", () => {
   it("reaches whoever listens from any request, and only for a signed_out refusal", async () => {
     const lost = vi.fn();
     onTestFinished(onSessionLost(lost));
-    const gone = createHttpApi(createServerClient(answering(401, { error: "signed_out" }), me.id));
+    const gone = createHttpApi(
+      createServerClient(answering(401, { error: "signed_out" }), accountSelection(me.id)),
+    );
     await refusalOf(gone.tickets());
     await refusalOf(gone.explore());
     expect(lost).toHaveBeenCalledTimes(2);
@@ -486,4 +489,18 @@ describe("a sticker's timelapse", () => {
       code: "timelapse_not_found",
     });
   });
+});
+
+it("keeps actor and selection version immutable on account requests", async () => {
+  const fetch = vi.fn<typeof globalThis.fetch>(
+    async () => new Response(JSON.stringify({}), { status: 200 }),
+  );
+  const selection = { userId: "hana", selectionVersion: "first" };
+  const api = createHttpApi(createServerClient(fetch, selection));
+  selection.userId = "bigwheel";
+  selection.selectionVersion = "second";
+  await api.tickets();
+  const headers = new Headers(fetch.mock.calls[0]?.[1]?.headers);
+  expect(headers.get("x-croquis-user-id")).toBe("hana");
+  expect(headers.get("x-croquis-selection-version")).toBe("first");
 });

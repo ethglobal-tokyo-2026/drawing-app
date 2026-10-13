@@ -1,6 +1,6 @@
 import type { Me } from "@drawing-app/api/client";
 import { useSyncExternalStore } from "react";
-import { apiError, type ApiClient } from "../../api/apiClient";
+import { ApiError, apiError, type ApiClient } from "../../api/apiClient";
 import { useSetMe } from "../../api/meContext";
 import { useApi } from "../../api/useApi";
 
@@ -24,6 +24,7 @@ class SettingSaves {
   /** Each setting's latest change: only its outcome is that setting's status. */
   private latest = new Map<Setting, object>();
   private listeners = new Set<() => void>();
+  private writePauses = 0;
 
   subscribe = (onChange: () => void) => {
     this.listeners.add(onChange);
@@ -31,6 +32,58 @@ class SettingSaves {
   };
 
   read = () => this.statuses;
+
+  pauseNewWrites(): () => void {
+    this.writePauses += 1;
+    let released = false;
+    return () => {
+      if (!released) {
+        released = true;
+        this.writePauses -= 1;
+      }
+    };
+  }
+
+  waitUntilSaved(signal: AbortSignal): Promise<void> {
+    return new Promise((resolve, reject) => {
+      let unsubscribe = () => {};
+      const finish = (error?: ApiError) => {
+        unsubscribe();
+        signal.removeEventListener("abort", aborted);
+        if (error) reject(error);
+        else resolve();
+      };
+      const aborted = () =>
+        finish(
+          new ApiError(0, {
+            error: "timeout",
+            detail: "Settings did not finish saving before switching.",
+          }),
+        );
+      const check = () => {
+        if (signal.aborted) {
+          aborted();
+          return;
+        }
+        const statuses = Object.entries(this.statuses);
+        if (statuses.some(([, status]) => status?.step === "saving")) return;
+        const affected = statuses
+          .filter(([, status]) => status?.step === "failed")
+          .map(([setting]) => setting);
+        finish(
+          affected.length
+            ? new ApiError(409, {
+                error: "person_switch_settings_unsaved",
+                detail: affected.join(", "),
+              })
+            : undefined,
+        );
+      };
+      unsubscribe = this.subscribe(check);
+      signal.addEventListener("abort", aborted, { once: true });
+      check();
+    });
+  }
 
   save(
     setMe: (me: Me) => void,
@@ -40,6 +93,20 @@ class SettingSaves {
     apply: () => Promise<Failure | null> | Failure | null,
   ) {
     if (this.statuses[setting]?.step === "saving") return;
+    if (this.writePauses) {
+      this.statuses = {
+        ...this.statuses,
+        [setting]: {
+          step: "failed",
+          failure: {
+            kind: "notSaved",
+            error: new ApiError(409, { error: "session_account_changed" }),
+          },
+        },
+      };
+      this.listeners.forEach((listener) => listener());
+      return;
+    }
     const change = {};
     this.latest.set(setting, change);
     const settle = (status: Status | undefined) => {
@@ -78,6 +145,16 @@ function savesThrough(api: ApiClient): SettingSaves {
     savesByClient.set(api, saves);
   }
   return saves;
+}
+
+/** Account switching drains queued settings and their device application, without discarding failures. */
+export function waitUntilSettingsSaved(api: ApiClient, signal: AbortSignal): Promise<void> {
+  return savesThrough(api).waitUntilSaved(signal);
+}
+
+/** Blocks new note changes without interfering with settings already waiting their turn. */
+export function pauseSettingsWrites(api: ApiClient): () => void {
+  return savesThrough(api).pauseNewWrites();
 }
 
 /**

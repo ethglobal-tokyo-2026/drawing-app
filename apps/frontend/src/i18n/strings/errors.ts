@@ -3,6 +3,21 @@ import type { Leaf } from "../catalog";
 
 /** One message per error code, for people; the server's `detail` stays English, for developers. */
 export const errors = {
+  /** Private person transition: device saves or authoritative session recovery exceeded the ordinary request deadline. */
+  timeout: {
+    en: "The changes or session check didn’t finish in time. Try again once your changes have saved.",
+    ja: "変更の保存またはログインの確認が時間内に完了しませんでした。変更が保存されてから、もう一度お試しください。",
+  },
+  /** Sign-in and wallet synchronization: the authenticated API could not complete protected Privy issuance, shown with retry */
+  auth_unavailable: {
+    en: "Couldn’t prepare your wallet sign-in. Try again in a moment.",
+    ja: "ウォレットへのログインを準備できませんでした。少し待ってから、もう一度お試しください。",
+  },
+  /** Sign-in and wallet synchronization: LINE names a different account from the signed Croquis session, shown with reconnect */
+  line_principal_mismatch: {
+    en: "Your LINE account changed. Reconnect with LINE to continue.",
+    ja: "LINEのアカウントが変わりました。続けるにはLINEで再ログインしてください。",
+  },
   /** Any screen that shows a failed request through problemOf, when the server answers a code this catalog lacks (such as route_not_found); {{code}} is that code */
   unknown: {
     en: "Something went wrong ({{code}}). Try again. If it keeps happening, tell the Croquis Official account in LINE.",
@@ -217,6 +232,41 @@ export const errors = {
   session_account_changed: {
     en: "The signed-in account changed. Reload to continue. Your saved gratitude stays with its account.",
     ja: "ログイン中のアカウントが変わりました。再読み込みして続けてください。保存された感謝は、元のアカウントに残ります。",
+  },
+  /** Private person controls: a server-authorized selection is not available to this LINE account. */
+  person_switch_forbidden: {
+    en: "This LINE account can’t select that person.",
+    ja: "このLINEアカウントでは、その人に切り替えられません。",
+  },
+  /** Private person controls: the server still has an active ownership operation. */
+  person_switch_busy: {
+    en: "A sticker or ticket ownership operation is still pending. Finish it before switching.",
+    ja: "シールまたはチケットの所有権の処理が続いています。完了してから切り替えてください。",
+  },
+  /** Private person controls: active device ownership operations prevent selection. */
+  person_switch_ownership_pending: {
+    en: "An ownership operation is still pending. Finish it before switching.",
+    ja: "所有権の処理が続いています。完了してから切り替えてください。",
+  },
+  /** Private person controls: failed sticker positions stay with the current person until saved. */
+  person_switch_placement_unsaved: {
+    en: "Some sticker positions haven’t saved. Save the affected stickers before switching.",
+    ja: "保存できていないシールの配置があります。該当するシールの配置を保存してから切り替えてください。",
+  },
+  /** Sticker board or private person transition: device storage cannot preserve unfinished positions across Reload. */
+  person_switch_placement_preservation_failed: {
+    en: "This device couldn’t preserve unfinished sticker positions. Keep this tab open and retry before switching or reloading.",
+    ja: "この端末で保存前のシールの配置を保持できませんでした。このタブを閉じずに、切り替えや再読み込みの前に、もう一度お試しください。",
+  },
+  /** Private person controls: failed account or device settings prevent selection. */
+  person_switch_settings_unsaved: {
+    en: "Some settings haven’t saved or applied on this device. Resolve the affected settings before switching.",
+    ja: "保存できていない設定、またはこの端末で適用できていない設定があります。該当する設定を確認してから切り替えてください。",
+  },
+  /** Private person controls or recipient reload: the exact recipient gift destination could not be kept or read. */
+  person_switch_destination_failed: {
+    en: "This device couldn’t keep or read the recipient’s gift. Try again before switching.",
+    ja: "この端末で受け取る人のギフトを保存または読み取れませんでした。切り替える前に、もう一度お試しください。",
   },
   /** Sticker detail: loading where it's been (GET /api/stickers/:stickerId), in “Couldn’t load where it’s been…”, or Giving: packing it (POST /api/gifts), in “couldn’t be packed”, through problemOf */
   sticker_not_found: {

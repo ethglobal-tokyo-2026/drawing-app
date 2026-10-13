@@ -23,6 +23,7 @@ import { journalLog } from "./services/journal.ts";
 import { retryKeyFor } from "./services/lineMessaging.ts";
 import { createLineVerifier } from "./services/lineVerifier.ts";
 import { mockChain } from "./services/mockChain.ts";
+import { createPrivyJwtService } from "./services/privyJwt.ts";
 import { createPrivySuiWallets } from "./services/privySuiWallets.ts";
 import { createSuiChain } from "./services/suiChain.ts";
 import { startMintCatchUp } from "./stickers/mint.ts";
@@ -30,6 +31,7 @@ import { startCdnPurgeSweeps } from "./stickers/nsfwDrawing.ts";
 import { suiIdSchema } from "./shapes.ts";
 import { startChainChecks } from "./sui/chainCheck.ts";
 import { startTicketPurchaseSweeps } from "./tickets/purchaseSweep.ts";
+import { prunePersonSwitchSessions, validatePersonSwitchConfig } from "./session/personSwitch.ts";
 
 /** A secret the examples leave as a placeholder. */
 const secretSchema = z
@@ -41,6 +43,11 @@ const secretSchema = z
 const envSchema = z.object({
   SESSION_SECRET: z.string().min(32),
   LINE_CHANNEL_ID: z.string().min(1),
+  PRIVY_JWT_INTERNAL_URL: z.string().optional(),
+  PRIVY_JWT_INTERNAL_SECRET: z.string().min(32).optional(),
+  PERSON_SWITCHING_MODE: z.enum(["off", "verify", "live"]).default("off"),
+  PERSON_SWITCH_OPERATOR_USER_ID: z.uuid().optional(),
+  PERSON_SWITCH_HANA_USER_ID: z.uuid().optional(),
   IMAGE_DIR: z.string().min(1),
   // Where the sticker images load from: the box's, through Fastly in front of the site on the box. The
   // path alone loads them from whichever origin the app was opened on, as behind a demo's tunnel.
@@ -80,6 +87,13 @@ const env = parsed.data;
 migrateDatabase();
 
 const db = openDb();
+const personSwitch = {
+  mode: env.PERSON_SWITCHING_MODE,
+  operatorUserId: env.PERSON_SWITCH_OPERATOR_USER_ID ?? null,
+  hanaUserId: env.PERSON_SWITCH_HANA_USER_ID ?? null,
+};
+validatePersonSwitchConfig(db, personSwitch);
+prunePersonSwitchSessions(db, new Date());
 const images = createDiskImageStore(env.IMAGE_DIR, env.IMAGE_BASE_URL);
 const ticketPayment = {
   network: env.SUI_NETWORK,
@@ -169,15 +183,34 @@ const chatMenu = chatMenuFromEnvironment({
   clock,
   channel: messaging,
   menusFile: env.LINE_CHAT_MENUS_FILE,
+  personSwitch,
 });
-const giverNotice = giverNoticeFor(messaging, { db, clock });
+const giverNotice = giverNoticeFor(messaging, { db, clock, personSwitch });
 
+if (
+  env.STICKER_CHAIN_MODE === "sui" &&
+  (!env.PRIVY_JWT_INTERNAL_URL || !env.PRIVY_JWT_INTERNAL_SECRET)
+) {
+  throw new Error("Protected Privy issuer URL and internal secret are required in Sui mode");
+}
+if (Boolean(env.PRIVY_JWT_INTERNAL_URL) !== Boolean(env.PRIVY_JWT_INTERNAL_SECRET)) {
+  throw new Error("Protected Privy issuer URL and internal secret must be configured together");
+}
 const deps: AppDeps = {
   db,
   sessionSecret: env.SESSION_SECRET,
+  personSwitch,
+  lineChannelId: env.LINE_CHANNEL_ID,
   clock,
   ids: { uuid: () => randomUUID() },
   line: chooseLineVerifier(env.DEV_SIGN_IN, createLineVerifier(env.LINE_CHANNEL_ID)),
+  privyJwt:
+    env.PRIVY_JWT_INTERNAL_URL && env.PRIVY_JWT_INTERNAL_SECRET
+      ? createPrivyJwtService({
+          url: env.PRIVY_JWT_INTERNAL_URL,
+          secret: env.PRIVY_JWT_INTERNAL_SECRET,
+        })
+      : null,
   images,
   ...chain,
   ticketPayment,

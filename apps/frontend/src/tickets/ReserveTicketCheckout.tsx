@@ -1,6 +1,7 @@
 import type { TicketPurchasePayment } from "@drawing-app/api/client";
 import { useId, useState, type KeyboardEvent, type ReactNode } from "react";
 import { ApiError } from "../api/apiClient";
+import { usePersonSwitchBlocker } from "../api/PersonSwitchProvider";
 import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { Trans, useTranslation } from "../i18n/react";
 import { ArrowClockwise, BuyTicketsIcon, DrawIcon } from "../icons";
@@ -222,6 +223,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
 
   const paying = step === "paying";
   const busy = paying || adding;
+  usePersonSwitchBlocker(busy || lost !== null, "Reserve ticket checkout");
   /** Closes the card, unless a payment is on its way: false tells Back it can't close yet. */
   const leave = () => {
     if (busy) return false;

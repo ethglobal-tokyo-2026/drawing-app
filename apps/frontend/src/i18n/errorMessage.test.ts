@@ -49,3 +49,39 @@ describe("several failures' details", () => {
     expect(joinedDetails([undefined])).toBeUndefined();
   });
 });
+
+it.each([
+  ["delivery", "giving sticker 42", "シール42の贈る操作"],
+  ["claim", "receiving sticker 42", "シール42の受け取り"],
+  ["take_out", "taking out sticker 42", "シール42の取り出し"],
+  ["mint", "sealing sticker 42", "シール42の仕上げ"],
+  ["return", "returning sticker 42", "シール42の返却"],
+] as const)(
+  "names the affected sticker for persisted %s recovery in both languages",
+  async (kind, english, japanese) => {
+    const error = new ApiError(409, {
+      error: "person_switch_busy",
+      pendingOwnership: {
+        kind,
+        giftId: "diagnostic-gift",
+        stickerId: "diagnostic-sticker",
+        stickerNo: 42,
+      },
+    });
+    await inLanguage("en");
+    expect(errorMessage(error)).toContain(english);
+    await inLanguage("ja");
+    expect(errorMessage(error)).toContain(japanese);
+    expect(errorMessage(error)).not.toContain("diagnostic-");
+  },
+);
+
+it("names a pending ticket purchase without inventing a sticker number", async () => {
+  await inLanguage("en");
+  const error = new ApiError(409, {
+    error: "person_switch_busy",
+    pendingOwnership: { kind: "payment", giftId: null, stickerId: null, stickerNo: null },
+  });
+  expect(errorMessage(error)).toContain("buying reserve tickets");
+  expect(errorMessage(error)).not.toContain("sticker");
+});

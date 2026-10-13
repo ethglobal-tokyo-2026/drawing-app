@@ -1,5 +1,6 @@
 import { ApiError, type ApiClient, type ErrorCode } from "../api/apiClient";
 import { myStickerBoardChanged } from "../sticker-board/useMyStickerBoard";
+import { reportGiftDelivery } from "./personGiftDelivery";
 import { forgetKeptGift, keptReports } from "./keptGifts";
 
 /** Refusals no later report can change: the gift is gone, closed, or someone else's. */
@@ -17,7 +18,7 @@ export const refusedForGood = (error: unknown) =>
  * from Giving, so the app's start doesn't load Giving's code to do it.
  */
 export async function reportKeptSends(
-  api: Pick<ApiClient, "reportShared">,
+  api: Pick<ApiClient, "reportShared" | "giftDelivery" | "deliverPersonGift">,
   userId: string,
 ): Promise<void> {
   let settled = 0;
@@ -25,7 +26,7 @@ export async function reportKeptSends(
     // Older entries cannot resolve an attempt without a giver-only packaging response.
     if (!kept.attemptId || (kept.message !== "sent" && kept.message !== "cancelled")) continue;
     try {
-      await api.reportShared(giftId, kept.attemptId, kept.message);
+      await reportGiftDelivery(api, giftId, kept.attemptId, kept.message);
     } catch (error) {
       if (!refusedForGood(error)) {
         console.error(

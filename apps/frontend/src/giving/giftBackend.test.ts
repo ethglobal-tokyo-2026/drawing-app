@@ -35,6 +35,7 @@ function setup() {
   const packageGift = vi
     .fn<ApiClient["packageGift"]>()
     .mockResolvedValueOnce({
+      delivery: "line",
       gift: packed,
       forUserId: "user-bob",
       giftClaimToken: token,
@@ -42,6 +43,7 @@ function setup() {
       deposit: firstDeposit,
     })
     .mockResolvedValue({
+      delivery: "line",
       gift: packed,
       forUserId: "user-bob",
       giftClaimToken: null,
@@ -183,6 +185,7 @@ describe("Giving through the Sui wallet", () => {
   it("gives a gift with nothing to sign when the server answers no deposit", async () => {
     const t = setup();
     t.packageGift.mockReset().mockResolvedValue({
+      delivery: "line",
       gift: t.packed,
       forUserId: "user-bob",
       giftClaimToken: token,
@@ -234,6 +237,7 @@ describe("Giving through the Sui wallet", () => {
       cause: lost,
     });
     t.packageGift.mockResolvedValue({
+      delivery: "line",
       gift: t.packed,
       forUserId: "user-bob",
       giftClaimToken: null,
@@ -252,6 +256,7 @@ describe("Giving through the Sui wallet", () => {
       new ApiError(409, { error: "sponsorship_expired", detail: "The sponsorship lapsed" }),
     );
     t.packageGift.mockResolvedValue({
+      delivery: "line",
       gift: t.packed,
       forUserId: "user-bob",
       giftClaimToken: null,
@@ -274,6 +279,7 @@ describe("Giving through the Sui wallet", () => {
     });
     t.reportDeposit.mockRejectedValue(lapsed);
     t.packageGift.mockResolvedValue({
+      delivery: "line",
       gift: t.packed,
       forUserId: "user-bob",
       giftClaimToken: null,
@@ -304,6 +310,7 @@ describe("Giving through the Sui wallet", () => {
       t.packageGift
         .mockReset()
         .mockResolvedValueOnce({
+          delivery: "line",
           gift: t.packed,
           forUserId: originalRecipient,
           giftClaimToken: null,
@@ -311,12 +318,14 @@ describe("Giving through the Sui wallet", () => {
           messageAttempt: null,
         })
         .mockResolvedValueOnce({
+          delivery: "line",
           gift: freshGift,
           forUserId: originalRecipient,
           giftClaimToken: token,
           deposit: null,
           messageAttempt: null,
         });
+
       const { createApiGiftBackend: fresh } = await reload();
       await expect(
         fresh({ ...t.options, forUserId: "user-carol" }).pack(t.sticker),
@@ -330,6 +339,7 @@ describe("Giving through the Sui wallet", () => {
   it("bounds automatic missing-token recovery to one replacement", async () => {
     const t = setup();
     t.packageGift.mockReset().mockResolvedValue({
+      delivery: "line" as const,
       gift: t.packed,
       forUserId: "user-bob",
       giftClaimToken: null,
@@ -350,6 +360,7 @@ describe("Giving through the Sui wallet", () => {
     t.packageGift
       .mockReset()
       .mockResolvedValueOnce({
+        delivery: "line" as const,
         gift: t.packed,
         forUserId: "user-bob",
         giftClaimToken: null,
@@ -357,6 +368,7 @@ describe("Giving through the Sui wallet", () => {
         messageAttempt: { id: attemptId, state: "cancelled" },
       })
       .mockResolvedValueOnce({
+        delivery: "line" as const,
         gift: freshGift,
         forUserId: "user-bob",
         giftClaimToken: token,
@@ -379,6 +391,7 @@ describe("Giving through the Sui wallet", () => {
     t.reportShared.mockRejectedValue(refused);
     await expect(t.backend.markCancelled(t.packed.id, attemptId)).rejects.toBe(refused);
     const waitingGift = {
+      delivery: "line" as const,
       gift: t.packed,
       forUserId: "user-bob",
       giftClaimToken: null,
@@ -395,13 +408,17 @@ describe("Giving through the Sui wallet", () => {
 
     t.reportShared.mockResolvedValue(t.packed);
     const freshGift = gift({ ...t.packed, id: "gift-recorded-cancel", status: "packed" });
-    t.packageGift.mockReset().mockResolvedValueOnce(waitingGift).mockResolvedValueOnce({
-      gift: freshGift,
-      forUserId: "user-bob",
-      giftClaimToken: token,
-      deposit: null,
-      messageAttempt: null,
-    });
+    t.packageGift
+      .mockReset()
+      .mockResolvedValueOnce(waitingGift)
+      .mockResolvedValueOnce({
+        delivery: "line" as const,
+        gift: freshGift,
+        forUserId: "user-bob",
+        giftClaimToken: token,
+        deposit: null,
+        messageAttempt: null,
+      });
     await expect(reopened.pack(t.sticker)).resolves.toMatchObject({ giftId: freshGift.id });
     expect(t.startTakeOut).toHaveBeenCalledExactlyOnceWith(t.packed.id, {
       id: attemptId,
@@ -414,6 +431,7 @@ describe("Giving through the Sui wallet", () => {
     const t = setup();
     const received = new ApiError(409, { error: "already_received", detail: "Gift was received" });
     t.packageGift.mockReset().mockResolvedValue({
+      delivery: "line" as const,
       gift: t.packed,
       forUserId: "user-bob",
       giftClaimToken: null,
@@ -446,6 +464,7 @@ describe("Giving through the Sui wallet", () => {
     await reopened.takeOut(firstGift.giftId);
     const replacement = gift({ ...t.packed, id: "gift-shared-recipient", status: "packed" });
     t.packageGift.mockResolvedValue({
+      delivery: "line" as const,
       gift: replacement,
       forUserId: "user-bob",
       giftClaimToken: token,
@@ -461,6 +480,7 @@ describe("Giving through the Sui wallet", () => {
     t.packageGift
       .mockReset()
       .mockResolvedValueOnce({
+        delivery: "line" as const,
         gift: t.packed,
         forUserId: "user-bob",
         giftClaimToken: null,
@@ -468,6 +488,7 @@ describe("Giving through the Sui wallet", () => {
         deposit: null,
       })
       .mockResolvedValueOnce({
+        delivery: "line" as const,
         gift: t.packed,
         forUserId: "user-bob",
         giftClaimToken: null,
@@ -553,6 +574,7 @@ describe("Giving through the Sui wallet", () => {
       t.packageGift.mockClear();
       const { createApiGiftBackend: afterReload } = await reload();
       t.packageGift.mockResolvedValue({
+        delivery: "line",
         gift: t.packed,
         forUserId: "user-bob",
         giftClaimToken: null,

@@ -2,6 +2,8 @@ import { gifts, users, type Db } from "@drawing-app/db";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import type { MessagingChannel } from "../chatMenu/fromEnvironment.ts";
+import { deliveryAtPackaging, personLineUnavailable } from "./personDelivery.ts";
+import type { PersonSwitchConfig } from "../session/sessionShapes.ts";
 import type { Clock, GiverNotice } from "../deps.ts";
 import { logFailure, logInfo } from "../diagnostics.ts";
 import type { Schedule } from "../midnightJob.ts";
@@ -70,9 +72,11 @@ export function createGiverNotice({
   db,
   clock,
   line,
+  personSwitch,
 }: {
   db: Db;
   clock: Clock;
+  personSwitch?: PersonSwitchConfig;
   line: Pick<LineMessaging, "pushText">;
 }): GiverNotice {
   const giver = alias(users, "giver");
@@ -91,6 +95,7 @@ export function createGiverNotice({
     const due = db
       .select({
         giverId: gifts.giverId,
+        receiverId: gifts.receiverId,
         receivedAt: gifts.receivedAt,
         lineUserId: giver.lineUserId,
         language: giver.language,
@@ -104,6 +109,16 @@ export function createGiverNotice({
       .get();
     if (!due?.receivedAt) return;
     const fields = { giftId, userId: due.giverId };
+    if (
+      personLineUnavailable(personSwitch, due.giverId) ||
+      (personSwitch &&
+        deliveryAtPackaging(personSwitch, { giverId: due.giverId, forUserId: due.receiverId }) ===
+          "person")
+    ) {
+      markDone(giftId);
+      logInfo("gift.giver_notice.skipped", { ...fields, status: "person_delivery" });
+      return;
+    }
     if (clock.now().getTime() - due.receivedAt.getTime() >= RETRY_WINDOW_MS) {
       markDone(giftId);
       logInfo("gift.giver_notice.given_up", { ...fields, status: "retry_window_passed" });
@@ -177,9 +192,11 @@ export function createGiverNotice({
 /** The giver's messages through the Messaging API channel, or off with it. */
 export const giverNoticeFor = (
   channel: MessagingChannel,
-  { db, clock }: { db: Db; clock: Clock },
+  { db, clock, personSwitch }: { db: Db; clock: Clock; personSwitch?: PersonSwitchConfig },
 ): GiverNotice =>
-  channel.off === null ? createGiverNotice({ db, clock, line: channel.line }) : giverNoticeOff;
+  channel.off === null
+    ? createGiverNotice({ db, clock, personSwitch, line: channel.line })
+    : giverNoticeOff;
 
 /** Sweeps at once, for what an earlier run left due, then SWEEP_EVERY_MS after each sweep ends. */
 export const startGiverNoticeSweeps = (notice: Pick<GiverNotice, "sweep">, schedule?: Schedule) =>

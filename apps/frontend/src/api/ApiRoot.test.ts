@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { accountSelection } from "./sessionTestFixtures";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 // Only whether the app's client waits for Privy's Sui wallet matters here.
@@ -24,7 +25,7 @@ describe("the app's API client", () => {
       const { withSuiWallet } = await import("./suiWalletApi");
       vi.mocked(withSuiWallet).mockClear();
       const { createAccountApi } = await import("./serverClients");
-      createAccountApi("alice");
+      createAccountApi(accountSelection("alice"));
       expect(vi.mocked(withSuiWallet).mock.calls.length > 0).toBe(waits);
     },
     FRESH_IMPORT_TIMEOUT_MS,

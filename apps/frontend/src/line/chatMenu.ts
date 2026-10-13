@@ -1,7 +1,8 @@
-import type { ChatMenuLink } from "@drawing-app/api/client";
+import type { ChatMenuLink, AccountSelection } from "@drawing-app/api/client";
 import { useEffect, useSyncExternalStore } from "react";
 import { createServerClient } from "../api/httpApi";
 import { useMe } from "../api/meContext";
+import { useSessionEnvelope, selectionOf } from "../api/sessionContext";
 import { messageOf } from "../i18n/errorMessage";
 import { jsonField } from "../identity/privy";
 
@@ -49,9 +50,10 @@ function fail(userId: string, reason: string) {
  * never throws.
  */
 export async function linkChatMenu(
-  userId: string,
-  api = createServerClient(fetch, userId),
+  selection: AccountSelection,
+  api = createServerClient(fetch, selection),
 ): Promise<void> {
+  const userId = selection.userId;
   if (asked.has(userId)) return;
   asked.add(userId);
   set(userId, { state: "linking" });
@@ -70,9 +72,11 @@ export async function linkChatMenu(
 
 /** Links your chat menu once you're signed in to the app's server. It shows nothing. */
 export function ChatMenuLink() {
-  const { id } = useMe();
+  const session = useSessionEnvelope();
+  const id = session.me.id;
+  const version = session.selectionVersion;
   useEffect(() => {
-    void linkChatMenu(id);
-  }, [id]);
+    void linkChatMenu(selectionOf(session));
+  }, [id, version, session]);
   return null;
 }

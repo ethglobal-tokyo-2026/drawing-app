@@ -1,8 +1,17 @@
+import { i18next } from "../i18n/i18n";
 import liff from "@line/liff";
 import type { User, WalletWithMetadata } from "@privy-io/react-auth";
 import { useSyncExternalStore } from "react";
 import { ApiError } from "../api/apiClient";
-import { messageOf } from "../i18n/errorMessage";
+import { createSessionApi } from "../api/httpApi";
+import {
+  currentSelection,
+  isAccountSelectionCurrent,
+  onSessionSuspended,
+  selectionKey,
+} from "../api/sessionContext";
+import { requestAccountRelease } from "../api/sessionLoss";
+import type { PrivyAccount } from "./privyAccount";
 import { liffMockActive } from "../line/liff";
 import { reconnectLine } from "../line/reconnectLine";
 
@@ -57,8 +66,9 @@ const EXPIRY_MARGIN_S = 60;
 const EXCHANGE_TIMEOUT_MS = 10_000;
 
 // Privy re-authenticates whenever it's handed a JWT unlike the last, so one is kept while it's good.
-let kept: { jwt: string; expiresAt: number } | undefined;
-let reconnecting = false;
+let kept: { key: string; jwt: string; expiresAt: number } | undefined;
+let reconnecting: ReturnType<typeof currentSelection> = null;
+let suspension = 0;
 
 /**
  * The person's retry reconnects LINE when its credentials need replacing, coming back to `returnTo`
@@ -66,24 +76,40 @@ let reconnecting = false;
  * `onFailed`, so the screen that asked can say so where the person tapped.
  */
 export function retryPrivySignIn(returnTo?: string, onFailed?: (failure: ApiError) => void): void {
-  if (status.state === "failed" && status.reloadRequired) {
-    location.reload();
-    return;
-  }
-  if (reconnecting) return;
-  if (status.state === "failed" && status.reconnectLine) {
-    reconnecting = true;
-    // Keep the exchange disabled while LINE navigates, so Privy cannot resend the stale token.
-    void reconnectLine(returnTo)
-      .catch(() => {
-        if (status.state === "failed" && status.reloadRequired) return;
-        fail("LINE could not reconnect; try again", true);
-        // LINE's SDK errors can carry credentials, so none of it goes on screen.
-        onFailed?.(new ApiError(0, { error: "line_reconnect_failed" }));
-      })
-      .finally(() => {
-        reconnecting = false;
-      });
+  const lifetime = currentSelection();
+  if (!lifetime) return;
+  const recoveryReason = status.state === "failed" ? status.reason : "";
+  const reloadRequired = status.state === "failed" && status.reloadRequired;
+  const requiresLineReconnect = status.state === "failed" && status.reconnectLine;
+  if (reloadRequired || requiresLineReconnect) {
+    if (!reloadRequired && reconnecting === lifetime) return;
+    // The preservation pause suspends readiness; retain this explicit selection and its recovery.
+    let expectedSuspension = suspension;
+    const isRecoveryCurrent = () =>
+      expectedSuspension === suspension &&
+      (currentSelection() === null || currentSelection() === lifetime);
+    const released = requestAccountRelease(lifetime.userId, () => {
+      if (!isRecoveryCurrent()) return;
+      if (reloadRequired) {
+        location.reload();
+        return;
+      }
+      reconnecting = lifetime;
+      // Keep the exchange disabled while LINE navigates, including after a preservation pause.
+      setPrivyStatus({ state: "failed", reason: recoveryReason, reconnectLine: true });
+      void reconnectLine(returnTo)
+        .catch(() => {
+          if (!isRecoveryCurrent() || reconnecting !== lifetime) return;
+          if (status.state === "failed" && status.reloadRequired) return;
+          fail("LINE could not reconnect; try again", true);
+          // LINE's SDK errors can carry credentials, so none of it goes on screen.
+          onFailed?.(new ApiError(0, { error: "line_reconnect_failed" }));
+        })
+        .finally(() => {
+          if (isRecoveryCurrent() && reconnecting === lifetime) reconnecting = null;
+        });
+    });
+    if (!released) expectedSuspension = suspension;
     return;
   }
   resetPrivySignIn();
@@ -110,10 +136,13 @@ export function onPrivyError(error: Error) {
   if (error.message.includes(WALLET_FRAME_RACE) && !retriedRace) {
     retriedRace = true;
     console.warn("Privy signed out while making the wallet; signing in again");
-    setTimeout(resetPrivySignIn, RACE_RETRY_MS);
+    const selected = currentSelection();
+    setTimeout(() => {
+      if (selected === currentSelection()) resetPrivySignIn();
+    }, RACE_RETRY_MS);
     return;
   }
-  setPrivyStatus({ state: "failed", reason: `Privy refused the sign-in: ${error.message}` });
+  setPrivyStatus({ state: "failed", reason: i18next.t(($) => $.identity.selection.authFailed) });
 }
 
 function fail(reason: string, requiresLineReconnect = false): undefined {
@@ -132,37 +161,56 @@ export const jsonField = (body: unknown, key: string): unknown =>
  * counts the person logged in exactly while it holds one, and its ID token lapses far sooner. A
  * failure resolves to undefined, since a throw logs out too, and its reason goes to the status.
  */
-export async function fetchPrivyJwt(): Promise<string | undefined> {
+export async function fetchPrivyJwt(account: PrivyAccount): Promise<string | undefined> {
   // The SDK re-syncs on its own after a failure; asking again would only repeat it at every server.
-  if (status.state === "failed") return undefined;
-  if (kept && kept.expiresAt - EXPIRY_MARGIN_S > Date.now() / 1000) return kept.jwt;
-  const accessToken = liff.getAccessToken();
+  if (!isAccountSelectionCurrent(account) || status.state === "failed") return undefined;
+  if (
+    kept &&
+    kept.key === selectionKey(account) &&
+    kept.expiresAt - EXPIRY_MARGIN_S > Date.now() / 1000
+  )
+    return kept.jwt;
+  const lifetime = currentSelection();
+  let accessToken: string | null;
+  try {
+    accessToken = liff.getAccessToken();
+  } catch {
+    return fail("LINE could not supply an access token", true);
+  }
   if (!accessToken) return fail("LINE gave no access token", true);
   // Privy renews a lapsed JWT in the background, and the person stays signed in unless that fails.
   if (status.state !== "signed-in") setPrivyStatus({ state: "signing-in" });
   try {
-    const response = await fetch("/v1/auth/privy-jwt", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ accessToken }),
-      signal: AbortSignal.timeout(EXCHANGE_TIMEOUT_MS),
-    });
-    const body: unknown = await response.json().catch(() => null);
-    if (!response.ok) {
-      const error = jsonField(body, "error");
-      return fail(
-        `the auth server could not complete sign-in: HTTP ${response.status}${typeof error === "string" ? ` ${error}` : ""}`,
-        response.status === 401 && error === "line_auth_failed",
-      );
-    }
+    const body: unknown = await createSessionApi().privyJwt(
+      accessToken,
+      account,
+      AbortSignal.timeout(EXCHANGE_TIMEOUT_MS),
+    );
+    if (lifetime !== currentSelection() || !isAccountSelectionCurrent(account)) return undefined;
     const jwt = jsonField(body, "jwt");
     const expiresAt = jsonField(body, "expiresAt");
+    if (jsonField(body, "subject") !== account.expectedSubject)
+      return fail(i18next.t(($) => $.identity.selection.subjectMismatch));
     if (typeof jwt !== "string" || !jwt || typeof expiresAt !== "number") {
       return fail("the auth server answered without a JWT");
     }
-    kept = { jwt, expiresAt };
+    kept = { key: selectionKey(account), jwt, expiresAt };
     return jwt;
   } catch (error) {
-    return fail(`couldn’t reach the auth server: ${messageOf(error)}`);
+    if (lifetime !== currentSelection() || !isAccountSelectionCurrent(account)) return undefined;
+    return fail(
+      `The authenticated API could not complete Privy sign-in: ${error instanceof ApiError ? `${error.status} ${error.code}` : "network failure"}`,
+      error instanceof ApiError &&
+        error.status === 401 &&
+        (error.code === "line_token_expired" || error.code === "line_token_invalid"),
+    );
   }
 }
+
+onSessionSuspended(() => {
+  suspension += 1;
+  reconnecting = null;
+  kept = undefined;
+  retriedRace = false;
+  setPrivyStatus(liffMockActive ? { state: "off" } : { state: "signing-in" });
+});

@@ -41,17 +41,21 @@ async function actualApi() {
   let loseBegin = false;
   let failReports = false;
   const api = createHttpApi(
-    createServerClient(async (input, init) => {
-      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-      if (failReports && url.endsWith("/shared")) throw new Error("Report transport unavailable");
-      const response = await t.app.request(url, {
-        ...init,
-        headers: { ...Object.fromEntries(new Headers(init?.headers)), ...headers },
-      });
-      if (loseBegin && url.endsWith("/message-attempt"))
-        throw new Error("Begin acknowledgement lost");
-      return response;
-    }, giver),
+    createServerClient(
+      async (input, init) => {
+        const url =
+          typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+        if (failReports && url.endsWith("/shared")) throw new Error("Report transport unavailable");
+        const response = await t.app.request(url, {
+          ...init,
+          headers: { ...Object.fromEntries(new Headers(init?.headers)), ...headers },
+        });
+        if (loseBegin && url.endsWith("/message-attempt"))
+          throw new Error("Begin acknowledgement lost");
+        return response;
+      },
+      { userId: giver, selectionVersion: null },
+    ),
   );
   const options = {
     api,

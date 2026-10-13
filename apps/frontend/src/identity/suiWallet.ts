@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { onSessionSuspended } from "../api/sessionContext";
 import { privyStatus } from "./privy";
 import { waitForPrivy } from "./waitForPrivy";
 
@@ -59,3 +60,9 @@ export const waitForSuiAddress = (): Promise<string> =>
     askAgain: askForSuiWalletAgain,
     subscribe: onSuiWalletFailure,
   });
+
+onSessionSuspended(() => {
+  failure = undefined;
+  attempt += 1;
+  notify();
+});

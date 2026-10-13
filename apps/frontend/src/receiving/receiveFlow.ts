@@ -46,6 +46,7 @@ const REFUSAL_KINDS: Record<RefusalKind, true> = {
   gift_returned: true,
   gift_expired: true,
   not_deposited: true,
+  gift_message_unresolved: true,
   gift_not_found: true,
   nsfw_not_opted_in: true,
 };

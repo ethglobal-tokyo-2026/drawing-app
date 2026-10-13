@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, unlinkSync } from "node:fs";
 import { request } from "node:http";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import { stickers } from "@drawing-app/db";
+import { personSwitchSessions, stickers, users } from "@drawing-app/db";
 import { insertTicketUse, insertUser } from "@drawing-app/db/testing";
 import { serve } from "@hono/node-server";
 import { eq } from "drizzle-orm";
@@ -14,6 +14,7 @@ import { createServer, STICKER_IMAGES_PATH } from "./app.ts";
 import { validate } from "./errors.ts";
 import { createDiskImageStore } from "./services/imageStore.ts";
 import { setSessionCookie, type AppEnv } from "./session.ts";
+import { BIGWHEEL_ID, HANA_ID } from "./session/personSwitch.ts";
 import type { StickerImages } from "./shapes.ts";
 import { markNsfwResponseSchema, unmarkNsfwResponseSchema } from "./stickers/markNsfw.ts";
 import { sweepCdnPurges } from "./stickers/nsfwDrawing.ts";
@@ -247,6 +248,47 @@ describe("sticker images", () => {
     for (const url of urlsIn(urls).filter((url) => !drawing.includes(url))) {
       await expectPublic(url);
     }
+  });
+
+  it("authorizes headerless images with the selected account's NSFW opt-in", async () => {
+    const { store, contentHash } = await savedImages();
+    insertUser(test.db, { id: BIGWHEEL_ID });
+    insertUser(test.db, {
+      id: HANA_ID,
+      lineUserId: "dev-video-hana",
+      nsfwOptedInAt: test.clock.now(),
+    });
+    Object.assign(test.deps.personSwitch, {
+      mode: "verify",
+      operatorUserId: BIGWHEEL_ID,
+      hanaUserId: HANA_ID,
+    });
+    insertSealedSticker(test.db, HANA_ID, { nsfw: true, contentHash });
+    const headers = await test.signInAs(BIGWHEEL_ID);
+    const sessionId = headers["x-croquis-selection-version"];
+    if (!sessionId) throw new Error("The operator session has no version");
+    test.db
+      .insert(personSwitchSessions)
+      .values({
+        sessionId,
+        authenticatedUserId: BIGWHEEL_ID,
+        selectedUserId: HANA_ID,
+        selectionVersion: "selected-hana",
+        expiresAt: new Date(test.clock.now().getTime() + 10000),
+      })
+      .run();
+    const server = createServer(test.deps, imageDir);
+    const path = new URL(store.urls(contentHash).png).pathname;
+    const selected = await server.request(path, { headers: { Cookie: headers.Cookie } });
+    expect(selected.status).toBe(200);
+    expect(selected.headers.get("cache-control")).toMatch(/^private,/);
+    test.db.update(users).set({ nsfwOptedInAt: null }).where(eq(users.id, HANA_ID)).run();
+    test.db
+      .update(users)
+      .set({ nsfwOptedInAt: test.clock.now() })
+      .where(eq(users.id, BIGWHEEL_ID))
+      .run();
+    expect((await server.request(path, { headers: { Cookie: headers.Cookie } })).status).toBe(403);
   });
 
   it("answer a stored file's path in any form but its name with 404, as the server receives it", async () => {

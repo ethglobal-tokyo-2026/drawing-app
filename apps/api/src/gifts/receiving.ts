@@ -1,6 +1,8 @@
 import { gifts, stickerPlacements, stickers, users, type Db } from "@drawing-app/db";
 import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
+import { assertPersonTransferAllowed, giftOwnershipPeople } from "../session/personOwnership.ts";
+import { giftDeliveryFor } from "./personDelivery.ts";
 import type { AppDeps } from "../deps.ts";
 import { logFailure, logInfo } from "../diagnostics.ts";
 import {
@@ -56,6 +58,7 @@ export type OpenGiftBody = z.infer<typeof openGiftBodySchema>;
 
 /** Why a gift can't be received, in the order they're checked. */
 const receiveRefusalSchema = z.enum([
+  "gift_not_found",
   "group_chat",
   "own_gift",
   "already_received",
@@ -63,6 +66,7 @@ const receiveRefusalSchema = z.enum([
   "gift_returned",
   "gift_expired",
   "not_deposited",
+  "gift_message_unresolved",
   "nsfw_not_opted_in",
 ]);
 export type ReceiveRefusal = z.infer<typeof receiveRefusalSchema>;
@@ -131,12 +135,22 @@ function receiveRefusal(
   liffContextType: LiffContextType,
   now: Date,
   claimLanded = false,
+  personSwitch?: AppDeps["personSwitch"],
 ): Refusal<ReceiveRefusal> | null {
   const groupChat = groupChatRefusal(liffContextType);
   if (groupChat) return groupChat;
   if (gift.giverId === userId) return refuse("own_gift", `Gift ${gift.id} is your own`);
   if (gift.status === "received") {
     return refuse("already_received", `Gift ${gift.id} was already received`);
+  }
+  if (personSwitch && giftDeliveryFor(personSwitch, gift) === "person") {
+    if (gift.status === "packed")
+      return refuse(
+        "gift_message_unresolved",
+        `Gift ${gift.id}'s private delivery has not been acknowledged`,
+      );
+    if (gift.forUserId !== userId)
+      return refuse("gift_not_found", `Gift ${gift.id} waits for its selected recipient`);
   }
   if (gift.status === "taken_out") return takenBack(gift);
   if (gift.status === "returned") return giftReturned(gift);
@@ -175,7 +189,9 @@ function giftWaitingFor(db: Pick<Db, "select">, userId: string, giftId: string) 
 
 const notWaiting = (giftId: string) => refuse("gift_not_found", `No gift ${giftId} waits for you`);
 
-export type Previewing = Refusal<"gift_not_found"> | { refusal: null; preview: GiftPreview };
+export type Previewing =
+  | Refusal<"gift_not_found" | "gift_message_unresolved">
+  | { refusal: null; preview: GiftPreview };
 
 /** The preview of a gift this person opened: the sticker only when they can receive it. */
 function previewOf(
@@ -208,7 +224,17 @@ export async function previewGift(
   const gift = openGift(deps, giftClaimToken);
   if (!gift) return notFound();
   const claimLanded = claimLandedBeforeExpiry(deps, gift);
-  const refusal = receiveRefusal(db, gift, userId, liffContextType, clock.now(), claimLanded);
+  const refusal = receiveRefusal(
+    db,
+    gift,
+    userId,
+    liffContextType,
+    clock.now(),
+    claimLanded,
+    deps.personSwitch,
+  );
+  if (refusal?.refusal === "gift_message_unresolved")
+    return refuse(refusal.refusal, refusal.detail);
   const preview = previewOf(deps, userId, gift, refusal);
   // The first person to open it becomes who it waits for, so it stays on their board if they leave.
   if (!refusal && gift.forUserId === null) {
@@ -232,7 +258,17 @@ export async function previewGiftForYou(
   const gift = giftWaitingFor(deps.db, userId, giftId);
   if (!gift) return notWaiting(giftId);
   const claimLanded = claimLandedBeforeExpiry(deps, gift);
-  const refusal = receiveRefusal(deps.db, gift, userId, "none", deps.clock.now(), claimLanded);
+  const refusal = receiveRefusal(
+    deps.db,
+    gift,
+    userId,
+    "none",
+    deps.clock.now(),
+    claimLanded,
+    deps.personSwitch,
+  );
+  if (refusal?.refusal === "gift_message_unresolved")
+    return Promise.resolve(refuse(refusal.refusal, refusal.detail));
   return Promise.resolve({ refusal: null, preview: previewOf(deps, userId, gift, refusal) });
 }
 
@@ -335,6 +371,7 @@ function receiveOpened(
   opened: GiftRow,
   liffContextType: LiffContextType,
 ): Promise<Receiving> {
+  assertPersonTransferAllowed(deps, [userId, ...giftOwnershipPeople(deps, opened.id)]);
   const active = receivingNow.get(deps.db) ?? new Map<string, Promise<Receiving>>();
   receivingNow.set(deps.db, active);
   const key = `${opened.id}/${userId}`;
@@ -412,7 +449,15 @@ async function completeReceive(
   const { db, clock } = deps;
   const now = clock.now();
   const claimLanded = claimLandedBeforeExpiry(deps, opened);
-  const beforeClaim = receiveRefusal(db, opened, userId, liffContextType, now, claimLanded);
+  const beforeClaim = receiveRefusal(
+    db,
+    opened,
+    userId,
+    liffContextType,
+    now,
+    claimLanded,
+    deps.personSwitch,
+  );
   if (beforeClaim) {
     return beforeClaim.refusal === "already_received"
       ? (recordedReceive(deps, userId, opened) ?? beforeClaim)
@@ -429,7 +474,15 @@ async function completeReceive(
     (tx) => {
       const gift = tx.select().from(gifts).where(eq(gifts.id, opened.id)).get();
       if (!gift) return refuse("gift_not_found", `Gift ${opened.id} is gone`);
-      const refused = receiveRefusal(tx, gift, userId, liffContextType, now, claimLanded);
+      const refused = receiveRefusal(
+        tx,
+        gift,
+        userId,
+        liffContextType,
+        now,
+        claimLanded,
+        deps.personSwitch,
+      );
       if (refused) return refused;
       recordReceive(gift, userId, now)(tx, []);
       return null;
@@ -476,12 +529,12 @@ async function claimOnSui(
   const now = sui.clock.now();
   const gift = currentGift(db, giftId);
   if (claimSucceeded(db, giftId)) return reconcileClaim(deps, sui, userId, recipient, gift);
-  const refusal = receiveRefusal(db, gift, userId, liffContextType, now);
+  const refusal = receiveRefusal(db, gift, userId, liffContextType, now, false, deps.personSwitch);
   if (refusal) return refusal;
 
   const claim = await sponsored(
     sui,
-    { kind: "claim", giftId, stickerId: gift.stickerId },
+    { kind: "claim", giftId, stickerId: gift.stickerId, requestedByUserId: userId },
     await sui.sui.claimKind(giftId, recipient),
   );
   const { row } = await runAsServer(sui, claim, recordReceive(gift, userId, now));

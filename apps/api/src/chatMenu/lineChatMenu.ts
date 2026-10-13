@@ -1,5 +1,7 @@
 import { users, type Db } from "@drawing-app/db";
 import { and, eq, isNull } from "drizzle-orm";
+import { personLineUnavailable } from "../gifts/personDelivery.ts";
+import type { PersonSwitchConfig } from "../session/sessionShapes.ts";
 import type { Clock, LineChatMenu } from "../deps.ts";
 import { logFailure, logInfo } from "../diagnostics.ts";
 import type { LineMessaging } from "../services/lineMessaging.ts";
@@ -9,8 +11,15 @@ import { ticketsLeftOf } from "../tickets/tickets.ts";
 import { chatMenuFor, menuToLink, type ChatMenuIds, type ChatMenuOffReason } from "./menus.ts";
 
 /** The chat menu with nothing to link with: every call does nothing, and `link` says why. */
-export const chatMenuOff = (reason: Exclude<ChatMenuOffReason, "no_menu">): LineChatMenu => ({
-  link: () => Promise.resolve({ status: "off", reason }),
+export const chatMenuOff = (
+  reason: Exclude<ChatMenuOffReason, "no_menu">,
+  personSwitch?: PersonSwitchConfig,
+): LineChatMenu => ({
+  link: (userId) =>
+    Promise.resolve({
+      status: "off",
+      reason: personLineUnavailable(personSwitch, userId) ? "person_unavailable" : reason,
+    }),
   relink: () => Promise.resolve(),
   unlink: () => Promise.resolve(),
   idle: () => Promise.resolve(),
@@ -25,9 +34,11 @@ export function createLineChatMenu({
   clock,
   line,
   ids,
+  personSwitch,
 }: {
   db: Db;
   clock: Clock;
+  personSwitch?: PersonSwitchConfig;
   line: LineMessaging;
   ids: ChatMenuIds;
 }): LineChatMenu {
@@ -65,6 +76,10 @@ export function createLineChatMenu({
   return {
     link: (userId) =>
       inTurn(userId, async () => {
+        if (personLineUnavailable(personSwitch, userId)) {
+          logInfo("chat_menu.skipped", { userId, status: "person_unavailable" });
+          return { status: "off", reason: "person_unavailable" } as const;
+        }
         const now = menuNow(userId);
         if (!now) return null;
         const { lineUserId, toLink } = now;
@@ -79,6 +94,10 @@ export function createLineChatMenu({
 
     relink: (userId) =>
       inTurn(userId, async () => {
+        if (personLineUnavailable(personSwitch, userId)) {
+          logInfo("chat_menu.skipped", { userId, status: "person_unavailable" });
+          return;
+        }
         const now = menuNow(userId);
         if (!now?.toLink) return;
         await line.linkMenu(now.lineUserId, now.toLink.richMenuId);
@@ -87,6 +106,10 @@ export function createLineChatMenu({
 
     unlink: (userId, lineUserId) =>
       inTurn(userId, async () => {
+        if (personLineUnavailable(personSwitch, userId)) {
+          logInfo("chat_menu.skipped", { userId, status: "person_unavailable" });
+          return;
+        }
         await line.unlinkMenu(lineUserId);
         logInfo("chat_menu.unlinked", { userId });
       }).catch((error: unknown) => logFailure("chat_menu.unlink_failed", error, { userId })),

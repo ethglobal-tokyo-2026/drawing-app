@@ -2,16 +2,13 @@ import { once } from "node:events";
 import { onTestFinished } from "vitest";
 import { createAuthHttpServer } from "../../src/auth-http.js";
 
-export const APP_ORIGIN = "https://drawing.example";
-
 /** Starts the auth server on a free port for the current test, recording the errors it logs. */
 export async function startAuthServer(
-  options: Omit<Parameters<typeof createAuthHttpServer>[0], "appOrigin" | "logger">,
+  options: Omit<Parameters<typeof createAuthHttpServer>[0], "logger">,
 ) {
   const errors: unknown[] = [];
   const server = createAuthHttpServer({
     ...options,
-    appOrigin: APP_ORIGIN,
     logger: { error: (_message, details) => errors.push(details.error) },
   });
   server.listen(0, "127.0.0.1");

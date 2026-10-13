@@ -59,6 +59,35 @@ afterEach(() => {
 });
 
 describe("the gratitude outbox", () => {
+  it("sends a kept combo once when a remount precedes an aborted sender's completion", async () => {
+    const combo = recordGratitudeBody({ idempotencyKey: crypto.randomUUID() });
+    await sendGratitude(server(new TypeError("offline")), ME, combo);
+    let rejectEarlier = (_error: Error) => {};
+    const earlier = {
+      recordGratitude: vi.fn<ApiClient["recordGratitude"]>(
+        () =>
+          new Promise((_, reject) => {
+            rejectEarlier = reject;
+          }),
+      ),
+    };
+    const stopEarlier = resendGratitudeWhenReachable(earlier, ME);
+    stopEarlier();
+    const current = server("records");
+    const stopCurrent = resendGratitudeWhenReachable(current, ME);
+    try {
+      rejectEarlier(new DOMException("The former mount was disposed", "AbortError"));
+      await vi.waitFor(() => expect(isGratitudeWaiting(ME, combo.giftId)).toBe(false));
+      expect(current.recordGratitude).toHaveBeenCalledTimes(1);
+      expect(current.recordGratitude.mock.calls[0]?.[0]).toEqual(combo);
+      window.dispatchEvent(new Event("online"));
+      await Promise.resolve();
+      expect(current.recordGratitude).toHaveBeenCalledTimes(1);
+    } finally {
+      stopCurrent();
+    }
+  });
+
   it("stops between queued combos when disposal follows the first recorded answer", async () => {
     vi.useFakeTimers();
     const first = recordGratitudeBody({ idempotencyKey: crypto.randomUUID() });

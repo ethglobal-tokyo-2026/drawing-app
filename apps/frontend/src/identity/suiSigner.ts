@@ -1,6 +1,12 @@
 import { Signer } from "@mysten/sui/cryptography";
 import { Ed25519PublicKey } from "@mysten/sui/keypairs/ed25519";
 import { fromBase58, fromBase64, fromHex, normalizeSuiAddress, toHex } from "@mysten/sui/utils";
+import { ApiError } from "../api/apiClient";
+import {
+  captureAccountSelection,
+  currentSelection,
+  onSessionSuspended,
+} from "../api/sessionContext";
 import { SigningTimedOut } from "./signingTimedOut";
 import { onSuiWalletFailure, suiWalletFailure, waitForSuiAddress } from "./suiWallet";
 import { waitForPrivy } from "./waitForPrivy";
@@ -49,13 +55,19 @@ interface Sponsored {
  * with SigningTimedOut past SIGNING_TIMEOUT_MS: a signature that comes later is never posted.
  */
 export async function signSponsored(tx: Sponsored): Promise<{ digest: string; signature: string }> {
+  const selection = currentSelection();
+  if (!selection) throw new ApiError(409, { error: "session_account_changed" });
+  const check = captureAccountSelection(selection);
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timedOut = new Promise<never>((_, reject) => {
     timer = setTimeout(() => reject(new SigningTimedOut()), SIGNING_TIMEOUT_MS);
   });
   const signing = (async () => {
+    check();
     const wallet = await waitForSuiSigner();
+    check();
     const { signature } = await wallet.signTransaction(fromBase64(tx.txBytes));
+    check();
     return { digest: tx.digest, signature };
   })();
   return Promise.race([signing, timedOut]).finally(() => clearTimeout(timer));
@@ -92,6 +104,7 @@ export function suiPublicKeyFor(address: string, encoded: string): Ed25519Public
 
 /** Signs Sui transactions with the Privy wallet: Privy signs the intent digest Sui asks for. */
 export class PrivySuiSigner extends Signer {
+  private readonly assertCurrent: () => void;
   private readonly address: string;
   private readonly publicKey: Ed25519PublicKey;
   private readonly signRawHash: (hash: `0x${string}`) => Promise<`0x${string}`>;
@@ -100,15 +113,19 @@ export class PrivySuiSigner extends Signer {
     address: string,
     publicKey: Ed25519PublicKey,
     signRawHash: (hash: `0x${string}`) => Promise<`0x${string}`>,
+    assertCurrent: () => void = () => {},
   ) {
     super();
+    this.assertCurrent = assertCurrent;
     this.address = address;
     this.publicKey = publicKey;
     this.signRawHash = signRawHash;
   }
 
   async sign(digest: Uint8Array): Promise<Uint8Array<ArrayBuffer>> {
+    this.assertCurrent();
     const signature = await this.signRawHash(`0x${toHex(digest)}`);
+    this.assertCurrent();
     return Uint8Array.from(fromHex(signature.slice(2)));
   }
 
@@ -124,3 +141,5 @@ export class PrivySuiSigner extends Signer {
     return normalizeSuiAddress(this.address);
   }
 }
+
+onSessionSuspended(() => setSuiSigner(null));

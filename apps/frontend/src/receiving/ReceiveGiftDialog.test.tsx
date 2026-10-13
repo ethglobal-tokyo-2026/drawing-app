@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import type { GiftPreview, ReceivedGift, ReceiveRefusal } from "@drawing-app/api/client";
 import { MARKUP_LIKE_NAME, markupLikePerson, people, sticker } from "../api/testFixtures";
-import { emptyApi, renderWithApi, shownText } from "../api/testing";
+import { emptyApi, renderWithApi, shownText, TEST_ME } from "../api/testing";
 import { toPerson } from "../api/views";
 import { formatDay, formatDuration, formatNo } from "../stickers/format";
 import { inLanguage } from "../ui/testing";
@@ -22,6 +22,8 @@ const liff = vi.hoisted(() => ({
 const profile = vi.hoisted(() => ({ userId: "U1", displayName: "" }));
 vi.mock("@line/liff", () => ({ default: liff }));
 vi.mock("../line/liff", () => ({
+  liffMockActive: true,
+  lineUserId: () => profile.userId,
   useLine: () => ({ status: "ready", profile, inClient: true }),
 }));
 
@@ -74,6 +76,7 @@ const open = (overrides: Partial<ApiClient>, from: GiftFrom = { giftClaimToken: 
   ({ unmount } = renderWithApi(
     <ReceiveGiftDialog from={from} onClose={onClose} />,
     emptyApi(overrides),
+    { ...TEST_ME, lineDisplayName: profile.displayName },
   ));
 };
 const settle = (ms = 0) => act(() => vi.advanceTimersByTimeAsync(ms));

@@ -54,6 +54,8 @@ export const suiTransactions = sqliteTable(
     failure: text("failure"),
     settledAt: integer("settled_at", { mode: "timestamp_ms" }),
     ...timestamps(),
+    /** The authenticated person who requested it, separately from the Sui sender. */
+    requestedByUserId: text("requested_by_user_id").references(() => users.id),
   },
   (t) => [
     // One open transaction per owned object it moves, and per record it settles.

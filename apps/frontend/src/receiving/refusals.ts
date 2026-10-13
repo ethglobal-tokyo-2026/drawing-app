@@ -64,6 +64,13 @@ export function refusalScreen(kind: RefusalKind, giver: PersonView | null): EndS
         bag: { state: "opened", stamp: "returned" },
         action: "backToLine",
       };
+    case "gift_message_unresolved":
+      return {
+        title: t(($) => $.receiving.refusals.deliveryPending.title),
+        line: t(($) => $.receiving.refusals.deliveryPending.line),
+        bag: { state: "closed" },
+        action: "tryAgain",
+      };
     case "not_deposited":
       return {
         title: t(($) => $.receiving.refusals.notDeposited.title),

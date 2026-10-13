@@ -1,5 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { AuthError, AUTH_FAILURE_STATUS, authFailureOf } from "./auth-error.js";
+import { PrivyAssertionError, verifyPrivyAssertion } from "./internalAssertion.ts";
 import type { LinePrivyJwtIssuer } from "./line-privy-jwt.js";
 
 /** The largest request body the Privy JWT route reads. */
@@ -23,8 +24,8 @@ function sendJson(
   response.end(JSON.stringify(body));
 }
 
-// The route takes LIFF's access token, which lives as long as LIFF counts the person logged in.
-async function readAccessToken(request: IncomingMessage) {
+// Only authenticated internal assertions reach the signing key.
+async function readAssertion(request: IncomingMessage) {
   if (!request.headers["content-type"]?.startsWith("application/json")) {
     throw new AuthError({ code: "invalid_request", reason: "content_type_required" });
   }
@@ -41,36 +42,41 @@ async function readAccessToken(request: IncomingMessage) {
   } catch {
     throw new AuthError({ code: "invalid_request", reason: "invalid_json" });
   }
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new AuthError({ code: "invalid_request", reason: "invalid_body" });
-  }
-  const accessToken: unknown = Reflect.get(parsed, "accessToken");
-  if (typeof accessToken !== "string") {
-    throw new AuthError({ code: "invalid_request", reason: "access_token_required" });
-  }
-  return accessToken;
+  return parsed;
 }
 
 /**
- * The LINE → Privy auth server: trades LIFF's access token for a Privy JWT, and serves the keys Privy
- * checks it with.
+ * The protected Privy issuer serves public verification keys and signs API-authorized identities.
  */
 export function createAuthHttpServer({
   issuer,
-  appOrigin,
+  internalSecret,
   logger = console,
 }: {
   issuer: LinePrivyJwtIssuer;
-  appOrigin: string;
+  internalSecret: string;
   logger?: Logger;
 }) {
-  if (!appOrigin) throw new Error("APP_ORIGIN is required");
+  if (internalSecret.length < 32) throw new Error("PRIVY_JWT_INTERNAL_SECRET is required");
 
   async function answerPrivyJwt(request: IncomingMessage, response: ServerResponse) {
     try {
-      const { jwt, expiresAt } = await issuer.issue(await readAccessToken(request));
-      sendJson(response, 200, { jwt, expiresAt });
+      const assertion = verifyPrivyAssertion(
+        await readAssertion(request),
+        internalSecret,
+        Math.floor(Date.now() / 1000),
+      );
+      const result = await issuer.issueAuthorized(
+        assertion.selectedLineUserId,
+        assertion.expiresAt,
+      );
+      sendJson(response, 200, result);
     } catch (error) {
+      if (error instanceof PrivyAssertionError) {
+        logger.error("Privy authorization refused", { error: { code: "internal_auth_forbidden" } });
+        sendJson(response, 403, { error: "internal_auth_forbidden" });
+        return;
+      }
       const failure = authFailureOf(error);
       logger.error("Privy JWT issuance failed", { error: failure });
       sendJson(response, AUTH_FAILURE_STATUS[failure.code], { error: failure.code });
@@ -84,18 +90,14 @@ export function createAuthHttpServer({
       sendJson(response, 200, issuer.jwks, { "cache-control": "public, max-age=300" });
       return;
     }
-    if (request.method !== "POST" || pathname !== "/v1/auth/privy-jwt") {
+    if (request.method !== "POST" || pathname !== "/_internal/privy-jwt") {
       sendJson(response, 404, { error: "not_found" });
-      return;
-    }
-    if (request.headers.origin && request.headers.origin !== appOrigin) {
-      sendJson(response, 403, { error: "origin_not_allowed" });
       return;
     }
     await answerPrivyJwt(request, response);
   }
 
-  return createServer(async (request, response) => {
+  const server = createServer(async (request, response) => {
     // A rejection escaping this async handler would be unhandled, and that ends the process.
     try {
       await answer(request, response);
@@ -105,4 +107,13 @@ export function createAuthHttpServer({
       else sendJson(response, AUTH_FAILURE_STATUS.auth_unavailable, { error: "auth_unavailable" });
     }
   });
+  server.requestTimeout = 10_000;
+  server.headersTimeout = 10_000;
+  server.setTimeout(10_000, (socket) => {
+    logger.error("Auth request timed out", {
+      error: { code: "auth_unavailable", reason: "timeout" },
+    });
+    socket.destroy();
+  });
+  return server;
 }

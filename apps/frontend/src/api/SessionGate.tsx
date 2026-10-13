@@ -7,18 +7,26 @@ import { lineClaims, lineAccessToken, lineUserId, type LineClaims } from "../lin
 import { reconnectLine } from "../line/reconnectLine";
 import { Key } from "../ui/Key";
 import { ApiError, apiError } from "./apiClient";
-import type { Me } from "@drawing-app/api/client";
+import type { Me, SessionEnvelope, AccountSelection } from "@drawing-app/api/client";
 import { earlySession, type EarlySession } from "./earlySession";
 import { HandlePrompt } from "./HandlePrompt";
 import type { SessionApi } from "./httpApi";
 import { MeContext, SetMeContext } from "./meContext";
-import { onSessionLost } from "./sessionLoss";
+import {
+  acceptSession,
+  onSessionRestoreRequested,
+  suspendSession,
+  selectionOf,
+  selectionKey,
+  SessionEnvelopeContext,
+} from "./sessionContext";
+import { onSessionLost, requestAccountRelease } from "./sessionLoss";
 
 type Session =
   | { step: "signing-in" }
   | { step: "reconnecting" }
   | { step: "failed"; error: ApiError; expired?: boolean }
-  | { step: "ready"; me: Me };
+  | { step: "ready"; envelope: SessionEnvelope };
 
 // Initial sign-in failures can require a fresh LINE login. Post-ready expiry requires Reload.
 const needsLine = (error: ApiError) =>
@@ -29,7 +37,7 @@ const needsLine = (error: ApiError) =>
   error.code === "signed_out";
 
 /** What signing in with LINE would change on your account: LINE's name and picture. */
-const outOfDate = (me: Me, claims: LineClaims | null) =>
+const outOfDate = (me: SessionEnvelope["authenticated"], claims: LineClaims | null) =>
   claims !== null &&
   (me.lineDisplayName !== (claims.name ?? me.lineDisplayName) ||
     me.linePictureUrl !== (claims.picture ?? null));
@@ -69,7 +77,9 @@ export function SessionGate({
   const setReadyMe = useCallback(
     (me: Me) =>
       setState((state) =>
-        state.step === "ready" && state.me.id === me.id ? { step: "ready", me } : state,
+        state.step === "ready" && state.envelope.me.id === me.id
+          ? { ...state, envelope: { ...state.envelope, me } }
+          : state,
       ),
     [],
   );
@@ -77,7 +87,7 @@ export function SessionGate({
   useEffect(() => {
     let current = true;
     let refreshFailure: ApiError | undefined;
-    const signIn = async (expectedUserId?: string) => {
+    const signIn = async (expected?: AccountSelection) => {
       let token: string | null;
       try {
         token = accessToken();
@@ -92,21 +102,37 @@ export function SessionGate({
       }
       // LINE's language, never one this phone kept: a new account starts in it.
       const request = { accessToken: token, language: lineLanguage() };
-      return expectedUserId === undefined
-        ? session.signIn(request)
-        : session.signIn(request, expectedUserId);
+      return expected === undefined ? session.signIn(request) : session.signIn(request, expected);
     };
     /** A session resumed without LINE's token; signing in again, behind it, brings LINE's news. */
-    const resumed = async (me: Me) => {
+    const validate = (envelope: SessionEnvelope) => {
+      const principal = currentLineUserId();
+      if (!principal || envelope.authenticated.lineUserId !== principal)
+        throw new ApiError(409, { error: "session_account_changed" });
+      return envelope;
+    };
+    const resumed = async (envelope: SessionEnvelope) => {
+      validate(envelope);
+      const { me } = envelope;
       await followAccountLanguage(me.language);
-      if (current && outOfDate(me, claims())) {
-        signIn(me.id).then(
+      if (current && outOfDate(envelope.authenticated, claims())) {
+        signIn(selectionOf(envelope)).then(
           (signedIn) => {
             if (!current) return;
             // A handle chosen while the profile request was in flight is newer than its answer.
             setState((state) =>
-              state.step === "ready" && state.me === me && signedIn.me.id === me.id
-                ? { step: "ready", me: signedIn.me }
+              state.step === "ready" &&
+              state.envelope.me === me &&
+              signedIn.me.id === me.id &&
+              signedIn.selectionVersion === envelope.selectionVersion
+                ? {
+                    ...state,
+                    envelope: {
+                      ...state.envelope,
+                      me: signedIn.me,
+                      authenticated: signedIn.authenticated,
+                    },
+                  }
                 : state,
             );
           },
@@ -115,30 +141,32 @@ export function SessionGate({
             console.warn("Bringing LINE's profile to your account failed", failure);
             if (current && failure.code === "session_account_changed") {
               refreshFailure = failure;
-              setState((state) =>
-                state.step === "ready" && state.me.id === me.id
-                  ? { step: "failed", error: failure }
-                  : state,
+              requestAccountRelease(me.id, () =>
+                setState((state) =>
+                  state.step === "ready" && state.envelope.me.id === me.id
+                    ? { step: "failed", error: failure }
+                    : state,
+                ),
               );
             }
           },
         );
       }
-      return me;
+      return envelope;
     };
-    const signingIn = (async (): Promise<Me | null> => {
+    const signingIn = (async (): Promise<SessionEnvelope | null> => {
       const lineUser = currentLineUserId();
       if (early && attempt === 0) {
         // Asked as the app started, before LINE's user was known, so checked here: nothing of
         // another person's reaches the screen.
-        let cookies: Me | null;
+        let cookies: SessionEnvelope | null;
         try {
           cookies = await early.me;
         } catch (error) {
           early.drop();
           throw error;
         }
-        if (cookies && lineUser && cookies.lineUserId === lineUser) {
+        if (cookies && lineUser && cookies.authenticated.lineUserId === lineUser) {
           early.accept(cookies);
           return resumed(cookies);
         }
@@ -148,7 +176,7 @@ export function SessionGate({
           // Retries check the cookie again; the early answer may predate a completed sign-in.
           // The server matches the session to LINE's user.
           const answer = await session.me(lineUser);
-          return await resumed(answer.me);
+          return await resumed(answer);
         } catch (error) {
           // An outage isn't a reason to discard a session or start another LINE login.
           if (!(error instanceof ApiError) || error.status !== 401 || error.code !== "signed_out") {
@@ -157,19 +185,21 @@ export function SessionGate({
         }
       }
       if (!current) return null;
-      const { me } = await signIn();
+      const envelope = validate(await signIn());
+      const { me } = envelope;
       // Before the app opens, so it opens in the account's language.
       await followAccountLanguage(me.language);
-      return me;
+      return envelope;
     })();
     signingIn.then(
-      (me) => {
-        if (!current || !me) return;
+      (envelope) => {
+        if (!current || !envelope) return;
         if (refreshFailure) {
           setState({ step: "failed", error: refreshFailure });
           return;
         }
-        setState({ step: "ready", me });
+        acceptSession(envelope);
+        setState({ step: "ready", envelope });
       },
       (error: unknown) => {
         const failure = apiError(error);
@@ -179,6 +209,7 @@ export function SessionGate({
     );
     return () => {
       current = false;
+      suspendSession();
     };
   }, [session, accessToken, claims, currentLineUserId, early, attempt]);
 
@@ -186,9 +217,10 @@ export function SessionGate({
   useEffect(() => {
     if (state.step !== "ready") return;
     let handled = false;
-    return onSessionLost((error, expectedUserId) => {
-      if (handled || expectedUserId !== state.me.id) return;
+    return onSessionLost((error, expected) => {
+      if (handled || expected !== state.envelope.me.id) return;
       handled = true;
+      suspendSession();
       if (error.code === "session_account_changed") {
         console.warn("The account changed; reload to open the current session", error);
         setState({ step: "failed", error });
@@ -199,10 +231,25 @@ export function SessionGate({
     });
   }, [state]);
 
+  useEffect(() => {
+    if (state.step !== "ready") return;
+    return onSessionRestoreRequested((envelope) => {
+      if (
+        envelope.authenticated.lineUserId !== currentLineUserId() ||
+        envelope.authenticated.id !== state.envelope.authenticated.id ||
+        selectionKey(selectionOf(envelope)) !== selectionKey(selectionOf(state.envelope))
+      ) {
+        throw new ApiError(409, { error: "session_account_changed" });
+      }
+      acceptSession(envelope);
+      setState({ step: "ready", envelope });
+    });
+  }, [state, currentLineUserId]);
+
   const retry = async () => {
     if (state.step !== "failed") return;
     if (state.expired || state.error.code === "session_account_changed") {
-      location.reload();
+      requestAccountRelease(undefined, () => location.reload());
       return;
     }
     if (!needsLine(state.error)) {
@@ -226,16 +273,18 @@ export function SessionGate({
   };
 
   if (state.step === "ready") {
-    return state.me.needsHandle ? (
+    return state.envelope.me.needsHandle ? (
       <HandlePrompt
-        me={state.me}
-        setHandle={(handle) => session.setHandle(handle, state.me.id)}
+        me={state.envelope.me}
+        setHandle={(handle) => session.setHandle(handle, selectionOf(state.envelope))}
         onChosen={setReadyMe}
       />
     ) : (
-      <MeContext key={state.me.id} value={state.me}>
-        <SetMeContext value={setReadyMe}>{children}</SetMeContext>
-      </MeContext>
+      <SessionEnvelopeContext value={state.envelope}>
+        <MeContext key={selectionKey(selectionOf(state.envelope))} value={state.envelope.me}>
+          <SetMeContext value={setReadyMe}>{children}</SetMeContext>
+        </MeContext>
+      </SessionEnvelopeContext>
     );
   }
   return (

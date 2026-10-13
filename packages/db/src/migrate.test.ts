@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import Database from "better-sqlite3";
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import { migrateDatabase, migrationsFolder } from "./migrate.ts";
 import { DAILY_TICKETS_PER_DAY } from "./schema/limits.ts";
 import { bytes32, createTestDb, databaseBefore, journalEntries, refusal } from "./testDb.ts";
@@ -57,6 +58,42 @@ describe("migrateDatabase", () => {
 
     expect(() => migrateDatabase(path)).toThrow(/break foreign keys/);
     expect(() => migrateDatabase(path)).not.toThrow();
+  });
+});
+
+describe("the person switching sessions migration", () => {
+  it("preserves open and settled transactions and their autoincrement sequence", () => {
+    const { path, sqlite } = databaseBefore("0018_person_switch_sessions");
+    signUpU(sqlite);
+    const add = sqlite.prepare(
+      "insert into sui_transactions (id, kind, sender, user_id, purchase_id, digest, tx_bytes, sponsor_signature, sender_signature, expires_at, submitted_at, outcome, failure, settled_at, created_at, updated_at) values (?, 'payment', 'sender', 'u', ?, ?, 'AA==', 'AA==', ?, 2000000, ?, ?, ?, ?, 1000, 1001)",
+    );
+    sqlite.exec(
+      "insert into ticket_purchases (id, user_id, tickets, price_yen) values (1, 'u', 1, 100), (2, 'u', 1, 100), (3, 'u', 1, 100)",
+    );
+    add.run(4, 1, "open", null, null, null, null, null);
+    add.run(5, 2, "settled", "AA==", 1500, "failed", "MoveAbort", 1600);
+    add.run(99, 3, "deleted", null, null, "dead", null, 1600);
+    sqlite.exec("delete from sui_transactions where id = 99");
+    const before = sqlite.prepare("select * from sui_transactions order by id").all();
+    sqlite.close();
+    migrateDatabase(path);
+    const migrated = new Database(path);
+    expect(migrated.prepare("select * from sui_transactions order by id").all()).toEqual(
+      before.map((row) => ({
+        ...z.record(z.string(), z.unknown()).parse(row),
+        requested_by_user_id: null,
+      })),
+    );
+    expect(
+      migrated.prepare("select seq from sqlite_sequence where name = 'sui_transactions'").get(),
+    ).toEqual({ seq: 99 });
+    expect(migrated.pragma("foreign_key_check")).toEqual([]);
+    migrated.exec("update sui_transactions set requested_by_user_id = 'u' where id = 4");
+    expect(
+      migrated.prepare("select updated_at from sui_transactions where id = 4").get(),
+    ).not.toEqual({ updated_at: 1001 });
+    migrated.close();
   });
 });
 
@@ -279,7 +316,8 @@ describe("the Gift Message attempts migration", () => {
     const ids = new Set();
     for (const status of statuses) {
       const row = after(status);
-      const { message_attempt_id, message_attempt_state, ...preserved } = row;
+      const { message_attempt_id, message_attempt_state, delivery, ...preserved } = row;
+      expect(delivery).toBe("line");
       expect(preserved).toEqual(before(status));
       if (status === "packed" || status === "sent") {
         expect(message_attempt_id).toMatch(/^0x[0-9a-f]{64}$/);
@@ -292,6 +330,75 @@ describe("the Gift Message attempts migration", () => {
     }
     expect(ids.size).toBe(2);
     expect(migrated.pragma("foreign_key_check")).toEqual([]);
+    migrated.close();
+  });
+});
+
+describe("the gift delivery migration", () => {
+  it("preserves every prior gift field, ownership, indexes and foreign keys while retaining ordinary delivery", () => {
+    const { path, sqlite } = databaseBefore("0019_gift_delivery");
+    signUpU(sqlite);
+    sqlite.exec(
+      "insert into users (id, line_user_id, line_display_name, language) values ('v', 'line-v', 'V', 'en')",
+    );
+    const statuses = ["packed", "sent", "received", "taken_out", "returned"];
+    for (const status of statuses) {
+      insertStickerRow(sqlite, status);
+      sqlite
+        .prepare(
+          "insert into gifts (id, sticker_id, giver_id, for_user_id, claim_commitment, status, escrow_status, expires_at, sent_at, received_at, receiver_id, taken_out_at, returned_at, message_attempt_id, message_attempt_state, created_at, updated_at) values (?, ?, 'u', 'v', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1000, 1001)",
+        )
+        .run(
+          bytes32(`delivery-${status}`),
+          status,
+          bytes32(`delivery-claim-${status}`),
+          status,
+          status === "received"
+            ? "claimed"
+            : status === "taken_out"
+              ? "taken_out"
+              : status === "returned"
+                ? "expired_returned"
+                : "pending",
+          Date.now() + 86400000,
+          status === "sent" ? SEALED_AT : null,
+          status === "received" ? SEALED_AT : null,
+          status === "received" ? "v" : null,
+          status === "taken_out" ? SEALED_AT : null,
+          status === "returned" ? SEALED_AT : null,
+          bytes32(`delivery-attempt-${status}`),
+          status === "sent" ? "sent" : "pending",
+        );
+    }
+    const before = rowsBy(sqlite, "gifts", "sticker_id");
+    const beforeStickers = sqlite.prepare("select * from stickers order by id").all();
+    const beforeIndexes = sqlite
+      .prepare(
+        "select name, sql from sqlite_master where type = 'index' and tbl_name = 'gifts' order by name",
+      )
+      .all();
+    sqlite.close();
+    migrateDatabase(path);
+    const migrated = new Database(path);
+    const after = rowsBy(migrated, "gifts", "sticker_id");
+    for (const status of statuses)
+      expect(after(status)).toEqual({ ...before(status), delivery: "line" });
+    expect(migrated.prepare("select * from stickers order by id").all()).toEqual(beforeStickers);
+    expect(
+      migrated
+        .prepare(
+          "select name, sql from sqlite_master where type = 'index' and tbl_name = 'gifts' order by name",
+        )
+        .all(),
+    ).toEqual(beforeIndexes);
+    expect(migrated.pragma("foreign_key_check")).toEqual([]);
+    migrated.exec("update gifts set delivery = 'person' where sticker_id = 'packed'");
+    const updated = rowsBy(migrated, "gifts", "sticker_id")("packed");
+    expect(updated.delivery).toBe("person");
+    expect(updated.updated_at).not.toBe(1001);
+    expect(refusal(() => migrated.exec("update gifts set delivery = 'unknown'"))).toMatch(
+      /gifts_delivery/,
+    );
     migrated.close();
   });
 });

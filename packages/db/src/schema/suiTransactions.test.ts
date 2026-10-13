@@ -61,6 +61,18 @@ const payment = (sender: string, purchaseId = purchase()) =>
 const mint = () => insert({ kind: "mint", stickerId: insertSticker(db, person) })();
 
 describe("sui_transactions", () => {
+  it("records the authenticated requester separately from the sender account", () => {
+    const requestedByUserId = insertUser(db);
+    const id = insert({ kind: "take_out", userId: person, giftId: gift, requestedByUserId })();
+    expect(db.select().from(suiTransactions).where(eq(suiTransactions.id, id)).get()).toMatchObject(
+      { userId: person, requestedByUserId },
+    );
+    settle(id);
+    expect(refusal(insert({ kind: "claim", giftId: gift, requestedByUserId: "missing" }))).toMatch(
+      /FOREIGN KEY/,
+    );
+    expect(insert({ kind: "claim", giftId: gift, requestedByUserId })).not.toThrow();
+  });
   it("holds one open transaction per gift and per purchase, until it settles", () => {
     const claim = insert({ kind: "claim", giftId: gift });
     const takeOut = insert({ kind: "take_out", userId: person, giftId: gift })();

@@ -2,6 +2,7 @@ import {
   Fragment,
   Suspense,
   useCallback,
+  useContext,
   useEffect,
   useEffectEvent,
   useId,
@@ -14,6 +15,7 @@ import { useMyNsfwOptIn, veiledFor, withoutNsfwDrawings } from "../stickers/nsfw
 import { flushSync } from "react-dom";
 import { apiError, type ApiError } from "../api/apiClient";
 import { useApi } from "../api/useApi";
+import { usePersonSwitch } from "../api/PersonSwitchProvider";
 import { useApiQuery } from "../api/useApiQuery";
 import { toPerson, type PersonView, type StickerView } from "../api/views";
 import { GiftReceivedNotice } from "../giving/GiftReceivedNotice";
@@ -29,6 +31,7 @@ import { readMiniGameDemoSettings } from "../gratitude/miniGameDemoSettings";
 import { errorDetail, errorMessage, joinedDetails } from "../i18n/errorMessage";
 import { useTranslation } from "../i18n/react";
 import { DrawIcon } from "../icons/DrawIcon";
+import { SessionEnvelopeContext } from "../api/sessionContext";
 import { useMe } from "../api/meContext";
 import { useIdentity } from "../identity/useIdentity";
 import { CaretRight } from "../icons";
@@ -154,6 +157,11 @@ interface Props {
   onOpenGift: (gift: GiftForYou) => void;
   /** A closed Receiving dialog refreshes waiting gifts without reloading the sticker board. */
   giftClosures?: number;
+  /** Receiving has priority over a giver's received notice, including its queued preview. */
+  receiving?: boolean;
+  /** A received notice kept across the recipient board's remount until it is acknowledged. */
+  pendingReceivedNotice?: ReceivedGift;
+  onReceivedNoticeChange?: (notice: ReceivedGift | undefined) => void;
 }
 
 /** Stickers that have landed this session. */
@@ -227,11 +235,21 @@ const receivedGiftsOf = (stickers: readonly PlacedBoardSticker[]) =>
       : [],
   );
 
+export type ReceivedGift = ReturnType<typeof receivedGiftsOf>[number];
+
 /** Gratitude being sent: for a received gift when `giftId` is set, which records it; the stat
  * board's demo has none. */
 type GratitudeFor = { sticker: BoardSticker; giver: ReturnType<typeof asGiver>; giftId?: string };
 
-export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: Props) {
+export function StickerBoard({
+  freshId,
+  onDraw,
+  onOpenGift,
+  giftClosures = 0,
+  receiving = false,
+  pendingReceivedNotice,
+  onReceivedNoticeChange,
+}: Props) {
   const { t, i18n } = useTranslation();
   const layout = useBoardLayout();
   const stage = useRef<HTMLDivElement>(null);
@@ -247,7 +265,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const account = useMe();
   const {
     saves,
-    state: { unsaved, version },
+    state: { unsaved, version, preservationError },
   } = useBoardPlacementSaves();
   const save = useCallback(
     (sticker: Pick<BoardSticker, "id" | "no">, spots: Spots) => saves.save(sticker, spots),
@@ -380,6 +398,14 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const [open, setOpen] = useState<{ id: string; mode: "yours" | "given" } | null>(null);
   const openYours = (id: string) => setOpen({ id, mode: "yours" });
   const [giving, setGiving] = useState<BoardSticker | null>(null);
+  const sessionEnvelope = useContext(SessionEnvelopeContext);
+  const hanaGiftRecipient =
+    sessionEnvelope?.personSwitchMode === "live" &&
+    sessionEnvelope.me.id !== sessionEnvelope.authenticated.id
+      ? sessionEnvelope.allowedSelections.find(
+          (person) => person.id === sessionEnvelope.authenticated.id,
+        )
+      : undefined;
   /** The board is turned over to its stat board. */
   const [turned, setTurned] = useState(false);
   /** The board has turned over before, so its stat board stays mounted for every turn after. */
@@ -401,6 +427,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const [chipsDone, setChipsDone] = useState(false);
   const me = useIdentity();
   const giftSender = useGiftSender();
+  const { request: requestPersonSwitch } = usePersonSwitch();
   const reduced = useReducedMotion();
   const hints = useId();
   const idle = usePreloadAfterBoard(OPENED_FROM_BOARD);
@@ -553,9 +580,18 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   // Closed ones stay closed on this visit even when the device can't save that they were noticed. The
   // device's record is read again only when these change, not on every render.
   const notice = useMemo(
-    () => newestUnnoticed(receivedGifts.filter((g) => !noticesClosed.has(receiveOf(g)))),
-    [receivedGifts, noticesClosed],
+    () =>
+      newestUnnoticed(
+        [...receivedGifts, ...(pendingReceivedNotice ? [pendingReceivedNotice] : [])].filter(
+          (g) => !noticesClosed.has(receiveOf(g)),
+        ),
+      ),
+    [receivedGifts, noticesClosed, pendingReceivedNotice],
   );
+
+  useEffect(() => {
+    if (notice) onReceivedNoticeChange?.(notice);
+  }, [notice, onReceivedNoticeChange]);
 
   // A device with no record of notices would replay every gift ever received, so the first board it
   // draws counts those as noticed.
@@ -567,6 +603,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   // the check fails, the ask can't come, so the board says so, with a way to check again.
   const [checkFailure, setCheckFailure] = useState<ApiError | null>(null);
   const [checks, setChecks] = useState(0);
+  const [checkedFreshId, setCheckedFreshId] = useState<string | undefined>(undefined);
   useEffect(() => {
     if (!freshId || askedForGratitude.has(freshId)) return;
     let current = true;
@@ -574,6 +611,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       (detail) => {
         if (!current) return;
         setCheckFailure(null);
+        setCheckedFreshId(freshId);
         const [entry] = detail.transferTrail;
         if (entry && entry.receiver.id === detail.owner.id && !entry.gratitude)
           setOwed({ gift: { id: entry.giftId }, giver: toPerson(entry.giver) });
@@ -1073,7 +1111,8 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
         </div>
       )}
 
-      {(unsavedStickers.length > 0 ||
+      {(preservationError ||
+        unsavedStickers.length > 0 ||
         trayProblems.length > 0 ||
         checkFailure ||
         ticketsError ||
@@ -1091,6 +1130,14 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
               {t(($) => $.stickerBoard.board.ticketsDidntLoad, {
                 reason: errorMessage(ticketsError),
               })}
+            </ErrorLine>
+          )}
+          {preservationError && (
+            <ErrorLine
+              detail={errorDetail(preservationError)}
+              onRetry={() => saves.retryPreservation()}
+            >
+              {errorMessage(preservationError)}
             </ErrorLine>
           )}
           {unsavedStickers.length > 0 && (
@@ -1146,6 +1193,11 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
             fromHandle={account.handle ?? me.displayName}
             sender={giftSender}
             liffId={LIFF_ID}
+            forUserId={hanaGiftRecipient?.id}
+            toHandle={hanaGiftRecipient?.handle ?? undefined}
+            onSwitchRecipient={(userId, giftId) =>
+              void requestPersonSwitch(userId, { recipientUserId: userId, giftId })
+            }
             returnFocus={() =>
               stickerEl(giving.id) ?? face?.querySelector<HTMLElement>(".zip__slider") ?? null
             }
@@ -1160,19 +1212,25 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
         </Suspense>
       )}
 
-      {notice && (
-        <GiftReceivedNotice
-          // Each notice arrives anew.
-          key={receiveOf(notice)}
-          sticker={notice.sticker}
-          receiver={notice.receiver}
-          receivedAt={notice.receivedAt}
-          onClose={() => {
-            markNoticed([notice]);
-            setNoticesClosed((was) => new Set(was).add(receiveOf(notice)));
-          }}
-        />
-      )}
+      {notice &&
+        !receiving &&
+        !giving &&
+        !owed &&
+        !gratitudeFor &&
+        !(freshId && !askedForGratitude.has(freshId) && checkedFreshId !== freshId) && (
+          <GiftReceivedNotice
+            // Each notice arrives anew.
+            key={receiveOf(notice)}
+            sticker={notice.sticker}
+            receiver={notice.receiver}
+            receivedAt={notice.receivedAt}
+            onClose={() => {
+              markNoticed([notice]);
+              onReceivedNoticeChange?.(undefined);
+              setNoticesClosed((was) => new Set(was).add(receiveOf(notice)));
+            }}
+          />
+        )}
 
       {owed && freshSticker && !landingId && !askedForGratitude.has(freshSticker.id) && (
         <SendGratitudeSheet

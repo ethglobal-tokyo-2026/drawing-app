@@ -58,9 +58,12 @@ export async function createTestApp(
   const deps: AppDeps = {
     db,
     sessionSecret: "test-session-secret",
+    personSwitch: { mode: "off", operatorUserId: null, hanaUserId: null },
+    lineChannelId: "test-channel",
     clock,
     ids: sequentialIds(),
     line: fakeLineVerifier(),
+    privyJwt: null,
     images,
     ...mockChain,
     ticketPayment: TEST_PAYMENT_TARGET,
@@ -72,14 +75,20 @@ export async function createTestApp(
   };
   const app = createApp(deps);
   /** Request headers carrying a session cookie for `userId`, as signing in now would set it. */
-  const signInAs = async (userId: string) => ({
-    "x-croquis-user-id": userId,
-    Cookie: await serializeSigned(
-      SESSION_COOKIE,
-      sessionValue(userId, deps.clock.now()),
-      deps.sessionSecret,
-    ),
-  });
+  const signInAs = async (userId: string) => {
+    const sessionId = deps.ids.uuid();
+    return {
+      "x-croquis-user-id": userId,
+      Cookie: await serializeSigned(
+        SESSION_COOKIE,
+        sessionValue(userId, sessionId, deps.clock.now()),
+        deps.sessionSecret,
+      ),
+      ...(deps.personSwitch.mode !== "off" && userId === deps.personSwitch.operatorUserId
+        ? { "x-croquis-selection-version": sessionId }
+        : {}),
+    };
+  };
   return {
     app,
     deps,

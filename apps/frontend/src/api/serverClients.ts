@@ -1,3 +1,4 @@
+import type { AccountSelection } from "@drawing-app/api/client";
 import { openedFrom } from "../app/openedView";
 import { liffMockActive } from "../line/liff";
 import { startEarlySession, withEarlyAnswers } from "./earlySession";
@@ -7,9 +8,10 @@ import { withSuiWallet } from "./suiWalletApi";
 
 export const serverSession = createSessionApi();
 // LIFF Mock has no Privy sign-in; the local API supplies the matching mock chain behavior.
-export function createAccountApi(expectedUserId: string): ApiClient {
-  const httpApi = createHttpApi(createServerClient(fetch, expectedUserId));
-  return withEarlyAnswers(liffMockActive ? httpApi : withSuiWallet(httpApi), expectedUserId);
+export function createAccountApi(selection: AccountSelection): ApiClient {
+  selection = Object.freeze({ ...selection });
+  const httpApi = createHttpApi(createServerClient(fetch, selection));
+  return withEarlyAnswers(liffMockActive ? httpApi : withSuiWallet(httpApi, selection), selection);
 }
 
 /**

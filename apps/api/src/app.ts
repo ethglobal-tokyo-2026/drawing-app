@@ -3,6 +3,7 @@ import { stickers } from "@drawing-app/db";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { eq, or } from "drizzle-orm";
 import { Hono, type Context } from "hono";
+import { privyJwtRoutes } from "./routes/privyJwt.ts";
 import { except } from "hono/combine";
 import { createMiddleware } from "hono/factory";
 import { z } from "zod";
@@ -16,11 +17,14 @@ import { gratitudeRoutes } from "./routes/gratitude.ts";
 import { lineMenuRoutes } from "./routes/lineMenu.ts";
 import { performanceReportRoutes } from "./routes/performanceReports.ts";
 import { sessionRoutes } from "./routes/session.ts";
+import { personSwitchRoutes } from "./routes/personSwitch.ts";
+import { withPersonOwnership, assertPersonTransferAllowed } from "./session/personOwnership.ts";
 import { stickerBoardRoutes } from "./routes/stickerBoards.ts";
 import { stickerRoutes } from "./routes/stickers.ts";
 import { ticketRoutes } from "./routes/tickets.ts";
 import { storedImageFile } from "./services/imageStore.ts";
-import { requireSession, sessionUser, type AppEnv } from "./session.ts";
+import { requireSession, resolveSession, type AppEnv } from "./session.ts";
+import { liveSessionUser } from "./session/personSwitch.ts";
 import { optedIntoNsfw } from "./shapes.ts";
 import { isNsfwDrawing } from "./stickers/nsfwDrawing.ts";
 import { requestDiagnostics } from "./requestDiagnostics.ts";
@@ -34,10 +38,17 @@ export const MAX_BODY_BYTES = 64 * 1024;
 /** Sealing sends a sticker's images, over MAX_BODY_BYTES, and sets its own limit. */
 const isSealing = (c: Context) => c.req.method === "POST" && c.req.path === "/api/stickers";
 /** Interactive sign-in may establish a session; an automatic profile refresh must match one. */
-const isAnonymousSignIn = (c: Context) =>
-  c.req.method === "POST" &&
-  c.req.path === "/api/session" &&
-  c.req.header("x-croquis-user-id") === undefined;
+const isAnonymousSignIn = (deps: AppDeps) => async (c: Context) => {
+  if (
+    c.req.method !== "POST" ||
+    c.req.path !== "/api/session" ||
+    c.req.header("x-croquis-user-id") !== undefined ||
+    c.req.header("x-croquis-selection-version") !== undefined
+  )
+    return false;
+  const session = await resolveSession(c, deps);
+  return session?.selectionVersion == null;
+};
 
 /**
  * The REST API. Every call chains, here and inside each route group, so each route's request and
@@ -47,11 +58,49 @@ export function createApp(deps: AppDeps) {
   return (
     new Hono<AppEnv>()
       .basePath("/api")
+      .use("/session/privy-jwt", async (c, next) => {
+        c.header("Cache-Control", "no-store");
+        await next();
+      })
       .use(requestDiagnostics)
       .use(except(isSealing, limitBody(MAX_BODY_BYTES)))
-      .use(except(isAnonymousSignIn, requireSession(deps)))
+      .use(async (c, next) => {
+        if (await isAnonymousSignIn(deps)(c)) return next();
+        return requireSession(deps)(c, next);
+      })
+      .use(async (c, next) => {
+        const session = c.var.session;
+        const mutation = !["GET", "HEAD", "OPTIONS"].includes(c.req.method);
+        const authentication =
+          c.req.path === "/api/session" || c.req.path.startsWith("/api/session/");
+        if (!session || !mutation || authentication) return next();
+        const giftMutation = c.req.path === "/api/gifts" || c.req.path.startsWith("/api/gifts/");
+        // The token preview uses POST to keep its Gift Claim Token out of the URL.
+        const giftPreview = c.req.method === "POST" && c.req.path === "/api/gifts/preview";
+        const selected = session.authenticatedUserId !== session.selectedUserId;
+        const ownership =
+          (giftMutation && !giftPreview) ||
+          c.req.path === "/api/stickers" ||
+          c.req.path.startsWith("/api/ticket-purchases");
+        const run = async () => {
+          const restricted =
+            !giftPreview &&
+            selected &&
+            (deps.personSwitch.mode === "verify" ||
+              c.req.path.startsWith("/api/ticket-purchases") ||
+              (c.req.method === "DELETE" && c.req.path === "/api/me"));
+          if (restricted) return apiError(c, 403, "person_switch_forbidden");
+          if (ownership) assertPersonTransferAllowed(deps, [session.selectedUserId]);
+          await next();
+        };
+        if (session.selectionVersion !== null || giftMutation)
+          return withPersonOwnership(deps, session, run);
+        return run();
+      })
       // /session and /me
       .route("/", sessionRoutes(deps))
+      .route("/", personSwitchRoutes(deps))
+      .route("/", privyJwtRoutes(deps))
       // /line-menu
       .route("/", lineMenuRoutes(deps))
       // /performance-reports
@@ -119,7 +168,8 @@ const imageAccess = (deps: AppDeps) =>
     if (!file) return apiError(c, 404, "image_not_found", `No sticker image at ${c.req.path}`);
     const optInOnly = file.showsDrawing && isNsfwDrawing(deps.db, file.contentHash);
     if (optInOnly) {
-      const viewer = await sessionUser(c, deps);
+      const session = await resolveSession(c, deps);
+      const viewer = session && liveSessionUser(deps.db, session.selectedUserId);
       if (!viewer || !optedIntoNsfw(viewer)) {
         const detail = `${c.req.path} shows an NSFW sticker's drawing, only for the NSFW opt-in`;
         return apiError(c, 403, "nsfw_not_opted_in", detail);

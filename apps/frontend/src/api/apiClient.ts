@@ -1,3 +1,4 @@
+import { pendingPersonOwnershipSchema } from "@drawing-app/api/client";
 import type {
   ApiErrorCode,
   ErrorBody,
@@ -145,6 +146,10 @@ export interface ApiClient {
   packageGift: (stickerId: string, forUserId?: string) => Promise<PackagedGift>;
   /** POST /api/gifts/:giftId/deposit: the signed deposit, which the server runs. */
   reportDeposit: (giftId: string, signed: SignedTransaction) => Promise<Gift>;
+  /** POST /api/gifts/:giftId/deliver-person */
+  deliverPersonGift: (giftId: string, attemptId: string) => Promise<Gift>;
+  /** GET /api/gifts/:giftId/delivery */
+  giftDelivery: (giftId: string) => Promise<{ delivery: "line" | "person" }>;
   /** POST /api/gifts/:giftId/message-attempt */
   beginMessageAttempt: (giftId: string, attemptId: string) => Promise<Gift>;
   /** POST /api/gifts/:giftId/shared */
@@ -197,9 +202,17 @@ export interface ApiClient {
  */
 type ClientErrorCode =
   | "network"
+  | "timeout"
   | "no_line_token"
   | "line_reconnect_failed"
-  | "sui_wallet_not_ready";
+  | "sui_wallet_not_ready"
+  | "person_switch_forbidden"
+  | "person_switch_busy"
+  | "person_switch_ownership_pending"
+  | "person_switch_placement_unsaved"
+  | "person_switch_placement_preservation_failed"
+  | "person_switch_settings_unsaved"
+  | "person_switch_destination_failed";
 export type ErrorCode = ApiErrorCode | ClientErrorCode;
 
 /** A refused or failed request: the HTTP status and the API's error body. Status 0 is no answer. */
@@ -208,6 +221,7 @@ export class ApiError extends Error {
   /** The body's `error`: stable, so screens switch on it. */
   readonly code: string;
   readonly detail?: string;
+  readonly pendingOwnership?: ErrorBody["pendingOwnership"];
 
   constructor(status: number, body: ErrorBody) {
     super(body.detail ? `${body.error}: ${body.detail}` : body.error);
@@ -215,6 +229,8 @@ export class ApiError extends Error {
     this.status = status;
     this.code = body.error;
     this.detail = body.detail;
+    const pending = pendingPersonOwnershipSchema.safeParse(body.pendingOwnership);
+    this.pendingOwnership = pending.success ? pending.data : undefined;
   }
 }
 

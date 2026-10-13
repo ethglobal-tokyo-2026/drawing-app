@@ -1,13 +1,20 @@
 import type { Sticker } from "@drawing-app/api/client";
+import { acceptSession, suspendSession } from "./sessionContext";
+import { accountSelection, sessionEnvelope } from "./sessionTestFixtures";
+import { FRESH_TICKETS, TEST_ME } from "./testing";
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { setPrivyStatus } from "../identity/privy";
 import { ApiError, type ApiClient } from "./apiClient";
-import { withSuiWallet } from "./suiWalletApi";
-import { sticker } from "./testFixtures";
+import { withSuiWallet as guardedApi } from "./suiWalletApi";
+import { gift, sticker } from "./testFixtures";
 import { emptyApi } from "./testing";
 
 // Signing in, as in the app: tests run under LIFF Mock, where Privy is off and nothing waits.
-beforeEach(() => setPrivyStatus({ state: "signing-in" }));
+beforeEach(() => {
+  acceptSession(sessionEnvelope(TEST_ME));
+  setPrivyStatus({ state: "signing-in" });
+});
+const withSuiWallet = (api: ApiClient) => guardedApi(api, accountSelection(TEST_ME.id));
 
 /** Privy has signed in and made the person's Sui wallet. */
 const walletReady = () =>
@@ -115,3 +122,127 @@ describe("REST actions that need the person's Sui wallet", () => {
     expect(failed.detail).not.toMatch(/NFT|crypto|token|wallet|mint|burn/i);
   });
 });
+
+it("does not submit an old signature after the accepted selection version changes", async () => {
+  const reportDeposit = vi.fn<ApiClient["reportDeposit"]>();
+  const api = withSuiWallet(emptyApi({ reportDeposit }));
+  acceptSession(sessionEnvelope(TEST_ME, { selectionVersion: "later" }));
+  await expect(
+    api.reportDeposit("gift", { digest: "digest", signature: "signature" }),
+  ).rejects.toMatchObject({ code: "session_account_changed" });
+  expect(reportDeposit).not.toHaveBeenCalled();
+});
+
+const delayedOperations: { name: string; invoke: (api: ApiClient) => Promise<unknown> }[] = [
+  { name: "packageGift", invoke: (api) => api.packageGift("sticker-1", "user-2") },
+  {
+    name: "reportDeposit",
+    invoke: (api) => api.reportDeposit("gift-1", { digest: "digest", signature: "signature" }),
+  },
+  {
+    name: "takeOutGift",
+    invoke: (api) => api.takeOutGift("gift-1", { digest: "digest", signature: "signature" }),
+  },
+  {
+    name: "buyTickets",
+    invoke: (api) => api.buyTickets({ purchaseId: 1, digest: "digest", signature: "signature" }),
+  },
+  { name: "seal", invoke: (api) => api.seal(request) },
+  {
+    name: "receiveGift",
+    invoke: (api) => api.receiveGift({ giftClaimToken: "claim", liffContextType: "utou" }),
+  },
+  { name: "receiveGiftForYou", invoke: (api) => api.receiveGiftForYou("gift-1") },
+  {
+    name: "startTicketPurchase",
+    invoke: (api) => api.startTicketPurchase({ tickets: 3, priceYen: 270 }),
+  },
+];
+it.each(delayedOperations)(
+  "discards a delayed $name result after same-version restoration",
+  async ({ invoke }) => {
+    walletReady();
+    let finish!: () => void;
+    let started!: () => void;
+    const requestStarted = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const pendingResponse = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    const respond = async <T>(value: T) => {
+      started();
+      await pendingResponse;
+      return value;
+    };
+    const sealed = answer(sticker({ objectId: `0x${"ef".repeat(32)}` }));
+    const received = { ...sealed, gift: gift() };
+    const api = withSuiWallet(
+      emptyApi({
+        packageGift: () =>
+          respond({
+            gift: gift(),
+            delivery: "line",
+            messageAttempt: null,
+            forUserId: "user-2",
+            giftClaimToken: "claim",
+            deposit: {
+              digest: "D".repeat(44),
+              txBytes: "dHg=",
+              expiresAt: "2026-10-13T12:00:00.000Z",
+            },
+          }),
+        reportDeposit: () => respond(gift()),
+        takeOutGift: () => respond(gift()),
+        buyTickets: () => respond(FRESH_TICKETS),
+        seal: () => respond(sealed),
+        receiveGift: () => respond(received),
+        receiveGiftForYou: () => respond(received),
+        startTicketPurchase: () =>
+          respond({
+            purchase: { id: 1, tickets: 3, priceYen: 270 },
+            payment: {
+              digest: "D".repeat(44),
+              txBytes: "dHg=",
+              expiresAt: "2026-10-13T12:00:00.000Z",
+            },
+          }),
+      }),
+    );
+    const result = invoke(api);
+    await requestStarted;
+    suspendSession();
+    acceptSession(sessionEnvelope(TEST_ME));
+    walletReady();
+    finish();
+    await expect(result).rejects.toMatchObject({ code: "session_account_changed" });
+  },
+);
+
+for (const state of ["suspended", "changed"] as const) {
+  it.each(delayedOperations)(
+    `returns a rejected promise from $name when the session is ${state}`,
+    async ({ invoke }) => {
+      const api = withSuiWallet(emptyApi());
+      if (state === "suspended") suspendSession();
+      else acceptSession(sessionEnvelope(TEST_ME, { selectionVersion: "later" }));
+      let result: Promise<unknown> | undefined;
+      expect(() => {
+        result = invoke(api);
+      }).not.toThrow();
+      expect(result).toBeInstanceOf(Promise);
+      await expect(result).rejects.toMatchObject({ code: "session_account_changed" });
+    },
+  );
+}
+
+it.each([null, { id: `0x${"cd".repeat(32)}`, state: "cancelled" as const }])(
+  "retains the known-unsent message snapshot through guarded signed take-out: %j",
+  async (unsentMessageAttempt) => {
+    const takeOutGift = vi.fn<ApiClient["takeOutGift"]>().mockResolvedValue(gift());
+    const api = withSuiWallet(emptyApi({ takeOutGift }));
+    const signed = { digest: "digest", signature: "signature" };
+    await api.takeOutGift("gift-1", signed, unsentMessageAttempt);
+    expect(takeOutGift).toHaveBeenCalledExactlyOnceWith("gift-1", signed, unsentMessageAttempt);
+  },
+);

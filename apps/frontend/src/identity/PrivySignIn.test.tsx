@@ -93,13 +93,20 @@ describe("PrivySignIn", () => {
       { privyStatus, resetPrivySignIn },
       { useSuiAddress },
       { AddressPapers },
+      { acceptSession },
+      { sessionEnvelope },
+      { TEST_ME },
     ] = await Promise.all([
       import("./PrivySignIn"),
       import("./privyStart"),
       import("./privy"),
       import("../sticker-board/stat-board/addresses"),
       import("../sticker-board/stat-board/AddressPapers"),
+      import("../api/sessionContext"),
+      import("../api/sessionTestFixtures"),
+      import("../api/testing"),
     ]);
+    acceptSession(sessionEnvelope(TEST_ME));
     function YourAddressPaper() {
       return (
         <AddressPapers sui={useSuiAddress()} lifted={false} paperRef={null} onOpen={() => {}} />

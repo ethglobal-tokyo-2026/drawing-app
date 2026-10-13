@@ -39,6 +39,7 @@ function fakeBackend() {
       gifts.set(giftId, "packed");
       return Promise.resolve({
         giftId,
+        delivery: "line",
         message: buildGiftMessage({
           liffId: "123-abc",
           giftClaimToken: `token${packed}`,

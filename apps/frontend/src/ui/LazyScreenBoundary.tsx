@@ -4,6 +4,7 @@ import { useTranslation } from "../i18n/react";
 import { ErrorLine } from "./ErrorLine";
 import { LoadFailure } from "./loadFailure";
 import { reloadingOntoNewBuild } from "./reloadOntoNewBuild";
+import { requestAccountRelease } from "../api/sessionLoss";
 import "./lazy-screen.css";
 
 interface State {
@@ -52,7 +53,12 @@ function LoadFailedNote({ failure }: { failure: LoadFailure }) {
     <ErrorLine
       className="lazy-screen-note"
       detail={failure.message}
-      action={{ label: t(($) => $.ui.lazyScreen.reload), onClick: () => location.reload() }}
+      action={{
+        label: t(($) => $.ui.lazyScreen.reload),
+        onClick: () => {
+          requestAccountRelease(undefined, () => location.reload());
+        },
+      }}
     >
       {t(($) => $.ui.lazyScreen.didntLoad)}
     </ErrorLine>,

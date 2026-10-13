@@ -4,6 +4,7 @@ import type { AppDeps } from "../deps.ts";
 import { logFailure, logInfo } from "../diagnostics.ts";
 import { startMidnightJob, type Schedule } from "../midnightJob.ts";
 import { oneAtATime } from "../sui/oneAtATime.ts";
+import { giftOwnershipPeople, withPersonBackgroundOwnership } from "../session/personOwnership.ts";
 import {
   follow,
   runAsServer,
@@ -144,7 +145,11 @@ export async function returnExpiredGifts(deps: AppDeps): Promise<ExpirySweep> {
   // One at a time, so the server's transactions and Sui's reads never come in a burst.
   for (const gift of due) {
     try {
-      tally[await oneAtATime(`gift:${gift.id}`, () => settleExpired(deps, sui, gift))] += 1;
+      tally[
+        await withPersonBackgroundOwnership(deps, giftOwnershipPeople(deps, gift.id), () =>
+          oneAtATime(`gift:${gift.id}`, () => settleExpired(deps, sui, gift)),
+        )
+      ] += 1;
     } catch (error) {
       tally.failed += 1;
       logFailure("gift.expiry.failed", error, { giftId: gift.id, userId: gift.giverId });
@@ -206,8 +211,10 @@ async function followLostGiftTransactions(deps: AppDeps): Promise<void> {
     const { giftId } = row;
     try {
       if (giftId === null) throw new Error(`Gift transaction ${row.digest} names no gift`);
-      const followed = await oneAtATime(`gift:${giftId}`, () =>
-        followGiftTransaction(deps, sui, giftId, row),
+      const followed = await withPersonBackgroundOwnership(
+        deps,
+        giftOwnershipPeople(deps, giftId),
+        () => oneAtATime(`gift:${giftId}`, () => followGiftTransaction(deps, sui, giftId, row)),
       );
       tally[followed.outcome === null ? "open" : "settled"] += 1;
     } catch (error) {
