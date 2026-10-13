@@ -122,7 +122,7 @@ declare global {
       cover: () => void;
       expose: () => void;
       startedNormals: string[];
-      whenSettled: () => Promise<void>;
+      whenSettled: (expected?: "normal-error") => Promise<void>;
       lift: () => void;
       replacePrint: (url: string) => void;
       refresh: () => void;
@@ -134,7 +134,7 @@ declare global {
 window.creaseRevealFixture = {
   imageData: images,
   startedNormals,
-  whenSettled: async () => {
+  whenSettled: async (expected) => {
     const canvas = document.querySelector("[data-reveal] canvas.sticker-laminate");
     const image = document.querySelector("[data-reveal] .sticker-figure__img");
     if (!(canvas instanceof HTMLCanvasElement) || !(image instanceof HTMLImageElement))
@@ -143,7 +143,16 @@ window.creaseRevealFixture = {
     const signal = AbortSignal.timeout(10_000);
     await whenLaminateSettled(canvas, { normal: crease?.normal }, signal);
     if (signal.aborted) throw new Error("The fixture's current normal snapshot did not settle");
-    if (!canvas.isConnected || canvas.dataset.state !== "ready" || canvas.dataset.error)
+    const normalError = canvas.dataset.error?.startsWith(
+      `Replacing crease normal ${crease?.normal} failed:`,
+    );
+    if (expected === "normal-error" && !normalError)
+      throw new Error("The fixture's requested normal failure was not surfaced");
+    if (
+      !canvas.isConnected ||
+      canvas.dataset.state !== "ready" ||
+      (canvas.dataset.error && !(expected === "normal-error" && normalError))
+    )
       throw new Error("The fixture's current normal snapshot is not ready");
   },
   drop: () => {

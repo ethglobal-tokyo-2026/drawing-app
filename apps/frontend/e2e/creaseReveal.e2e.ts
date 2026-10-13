@@ -651,6 +651,109 @@ test("reflection stays flat until the delayed painted crease image is ready", as
   expect(errors).toEqual([]);
 });
 
+test("a failed crease normal keeps new paint hidden over retained material and recovers once", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await observeCreaseWork(page);
+  const { flat, images, errors } = await openFixture(page);
+  await routeImages(page, images);
+  const failedNormal = "/e2e/crease-reveal-normal.png?bake=1";
+  const requests: Route[] = [];
+  await page.route(`**${failedNormal}`, (route) => {
+    requests.push(route);
+  });
+  await freezeFrames(page);
+  await resetCreaseWork(page);
+  const pose = await page.evaluate(() => window.creaseRevealFixture.pose());
+  await page.evaluate(() => window.creaseRevealFixture.drop());
+  await expect
+    .poll(async () => {
+      await page.clock.runFor(16);
+      return requests.length;
+    })
+    .toBeGreaterThan(0);
+  // The full Figure requests its normal only after all matching painted crease images decode.
+  const paintedCrease = page.locator("[data-reveal] .sticker-crease-reveal");
+  await expect(page.locator("[data-reveal] .sticker-crease")).toHaveAttribute(
+    "data-normal",
+    failedNormal,
+  );
+  await expect(paintedCrease).toHaveCSS("opacity", "0");
+  await Promise.all(
+    requests.map((route) =>
+      route.fulfill({
+        status: 503,
+        contentType: "text/plain",
+        body: "Fixture crease normal unavailable",
+      }),
+    ),
+  );
+  const coat = page.locator("[data-reveal] canvas.sticker-laminate");
+  await expect(coat).toHaveAttribute("data-error", /Replacing crease normal.*bake=1.*503/);
+  await page.evaluate(() => window.creaseRevealFixture.whenSettled("normal-error"));
+  await page.clock.runFor(32);
+  await expect(coat).toHaveAttribute("data-state", "ready");
+  await expect(page.locator("[data-reveal] .sticker-figure__img")).toHaveCSS(
+    "visibility",
+    "hidden",
+  );
+  await expect(
+    paintedCrease,
+    "A failed normal must not publish new crease paint over a retained older reflection",
+  ).toHaveCSS("opacity", "0");
+  expect(await figurePixels(page), "The retained whole sticker must keep its exact pixels").toEqual(
+    flat.paint,
+  );
+  expect(await coatPixels(page), "The failed normal must never replace the ready coating").toEqual(
+    flat.coat,
+  );
+  expect(await page.evaluate(() => window.creaseRevealFixture.startedNormals)).toEqual([]);
+  await expectSettledCrease(page);
+  await page.evaluate(() => window.creaseRevealFixture.refresh());
+  await page.clock.runFor(32);
+  expect(await figurePixels(page)).toEqual(flat.paint);
+  expect(await coatPixels(page)).toEqual(flat.coat);
+  expect(await page.evaluate(() => window.creaseRevealFixture.pose())).toEqual(pose);
+  await expect(coat).toHaveAttribute("data-error", /Replacing crease normal.*bake=1.*503/);
+
+  await page.evaluate(() => window.creaseRevealFixture.cover());
+  await page.clock.runFor(32);
+  await page.evaluate(() => window.creaseRevealFixture.expose());
+  await page.clock.runFor(32);
+  await page.evaluate(() => window.creaseRevealFixture.whenSettled("normal-error"));
+  await expect(
+    paintedCrease,
+    "Re-exposing retained material must keep its mismatched pending crease paint hidden",
+  ).toHaveCSS("opacity", "0");
+  expect(await figurePixels(page)).toEqual(flat.paint);
+  expect(await coatPixels(page)).toEqual(flat.coat);
+  await expect(coat).toHaveAttribute("data-state", "ready");
+  await expect(coat).toHaveAttribute("data-error", /Replacing crease normal.*bake=1.*503/);
+  expect(await page.evaluate(() => window.creaseRevealFixture.startedNormals)).toEqual([]);
+  await expectSettledCrease(page);
+
+  await page.evaluate(() => window.creaseRevealFixture.drop());
+  await observeDiagonal(page, flat);
+  const recovered = await finishedPixels(page, flat);
+  await expect(coat).not.toHaveAttribute("data-error");
+  expect(await page.evaluate(() => window.creaseRevealFixture.startedNormals)).toEqual([
+    "/e2e/crease-reveal-normal.png?bake=2",
+  ]);
+  await resetCreaseWork(page);
+  await page.evaluate(() => {
+    window.creaseRevealFixture.reread();
+    window.creaseRevealFixture.refresh();
+  });
+  await page.clock.runFor(32);
+  expect(await figurePixels(page)).toEqual(recovered.paint);
+  expect(await coatPixels(page)).toEqual(recovered.coat);
+  await expectSettledCrease(page);
+  expect(await page.evaluate(() => window.creaseRevealFixture.startedNormals)).toHaveLength(1);
+  expect(errors.some((error) => error.includes(failedNormal) && error.includes("503"))).toBe(true);
+  expect(errors.filter((error) => !error.includes("503"))).toEqual([]);
+});
+
 test("a failed print upgrade reveals a ready crease over retained artwork without new light input", async ({
   page,
 }) => {

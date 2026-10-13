@@ -679,8 +679,8 @@ class MountedSurface {
     }
   }
   failed(why: string) {
-    this.finishCreaseReveal();
     this.renderFailed = true;
+    this.finishCreaseReveal();
     this.canvas.dataset.state = "failed";
     this.canvas.dataset.error = why;
     console.error(`Rendering sticker laminate for ${this.options.print} failed: ${why}`);
@@ -942,7 +942,10 @@ class MountedSurface {
     }
     if (normal) {
       this.completedNormal = normal;
-      if (showPaint) this.options.onCreaseProgress?.(normal, 1);
+      // Native fallback may show its crease; a retained coating needs the same committed normal.
+      const matchingCoating =
+        !this.hasSnapshot || this.renderFailed || this.snapshotNormal === normal;
+      if (showPaint && matchingCoating) this.options.onCreaseProgress?.(normal, 1);
     }
   }
   release() {
