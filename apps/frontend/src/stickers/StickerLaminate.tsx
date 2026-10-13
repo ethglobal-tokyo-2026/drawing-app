@@ -1,4 +1,5 @@
-import { useLayoutEffect, useRef } from "react";
+import { useContext, useLayoutEffect, useRef } from "react";
+import { LaminateActiveContext } from "./laminateActiveContext";
 import {
   laminateTurn,
   mountLaminate,
@@ -17,7 +18,7 @@ export function StickerLaminate({
   normal,
   turn = 0,
   finish = "gloss",
-  active = true,
+  active: surfaceActive = true,
   onCreaseProgress,
   canRevealCrease,
   startCreaseReveal,
@@ -36,6 +37,7 @@ export function StickerLaminate({
   /** Consumes that placement after the first valid real snapshot copy. */
   startCreaseReveal?: (normal: string) => boolean;
 }) {
+  const active = useContext(LaminateActiveContext) && surfaceActive;
   const ref = useRef<HTMLCanvasElement>(null);
   const heldTurn = useRef(turn);
   const heldActive = useRef(active);

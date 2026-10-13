@@ -26,6 +26,7 @@ import { Handle } from "../stickers/Handle";
 import { boardFoil } from "../stickers/madeFoil";
 import { useLight } from "../stickers/light";
 import { StickerFigure } from "../stickers/StickerFigure";
+import { LaminateActiveContext } from "../stickers/laminateActiveContext";
 import { ErrorLine } from "../ui/ErrorLine";
 import { FlatButton } from "../ui/FlatButton";
 import { Key } from "../ui/Key";
@@ -419,44 +420,45 @@ export function ArtistBoard({ person, onBack }: Props) {
           </div>
         )}
         <CreasesContext value={creases}>
-          {field &&
-            size &&
-            inOrder.map((s, i) => (
-              <Fragment key={s.id}>
-                <PlacedSticker
-                  sticker={s}
-                  field={field}
-                  unit={size.U}
-                  selected={s.id === selected}
-                  knobBelow={false}
-                  landing={false}
-                  onLanded={noLanding}
-                  reduced={reduced}
-                  tabbable={s.id === tabbable}
-                  position={i + 1}
-                  setSize={order.length}
-                  hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
-                  foil={byOther(s)}
-                  veiled={veiledFor(s, optedIn)}
-                  laminateActive={laminateActive}
-                  by={byOther(s) ? handleOf(s.artist) : undefined}
-                />
-                {/* Right after its sticker, so Tab reaches it next. */}
-                {s.id === selected && (
-                  <StickerToolbar
-                    label={formatNo(s.no)}
-                    sticker={{ ...stickerBox(field, size.U, s.placement, s), r: s.placement.r }}
-                    board={size}
+          <LaminateActiveContext value={laminateActive}>
+            {field &&
+              size &&
+              inOrder.map((s, i) => (
+                <Fragment key={s.id}>
+                  <PlacedSticker
+                    sticker={s}
+                    field={field}
+                    unit={size.U}
+                    selected={s.id === selected}
                     knobBelow={false}
-                    clearOf={give}
-                    onView={() => setViewing(s)}
-                    {...(byOther(s) && { artist: s.artist })}
-                    onEscape={() => stickerEl(s.id)?.focus()}
+                    landing={false}
+                    onLanded={noLanding}
                     reduced={reduced}
+                    tabbable={s.id === tabbable}
+                    position={i + 1}
+                    setSize={order.length}
+                    hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
+                    foil={byOther(s)}
+                    veiled={veiledFor(s, optedIn)}
+                    by={byOther(s) ? handleOf(s.artist) : undefined}
                   />
-                )}
-              </Fragment>
-            ))}
+                  {/* Right after its sticker, so Tab reaches it next. */}
+                  {s.id === selected && (
+                    <StickerToolbar
+                      label={formatNo(s.no)}
+                      sticker={{ ...stickerBox(field, size.U, s.placement, s), r: s.placement.r }}
+                      board={size}
+                      knobBelow={false}
+                      clearOf={give}
+                      onView={() => setViewing(s)}
+                      {...(byOther(s) && { artist: s.artist })}
+                      onEscape={() => stickerEl(s.id)?.focus()}
+                      reduced={reduced}
+                    />
+                  )}
+                </Fragment>
+              ))}
+          </LaminateActiveContext>
         </CreasesContext>
       </div>
 

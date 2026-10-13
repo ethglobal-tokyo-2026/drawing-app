@@ -44,17 +44,21 @@ function usePeek(note: RefObject<HTMLElement | null>, title: RefObject<HTMLEleme
     const cork = paper.parentElement;
     const stats = cork?.querySelector<HTMLElement>(".stat-board__stats");
     const tuck = () => {
+      // ResizeObserver delivers after layout; read all geometry before changing the paper's tuck.
       const padding = cork ? parseFloat(getComputedStyle(cork).paddingBottom) || 0 : 0;
       const shown = heading.offsetTop + heading.offsetHeight + PEEK_UNDER_TITLE;
       const tucked = Math.max(0, paper.offsetHeight - shown + padding);
-      paper.style.setProperty("--settings-tuck", `${tucked}px`);
-      if (cork && stats)
-        paper.toggleAttribute(
-          "data-below-stats",
-          !statsClearPeek(cork.clientHeight, stats.offsetTop + stats.offsetHeight, shown),
-        );
+      const belowStats =
+        cork && stats
+          ? !statsClearPeek(cork.clientHeight, stats.offsetTop + stats.offsetHeight, shown)
+          : null;
+      const value = `${tucked}px`;
+      if (paper.style.getPropertyValue("--settings-tuck") !== value)
+        paper.style.setProperty("--settings-tuck", value);
+      if (belowStats !== null && paper.hasAttribute("data-below-stats") !== belowStats)
+        paper.toggleAttribute("data-below-stats", belowStats);
     };
-    tuck();
+    // Its initial delivery supplies the first measurements before paint, without a mount-time flush.
     const resized = new ResizeObserver(tuck);
     for (const el of [paper, cork, stats]) if (el) resized.observe(el);
     return () => resized.disconnect();

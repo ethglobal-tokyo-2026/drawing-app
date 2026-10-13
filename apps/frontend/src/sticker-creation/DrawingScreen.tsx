@@ -1478,6 +1478,7 @@ export function DrawingScreen({
         />
         <div className="drawing-layer-column">
           <LayerColumn
+            active={active && !sideways}
             chips={chips}
             current={layers.current}
             canAdd={chips.length < MAX_LAYERS}

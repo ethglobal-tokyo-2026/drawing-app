@@ -220,6 +220,9 @@ describe("ArtistBoard's covered laminate", () => {
         if (!view) throw new Error("The selected sticker has no View button");
         act(() => view.click());
         expect(host.querySelector(".visit-view")).not.toBeNull();
+        const viewed = mounted.mock.calls.find(([canvas]) => canvas.closest(".visit-view"));
+        if (!viewed) throw new Error("The viewed sticker's laminate did not mount");
+        expect(viewed[1].active?.()).toBe(true);
       } else {
         act(() => host.querySelector<HTMLButtonElement>(".board-who")?.click());
       }

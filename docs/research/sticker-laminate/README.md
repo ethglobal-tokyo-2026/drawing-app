@@ -12,6 +12,10 @@ One WebGL context renders packed tiles. It requests `premultipliedAlpha: true`; 
 
 Complete exposed registered geometry determines GL capacity, including pending textures and first normals. Partial refreshes select ready targets within that plan. Capacity can shrink from a covered Sticker Board to its detail without discarding board snapshots or textures. Re-exposure samples the held pose. Initially covered, detached, and offscreen surfaces defer resource acquisition; closed sticker trays create images and laminate owners when opened.
 
+Decoded texture uploads share a validation task after 16ms rather than querying GPU errors after each upload. A successful batch checks once and becomes eligible for snapshots only afterward. Failed batches report every affected URL; error draining is bounded, and an unreadable shared error state fails and settles all owners while preserving their last bitmaps. Cancellation, context loss, and a 20-second deadline retire unvalidated uploads. WebGL 1 error checks remain synchronous: batching reduces queries without guaranteeing a cheap check.
+
+Board exposure reaches the laminate leaves through context. Turns and detail covers suspend their retained surfaces without re-rendering the memoized sticker figures. The independently displayed detail stays active. Re-exposure samples the held pose once.
+
 Initial Sticker Board assembly waits for exposed snapshots, applicable foil masks, and the first crease baseline, with a ten-second overall deadline. Readiness checks the normal committed to the retained snapshot and excludes later sharp-image refinement. Unavailable or failed workers settle affected jobs with diagnostics. Live failures retain the last complete material or original image; canceled generations cannot replace current pixels. Final ownership release retires pending and GPU resources. Concealing NSFW artwork remounts its laminate to discard the previous bitmap.
 
 Only an explicit placement commit grants a finite crease reveal. Hydration, viewport changes, material refinement, and remounting do not grant one. The matching accepted normal consumes that grant after its first retained snapshot, including when reduced motion displays it immediately. Covering the board cancels unstarted grants.
@@ -33,7 +37,7 @@ pnpm --filter frontend test:e2e stickerLaminate stickerLightFrames stickerBoardD
 pnpm --filter frontend test:sticker-performance --project=chrome
 ```
 
-Hardware gates require display p95 ≤16.7ms and maximum ≤50ms; software GPUs or failing idle baselines refuse qualification. They cover loaded boards, details, selection, dragging, and tilt. Startup remains unqualified: immediate texture-upload error checks can wait for queued GPU work on the main thread.
+Hardware gates require display p95 ≤16.7ms and maximum ≤50ms; software GPUs or failing idle baselines refuse qualification. They cover loaded boards, details, selection, dragging, and tilt. Startup remains unqualified: batched texture-upload error checks can still wait for queued GPU work on the main thread, and initial app layout has separately exceeded the frame budget.
 
 A physical-device repeat is required to qualify iPad performance. Mac results and simulator functional checks establish neither physical iPad/LINE performance nor sustained 120Hz ProMotion output. While recording, material batch notes separate submission, first retained copy, and remaining copies; these synchronous timings do not prove GPU completion. `STICKER_DRAG_TRACE=on` enables explicit Chrome timeline capture.
 
@@ -45,12 +49,23 @@ A controlled 21-sticker comparison on hardware Chrome (M5 Max, Metal) reduced st
 
 Direct laminate crops removed the copy into a second full-size 2D canvas and its allocation. On native simulator Safari 26.5, the same 21-sticker fixture was fitted to the iPad Air viewport; successive baseline/direct/baseline/direct/baseline synchronous copy times were 63.3/56.4/63.0/47.6/56.4ms per light publication. Comparing each direct run with the average of its neighboring baselines measures about 10.7% and 20.3% less copy time, with variable overall frame intervals. Hardware Chrome copy time stayed approximately 0.2ms per publication. Both engines' 21 retained bitmaps matched the staged path exactly. The lifecycle regression additionally compares distinct prints, normals, fractional cuts, and flight poses with an independent staged reference across multiple batches. This qualifies removal of the extra copy, not the physical iPad's overall frame rate or the remaining foil cost.
 
+### Populated app startup and Stat board turns
+
+A full-app Chrome capture used production React, local test sign-in, 49 distinct production-format 600px WebP stickers, 23 placed on a 1200×1454 board at 2x. Images were prepared before capture. The scene held its light pose; it did not test physical rotation or tray opening. Development-build timings were excluded from production conclusions.
+
+Repeated baseline captures made 68 upload error checks, totaling 247.0 and 195.6ms in elapsed native-call time. The first batched candidate made 26 checks totaling 150.7ms, but one check still waited 88.8ms. Thus deferral alone did not remove startup stalls. A later final capture made 23 checks totaling 6.9ms; cache and host variation prevent treating that low total as a stable device cost. Upload pixels, filtering, optical parameters, and retained crop semantics are unchanged.
+
+The first Stat board turn exposed two forced-layout paths. The hidden drawing screen measured its Layer list during background mounting; it now measures and observes only while active. The Settings paper measured immediately on mounting and mixed geometry reads with writes; its first measurement now comes from ResizeObserver delivery, with all reads before changed writes. The final capture's first/second turn maximum intervals were 17.1/9.3ms, compared with baseline first turns of 117.3/91.7ms. Both sides were visually inspected. These stationary Mac results qualify those specific paths, not physical iPad cadence or remaining foil rendering costs. The final startup still had a 158.3ms initial app frame.
+
+The upload regressions exercise delayed readiness, exact replacement pixels, complete OOM diagnostics, release, deadline, lost/restored generations, and terminal failure settlement for existing and cached owners. Unit regressions preserve exposure behavior, memoized figures, visible Layer scrolling, and the Settings paper's tuck and Stats clearance. Future finish-renderer integration must preserve these ownership and exposure rules as well as direct retained crops.
+
 ## Sources
 
 - Clearcoat model: https://google.github.io/filament/main/filament.html#materialsystem/clearcoatmodel
 - Layered scattering: https://www.pbr-book.org/4ed/Light_Transport_II_Volume_Rendering/Scattering_from_Layered_Materials
 - Orientation events: https://www.w3.org/TR/orientation-event/
 - WebGL alpha representation: https://registry.khronos.org/webgl/specs/latest/1.0/#PREMULTIPLIED_ALPHA
+- Blocking WebGL queries: https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices#avoid_blocking_api_calls_in_production
 - WebKit capture before cropping: https://raw.githubusercontent.com/WebKit/WebKit/main/Source/WebCore/html/canvas/CanvasRenderingContext2DBase.cpp
 - WebKit cached source snapshots: https://raw.githubusercontent.com/WebKit/WebKit/main/Source/WebCore/html/canvas/WebGLRenderingContextBase.cpp
 - WebKit Cocoa framebuffer capture: https://raw.githubusercontent.com/WebKit/WebKit/main/Source/WebCore/platform/graphics/cocoa/GraphicsContextGLCocoa.mm

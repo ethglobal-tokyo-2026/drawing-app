@@ -37,6 +37,7 @@ import { CaretRight } from "../icons";
 import { LIFF_ID } from "../line/liff";
 import { formatNo, handleOf } from "../stickers/format";
 import { useLight } from "../stickers/light";
+import { LaminateActiveContext } from "../stickers/laminateActiveContext";
 import { boardFoil } from "../stickers/madeFoil";
 import { playStick } from "../stickers/stick";
 import { DrawKeyTickets } from "../tickets/DrawKeyTickets";
@@ -1055,54 +1056,55 @@ export function StickerBoard({
           </div>
         )}
         <CreasesContext value={creases}>
-          <KeepAnimations order={order.join(" ")} root={stage}>
-            {field &&
-              size &&
-              inOrder.map((s, i) => (
-                <Fragment key={s.id}>
-                  <PlacedSticker
-                    sticker={s}
-                    field={field}
-                    unit={size.U}
-                    selected={s.id === selected}
-                    knobBelow={s.id === selected && knobBelow}
-                    inHand={hold?.id === s.id ? hold.kind : undefined}
-                    landing={s.id === landingId}
-                    onLanded={landedNow}
-                    reduced={reduced}
-                    tabbable={s.id === tabbable}
-                    position={i + 1}
-                    setSize={order.length}
-                    hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
-                    foil={byOther(s)}
-                    veiled={veiledFor(s, optedIn)}
-                    laminateActive={laminateActive}
-                    by={byOther(s) ? handleOf(s.artist) : undefined}
-                  />
-                  {/* Right after its sticker, so Tab reaches it next. */}
-                  {s.id === selected && !hold && (
-                    <StickerToolbar
-                      label={formatNo(s.no)}
-                      sticker={{ ...stickerBox(field, size.U, s.placement, s), r: s.placement.r }}
-                      board={size}
-                      knobBelow={knobBelow}
-                      clearOf={draw}
-                      {...(giftSender && { onGive: () => setGiving(s) })}
-                      onView={() => openYours(s.id)}
-                      onRemove={() => stow(s.id)}
-                      arrange={{
-                        open: arrangeOpen,
-                        onOpen: openArrange,
-                        onStep: (step) => arrange(s.id, step),
-                      }}
-                      {...(byOther(s) && { artist: s.artist })}
-                      onEscape={() => stickerEl(s.id)?.focus()}
+          <LaminateActiveContext value={laminateActive}>
+            <KeepAnimations order={order.join(" ")} root={stage}>
+              {field &&
+                size &&
+                inOrder.map((s, i) => (
+                  <Fragment key={s.id}>
+                    <PlacedSticker
+                      sticker={s}
+                      field={field}
+                      unit={size.U}
+                      selected={s.id === selected}
+                      knobBelow={s.id === selected && knobBelow}
+                      inHand={hold?.id === s.id ? hold.kind : undefined}
+                      landing={s.id === landingId}
+                      onLanded={landedNow}
                       reduced={reduced}
+                      tabbable={s.id === tabbable}
+                      position={i + 1}
+                      setSize={order.length}
+                      hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
+                      foil={byOther(s)}
+                      veiled={veiledFor(s, optedIn)}
+                      by={byOther(s) ? handleOf(s.artist) : undefined}
                     />
-                  )}
-                </Fragment>
-              ))}
-          </KeepAnimations>
+                    {/* Right after its sticker, so Tab reaches it next. */}
+                    {s.id === selected && !hold && (
+                      <StickerToolbar
+                        label={formatNo(s.no)}
+                        sticker={{ ...stickerBox(field, size.U, s.placement, s), r: s.placement.r }}
+                        board={size}
+                        knobBelow={knobBelow}
+                        clearOf={draw}
+                        {...(giftSender && { onGive: () => setGiving(s) })}
+                        onView={() => openYours(s.id)}
+                        onRemove={() => stow(s.id)}
+                        arrange={{
+                          open: arrangeOpen,
+                          onOpen: openArrange,
+                          onStep: (step) => arrange(s.id, step),
+                        }}
+                        {...(byOther(s) && { artist: s.artist })}
+                        onEscape={() => stickerEl(s.id)?.focus()}
+                        reduced={reduced}
+                      />
+                    )}
+                  </Fragment>
+                ))}
+            </KeepAnimations>
+          </LaminateActiveContext>
         </CreasesContext>
         <p ref={stepsSaid} className="board-steps-status visually-hidden" role="status" />
       </div>

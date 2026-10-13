@@ -22,6 +22,8 @@ import type { LayerChipView, ThumbnailSource } from "./layerView";
 import "./LayerColumn.css";
 
 export interface LayerColumnProps {
+  /** Whether the drawing screen shows this column; hidden columns retain their state without measuring. */
+  active: boolean;
   /** Back to front; shown front on top. */
   chips: readonly LayerChipView[];
   current: LayerId;
@@ -77,6 +79,7 @@ const optionsLearned = deviceSetting<boolean>("draw.layerOptionsLearned", {
  * outgrow the room the parent gives the column.
  */
 export function LayerColumn({
+  active,
   chips,
   current,
   canAdd,
@@ -119,6 +122,7 @@ export function LayerColumn({
   const learned = useSyncExternalStore(optionsLearned.subscribe, optionsLearned.get);
   const [scroll, setScroll] = useState({ position: 0, portion: 1 });
   const measureScroll = useCallback(() => {
+    if (!active) return;
     const column = root.current;
     const list = column?.querySelector<HTMLElement>(".layer-list");
     if (!column || !list) return;
@@ -133,11 +137,12 @@ export function LayerColumn({
     setScroll((before) =>
       before.position === position && before.portion === portion ? before : { position, portion },
     );
-  }, []);
+  }, [active]);
   const overflowing = scroll.portion < 1;
   const moreAbove = overflowing && scroll.position > 0;
   const moreBelow = overflowing && scroll.position < 1;
   const scrollLayers = (direction: -1 | 1) => {
+    if (!active) return;
     const list = root.current?.querySelector<HTMLElement>(".layer-list");
     if (!list) return;
     const pitch = CHIP_HEIGHT + 4;
@@ -170,6 +175,7 @@ export function LayerColumn({
 
   /** Keeps the open paper beside its chip, within the screen and above the column's foot. */
   const placePaper = () => {
+    if (!active) return;
     const paper = addBox.current ?? optionsBox.current ?? recoveryBox.current ?? hintBox.current;
     const chip = addBox.current
       ? root.current?.querySelector<HTMLElement>(".layer-add")
@@ -209,7 +215,7 @@ export function LayerColumn({
   };
 
   useLayoutEffect(() => {
-    if (!showAdd && !showOptions && !showHint && !showRecovery) return;
+    if (!active || (!showAdd && !showOptions && !showHint && !showRecovery)) return;
     placePaper();
     if (typeof ResizeObserver === "undefined") return;
     const paper = addBox.current ?? optionsBox.current ?? recoveryBox.current ?? hintBox.current;
@@ -223,7 +229,7 @@ export function LayerColumn({
   });
 
   useLayoutEffect(() => {
-    if (showAdd || !focusAfterAdd.current) return;
+    if (!active || showAdd || !focusAfterAdd.current) return;
     focusAfterAdd.current = false;
     chipAt(root.current, current)?.focus({ preventScroll: true });
   });
@@ -231,6 +237,7 @@ export function LayerColumn({
   // Selection, reordering and changes in room bring the current layer into view. Only the list scrolls, where
   // scrollIntoView would scroll every box round it, the drawing screen's too.
   useLayoutEffect(() => {
+    if (!active) return;
     const list = root.current?.querySelector<HTMLElement>(".layer-list") ?? null;
     const chip = chipAt(list, current);
     if (!list || !chip) return;
@@ -240,17 +247,18 @@ export function LayerColumn({
       chip.offsetTop + chip.offsetHeight + parseFloat(paddingBottom) - list.clientHeight;
     if (list.scrollTop > above) list.scrollTop = above;
     else if (list.scrollTop < below) list.scrollTop = below;
-  }, [current, orderKey, scroll.portion]);
+  }, [active, current, orderKey, scroll.portion]);
 
   // Recheck content changes and automatic selection scrolling before paint, then follow resizes.
   useLayoutEffect(measureScroll);
   useLayoutEffect(() => {
+    if (!active) return;
     const list = root.current?.querySelector<HTMLElement>(".layer-list");
     if (!list || typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(measureScroll);
     observer.observe(list);
     return () => observer.disconnect();
-  }, [measureScroll]);
+  }, [active, measureScroll]);
 
   const press = (id: LayerId) => (id === current ? onToggleOptions() : onSelect(id));
 
@@ -321,6 +329,7 @@ export function LayerColumn({
             aria-describedby={overflowing ? overflowId : undefined}
             onKeyDown={moveFocus}
             onScroll={(e) => {
+              if (!active) return;
               measureScroll();
               const list = e.currentTarget;
               const chip = chipAt(list, current);

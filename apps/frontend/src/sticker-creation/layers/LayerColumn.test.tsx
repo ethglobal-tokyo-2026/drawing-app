@@ -37,6 +37,7 @@ const chipsOf = (
 const renderColumn = (props: Partial<LayerColumnProps> = {}) =>
   render(
     <LayerColumn
+      active
       chips={chipsOf([1, 2, 3])}
       current={2}
       canAdd
@@ -70,6 +71,77 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("LayerColumn", () => {
+  it("measures only while active and brings the current layer into view on activation", async () => {
+    const reads: string[] = [];
+    const observers = new Set<ResizeObserver>();
+    vi.stubGlobal(
+      "ResizeObserver",
+      class implements ResizeObserver {
+        observe() {
+          observers.add(this);
+        }
+        unobserve() {}
+        disconnect() {
+          observers.delete(this);
+        }
+      },
+    );
+    const style = getComputedStyle;
+    const styles = vi
+      .spyOn(globalThis, "getComputedStyle")
+      .mockImplementation((element, pseudo) => {
+        if (element.closest(".layer-column")) reads.push("style");
+        return style(element, pseudo);
+      });
+    const properties = ["scrollHeight", "clientHeight", "offsetTop", "offsetHeight"] as const;
+    const geometry = properties.map((property) => {
+      let prototype: object | null = HTMLElement.prototype;
+      while (prototype && !Object.hasOwn(prototype, property))
+        prototype = Reflect.getPrototypeOf(prototype);
+      const descriptor = prototype && Object.getOwnPropertyDescriptor(prototype, property);
+      const get: unknown = descriptor && Reflect.get(descriptor, "get");
+      if (typeof get !== "function") throw new Error(`The browser has no ${property} getter`);
+      const spy = vi.spyOn(HTMLElement.prototype, property, "get");
+      return spy.mockImplementation(function (this: HTMLElement) {
+        if (this.closest(".layer-column")) reads.push(property);
+        const value: unknown = Reflect.apply(get, this, []);
+        if (typeof value !== "number") throw new Error(`The ${property} getter returned no number`);
+        return value;
+      });
+    });
+    try {
+      renderColumn({ active: false, current: 1 });
+      expect(reads).toEqual([]);
+      expect(observers.size).toBe(0);
+      const list = find(".layer-list");
+      layOut(list, 100);
+      const selected = chip(1);
+      if (!selected.parentElement) throw new Error("The current layer has no chip list");
+      selected.parentElement.style.padding = "4px";
+      Object.defineProperties(selected, {
+        offsetTop: { value: 104 },
+        offsetHeight: { value: 46 },
+      });
+      renderColumn({ active: true, current: 1 });
+      expect(reads.length).toBeGreaterThan(0);
+      expect(observers.size).toBeGreaterThan(0);
+      expect(list.scrollTop).toBe(54);
+      expect(findAll(".layer-scroll-controls")).toHaveLength(1);
+      expect(find(".layer-scroll-well").getAttribute("data-more-above")).toBe("true");
+      renderColumn({ active: false, current: 1 });
+      reads.length = 0;
+      expect(observers.size).toBe(0);
+      await act(async () => {
+        list.dispatchEvent(new Event("scroll"));
+      });
+      renderColumn({ active: false, current: 2 });
+      expect(reads).toEqual([]);
+    } finally {
+      styles.mockRestore();
+      geometry.forEach((spy) => spy.mockRestore());
+    }
+  });
+
   it("makes every enabled chip draggable and describes the same gesture", () => {
     renderColumn();
     for (const id of [1, 2, 3]) {
@@ -189,6 +261,7 @@ describe("LayerColumn", () => {
       const [recovery, setRecovery] = useState(true);
       return (
         <LayerColumn
+          active
           chips={chipsOf([1, 2, 3], { 3: { opacity: 0 } })}
           current={3}
           canAdd
@@ -266,6 +339,7 @@ describe("LayerColumn", () => {
           }}
         >
           <LayerColumn
+            active
             chips={chipsOf([1, 2, 3])}
             current={2}
             canAdd
@@ -320,6 +394,7 @@ describe("LayerColumn", () => {
       const ui = (
         <div className="drawing-screen">
           <LayerColumn
+            active
             chips={chipsOf([1, 2, 3])}
             current={2}
             canAdd
@@ -483,6 +558,7 @@ describe("LayerColumn", () => {
         const [optionsOpen, setOptionsOpen] = useState(false);
         return (
           <LayerColumn
+            active
             chips={chipsOf([1, 2, 3])}
             current={current}
             canAdd

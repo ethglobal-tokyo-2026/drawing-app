@@ -3,8 +3,9 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { beforeEach, expect, it, vi } from "vitest";
 import { StickerLaminate } from "./StickerLaminate";
+import { LaminateActiveContext } from "./laminateActiveContext";
 
-import { mountLaminate, turnLaminate, updateLaminate } from "./laminateRenderer";
+import { mountLaminate, refreshLaminate, turnLaminate, updateLaminate } from "./laminateRenderer";
 
 const anyActiveCallback: unknown = expect.any(Function);
 
@@ -26,9 +27,87 @@ vi.mock("./laminateRenderer", () => {
 
 beforeEach(() => {
   vi.mocked(mountLaminate).mockClear();
+  vi.mocked(refreshLaminate).mockClear();
   vi.mocked(turnLaminate).mockClear();
   vi.mocked(updateLaminate).mockClear();
 });
+
+it("suspends its retained surface through context and refreshes it once when exposed again", () => {
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  const expose = (active: boolean) =>
+    act(() =>
+      root.render(
+        <LaminateActiveContext value={active}>
+          <StickerLaminate print="print.png" cut="cut.png" turn={42} />
+        </LaminateActiveContext>,
+      ),
+    );
+  try {
+    expose(true);
+    const canvas = host.querySelector("canvas");
+    if (!canvas) throw new Error("The sticker laminate did not mount");
+    const options = vi.mocked(mountLaminate).mock.calls[0]?.[1];
+    expect(options?.active?.()).toBe(true);
+    vi.mocked(refreshLaminate).mockClear();
+
+    expose(false);
+    expect(options?.active?.()).toBe(false);
+    expect(refreshLaminate).not.toHaveBeenCalled();
+
+    expose(true);
+    expect(options?.active?.()).toBe(true);
+    expect(refreshLaminate).toHaveBeenCalledExactlyOnceWith(canvas);
+    expect(host.querySelector("canvas")).toBe(canvas);
+    expect(mountLaminate).toHaveBeenCalledOnce();
+    expect(updateLaminate).toHaveBeenCalledOnce();
+    expect(turnLaminate).toHaveBeenCalledExactlyOnceWith(canvas, 42);
+  } finally {
+    act(() => root.unmount());
+    host.remove();
+  }
+});
+
+it.each([undefined, true, false])(
+  "preserves explicit activity when the surrounding presentation's activity is %s",
+  (exposed) => {
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    const setActive = (active: boolean) =>
+      act(() => {
+        const surface = <StickerLaminate print="print.png" cut="cut.png" active={active} />;
+        root.render(
+          exposed === undefined ? (
+            surface
+          ) : (
+            <LaminateActiveContext value={exposed}>{surface}</LaminateActiveContext>
+          ),
+        );
+      });
+    try {
+      setActive(false);
+      const canvas = host.querySelector("canvas");
+      if (!canvas) throw new Error("The sticker laminate did not mount");
+      const options = vi.mocked(mountLaminate).mock.calls[0]?.[1];
+      expect(options?.active?.()).toBe(false);
+      expect(refreshLaminate).not.toHaveBeenCalled();
+
+      setActive(true);
+      expect(options?.active?.()).toBe(exposed !== false);
+      if (exposed === false) expect(refreshLaminate).not.toHaveBeenCalled();
+      else expect(refreshLaminate).toHaveBeenCalledExactlyOnceWith(canvas);
+
+      setActive(false);
+      expect(options?.active?.()).toBe(false);
+      expect(mountLaminate).toHaveBeenCalledOnce();
+    } finally {
+      act(() => root.unmount());
+      host.remove();
+    }
+  },
+);
 
 it("preserves a live gesture's displayed turn when its crease texture changes before commit", () => {
   const host = document.createElement("div");

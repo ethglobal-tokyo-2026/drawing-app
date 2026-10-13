@@ -404,6 +404,95 @@ describe("the Settings note's saves", () => {
 });
 
 describe("the Settings note's peek", () => {
+  it("takes its first measurements from resize delivery and reads geometry before changing its tuck", async () => {
+    const deliveries: (() => void)[] = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class implements ResizeObserver {
+        constructor(callback: ResizeObserverCallback) {
+          deliveries.push(() => callback([], this));
+        }
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    const operations: string[] = [];
+    const computedStyle = getComputedStyle;
+    vi.spyOn(globalThis, "getComputedStyle").mockImplementation((element, pseudo) => {
+      if (element.matches(".stat-board__cork")) operations.push("read:padding");
+      return computedStyle(element, pseudo);
+    });
+    const view = renderWithApi(
+      <div className="stat-board__cork" style={{ paddingBottom: "20px" }}>
+        <div className="stat-board__stats" />
+        <SettingsNote />
+      </div>,
+      emptyApi({}),
+      TEST_ME,
+    );
+    unmount = view.unmount;
+    await act(async () => {});
+    expect(operations).toEqual([]);
+    const cork = view.host.querySelector<HTMLElement>(".stat-board__cork");
+    const stats = view.host.querySelector<HTMLElement>(".stat-board__stats");
+    const note = view.host.querySelector<HTMLElement>(".settings-note");
+    const title = view.host.querySelector<HTMLElement>(".settings-note__title");
+    if (!cork || !stats || !note || !title) throw new Error("The Settings paper is missing");
+    const geometry = (element: HTMLElement, property: string, value: () => number) =>
+      Object.defineProperty(element, property, {
+        configurable: true,
+        get: () => {
+          operations.push(`read:${property}`);
+          return value();
+        },
+      });
+    let statsHeight = 416;
+    geometry(cork, "clientHeight", () => 520);
+    geometry(stats, "offsetTop", () => 24);
+    geometry(stats, "offsetHeight", () => statsHeight);
+    geometry(note, "offsetHeight", () => 320);
+    geometry(title, "offsetTop", () => 12);
+    geometry(title, "offsetHeight", () => 38);
+    const setProperty = note.style.setProperty.bind(note.style);
+    const setTuck = vi
+      .spyOn(note.style, "setProperty")
+      .mockImplementation((name, value, priority) => {
+        operations.push("write:tuck");
+        return setProperty(name, value, priority);
+      });
+    const toggleAttribute = note.toggleAttribute.bind(note);
+    const setBelow = vi.spyOn(note, "toggleAttribute").mockImplementation((name, force) => {
+      operations.push("write:below");
+      return toggleAttribute(name, force);
+    });
+    const deliver = () => {
+      operations.length = 0;
+      act(() => deliveries.forEach((delivery) => delivery()));
+      const firstWrite = operations.findIndex((operation) => operation.startsWith("write:"));
+      if (firstWrite >= 0)
+        expect(
+          operations.slice(firstWrite).filter((operation) => operation.startsWith("read:")),
+        ).toEqual([]);
+    };
+
+    deliver();
+    expect(note.style.getPropertyValue("--settings-tuck")).toBe("280px");
+    expect(note.hasAttribute("data-below-stats")).toBe(false);
+    setTuck.mockClear();
+    setBelow.mockClear();
+    deliver();
+    expect(setTuck).not.toHaveBeenCalled();
+    expect(setBelow).not.toHaveBeenCalled();
+
+    statsHeight = 456;
+    deliver();
+    expect(note.hasAttribute("data-below-stats")).toBe(true);
+    expect(note.style.getPropertyValue("--settings-tuck")).toBe("280px");
+    expect(setTuck).not.toHaveBeenCalled();
+    expect(setBelow).toHaveBeenCalledOnce();
+  });
+
   it("shows only where the stats end above the cork's foot band", () => {
     // A cork 520px tall whose foot band is 60px: stats to 440px leave room, stats to 480px don't.
     expect(statsClearPeek(520, 440, 60)).toBe(true);

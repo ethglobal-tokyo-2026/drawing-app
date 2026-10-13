@@ -11,6 +11,16 @@ import { setCreaseRevealSize } from "./creaseRevealSize";
 
 /** The same short set-down timing as a board sticker's press. */
 const CREASE_REVEAL_MS = 220;
+/** Image uploads share one later task; no individual upload immediately queries GPU errors. */
+const TEXTURE_VALIDATION_DELAY_MS = 16;
+const TEXTURE_VALIDATION_TIMEOUT_MS = 20_000;
+/** A failed check drains the finite WebGL error flags before another upload batch can proceed. */
+const MAX_TEXTURE_ERROR_CHECKS = 8;
+
+interface TextureValidation {
+  url: string;
+  finish: (failure?: string) => void;
+}
 
 export type LaminateFinish = "gloss" | "matte";
 export interface LaminateSurface {
@@ -45,6 +55,10 @@ class LaminateRenderer {
   readonly surfaces = new Set<MountedSurface>();
   readonly refreshes = new Set<MountedSurface>();
   readonly reveals = new Set<MountedSurface>();
+  readonly textureValidations = new Set<TextureValidation>();
+  textureValidationTimer = 0;
+  /** An undrained or unreadable error state cannot be used for later uploads or snapshots. */
+  textureValidationFailure: string | null = null;
   refreshFrame = 0;
   revealFrame = 0;
   readonly flat: WebGLTexture;
@@ -60,6 +74,7 @@ class LaminateRenderer {
   readonly contextLost = (event: Event) => {
     event.preventDefault();
     this.lost = true;
+    this.cancelTextureValidations("The shared laminate GPU context was lost");
     for (const surface of this.surfaces) surface.failed("The shared laminate GPU context was lost");
   };
   readonly contextRestored = () => {
@@ -156,34 +171,134 @@ class LaminateRenderer {
 
   texture(source: TexImageSource | Uint8Array): WebGLTexture {
     const gl = this.gl;
+    if (this.disposed || this.lost || gl.isContextLost())
+      throw new Error("The laminate GPU context is unavailable during texture upload");
+    if (this.textureValidationFailure) throw new Error(this.textureValidationFailure);
     const texture = gl.createTexture();
     if (!texture) throw new Error("Allocating a laminate texture failed");
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
-    if (source instanceof Uint8Array)
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, source);
-    else gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
-    const error = gl.getError();
-    if (error !== gl.NO_ERROR) {
-      gl.deleteTexture(texture);
-      throw new Error(`Uploading a laminate texture failed (${error})`);
+    try {
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
+      if (source instanceof Uint8Array) {
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, source);
+        // The constructor's flat normal validates immediately; decoded images validate as a batch.
+        const error = gl.getError();
+        if (error !== gl.NO_ERROR || gl.isContextLost())
+          throw new Error(`Uploading the flat laminate texture failed (${error})`);
+      } else gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+      return texture;
+    } catch (error) {
+      if (!gl.isContextLost()) gl.deleteTexture(texture);
+      throw error;
     }
-    return texture;
+  }
+
+  validateTexture(texture: WebGLTexture, url: string, signal: AbortSignal): Promise<WebGLTexture> {
+    return new Promise((resolve, reject) => {
+      let finished = false;
+      let deadline = 0;
+      const cancel = () => pending.finish(String(signal.reason));
+      const pending: TextureValidation = {
+        url,
+        finish: (failure) => {
+          if (finished) return;
+          finished = true;
+          this.textureValidations.delete(pending);
+          window.clearTimeout(deadline);
+          signal.removeEventListener("abort", cancel);
+          if (!this.textureValidations.size) {
+            window.clearTimeout(this.textureValidationTimer);
+            this.textureValidationTimer = 0;
+          }
+          if (failure) {
+            if (!this.lost && !this.gl.isContextLost()) this.gl.deleteTexture(texture);
+            reject(new Error(`Validating laminate texture ${url} failed: ${failure}`));
+          } else resolve(texture);
+        },
+      };
+      if (signal.aborted) {
+        cancel();
+        return;
+      }
+      if (this.disposed || this.lost || this.gl.isContextLost() || this.textureValidationFailure) {
+        pending.finish(this.textureValidationFailure ?? "The laminate GPU context is unavailable");
+        return;
+      }
+      this.textureValidations.add(pending);
+      signal.addEventListener("abort", cancel, { once: true });
+      deadline = window.setTimeout(
+        () => pending.finish("Validation exceeded 20 seconds"),
+        TEXTURE_VALIDATION_TIMEOUT_MS,
+      );
+      if (!this.textureValidationTimer)
+        this.textureValidationTimer = window.setTimeout(
+          () => timeOurWork("laminate upload validation", () => this.validateTextures()),
+          TEXTURE_VALIDATION_DELAY_MS,
+        );
+    });
+  }
+
+  validateTextures() {
+    this.textureValidationTimer = 0;
+    const batch = [...this.textureValidations];
+    if (!batch.length) return;
+    const urls = batch.map(({ url }) => url).join(", ");
+    const errors: number[] = [];
+    let failure: string | undefined;
+    try {
+      if (this.disposed || this.lost || this.gl.isContextLost())
+        failure = "The laminate GPU context is unavailable";
+      else {
+        for (let checks = 0; checks < MAX_TEXTURE_ERROR_CHECKS; checks++) {
+          const error = this.gl.getError();
+          if (error !== this.gl.NO_ERROR) errors.push(error);
+          if (this.lost || this.gl.isContextLost()) {
+            failure = "The shared laminate GPU context was lost";
+            break;
+          }
+          if (error === this.gl.NO_ERROR) break;
+          if (checks + 1 === MAX_TEXTURE_ERROR_CHECKS) {
+            failure = `GPU errors did not clear after ${MAX_TEXTURE_ERROR_CHECKS} checks`;
+            this.textureValidationFailure = failure;
+          }
+        }
+      }
+    } catch (error) {
+      failure = `Checking laminate texture uploads threw: ${String(error)}`;
+      this.textureValidationFailure = failure;
+    }
+    if (errors.length || failure) {
+      failure = `Uploading the laminate texture batch failed (${errors.join(", ") || "no error code"})${failure ? `: ${failure}` : ""}; affected URLs: ${urls}`;
+      if (this.textureValidationFailure) {
+        this.textureValidationFailure = failure;
+        this.cancelRefresh();
+        // An unreadable shared error state also invalidates its ready owners; their bitmaps remain.
+        for (const surface of this.surfaces) surface.failed(failure);
+      }
+    }
+    for (const pending of batch) pending.finish(failure);
+  }
+
+  cancelTextureValidations(failure: string) {
+    for (const pending of [...this.textureValidations]) pending.finish(failure);
   }
 
   acquire(url: string): Promise<WebGLTexture> {
     const old = this.textures.get(url);
     if (old) {
       old.users++;
-      return old.texture;
+      return this.textureValidationFailure
+        ? Promise.reject(new Error(this.textureValidationFailure))
+        : old.texture;
     }
     const abort = new AbortController();
     const signal = AbortSignal.any([abort.signal, AbortSignal.timeout(20_000)]);
     const texture = (async () => {
+      if (this.textureValidationFailure) throw new Error(this.textureValidationFailure);
       const response = await fetch(url, { signal });
       if (!response.ok) throw new Error(`Loading ${url} answered ${response.status}`);
       const blob = await response.blob();
@@ -217,8 +332,9 @@ class LaminateRenderer {
           }
           image.src = objectUrl;
         });
+        signal.throwIfAborted();
         const longest = Math.max(image.naturalWidth, image.naturalHeight);
-        if (longest <= 1024) return this.texture(image);
+        if (longest <= 1024) return this.validateTexture(this.texture(image), url, signal);
         const scaled = document.createElement("canvas");
         scaled.width = Math.max(1, Math.round((image.naturalWidth * 1024) / longest));
         scaled.height = Math.max(1, Math.round((image.naturalHeight * 1024) / longest));
@@ -226,7 +342,7 @@ class LaminateRenderer {
           const context = scaled.getContext("2d");
           if (!context) throw new Error(`Resizing ${url} failed: 2D context unavailable`);
           context.drawImage(image, 0, 0, scaled.width, scaled.height);
-          return this.texture(scaled);
+          return this.validateTexture(this.texture(scaled), url, signal);
         } finally {
           scaled.width = scaled.height = 0;
         }
@@ -256,7 +372,7 @@ class LaminateRenderer {
 
   /** Re-exposure requests made in one commit share a batch after eligibility refs update. */
   refresh(surface: MountedSurface) {
-    if (this.disposed || this.lost) return;
+    if (this.disposed || this.lost || this.textureValidationFailure) return;
     this.refreshes.add(surface);
     if (this.refreshFrame) return;
     this.refreshFrame = requestAnimationFrame(() => {
@@ -303,7 +419,7 @@ class LaminateRenderer {
   }
 
   draw(surfaces: MountedSurface[]) {
-    if (this.disposed || this.lost) return;
+    if (this.disposed || this.lost || this.textureValidationFailure) return;
     if (document.hidden) {
       for (const surface of surfaces) surface.finishCreaseReveal();
       return;
@@ -552,6 +668,7 @@ class LaminateRenderer {
   destroy() {
     if (this.disposed) return;
     this.disposed = true;
+    this.cancelTextureValidations("The shared laminate renderer was destroyed");
     this.cancelRefresh();
     cancelAnimationFrame(this.revealFrame);
     this.revealFrame = 0;
@@ -659,6 +776,10 @@ class MountedSurface {
       this.gpu = renderer ??= new LaminateRenderer();
       this.gpu.surfaces.add(this);
       const gpu = this.gpu;
+      if (gpu.textureValidationFailure) {
+        this.failed(gpu.textureValidationFailure);
+        return;
+      }
       this.normalTexture = gpu.flat;
       this.replaceNormal(this.options.normal);
       this.replacePrintCut(this.options.print, this.options.cut);
@@ -676,6 +797,10 @@ class MountedSurface {
     this.settleWaiters();
   }
   loadError(kind: "printCut" | "normal", why: string | null) {
+    if (this.gpu?.textureValidationFailure) {
+      if (!this.renderFailed) this.failed(this.gpu.textureValidationFailure);
+      return;
+    }
     if (kind === "printCut") this.printCutError = why;
     else this.normalError = why;
     const errors = [this.printCutError, this.normalError].filter(Boolean).join("; ");
@@ -873,6 +998,10 @@ class MountedSurface {
   }
   draw() {
     this.initialize();
+    if (this.gpu?.textureValidationFailure) {
+      if (!this.renderFailed) this.failed(this.gpu.textureValidationFailure);
+      return;
+    }
     if (!this.textures) return;
     this.gpu?.refresh(this);
   }
@@ -1015,6 +1144,10 @@ export function updateLaminate(
   surface.materialUpdating = true;
   try {
     Object.assign(surface.options, options);
+    if (surface.gpu?.textureValidationFailure) {
+      surface.failed(surface.gpu.textureValidationFailure);
+      return;
+    }
     // Deferred admission has no GPU yet; only a failure releases the matching fallback paint.
     if (surface.renderFailed || surface.gpu?.disposed || surface.gpu?.lost)
       surface.finishCreaseReveal();

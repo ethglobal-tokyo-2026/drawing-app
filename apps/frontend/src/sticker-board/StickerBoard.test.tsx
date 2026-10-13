@@ -29,6 +29,7 @@ import { errors } from "../i18n/strings/errors";
 import { stickerBoard } from "../i18n/strings/stickerBoard";
 import { SessionKeeper } from "../sticker-creation/session/keptSession";
 import { formatMonthDay, formatNo, spokenDuration } from "../stickers/format";
+import * as laminateRenderer from "../stickers/laminateRenderer";
 import type { Sheet } from "../tickets/ticketsContext";
 import { useTickets } from "../tickets/useTickets";
 import { TabsLeadSlot } from "../ui/TabsLead";
@@ -308,6 +309,58 @@ function selectByKeys(host: HTMLElement, stickerId: string) {
 }
 
 describe("StickerBoard's normalized stack", () => {
+  it("turns without rendering sticker wrappers or figures while retaining their active laminate callbacks", async () => {
+    onAPhone();
+    stubResizeObservers();
+    const mount = vi.spyOn(laminateRenderer, "mountLaminate").mockImplementation(() => vi.fn());
+    const refresh = vi.spyOn(laminateRenderer, "refreshLaminate").mockImplementation(() => {});
+    const rows = [0.14, 0.37, 0.63, 0.86].map((x) =>
+      boardSticker({
+        sticker: sticker({ artist: TEST_OWNER, ownerId: TEST_ME.id }),
+        placement: { ...placedAt(x, 0.4), scale: 0.05 },
+      }),
+    );
+    const { host } = await openBoard(boardApi(rows, { userStats: async () => settledStats }));
+    await act(() => vi.dynamicImportSettled());
+    const canvases = [
+      ...host.querySelectorAll<HTMLCanvasElement>(".placed-sticker .sticker-laminate"),
+    ];
+    expect(canvases).toHaveLength(4);
+    expect(mount).toHaveBeenCalledTimes(4);
+    const options = canvases.map((canvas) => {
+      const mounted = mount.mock.calls.find(([target]) => target === canvas);
+      if (!mounted) throw new Error("The placed sticker's laminate did not mount");
+      return mounted[1];
+    });
+    expect(options.map((surface) => surface.active?.())).toEqual([true, true, true, true]);
+    const placedBefore = new Map(stickerRenders.placed);
+    const figuresBefore = new Map(stickerRenders.figure);
+    refresh.mockClear();
+
+    flip(host);
+    await act(async () => {});
+
+    expect(options.map((surface) => surface.active?.())).toEqual([false, false, false, false]);
+    expect(stickerRenders.placed, "A turn must not render the placed sticker wrappers").toEqual(
+      placedBefore,
+    );
+    expect(stickerRenders.figure, "A turn must not render the sticker figures").toEqual(
+      figuresBefore,
+    );
+    expect(refresh).not.toHaveBeenCalled();
+
+    flip(host);
+    await act(async () => {});
+
+    expect(options.map((surface) => surface.active?.())).toEqual([true, true, true, true]);
+    expect(stickerRenders.placed).toEqual(placedBefore);
+    expect(stickerRenders.figure).toEqual(figuresBefore);
+    expect([...host.querySelectorAll(".placed-sticker .sticker-laminate")]).toEqual(canvases);
+    expect(mount).toHaveBeenCalledTimes(4);
+    expect(refresh).toHaveBeenCalledTimes(4);
+    for (const canvas of canvases) expect(refresh).toHaveBeenCalledWith(canvas);
+  });
+
   it("raises a disjoint sticker without rendering the other stickers again", async () => {
     onAPhone();
     stubResizeObservers();
