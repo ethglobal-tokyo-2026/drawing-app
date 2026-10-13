@@ -273,8 +273,8 @@ for (const detailSide of [360, 700]) {
     expect(result.largeAllocation).toEqual({ width: 2048, height: 2048 });
     expect(
       result.largeStageAllocation,
-      "The batch stage must match the complete exposed scene",
-    ).toEqual(result.largeAllocation);
+      "Retained copies must not allocate a second atlas",
+    ).toBeNull();
     expect(result.detailOutput).toEqual({
       width: detailSide === 360 ? 720 : 1024,
       height: detailSide === 360 ? 720 : 1024,
@@ -285,8 +285,8 @@ for (const detailSide of [360, 700]) {
     ).toEqual(result.detailOutput);
     expect(
       result.detailStageAllocation,
-      "The batch stage must shrink with the exposed detail",
-    ).toEqual(result.detailAllocation);
+      "Detail copies must not allocate a second atlas",
+    ).toBeNull();
     expect(
       result.detailResizeCount,
       "Stable detail motion and individual turns must not reallocate the shared source",
@@ -407,7 +407,7 @@ test("pending exposed material owners reserve scene capacity before their textur
   }
 });
 
-test("shared GL batches stage once before retained snapshots with identical reference pixels", async ({
+test("shared GL batches crop directly into retained snapshots with identical reference pixels", async ({
   page,
 }) => {
   await page.route("**/e2e/stickerLaminate.html", (route) =>
@@ -569,16 +569,16 @@ test("shared GL batches stage once before retained snapshots with identical refe
       },
     });
     const releases: (() => void)[] = [];
-    // Mixed widths and heights force the material packing order to differ from the mount order.
+    // Distinct prints and normals span multiple batches; mixed sizes reorder crops within each.
     const sizes = [
-      { width: 260, height: 300 },
-      { width: 340, height: 180 },
-      { width: 280, height: 360 },
-      { width: 400, height: 220 },
-      { width: 320, height: 280 },
-      { width: 240, height: 340 },
-      { width: 360, height: 260 },
-      { width: 300, height: 240 },
+      { width: 600, height: 700 },
+      { width: 780, height: 500 },
+      { width: 620, height: 800 },
+      { width: 900, height: 570 },
+      { width: 720, height: 650 },
+      { width: 580, height: 760 },
+      { width: 840, height: 610 },
+      { width: 700, height: 600 },
     ];
     const canvases = sizes.map(({ width, height }, index) => {
       const canvas = document.createElement("canvas");
@@ -618,11 +618,14 @@ test("shared GL batches stage once before retained snapshots with identical refe
         copiedRows: [...observations.copiedRows],
         names: [...observations.names].sort(),
         // The declared material DPR ceiling remains 2 on the suite's DPR-3 phone emulation.
-        expectedSizes: sizes.map(({ width, height }, index) => ({
-          case: index,
-          width: width * Math.min(devicePixelRatio, 2),
-          height: height * Math.min(devicePixelRatio, 2),
-        })),
+        expectedSizes: sizes.map(({ width, height }, index) => {
+          const ratio = Math.min(devicePixelRatio, 2, 1024 / Math.max(width, height));
+          return {
+            case: index,
+            width: Math.round(width * ratio),
+            height: Math.round(height * ratio),
+          };
+        }),
       };
     } finally {
       for (const release of releases) release();
@@ -653,11 +656,15 @@ test("shared GL batches stage once before retained snapshots with identical refe
   expect(result.maxDifference).toBe(0);
   expect(result.contexts).toBe(1);
   expect(result.draws).toBe(8);
+  expect(
+    result.expectedSizes.reduce((pixels, { width, height }) => pixels + width * height, 0),
+    "Distinct-material crops must exceed one complete shared buffer",
+  ).toBeGreaterThan(2048 * 2048);
   expect(result.targetCopies).toBe(8);
-  expect(result.gpuCopies, "Each material batch must make one GPU-to-2D drawImage call").toBe(1);
+  expect(result.gpuCopies, "Every target must copy directly from the complete GL batch").toBe(8);
 });
 
-test("material batch stage notes appear only while the performance recorder is on", async ({
+test("material batch copy notes appear only while the performance recorder is on", async ({
   page,
 }) => {
   await page.route("**/e2e/stickerLaminate.html", (route) =>
@@ -712,7 +719,7 @@ test("material batch stage notes appear only while the performance recorder is o
       await frame();
       stopPerformanceRecorder();
       const recording = readPerformanceRecording();
-      if (!recording) throw new Error("The material-stage recording is unavailable");
+      if (!recording) throw new Error("The material-copy recording is unavailable");
       const notes = recording.slowFrames.flatMap((slow) =>
         slow.events.filter((event) => event.kind === "laminate-batch"),
       );
@@ -725,7 +732,7 @@ test("material batch stage notes appear only while the performance recorder is o
   expect(details.length).toBeGreaterThan(0);
   for (const detail of details)
     expect(detail).toMatch(
-      /^1 tile; GL \d+x\d+; used \d+x\d+; submit \d+(?:\.\d+)?ms; snapshot \d+(?:\.\d+)?ms; first copy \d+(?:\.\d+)?ms; remaining copies \d+(?:\.\d+)?ms$/,
+      /^1 tile; GL \d+x\d+; used \d+x\d+; submit \d+(?:\.\d+)?ms; first copy \d+(?:\.\d+)?ms; remaining copies \d+(?:\.\d+)?ms$/,
     );
 });
 

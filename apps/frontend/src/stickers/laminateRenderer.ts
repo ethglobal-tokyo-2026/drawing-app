@@ -34,7 +34,6 @@ export interface LaminateSurface {
 /** One GPU context computes the coating; each visible sticker keeps its own 2D snapshot. */
 class LaminateRenderer {
   readonly canvas = document.createElement("canvas");
-  readonly atlas = document.createElement("canvas");
   readonly uniforms = new Map<string, WebGLUniformLocation | null>();
   readonly normalTransform = new Float32Array(9);
   readonly gl: WebGLRenderingContext;
@@ -151,7 +150,6 @@ class LaminateRenderer {
       this.reduced.removeEventListener("change", this.motionChanged);
       if (!gl.isContextLost()) gl.getExtension("WEBGL_lose_context")?.loseContext();
       releaseCanvas(this.canvas);
-      releaseCanvas(this.atlas);
       throw error;
     }
   }
@@ -395,8 +393,6 @@ class LaminateRenderer {
       // Scene changes may shrink storage; turns and texture arrivals keep the complete scene size.
       if (this.canvas.width !== width) this.canvas.width = width;
       if (this.canvas.height !== height) this.canvas.height = height;
-      if (this.atlas.width !== width) this.atlas.width = width;
-      if (this.atlas.height !== height) this.atlas.height = height;
     } catch (error) {
       for (const batch of draws) for (const { surface } of batch) surface.failed(String(error));
       return;
@@ -497,18 +493,11 @@ class LaminateRenderer {
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
     const submittedMs = recording ? performance.now() - submittedAt : 0;
-    const snapshotStartedAt = recording ? performance.now() : 0;
-    const atlasContext = this.atlas.getContext("2d");
-    if (!atlasContext) throw new Error("The laminate batch snapshot 2D context is unavailable");
-    // Replace the used region, including transparent cuts; retained crops never read outside it.
-    atlasContext.clearRect(0, 0, width, height);
-    atlasContext.globalCompositeOperation = "source-over";
-    atlasContext.drawImage(this.canvas, 0, 0, width, height, 0, 0, width, height);
-    const snapshotMs = recording ? performance.now() - snapshotStartedAt : 0;
     let firstCopyMs = 0;
     let remainingCopiesMs = 0;
     let copied = 0;
-    // One GPU-source copy follows every batch; retained stickers then crop the complete 2D stage.
+    // Finish every crop before the next batch overwrites the shared GL source. Native browsers
+    // can reuse its unchanged snapshot; an extra full-size 2D atlas adds another copy and allocation.
     for (const { surface, x, y, w, h, target } of tiles) {
       const copyStartedAt = recording ? performance.now() : 0;
       const canvas = target ?? surface.flatSnapshot();
@@ -519,7 +508,7 @@ class LaminateRenderer {
       const context = canvas.getContext("2d");
       if (!context) throw new Error("The sticker snapshot 2D context is unavailable");
       context.globalCompositeOperation = "copy";
-      context.drawImage(this.atlas, x, y, w, h, 0, 0, w, h);
+      context.drawImage(this.canvas, x, y, w, h, 0, 0, w, h);
       if (recording) {
         const elapsed = performance.now() - copyStartedAt;
         if (copied === 0) firstCopyMs = elapsed;
@@ -556,7 +545,7 @@ class LaminateRenderer {
     if (recording)
       notePerformance(
         "laminate-batch",
-        `${tiles.length} ${tiles.length === 1 ? "tile" : "tiles"}; GL ${this.canvas.width}x${this.canvas.height}; used ${width}x${height}; submit ${submittedMs.toFixed(1)}ms; snapshot ${snapshotMs.toFixed(1)}ms; first copy ${firstCopyMs.toFixed(1)}ms; remaining copies ${remainingCopiesMs.toFixed(1)}ms`,
+        `${tiles.length} ${tiles.length === 1 ? "tile" : "tiles"}; GL ${this.canvas.width}x${this.canvas.height}; used ${width}x${height}; submit ${submittedMs.toFixed(1)}ms; first copy ${firstCopyMs.toFixed(1)}ms; remaining copies ${remainingCopiesMs.toFixed(1)}ms`,
       );
   }
 
@@ -590,7 +579,6 @@ class LaminateRenderer {
       this.gl.deleteProgram(this.program);
     }
     releaseCanvas(this.canvas);
-    releaseCanvas(this.atlas);
     // Detach callbacks first so intentional retirement cannot report failure on the replacement.
     if (!this.gl.isContextLost()) this.gl.getExtension("WEBGL_lose_context")?.loseContext();
   }
