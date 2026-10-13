@@ -144,7 +144,6 @@ export const line = {
       },
       sent: { en: "Sent. It’s in your chat with the friend you picked." },
       cancelled: { en: "Nothing sent: the friend list was closed." },
-      unknown: { en: "LINE didn’t say whether it was sent." },
     },
   },
 } as const satisfies Section;

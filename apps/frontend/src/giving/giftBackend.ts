@@ -102,7 +102,7 @@ export interface GiftBackend {
    * waits on each time that changes.
    */
   pack: (sticker: GiftSticker, onWait?: (wait: PackWait) => void) => Promise<PackedGift>;
-  /** LINE, or the giver, said the gift message went out. */
+  /** LINE confirmed that the gift message went out. */
   markSent: (giftId: string, attemptId: string) => Promise<void>;
   /**
    * The picker closed, or failed before it opened, without sending: the gift stays in the bag for

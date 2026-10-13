@@ -8,13 +8,12 @@ import { liffMockActive } from "../line/liff";
 import type { GiftMessage } from "./giftMessage";
 import { keepMockGiftMessage } from "./mockGiftMessages";
 
-/** `unknown`: LINE didn't say whether the gift message went out. */
+/** LINE confirms the gift message was sent, or the picker closed without sending. */
 export type GiftSendOutcome = PickerOutcome;
 
 /**
- * Hands the gift message to LINE's picker. Resolves once the person sends it or backs out, or once
- * LINE is done without saying which; rejects when the picker fails before it opens, with an error
- * that says why.
+ * Hands the gift message to LINE's picker. Resolves once LINE confirms sending or cancellation;
+ * rejects unsupported sends and picker failures with an error that says why.
  */
 export interface GiftSender {
   send: (message: GiftMessage) => Promise<GiftSendOutcome>;

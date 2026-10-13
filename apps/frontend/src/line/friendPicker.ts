@@ -10,8 +10,19 @@ export type LiffPicker = Pick<
   "isApiAvailable" | "shareTargetPicker" | "isInClient" | "getLineVersion"
 >;
 
-/** `unknown`: LINE didn't say whether the messages went out. */
-export type PickerOutcome = "sent" | "cancelled" | "unknown";
+/** A confirmed send or a picker closed without sending. */
+export type PickerOutcome = "sent" | "cancelled";
+
+/** A send failure, including whether LINE may already have sent the messages. */
+export class PickerSendError extends Error {
+  readonly mayHaveSent: boolean;
+
+  constructor(message: string, mayHaveSent: boolean, options?: ErrorOptions) {
+    super(message, options);
+    this.name = "PickerSendError";
+    this.mayHaveSent = mayHaveSent;
+  }
+}
 
 /**
  * LIFF's own checks, which fail before the picker opens, so nothing went out: its arguments and
@@ -43,33 +54,39 @@ export const canOpenPicker = (line: LiffPicker): boolean =>
 
 /**
  * Sends messages through LINE's full share target picker: friends, groups and recent chats. The
- * one-pick mode lists friends only, and LINE can leave that list empty. Rejects with LINE's error
- * code when the picker fails before it opens.
+ * one-pick mode lists friends only, and LINE can leave that list empty. Rejects unsupported sends
+ * before opening and preserves LINE's error when the picker fails.
  */
 export async function sendInLineChat(
   line: LiffPicker,
   messages: PickerMessage[],
 ): Promise<PickerOutcome> {
+  if (!canOpenPicker(line)) {
+    throw new PickerSendError("LINE’s friend picker is unavailable in this environment.", false);
+  }
+  if (!reportsOutcome(line)) {
+    throw new PickerSendError("LINE’s friend picker requires LINE 10.11.0 or later.", false);
+  }
   // LIFF asks LINE for a one-time token before it opens the picker, so offline it never opens.
-  const offline = navigator.onLine === false;
+  if (navigator.onLine === false) {
+    throw new PickerSendError("LINE’s friend picker cannot open while offline.", false);
+  }
   let result;
   try {
     result = await line.shareTargetPicker(messages, { isMultiple: true });
   } catch (error) {
     const code = error instanceof Error && "code" in error ? error.code : undefined;
-    if (offline || (typeof code === "string" && BEFORE_THE_PICKER.has(code))) {
-      throw new Error(`LINE’s friend picker failed: ${describeLiffError(error)}`, { cause: error });
-    }
-    // Once the picker is open, a failure (asking LINE for its result, or a timeout) says nothing of
-    // whether the messages went out. LIFF fails the one-time token's request the same way, so that
-    // failure reads the same, when online.
-    console.warn(
-      `LINE’s friend picker failed after it may have sent: ${describeLiffError(error)}`,
-      error,
+    // Later failures cannot prove nothing was sent; keep the gift pending to prevent duplication.
+    throw new PickerSendError(
+      `LINE’s friend picker failed: ${describeLiffError(error)}`,
+      !(typeof code === "string" && BEFORE_THE_PICKER.has(code)),
+      { cause: error },
     );
-    return "unknown";
   }
   if (result?.status === "success") return "sent";
   // A picker closed without sending resolves with nothing.
-  return result === undefined && reportsOutcome(line) ? "cancelled" : "unknown";
+  if (result === undefined) return "cancelled";
+  throw new PickerSendError("LINE’s friend picker returned an unexpected result.", true, {
+    cause: result,
+  });
 }

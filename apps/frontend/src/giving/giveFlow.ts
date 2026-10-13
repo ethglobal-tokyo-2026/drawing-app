@@ -1,5 +1,6 @@
 import { problemOf, type Problem } from "../i18n/errorMessage";
 import { i18next } from "../i18n/i18n";
+import { PickerSendError } from "../line/friendPicker";
 import { formatNo } from "../stickers/format";
 import {
   GiftMessageOutError,
@@ -21,13 +22,6 @@ export const PICKER_ANSWER_MS = 11 * 60_000;
  * it every half second. Past it, the giver may stop waiting.
  */
 export const PICKER_RETURN_MS = 5_000;
-/**
- * How long LINE's answer has from the moment the flow asks for the picker, with the page in view all
- * along, as where the picker opens over it: LIFF fetches a token before it opens the picker, so
- * this leaves room for a slow connection.
- */
-export const PICKER_OPENING_MS = 20_000;
-
 /** What the wait for the gift bag says of itself. */
 interface PackingWait {
   /** What it waits on now, once the backend has said. */
@@ -49,12 +43,12 @@ type GiveFlowStep =
    * LINE's picker is open. `late`: LINE hasn't answered in time with the page in view, so the giver
    * may stop waiting, as when LINE didn't say; its answer still counts until they do.
    */
-  | { step: "picking"; late?: true }
+  | { step: "picking"; late?: true; error?: Problem }
   | { step: "sent"; sentAt: number; recordError?: Problem }
   /** The picker closed without sending. */
   | { step: "notSent"; recordError?: Problem }
-  /** LINE didn't say whether the gift message went out, so it isn't offered again. */
-  | { step: "maybeSent"; confirming?: boolean; recordError?: Problem }
+  /** An unresolved LINE send stays pending until LINE confirms it or the sticker is taken out. */
+  | { step: "maybeSent"; error: Problem; recordError?: Problem }
   | { step: "failed"; error: Problem; recordError?: Problem }
   /** The sticker lifts back out of the bag. */
   | { step: "takingOut" }
@@ -85,8 +79,6 @@ export interface GiveFlow {
   give: () => void;
   /** The Send in LINE key: LINE's picker, again. */
   sendInLine: () => void;
-  /** "It went out", when LINE didn't say or is late: the giver says the gift message was sent. */
-  itWentOut: () => void;
   takeOut: () => void;
   /** The page is back in view, as when LINE's picker closes. */
   pageShown: () => void;
@@ -106,7 +98,7 @@ interface Attempt {
   messageAttemptId?: string;
 }
 
-/** A picker or recovery report always names the attempt that was acknowledged before it. */
+/** A picker report always names the attempt that was acknowledged before it. */
 function messageAttemptId(a: Attempt): string {
   if (!a.messageAttemptId) throw new Error("The Gift Message attempt was not recorded");
   return a.messageAttemptId;
@@ -124,7 +116,12 @@ const describe = (error: unknown): Problem =>
           message: i18next.t(($) => $.giving.transferProblem[error.problem]),
           detail: error.message,
         }
-      : problemOf(error);
+      : error instanceof PickerSendError
+        ? {
+            message: i18next.t(($) => $.giving.lineSendError.pickerFailed),
+            detail: error.message,
+          }
+        : problemOf(error);
 
 /**
  * What an attempt's packing came to: the gift that holds the sticker, null when packing failed before
@@ -151,6 +148,10 @@ export function createGiveFlow({
   report = console.error,
 }: GiveFlowOptions): GiveFlow {
   const which = formatNo(sticker.no);
+  const lineSendProblem = (cause?: unknown): Problem => ({
+    message: i18next.t(($) => $.giving.lineSendError.message, { no: which }),
+    ...(cause !== undefined && { detail: describe(cause).detail }),
+  });
   const listeners = new Set<() => void>();
   let state: GiveFlowState = { step: "packed" };
   let attempt: Attempt | null = null;
@@ -216,7 +217,11 @@ export function createGiveFlow({
     if (!inView) return;
     lateTimer = setTimeout(() => {
       lateTimer = undefined;
-      if (waiting && state.step === "picking") set({ step: "picking", late: true });
+      if (waiting && state.step === "picking") {
+        const error = new Error(`LINE's friend picker did not answer within ${ms / 1000} s`);
+        report(`${which}: LINE's send confirmation timed out`, error);
+        set({ step: "picking", late: true, error: lineSendProblem(error) });
+      }
     }, ms);
   };
 
@@ -256,6 +261,7 @@ export function createGiveFlow({
           }
         : {
             step: "maybeSent",
+            error: lineSendProblem(error),
             ...(error.recordError !== undefined && { recordError: describe(error.recordError) }),
           },
     );
@@ -306,8 +312,9 @@ export function createGiveFlow({
     waiting = null;
     clearTimer();
     stopped.a.open = false;
-    console.warn(`${which}: LINE didn't say whether the gift message went out`, stopped.giftId);
-    if (attempt === stopped.a) set({ step: "maybeSent" });
+    const error = new Error(`Gift ${stopped.giftId}: LINE's send confirmation did not arrive`);
+    report(`${which}: LINE's send confirmation failed`, error);
+    if (attempt === stopped.a) set({ step: "maybeSent", error: lineSendProblem(error) });
   };
 
   const answered = async (
@@ -329,6 +336,12 @@ export function createGiveFlow({
       if (shown()) set({ step: "sent", sentAt: now(), recordError });
       return;
     }
+    if (outcome !== "cancelled") {
+      report(`${which}: LINE's send confirmation failed`, outcome.failed);
+      if (!awaited && shown()) {
+        set({ step: "maybeSent", error: lineSendProblem(outcome.failed) });
+      }
+    }
     if (!awaited) return;
     if (outcome === "cancelled") {
       const recordError = await record("the cancel", () =>
@@ -337,11 +350,10 @@ export function createGiveFlow({
       if (recordError) a.open = false;
       else a.messageAttemptId = undefined;
       if (shown()) set({ step: "notSent", recordError });
-    } else if (outcome === "unknown") {
+    } else if (outcome.failed instanceof PickerSendError && outcome.failed.mayHaveSent) {
       a.open = false;
-      if (shown()) set({ step: "maybeSent" });
+      if (shown()) set({ step: "maybeSent", error: lineSendProblem(outcome.failed) });
     } else {
-      report(`${which} wasn’t sent`, outcome.failed);
       const recordError = await record("the failure", () =>
         backend.markCancelled(giftId, messageAttemptId(a)),
       );
@@ -385,8 +397,6 @@ export function createGiveFlow({
     set({ step: "picking" });
     waiting = { a, giftId: packed.giftId };
     after(PICKER_ANSWER_MS, stopWaiting);
-    // Due from now too, since LINE's picker may open over the page without hiding it.
-    answerDue(PICKER_OPENING_MS);
     let outcome: GiftSendOutcome | { failed: unknown };
     try {
       outcome = await sender.send(packed.message);
@@ -410,34 +420,15 @@ export function createGiveFlow({
       after(pickerDelayMs, () => void openPicker());
     },
     sendInLine: () => void openPicker(),
-    itWentOut: () => {
-      const a = attempt;
-      if (disposed || !a) return;
-      if (late()) stopWaiting();
-      if (state.step !== "maybeSent" || state.confirming) return;
-      set({ step: "maybeSent", confirming: true });
-      void (async () => {
-        const { giftId } = await packingOf(a);
-        const recordError = giftId
-          ? await record("the send", () => backend.markSent(giftId, messageAttemptId(a)))
-          : undefined;
-        if (attempt === a && state.step === "maybeSent") {
-          set({ step: "sent", sentAt: now(), recordError });
-        }
-      })();
-    },
     takeOut: () => {
       const leavable =
-        inTheBag() ||
-        state.step === "preparing" ||
-        late() ||
-        (state.step === "maybeSent" && !state.confirming);
+        inTheBag() || state.step === "preparing" || late() || state.step === "maybeSent";
       if (disposed || !leavable) return;
       if (late()) stopWaiting();
       clearTimer();
       const a = attempt;
-      // On "Did it go out?" already: Take it out is the giver's answer, so it goes ahead.
-      const asked = state.step === "maybeSent";
+      // Taking out an unresolved send explicitly invalidates its Gift Claim Token.
+      const unresolved = state.step === "maybeSent";
       // A failed confirmation can still mean the take-out landed. Sending must prepare it again.
       // Mid-preparation the take-out waits for the packing to settle: a sticker never comes out while
       // its deposit is still going in.
@@ -447,7 +438,7 @@ export function createGiveFlow({
         const packing = a ? await packingOf(a) : null;
         // Packing ended on news that the gift message is out, which the screen hasn't said yet: it
         // says so now, and the gift stays in LINE's hands.
-        if (a && packing?.messageOut && !asked) {
+        if (a && packing?.messageOut && !unresolved) {
           showMessageOut(a, packing.messageOut);
           return;
         }

@@ -44,7 +44,7 @@ test("Gift link: Alice gives from her board, and Bob opens the Gift Message's li
     await openDetail(alice, language, other)
   )
     .getByRole("navigation", { name: say(stickerBoard.detail.yourStickers, language) })
-    .getByRole("button", { name: no, exact: true })
+    .getByRole("button", { name: startsWith(no) })
     .click();
   // The detail is named for the sticker it shows.
   const onItsWay = alice.getByRole("dialog", { name: no });
@@ -202,7 +202,7 @@ test("Bob's detail of Alice's gift holds the Transfer Trail's place and Send gra
 });
 
 /** Only the LINE boundary is simulated; gift attempts use the running API and migrated database. */
-async function pickerAnswers(page: Page, outcome: "sent" | "cancelled" | "unknown") {
+async function pickerAnswers(page: Page, outcome: "sent" | "cancelled") {
   await page.evaluate((answer) => {
     const testWindow: Window & { liffMock?: LiffMockApi } = window;
     const mock = testWindow.liffMock;
@@ -210,9 +210,27 @@ async function pickerAnswers(page: Page, outcome: "sent" | "cancelled" | "unknow
     mock.set((data) => ({
       ...data,
       shareTargetPicker: answer === "sent" ? { status: "success" } : undefined,
-      getLineVersion: answer === "unknown" ? "10.10.0" : "14.0.0",
+      getLineVersion: "14.0.0",
     }));
   }, outcome);
+}
+
+/** LIFF Mock reads this response inside its picker call, so the getter preserves LINE's failure. */
+async function pickerFailsAfterOpening(page: Page) {
+  await page.evaluate(() => {
+    const testWindow: Window & { liffMock?: LiffMockApi } = window;
+    const mock = testWindow.liffMock;
+    if (!mock) throw new Error("LIFF Mock was not installed");
+    mock.set((data) => ({
+      ...data,
+      getLineVersion: "14.0.0",
+      get shareTargetPicker() {
+        throw Object.assign(new Error("LINE's picker stopped before reporting its outcome"), {
+          code: "EXCEPTION_IN_SUBWINDOW",
+        });
+      },
+    }));
+  });
 }
 
 test("A definitive cancellation permits one new attempt using the original gift and token", async ({
@@ -245,14 +263,14 @@ test("A definitive cancellation permits one new attempt using the original gift 
   expect(await token).toMatch(/^0x[0-9a-f]{64}$/);
 });
 
-test("An uncertain attempt survives reload, keeps its recipient, and waits for explicit Take out", async ({
+test("An unconfirmed LINE send stays an error after reload and keeps its recipient until Take it out", async ({
   page: alice,
   friend: bob,
 }) => {
   await signIn(alice, "uncertain-giver", language);
   const bobHandle = handleOf(await signIn(bob, "original-recipient", language));
   const no = await sealFromBoard(alice, language);
-  await pickerAnswers(alice, "unknown");
+  await pickerFailsAfterOpening(alice);
   let begins = 0;
   let takeOuts = 0;
   alice.on("request", (request) => {
@@ -273,16 +291,19 @@ test("An uncertain attempt survives reload, keeps its recipient, and waits for e
   await giveSheet.getByRole("radio", { name: no }).click();
   await giveSheet.getByRole("button", { name: say(giving.give, language, { no }) }).click();
   const original = packagedGiftSchema.parse(await (await packaged).json());
-  await expect(
-    alice.getByRole("dialog", { name: say(giving.maybeSent.title, language) }),
-  ).toBeVisible();
+  const sendError = alice.getByRole("dialog", {
+    name: say(giving.lineSendError.title, language),
+  });
+  await expect(sendError).toBeVisible();
+  const confirmationError = say(giving.lineSendError.message, language, { no });
+  await expect(sendError.getByRole("alert").filter({ hasText: confirmationError })).toBeVisible();
   // A fresh page has no in-memory Gift Claim Token; the API's pending attempt controls recovery.
   await alice.goto("/");
   const other = await sealFromBoard(alice, language);
   const detail = await openDetail(alice, language, other);
   await detail
     .getByRole("navigation", { name: say(stickerBoard.detail.yourStickers, language) })
-    .getByRole("button", { name: no, exact: true })
+    .getByRole("button", { name: startsWith(no) })
     .click();
   const resumed = alice.waitForResponse(
     (response) =>
@@ -292,8 +313,9 @@ test("An uncertain attempt survives reload, keeps its recipient, and waits for e
     .getByRole("dialog", { name: no, exact: true })
     .getByRole("button", { name: say(stickerBoard.detail.give, language), exact: true })
     .click();
-  const recovery = alice.getByRole("dialog", { name: say(giving.maybeSent.title, language) });
+  const recovery = alice.getByRole("dialog", { name: say(giving.lineSendError.title, language) });
   await expect(recovery).toBeVisible();
+  await expect(recovery.getByRole("alert").filter({ hasText: confirmationError })).toBeVisible();
   const recovered = packagedGiftSchema.parse(await (await resumed).json());
   expect(recovered.gift.id).toBe(original.gift.id);
   expect(recovered.forUserId).toBe(original.forUserId);

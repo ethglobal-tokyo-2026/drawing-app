@@ -115,17 +115,13 @@ export function Giving({
   const view: View = unsent && cantFind ? "cantFind" : screen;
   const preparing = state.step === "packed" || state.step === "preparing";
   const slow = (state.step === "packed" || state.step === "preparing") && state.slow === true;
-  // LINE's answer is late, so it asks as when LINE didn't say, while still hearing it.
+  // A late LINE answer shows an error while the flow still waits for a definitive outcome.
   const late = state.step === "picking" && state.late === true;
   // Out of the bag, the sticker is back where it was given from, and Giving closes on it.
   const takenOut = state.step === "takenOut";
   const takingOut = state.step === "takingOut" || takenOut;
   // The gift's preparation and LINE's picker keep it open until their outcome is known.
-  const busy =
-    preparing ||
-    (state.step === "picking" && !late) ||
-    takingOut ||
-    (state.step === "maybeSent" && Boolean(state.confirming));
+  const busy = preparing || (state.step === "picking" && !late) || takingOut;
   // A long wait for the gift bag can be left by taking the sticker back out.
   const canTakeOut = !busy || slow;
 
@@ -172,7 +168,7 @@ export function Giving({
   // Without scrolling, since the sheet may still be rising from below the screen.
   useEffect(() => {
     body.current?.querySelector<HTMLElement>("[data-autofocus]")?.focus({ preventScroll: true });
-  }, [view]);
+  }, [view, state.step, late]);
 
   const [closed, setClosed] = useState(false);
   useEffect(() => {
@@ -237,28 +233,24 @@ export function Giving({
     );
   } else if (state.step === "maybeSent" || late) {
     // No Send in LINE: if the gift message went out, a second one would put its link in two chats.
-    title = t(($) => $.giving.maybeSent.title);
-    lead = t(($) => $.giving.maybeSent.lead);
+    title = t(($) => $.giving.lineSendError.title);
+    lead = t(($) => $.giving.lineSendError.lead);
+    const error =
+      (state.step === "maybeSent" || state.step === "picking") && state.error
+        ? state.error
+        : { message: t(($) => $.giving.lineSendError.message, { no: formatNo(sticker.no) }) };
     head = titleHead(title);
     content = (
       <>
         <div className="giving__scroll">
           <p className="giving__sub keep-phrases">{lead}</p>
+          <ErrorLine className="giving__problem" detail={error.detail}>
+            {error.message}
+          </ErrorLine>
           {bag("open")}
         </div>
         <div className="giving__acts">
-          <Key
-            tone="aqua"
-            icon={<PaperPlaneTilt weight="fill" />}
-            onClick={() => {
-              if (!busy) flow?.itWentOut();
-            }}
-            {...busyKey}
-            data-autofocus
-          >
-            {t(($) => $.giving.maybeSent.itWentOut)}
-          </Key>
-          <QuietLink onClick={takeOut} aria-disabled={!canTakeOut || undefined}>
+          <QuietLink onClick={takeOut} aria-disabled={!canTakeOut || undefined} data-autofocus>
             <ArrowUUpLeft /> {t(($) => $.giving.inTheBag.takeOut)}
           </QuietLink>
         </div>

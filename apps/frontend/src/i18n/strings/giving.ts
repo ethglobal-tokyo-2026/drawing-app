@@ -184,17 +184,25 @@ export const giving = {
       ja: "クロッキーに記録できませんでした：{{reason}}",
     },
   },
-  /** LINE didn't say whether the Gift Message went out, so the same one isn't offered again. */
-  maybeSent: {
-    /** Giving, when LINE's friend picker gave no answer on whether the Gift Message went out: the sheet's title over the open gift bag */
-    title: { en: "Did it go out?", ja: "送れましたか？" },
-    /** Giving's "Did it go out?" screen: the line under its title */
+  /** Giving's error after an unresolved LINE send, which stays pending until LINE confirms or the sticker is taken out. */
+  lineSendError: {
+    /** Giving's LINE send error screen: the title over the open gift bag */
+    title: { en: "LINE send error", ja: "LINE送信エラー" },
+    /** Giving's LINE send error screen: recovery instructions under the title */
     lead: {
-      en: "LINE didn’t say whether your gift message went out. If it did, tap It went out. If not, take the sticker out, then give it again.",
-      ja: "ギフトメッセージを<wbr/>送れたかどうか、<wbr/>LINEから<wbr/>返事が<wbr/>ありませんでした。<wbr/>送れた場合は<wbr/>「送れました」を<wbr/>タップしてください。<wbr/>送れていない場合は、<wbr/>シールを<wbr/>取り出してから、<wbr/>もう一度<wbr/>贈ってください。",
+      en: "Take the sticker out before trying to give it again. This closes the previous gift link.",
+      ja: "もう一度<wbr/>贈るには、<wbr/>シールを<wbr/>取り出してください。<wbr/>前の<wbr/>ギフトリンクは<wbr/>使えなくなります。",
     },
-    /** Giving's "Did it go out?" screen: the aqua key the giver taps when the Gift Message did go out in LINE */
-    itWentOut: { en: "It went out", ja: "送れました" },
+    /** Giving's LINE send error screen: the persistent alert when the picker fails or its answer does not arrive */
+    message: {
+      en: "LINE didn’t confirm that {{no}} was sent.",
+      ja: "{{no}}の送信をLINEで確認できませんでした。",
+    },
+    /** Giving's failed-send alert: the reason when LINE's friend picker rejects the send */
+    pickerFailed: {
+      en: "LINE’s friend picker couldn’t complete the send.",
+      ja: "LINEの友だち選択で送信を完了できませんでした。",
+    },
   },
   sent: {
     /** Giving, once the Gift Message went out through LINE: the title under the gift bag as it closes */

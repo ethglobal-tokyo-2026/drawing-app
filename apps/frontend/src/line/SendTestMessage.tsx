@@ -12,7 +12,6 @@ type Status =
   | { kind: "picking" }
   | { kind: "sent" }
   | { kind: "cancelled" }
-  | { kind: "unknown" }
   | { kind: "failed"; reason: string };
 
 /**
@@ -52,11 +51,9 @@ export function SendTestMessage({ senderName }: { senderName: string }) {
             ? t(($) => $.line.developer.testMessage.sent)
             : status.kind === "cancelled"
               ? t(($) => $.line.developer.testMessage.cancelled)
-              : status.kind === "unknown"
-                ? t(($) => $.line.developer.testMessage.unknown)
-                : status.kind === "failed"
-                  ? status.reason
-                  : t(($) => $.line.developer.testMessage.pick)}
+              : status.kind === "failed"
+                ? status.reason
+                : t(($) => $.line.developer.testMessage.pick)}
       </p>
     </div>
   );

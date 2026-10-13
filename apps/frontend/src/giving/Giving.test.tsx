@@ -8,7 +8,7 @@ import { giving } from "../i18n/strings/giving";
 import { refusingStorage } from "../ui/testing";
 import { formatDay, formatDuration, formatNo } from "../stickers/format";
 import type { GiftSender, GiftSendOutcome } from "./giftSender";
-import { PICKER_OPENING_MS, PREPARING_SLOW_MS } from "./giveFlow";
+import { PICKER_ANSWER_MS, PREPARING_SLOW_MS } from "./giveFlow";
 import { Giving } from "./Giving";
 import { GiveSheet } from "./GiveSheet";
 
@@ -192,7 +192,10 @@ describe("Giving", () => {
     try {
       open("s-read-blocked", { api });
       await wait(1150);
-      expect(title()).toBe("Did it go out?");
+      expect(title()).toBe("LINE send error");
+      expect(document.querySelector('.giving__scroll [role="alert"]')?.textContent).toContain(
+        "LINE didn’t confirm that No.0147 was sent",
+      );
       expect(document.body.textContent).toContain(giving.transferProblem.storage_failed.en);
       await wait(5000);
       expect(document.body.textContent).toContain(giving.transferProblem.storage_failed.en);
@@ -302,12 +305,32 @@ describe("Giving", () => {
     expect(onClose).toHaveBeenCalledExactlyOnceWith(false);
   });
 
-  it("asks whether it went out once LINE's answer is late, and closes when the giver says so", async () => {
+  it("keeps waiting while the giver chooses a friend in a picker over the visible page", async () => {
+    open("s-choosing");
+    await wait(1150);
+    await wait(30_000);
+    expect(document.querySelector('[role="alert"]')).toBeNull();
+    expect(document.querySelector(".key")?.getAttribute("aria-busy")).toBe("true");
+    expect(giftOf("s-choosing")).toBe("packed");
+
+    await act(async () => answerPicker("cancelled"));
+    await wait(0);
+    expect(title()).toBe("Not sent yet");
+    expect(document.querySelector(".key")?.hasAttribute("aria-busy")).toBe(false);
+    expect(giftOf("s-choosing")).toBe("packed");
+  });
+
+  it("keeps a LINE timeout error visible until LINE confirms the send", async () => {
     open("s-late");
     await wait(1150);
-    await wait(PICKER_OPENING_MS);
-    expect(title()).toBe("Did it go out?");
-    tap("It went out");
+    await wait(PICKER_ANSWER_MS);
+    expect(title()).toBe("LINE send error");
+    const error = document.querySelector('[role="alert"]')?.textContent;
+    expect(error).toContain("LINE didn’t confirm that No.0147 was sent");
+    expect(giftOf("s-late")).toBe("packed");
+    await wait(5000);
+    expect(document.querySelector('[role="alert"]')?.textContent).toBe(error);
+    await act(async () => answerPicker("sent"));
     await wait(0);
     expect(title()).toBe("Closed and sent");
     expect(giftOf("s-late")).toBe("sent");

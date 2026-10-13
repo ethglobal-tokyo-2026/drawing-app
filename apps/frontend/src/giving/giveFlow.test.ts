@@ -10,14 +10,7 @@ import {
 } from "./giftBackend";
 import { buildGiftMessage, type GiftMessage } from "./giftMessage";
 import type { GiftSendOutcome } from "./giftSender";
-import {
-  createGiveFlow,
-  PICKER_ANSWER_MS,
-  PICKER_OPENING_MS,
-  PICKER_RETURN_MS,
-  PREPARING_SLOW_MS,
-  type GiveFlow,
-} from "./giveFlow";
+import { createGiveFlow, PICKER_ANSWER_MS, PICKER_RETURN_MS, PREPARING_SLOW_MS } from "./giveFlow";
 
 const PICKER_DELAY = 1150;
 const TAKE_OUT = 380;
@@ -108,7 +101,8 @@ function setup({ backend }: { backend?: GiftBackend } = {}) {
     /** What the flow says went wrong; fails the test when nothing did. */
     failure: () => {
       const state = flow.getState();
-      if (state.step !== "failed") throw new Error(`expected a failure, got ${state.step}`);
+      if (!("error" in state) || !state.error)
+        throw new Error(`expected a failure, got ${state.step}`);
       return state.error;
     },
   };
@@ -448,11 +442,35 @@ describe("giving through a LINE chat", () => {
     expect(server.states()).toEqual(["packed"]);
   });
 
+  it.each([
+    ["sent", "sent", "sent"],
+    ["cancelled", "notSent", "packed"],
+  ] as const)(
+    "keeps a visible LINE picker pending until LINE confirms %s",
+    async (outcome, step, gift) => {
+      const t = setup();
+      await openPicker(t);
+      // A picker can stay open over the page while the giver chooses a chat.
+      await wait(30_000);
+      expect(t.state()).toEqual({ step: "picking" });
+      expect(t.gifts()).toEqual(["maybeSent"]);
+      t.flow.sendInLine();
+      await wait();
+      expect(t.messages).toHaveLength(1);
+
+      t.picker().resolve(outcome);
+      await wait();
+      expect(t.step()).toBe(step);
+      expect(t.gifts()).toEqual([gift]);
+    },
+  );
+
   it("stops waiting on the picker when LINE never answers, and never sends that gift message again", async () => {
     const t = setup();
     await openPicker(t);
     await wait(PICKER_ANSWER_MS);
     expect(t.step()).toBe("maybeSent");
+    expect(t.failure().message).toContain("LINE didn’t confirm that No.0147 was sent");
     expect(t.gifts()).toEqual(["maybeSent"]);
     t.flow.sendInLine();
     await wait();
@@ -470,7 +488,8 @@ describe("giving through a LINE chat", () => {
     expect(t.state()).toEqual({ step: "picking" });
     t.flow.pageShown();
     await wait(PICKER_RETURN_MS);
-    expect(t.state()).toEqual({ step: "picking", late: true });
+    expect(t.state()).toMatchObject({ step: "picking", late: true });
+    expect(t.failure().message).toContain("LINE didn’t confirm that No.0147 was sent");
     t.picker().resolve("cancelled");
     await wait();
     expect(t.step()).toBe("notSent");
@@ -481,49 +500,31 @@ describe("giving through a LINE chat", () => {
     const t = setup();
     t.flow.give();
     t.flow.pageHidden();
-    await wait(PICKER_DELAY + PICKER_OPENING_MS);
+    await wait(PICKER_DELAY + 30_000);
     expect(t.state()).toEqual({ step: "picking" });
     t.flow.pageShown();
     await wait(PICKER_RETURN_MS);
-    expect(t.state()).toEqual({ step: "picking", late: true });
+    expect(t.state()).toMatchObject({ step: "picking", late: true });
+    expect(t.failure().message).toContain("LINE didn’t confirm that No.0147 was sent");
   });
 
-  it.each([
-    ["It went out", (flow: GiveFlow) => flow.itWentOut(), "sent", "sent"],
-    ["Take it out", (flow: GiveFlow) => flow.takeOut(), "takenOut", "taken_out"],
-  ] as const)(
-    "lets the giver leave with %s once LINE's answer is late, even where the picker never hides the page",
-    async (_, leave, step, gift) => {
-      const t = setup();
-      await openPicker(t);
-      // LIFF may still be fetching its token, and the picker not yet open.
-      await wait(PICKER_RETURN_MS);
-      expect(t.state()).toEqual({ step: "picking" });
-      await wait(PICKER_OPENING_MS - PICKER_RETURN_MS);
-      expect(t.state()).toEqual({ step: "picking", late: true });
-      leave(t.flow);
-      await wait(TAKE_OUT);
-      expect(t.step()).toBe(step);
-      expect(t.gifts()).toEqual([gift]);
-      t.flow.sendInLine();
-      await wait();
-      expect(t.messages).toHaveLength(1);
-    },
-  );
-
-  it("asks whether it went out when LINE's answer doesn't say, and closes the bag once the giver says so", async () => {
+  it("lets the giver take it out once LINE's answer is late after returning to the page", async () => {
     const t = setup();
     await openPicker(t);
-    t.picker().resolve("unknown");
-    await wait();
-    expect(t.step()).toBe("maybeSent");
+    t.flow.pageHidden();
+    await wait(PICKER_RETURN_MS);
+    expect(t.state()).toEqual({ step: "picking" });
+    t.flow.pageShown();
+    await wait(PICKER_RETURN_MS);
+    expect(t.state()).toMatchObject({ step: "picking", late: true });
+    expect(t.failure().message).toContain("LINE didn’t confirm that No.0147 was sent");
+    t.flow.takeOut();
+    await wait(TAKE_OUT);
+    expect(t.step()).toBe("takenOut");
+    expect(t.gifts()).toEqual(["taken_out"]);
     t.flow.sendInLine();
     await wait();
     expect(t.messages).toHaveLength(1);
-    t.flow.itWentOut();
-    await wait();
-    expect(t.step()).toBe("sent");
-    expect(t.gifts()).toEqual(["sent"]);
   });
 
   it.each([
@@ -581,7 +582,7 @@ describe("giving through a LINE chat", () => {
     },
   );
 
-  it("takes out a gift whose message may have gone out when the giver answers Did it go out? with Take it out", async () => {
+  it("takes out a gift with an unresolved LINE send after showing the error", async () => {
     const server = fakeBackend();
     const takeOut = vi.fn(server.backend.takeOut);
     const t = setup({
