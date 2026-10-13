@@ -16,7 +16,6 @@ import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME, TEST_OWNER } from "../
 import { ApiProvider } from "../api/ApiProvider";
 import { SessionEnvelopeContext } from "../api/sessionContext";
 import { sessionEnvelope } from "../api/sessionTestFixtures";
-import * as personSwitch from "../api/PersonSwitchProvider";
 import { MeContext } from "../api/meContext";
 import { TicketsProvider } from "../tickets/TicketsProvider";
 import { toApiPlacement, toPerson, toRecordPlacement } from "../api/views";
@@ -33,7 +32,13 @@ import { formatMonthDay, formatNo, spokenDuration } from "../stickers/format";
 import type { Sheet } from "../tickets/ticketsContext";
 import { useTickets } from "../tickets/useTickets";
 import { TabsLeadSlot } from "../ui/TabsLead";
-import { inLanguage, onLargeScreen, renderInHost, stubResizeObservers } from "../ui/testing";
+import {
+  inLanguage,
+  onLargeScreen,
+  ReducedMotion,
+  renderInHost,
+  stubResizeObservers,
+} from "../ui/testing";
 import { BoardPlacementSavesProvider, useBoardPlacementSaves } from "./BoardPlacementSavesProvider";
 import type { BoardPlacementSaves } from "./boardPlacementSaves";
 import { forgetGreetings } from "./artistChipGreeting";
@@ -68,15 +73,7 @@ vi.mock("../line/LineDetails", () => ({ LineDetails: () => null }));
 // Giving itself isn't tested here: it closes, sent or not, at a tap, from a board that can give.
 vi.mock("../giving/useGiftSender", () => ({ useGiftSender: () => ({}) }));
 vi.mock("../giving/Giving", () => ({
-  Giving: ({
-    onClose,
-    forUserId,
-    onSwitchRecipient,
-  }: {
-    onClose: (sent: boolean) => void;
-    forUserId?: string;
-    onSwitchRecipient?: (userId: string, giftId: string) => void;
-  }) => (
+  Giving: ({ onClose, forUserId }: { onClose: (sent: boolean) => void; forUserId?: string }) => (
     <>
       <button
         type="button"
@@ -89,14 +86,6 @@ vi.mock("../giving/Giving", () => ({
       <button type="button" className="test-gift-unsent" onClick={() => onClose(false)}>
         Not sent
       </button>
-      {onSwitchRecipient && (
-        <button
-          className="test-gift-recipient"
-          onClick={() => onSwitchRecipient("recipient", "gift-42")}
-        >
-          Recipient
-        </button>
-      )}
     </>
   ),
 }));
@@ -660,6 +649,36 @@ describe("StickerBoard's artist chips", () => {
 });
 
 describe("StickerBoard's stat board", () => {
+  it("keeps authorized person selection inside the hidden developer slip", async () => {
+    vi.spyOn(window, "matchMedia").mockImplementation(() => new ReducedMotion(true));
+    const hana = { ...TEST_OWNER, id: "hana", lineDisplayName: "Hana" };
+    const view = renderWithApi(
+      <SessionEnvelopeContext
+        value={sessionEnvelope(TEST_ME, {
+          allowedSelections: [TEST_OWNER, hana],
+          personSwitchMode: "live",
+          selectionVersion: "first",
+        })}
+      >
+        <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />
+      </SessionEnvelopeContext>,
+      boardApi([], { userStats: async () => settledStats }),
+    );
+    unmount = view.unmount;
+    await act(async () => {});
+    flip(view.host);
+    await act(async () => vi.dynamicImportSettled());
+    const selection = [...view.host.querySelectorAll("button")].find(
+      (button) => button.textContent === "Switch to Hana",
+    );
+    expect(selection).toBeDefined();
+    expect(selection?.closest(".dev-slip[inert]")).not.toBeNull();
+    act(() => view.host.querySelector<HTMLButtonElement>(".dev-slip__open")?.click());
+    expect(selection?.closest(".dev-slip[inert]")).toBeNull();
+    expect(selection?.closest(".stat-board__slip")).not.toBeNull();
+    expect(selection?.disabled).toBe(false);
+  });
+
   it("reloads your User Stats each time the board turns over", async () => {
     const stats = (direct: number) => ({
       since: "2026-10-01T00:00:00.000Z",
@@ -1320,26 +1339,6 @@ describe("StickerBoard after Giving", () => {
     act(() => give?.click());
     await act(() => vi.dynamicImportSettled());
   };
-
-  it("passes the confirmed recipient and gift to the explicit person switch request", async () => {
-    const request = vi.fn().mockResolvedValue(undefined);
-    const hook = vi
-      .spyOn(personSwitch, "usePersonSwitch")
-      .mockReturnValue({ pending: false, error: null, request });
-    onTestFinished(() => hook.mockRestore());
-    const a = boardSticker({ placement: placedAt(0.3) });
-    const view = await openBoard(
-      emptyApi({ stickerBoard: async () => ({ owner: TEST_OWNER, boardStickers: [a] }) }),
-    );
-    await openGiving(view.host, a.stickerId);
-    const recipient = document.querySelector<HTMLButtonElement>(".test-gift-recipient");
-    expect(recipient).not.toBeNull();
-    await act(async () => recipient?.click());
-    expect(request).toHaveBeenCalledExactlyOnceWith("recipient", {
-      recipientUserId: "recipient",
-      giftId: "gift-42",
-    });
-  });
 
   it("targets BIGWHEEL when Giving opens from Hana's own sticker board", async () => {
     const hana = {

@@ -49,8 +49,6 @@ interface Props {
   from: GiftFrom;
   /** Closes the dialog; with the received sticker's ID once Accept has received it. */
   onClose: (receivedStickerId?: string) => void;
-  /** Notifies the caller once the authoritative gift preview has opened. */
-  onOpened?: () => void;
 }
 
 /** The reveal after the snap, in step with receive-gift-dialog.css: normal, then reduced. */
@@ -68,7 +66,7 @@ type Opening = { claim: GiftOpening } | { gift: GiftForYou };
  * Opening a gift message's link, over the whole phone: the closed bag, the pull tab, the reveal and
  * Accept, or the reason the gift can't be received here. On the Back stack, as Not now is.
  */
-export function ReceiveGiftDialog({ from, onClose, onOpened }: Props) {
+export function ReceiveGiftDialog({ from, onClose }: Props) {
   const { t } = useTranslation();
   const api = useApi();
   const me = useIdentity();
@@ -90,10 +88,8 @@ export function ReceiveGiftDialog({ from, onClose, onOpened }: Props) {
       : { gift: from.gift },
   );
   const latestClose = useRef(onClose);
-  const latestOpened = useRef(onOpened);
   useLayoutEffect(() => {
     latestClose.current = onClose;
-    latestOpened.current = onOpened;
   });
 
   // One preview per attempt, which StrictMode's second run of the effect shares. A gift from the
@@ -112,7 +108,6 @@ export function ReceiveGiftDialog({ from, onClose, onOpened }: Props) {
       (preview) => {
         if (current) {
           dispatch({ type: "previewed", preview });
-          if (preview.receivable) latestOpened.current?.();
         }
       },
       (error: unknown) => {

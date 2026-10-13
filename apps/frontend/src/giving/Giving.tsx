@@ -58,8 +58,6 @@ interface Props {
   toHandle?: string;
   /** Where focus goes once Giving closes, when it opened as the give sheet went and never saw the opener. */
   returnFocus?: () => HTMLElement | null;
-  /** Explicit action after acknowledged private delivery; the controller resumes this exact gift. */
-  onSwitchRecipient?: (userId: string, giftId: string) => void;
 }
 
 /** Motion timings, in step with GiftBag.css: normal, then reduced. */
@@ -87,7 +85,6 @@ export function Giving({
   forUserId,
   toHandle,
   returnFocus,
-  onSwitchRecipient,
 }: Props) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
@@ -241,27 +238,6 @@ export function Giving({
             </ErrorLine>
           )}
         </div>
-        {personDelivery && onSwitchRecipient && state.packedForUserId && state.giftId && (
-          <LabelButton
-            block
-            disabled={!!state.recordError || !!state.storageError || recipientMismatch}
-            onClick={() => {
-              if (
-                !state.recordError &&
-                !state.storageError &&
-                !recipientMismatch &&
-                state.packedForUserId &&
-                state.giftId
-              ) {
-                onSwitchRecipient(state.packedForUserId, state.giftId);
-              }
-            }}
-          >
-            {t(($) => $.giving.personDelivery.switchRecipient, {
-              name: toHandle ? formatHandle(toHandle) : t(($) => $.giving.personDelivery.recipient),
-            })}
-          </LabelButton>
-        )}
         <LabelButton
           block
           icon={<StickerBoardIcon size={18} />}

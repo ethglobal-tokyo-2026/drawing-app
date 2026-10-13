@@ -9,6 +9,7 @@ import { buttonNamed, renderInHost, type HostView } from "../../ui/testing";
 import { SwitchPersonControls } from "./SwitchPersonControls";
 import { LivePersonSwitchControls } from "./SwitchPersonControls";
 import { SessionEnvelopeContext } from "../../api/sessionContext";
+import * as personSwitch from "../../api/PersonSwitchProvider";
 import { TEST_ME, TEST_OWNER } from "../../api/testing";
 import type { SessionEnvelope } from "@drawing-app/api/client";
 
@@ -64,12 +65,20 @@ describe("SwitchPersonControls", () => {
       </SessionEnvelopeContext>,
     );
     expect(view.host.querySelector("button")).toBeNull();
-    view.rerender(
-      <SessionEnvelopeContext value={session}>
-        <LivePersonSwitchControls />
-      </SessionEnvelopeContext>,
-    );
-    expect(view.host.querySelector("button")?.textContent).toContain("BIGWHEEL");
+    for (const pending of [false, true]) {
+      vi.spyOn(personSwitch, "usePersonSwitch").mockReturnValue({
+        pending,
+        error: null,
+        request: vi.fn(),
+      });
+      view.rerender(
+        <SessionEnvelopeContext value={session}>
+          <LivePersonSwitchControls />
+        </SessionEnvelopeContext>,
+      );
+      expect(view.host.querySelector("button")?.textContent).toContain("BIGWHEEL");
+      expect(view.host.querySelector<HTMLButtonElement>("button")?.disabled).toBe(pending);
+    }
     expect(view.host.textContent).not.toContain("demo");
   });
 

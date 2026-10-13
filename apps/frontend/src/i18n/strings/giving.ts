@@ -234,10 +234,6 @@ export const giving = {
       en: "Croquis couldn’t confirm delivery: {{reason}}",
       ja: "クロッキーでお届けを確認できませんでした：{{reason}}",
     },
-    /** Giving's private sent screen: the explicit action to switch to its recipient */
-    switchRecipient: { en: "Switch to {{name}}", ja: "{{name}}さんに切り替える" },
-    /** Giving's private sent screen: the recipient label when their handle is unavailable */
-    recipient: { en: "the recipient", ja: "受け取る人" },
     /** Giving, while a private gift is in its bag: the explanation of its destination */
     inTheBag: {
       en: "Your gift will wait on their sticker board once Croquis confirms delivery.",

@@ -22,7 +22,6 @@ import { ApiError, apiError } from "./apiClient";
 import {
   requestPersonSwitch,
   receivePersonSwitchNotice,
-  type PersonSwitchDestination,
   type PersonSwitchNotice,
 } from "./personSwitch";
 import {
@@ -40,7 +39,7 @@ import {
 import { serverSession } from "./serverClients";
 import { useApi } from "./useApi";
 
-type Request = (targetUserId: string, destination?: PersonSwitchDestination) => Promise<void>;
+type Request = (targetUserId: string) => Promise<void>;
 type SwitchContext = {
   pending: boolean;
   error: ApiError | null;
@@ -136,13 +135,13 @@ export function PersonSwitchProvider({ children }: { children: ReactNode }) {
     };
   }, []);
   const request = useCallback<Request>(
-    async (targetUserId, destination) => {
+    async (targetUserId) => {
       if (active.current || frozen) return;
       active.current = true;
       setPending(true);
       setError(null);
       try {
-        await requestPersonSwitch(targetUserId, destination, {
+        await requestPersonSwitch(targetUserId, {
           session,
           api: serverSession,
           principal: lineUserId,
@@ -169,7 +168,6 @@ export function PersonSwitchProvider({ children }: { children: ReactNode }) {
                 JSON.stringify({ ...notice, nonce: crypto.randomUUID() }),
               );
           },
-          storage: sessionStorage,
         });
       } catch (failure) {
         const preservation = saves.read().preservationError;

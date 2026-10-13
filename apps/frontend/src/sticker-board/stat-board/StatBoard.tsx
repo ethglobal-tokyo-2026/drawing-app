@@ -119,9 +119,9 @@ export const StatBoard = memo(function StatBoard({
         {/* Settings first, since it's the paper people come back to. */}
         <SettingsNote />
         <AddressPapers sui={sui} lifted={lifted} paperRef={suiPaper} onOpen={openAddress} />
-        <LivePersonSwitchControls />
         {DEV_SLIP && (
           <DeveloperSlip>
+            <LivePersonSwitchControls />
             <SwitchPersonControls />
             <SendTestMessage senderName={me.displayName} />
             <LineDetails />

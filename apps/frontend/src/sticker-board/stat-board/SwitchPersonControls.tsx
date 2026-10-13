@@ -7,7 +7,7 @@ import { liffMockActive, mockPerson } from "../../line/liff";
 import { LabelButton } from "../../ui/LabelButton";
 import "./developer-slip.css";
 
-/** Server capability controls remain visible when the optional developer tools are hidden. */
+/** Server-authorized person selection on the hidden developer slip. */
 export function LivePersonSwitchControls() {
   const session = useContext(SessionEnvelopeContext);
   const { pending, request } = usePersonSwitch();
@@ -15,23 +15,23 @@ export function LivePersonSwitchControls() {
   if (!session || session.personSwitchMode === "off" || session.allowedSelections.length < 2)
     return null;
   return (
-    <section className="stat-board__note">
-      <div className="stat-board__paper dev-slip__section">
-        <h3 className="fine dev-slip__h">{t(($) => $.personSwitch.title)}</h3>
-        {session.allowedSelections
-          .filter((person) => person.id !== session.me.id)
-          .map((person) => (
-            <LabelButton
-              key={person.id}
-              block
-              disabled={pending}
-              onClick={() => void request(person.id)}
-            >
-              {t(($) => $.personSwitch.switchTo, { name: person.lineDisplayName })}
-            </LabelButton>
-          ))}
-      </div>
-    </section>
+    <div className="dev-slip__section">
+      <h3 className="fine dev-slip__h">{t(($) => $.stickerBoard.developer.personSwitch.title)}</h3>
+      {session.allowedSelections
+        .filter((person) => person.id !== session.me.id)
+        .map((person) => (
+          <LabelButton
+            key={person.id}
+            block
+            disabled={pending}
+            onClick={() => void request(person.id)}
+          >
+            {t(($) => $.stickerBoard.developer.personSwitch.switchTo, {
+              name: person.lineDisplayName ?? person.handle ?? person.id,
+            })}
+          </LabelButton>
+        ))}
+    </div>
   );
 }
 

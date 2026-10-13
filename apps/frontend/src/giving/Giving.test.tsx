@@ -6,7 +6,7 @@ import { emptyApi, renderWithApi, shownText, TEST_ME } from "../api/testing";
 import { boardSticker, gift, MARKUP_LIKE_NAME } from "../api/testFixtures";
 import { giving } from "../i18n/strings/giving";
 import { sendInLineChat } from "../line/friendPicker";
-import { refusingStorage } from "../ui/testing";
+import { buttonNamed, refusingStorage } from "../ui/testing";
 import { formatDay, formatDuration, formatNo } from "../stickers/format";
 import type { GiftSender, GiftSendOutcome } from "./giftSender";
 import { PICKER_ANSWER_MS, PREPARING_SLOW_MS } from "./giveFlow";
@@ -616,15 +616,14 @@ it.each([
   },
 );
 
-describe("private delivery recipient action", () => {
+describe("private delivery confirmation", () => {
   for (const acknowledged of [true, false]) {
     it(
       acknowledged
-        ? "offers an explicit recipient switch after protected acknowledgment"
-        : "keeps recipient switching disabled while acknowledgment failed",
+        ? "returns to the board after protected acknowledgment without exposing developer controls"
+        : "keeps failed acknowledgment visible without exposing developer controls",
       async () => {
         const log = vi.spyOn(console, "error").mockImplementation(() => {});
-        const onSwitchRecipient = vi.fn();
         const packed = gift({ id: "private-ui-gift", status: "packed", escrowStatus: "pending" });
         const api = {
           ...giftsApi(),
@@ -658,7 +657,6 @@ describe("private delivery recipient action", () => {
             forUserId="recipient"
             toHandle="recipient"
             onClose={onClose}
-            onSwitchRecipient={onSwitchRecipient}
           />,
           api,
         );
@@ -667,13 +665,14 @@ describe("private delivery recipient action", () => {
         const action = [...document.querySelectorAll("button")].find((button) =>
           button.textContent?.includes("Switch to @recipient"),
         );
-        expect(action).toBeDefined();
-        expect(action?.disabled).toBe(!acknowledged);
+        expect(action).toBeUndefined();
         if (acknowledged) {
-          await act(async () => action?.click());
-          expect(onSwitchRecipient).toHaveBeenCalledWith("recipient", packed.id);
+          expect(document.body.textContent).toContain(
+            "Your gift is waiting on their sticker board.",
+          );
+          await act(async () => buttonNamed(document.body, "Back to My board").click());
+          expect(onClose).toHaveBeenCalledWith(true);
         } else {
-          expect(onSwitchRecipient).not.toHaveBeenCalled();
           expect(log).toHaveBeenCalled();
           expect(document.body.textContent).toContain("Croquis couldn’t confirm delivery");
           expect(title()).toBe("Delivery not confirmed");
@@ -691,12 +690,11 @@ describe("private delivery recipient action", () => {
   }
 });
 
-it("recovers a kept private send and enables its recipient switch without sending again", async () => {
+it("recovers a kept private send and returns to the board without sending again", async () => {
   const packed = gift({ id: "private-recovery-gift", status: "packed", escrowStatus: "pending" });
   const attemptId = `0x${"cd".repeat(32)}`;
   keepGift(TEST_ME.id, packed.id, { message: "sent", attemptId });
   const deliverPersonGift = vi.fn(async () => ({ ...packed, status: "sent" as const }));
-  const onSwitchRecipient = vi.fn();
   const send = vi.fn(async () => "sent" as const);
   const api = emptyApi({
     packageGift: async () => ({
@@ -726,18 +724,14 @@ it("recovers a kept private send and enables its recipient switch without sendin
       forUserId="recipient"
       toHandle="recipient"
       onClose={onClose}
-      onSwitchRecipient={onSwitchRecipient}
     />,
     api,
   );
   await wait(0);
   expect(deliverPersonGift).toHaveBeenCalledWith(packed.id, attemptId);
   expect(keptReports(TEST_ME.id)).not.toContainEqual([packed.id, expect.anything()]);
-  const action = [...document.querySelectorAll("button")].find((button) =>
-    button.textContent?.includes("Switch to @recipient"),
-  );
-  expect(action?.disabled).toBe(false);
-  await act(async () => action?.click());
-  expect(onSwitchRecipient).toHaveBeenCalledWith("recipient", packed.id);
+  expect(document.body.textContent).toContain("Your gift is waiting on their sticker board.");
+  await act(async () => buttonNamed(document.body, "Back to My board").click());
+  expect(onClose).toHaveBeenCalledWith(true);
   expect(send).not.toHaveBeenCalled();
 });
