@@ -85,6 +85,33 @@ const setHandle = (headers: Record<string, string>, handle: unknown) =>
 const setLanguageChoice = (headers: Record<string, string>, body: unknown) =>
   test.send("POST", "/api/me/language-choice", { headers, body });
 
+describe("session bootstrap caching", () => {
+  it.each(["missing", "invalid", "expired"])(
+    "never caches a signed-out bootstrap with a %s cookie",
+    async (cookie) => {
+      let headers: Record<string, string> = {};
+      if (cookie === "invalid") headers = { Cookie: `${SESSION_COOKIE}=invalid-signature` };
+      if (cookie === "expired") {
+        headers = await sessionCookie(await signIn(ALICE));
+        test.clock.advance(SESSION_MAX_AGE_S * 1000);
+      }
+      const response = await getMe(headers);
+      expect(await refusalOf(response)).toMatchObject({ status: 401, error: "signed_out" });
+      expect(response.headers.get("cache-control")).toBe("no-store");
+    },
+  );
+
+  it("never caches accepted or stale-account bootstrap responses", async () => {
+    const headers = await sessionCookie(await signIn(ALICE));
+    const accepted = await getMe(headers);
+    expect(accepted.status).toBe(200);
+    expect(accepted.headers.get("cache-control")).toBe("no-store");
+    const stale = await getMe({ ...headers, "x-croquis-user-id": "different-account" });
+    expect(await refusalOf(stale)).toMatchObject({ status: 409, error: "session_account_changed" });
+    expect(stale.headers.get("cache-control")).toBe("no-store");
+  });
+});
+
 describe("signing in", () => {
   it("makes the person at their first sign-in, with their LINE name as handle", async () => {
     const response = await signIn(ALICE);
