@@ -16,11 +16,12 @@ export interface Material {
 export interface Pose {
   x: number;
   y: number;
+  rotationDegrees: number;
 }
 export type Environment = (direction: Vec3) => number;
 
-export const MATERIAL_GLOSS: Material = { ior: 1.5, roughness: 0.055 };
-export const MATERIAL_MATTE: Material = { ior: 1.5, roughness: 0.38 };
+export const MATERIAL_GLOSS: Material = { ior: 1.5, roughness: 0.016 };
+export const MATERIAL_MATTE: Material = { ior: 1.5, roughness: 0.16 };
 export const CAMERA_DISTANCE = 2.4;
 export const POSE_RADIANS = 0.38;
 export const STICKER_THICKNESS = 0.35;
@@ -29,11 +30,11 @@ export const BASE_ILLUMINATION = 0.9;
 export const ENVIRONMENT = {
   ambient: 0.14,
   peak: 3.2,
-  centerX: 0.14,
-  centerY: -0.24,
-  halfWidth: 0.3,
-  halfHeight: 0.4,
-  edge: 0.22,
+  centerX: 0.02,
+  centerY: -0.025,
+  halfWidth: 0.1,
+  halfHeight: 0.145,
+  edge: 0.015,
 };
 
 const bound = (v: number) => Math.max(0, Math.min(1, v));
@@ -117,11 +118,11 @@ export function normalFromHeight(
   return normalFromSlope(dx, dy);
 }
 
-/** CSS flight matrix Rz·Rx·Ry, followed by the shared screen-space material pose. */
+/** CSS flight matrix Rz·Rx·Ry, followed by the foil's reflected-light travel pose. */
 export function orientNormal(n: Vec3, turn: number, pose: Pose, flight = { x: 0, y: 0 }): Vec3 {
-  const z = (turn * Math.PI) / 180,
-    x = -pose.y * POSE_RADIANS,
-    y = pose.x * POSE_RADIANS;
+  const z = ((turn + pose.rotationDegrees) * Math.PI) / 180,
+    x = pose.y * POSE_RADIANS,
+    y = -pose.x * POSE_RADIANS;
   const fx = (flight.x * Math.PI) / 180,
     fy = (flight.y * Math.PI) / 180;
   const ax = Math.cos(fy) * n[0] + Math.sin(fy) * n[2];
@@ -302,7 +303,13 @@ export function renderMaterialReference(input: MaterialReference): MaterialFrame
           )
         : ([0, 0, 1] as const);
       const coat = coatField({
-        point: screenPoint((x + 0.5) / width, (y + 0.5) / height, dw, dh, turn),
+        point: screenPoint(
+          (x + 0.5) / width,
+          (y + 0.5) / height,
+          dw,
+          dh,
+          turn + input.pose.rotationDegrees,
+        ),
         normal: orientNormal(n, turn, input.pose),
         material: input.material,
         environment: input.environment,

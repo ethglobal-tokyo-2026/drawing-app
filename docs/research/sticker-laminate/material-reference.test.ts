@@ -6,6 +6,117 @@ const math = () => reference;
 const near = (actual: number, expected: number, tolerance = 1e-9) =>
   assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} differs from ${expected}`);
 
+/** A white flat sticker isolates the perceptual footprint from ink and crease geometry. */
+function whiteReflection(pose: reference.Pose, turn = 0) {
+  const side = 121;
+  const frame = reference.renderMaterialReference({
+    width: side,
+    height: side,
+    print: new Uint8ClampedArray(side * side * 4).fill(255),
+    cut: new Float32Array(side * side).fill(1),
+    material: reference.MATERIAL_GLOSS,
+    pose,
+    turn,
+  });
+  const values = Array.from({ length: side * side }, (_, i) => frame.display[i * 4]);
+  const min = Math.min(...values),
+    max = Math.max(...values);
+  let weight = 0,
+    x = 0,
+    y = 0,
+    bright = 0;
+  for (let row = 0; row < side; row++)
+    for (let column = 0; column < side; column++) {
+      const i = row * side + column;
+      const amount = Math.max(0, values[i] - min);
+      const point = reference.screenPoint(
+        (column + 0.5) / side,
+        (row + 0.5) / side,
+        side,
+        side,
+        turn,
+      );
+      weight += amount;
+      x += point[0] * amount;
+      y += point[1] * amount;
+      if (values[i] >= min + (max - min) / 2) bright++;
+    }
+  return { min, max, fraction: bright / values.length, x: x / weight, y: y / weight };
+}
+
+await test("a gloss reflection has a localized bright region on otherwise near-white paper", () => {
+  // A source wider than the sticker produces a uniform wash and must fail this acceptance test.
+  for (const pose of [
+    { x: 0, y: 0, rotationDegrees: 0 },
+    { x: 0.23, y: 0, rotationDegrees: 0 },
+    { x: -0.23, y: 0, rotationDegrees: 0 },
+    { x: 0, y: 0.23, rotationDegrees: 0 },
+    { x: 0, y: -0.23, rotationDegrees: 0 },
+  ]) {
+    const result = whiteReflection(pose);
+    assert.ok(result.min >= 238, `The paper was darkened to ${result.min}`);
+    assert.ok(
+      result.max - result.min >= 12,
+      `The source edge spans only ${result.max - result.min}/255`,
+    );
+    assert.ok(
+      result.fraction >= 0.1 && result.fraction <= 0.45,
+      `The reflection covers ${result.fraction * 100}%`,
+    );
+  }
+});
+
+await test("flat and quarter-turned gloss travel in the shared foil pose direction", () => {
+  // Reversing either normal rotation makes the reflection move against the backing foil.
+  for (const turn of [0, 90]) {
+    const neutral = whiteReflection({ x: 0, y: 0, rotationDegrees: 0 }, turn);
+    for (const [axis, sign] of [
+      ["x", 1],
+      ["x", -1],
+      ["y", 1],
+      ["y", -1],
+    ] as const) {
+      const tilted = whiteReflection(
+        {
+          x: axis === "x" ? sign * 0.23 : 0,
+          y: axis === "y" ? sign * 0.23 : 0,
+          rotationDegrees: 0,
+        },
+        turn,
+      );
+      assert.ok(
+        (tilted[axis] - neutral[axis]) * sign > 0.12,
+        `${turn}° ${axis} ${sign}: reflection traveled against or barely with the foil`,
+      );
+    }
+  }
+});
+
+await test("gloss retains a short source edge while matte spreads the same incident light", () => {
+  // Excess source feathering makes both materials read like a diffuse color wash.
+  const widths = [reference.MATERIAL_GLOSS, reference.MATERIAL_MATTE].map((material) => {
+    // Include the surrounding plane: matte's spread reaches beyond a one-width sticker.
+    const values = Array.from(
+      { length: 3001 },
+      (_, i) =>
+        reference.coatField({
+          point: [i / 1000 - 1.5, -0.06],
+          normal: [0, 0, 1],
+          material,
+        }).environment,
+    );
+    const min = Math.min(...values),
+      max = Math.max(...values);
+    const peak = values.indexOf(max);
+    const rising = values.slice(0, peak + 1);
+    const start = rising.findIndex((value) => value >= min + (max - min) * 0.1);
+    const end = rising.findIndex((value) => value >= min + (max - min) * 0.9);
+    return (end - start) / 1000;
+  });
+  assert.ok(widths[0] <= 0.15, `Gloss source edge spans ${widths[0]} sticker widths`);
+  assert.ok(widths[1] >= widths[0] * 2.5, `Matte ${widths[1]} should spread gloss ${widths[0]}`);
+});
+
 await test("dielectric reflection is four percent at a normal air/1.5 interface", () => {
   const m = math();
   near(m.dielectricFresnel(1, 1.5), 0.04);
@@ -67,7 +178,7 @@ await test("grazing HDR reflection reports display clipping while preserving inc
     print: new Uint8ClampedArray(4).fill(255),
     cut: new Float32Array([1]),
     material: m.MATERIAL_GLOSS,
-    pose: { x: Math.PI / (2 * 0.38), y: 0 },
+    pose: { x: Math.PI / (2 * 0.38), y: 0, rotationDegrees: 0 },
     environment: () => 1.8,
   });
   assert.equal(frame.clippedPixels, 1);
@@ -80,7 +191,7 @@ await test("print changes leave isolated coating and cut coverage unchanged", ()
     height: 3,
     cut: new Float32Array(9).fill(1),
     material: m.MATERIAL_GLOSS,
-    pose: { x: -0.6, y: -0.6 },
+    pose: { x: -0.6, y: -0.6, rotationDegrees: 0 },
   };
   const white = m.renderMaterialReference({ ...input, print: new Uint8ClampedArray(36).fill(255) });
   const black = m.renderMaterialReference({ ...input, print: new Uint8ClampedArray(36) });
@@ -107,10 +218,34 @@ await test("a quarter turn rotates non-square geometry and normals in the same s
   const p = m.screenPoint(0.75, 0.25, 200, 100, 90);
   near(p[0], 0.25);
   near(p[1], 0.5);
-  const n = m.orientNormal([0.6, 0, 0.8], 90, { x: 0, y: 0 });
+  const n = m.orientNormal([0.6, 0, 0.8], 90, { x: 0, y: 0, rotationDegrees: 0 });
   near(n[0], 0);
   near(n[1], 0.6);
   near(n[2], 0.8);
+});
+
+await test("physical in-plane rotation turns geometric normals and the localized source", () => {
+  const n = reference.orientNormal([0.6, 0, 0.8], 0, { x: 0, y: 0, rotationDegrees: 90 });
+  near(n[0], 0);
+  near(n[1], 0.6);
+  near(n[2], 0.8);
+  const input = {
+    width: 41,
+    height: 41,
+    print: new Uint8ClampedArray(41 * 41 * 4).fill(255),
+    cut: new Float32Array(41 * 41).fill(1),
+    material: reference.MATERIAL_GLOSS,
+  };
+  const neutral = reference.renderMaterialReference({
+    ...input,
+    pose: { x: 0, y: 0, rotationDegrees: 0 },
+  });
+  const rotated = reference.renderMaterialReference({
+    ...input,
+    pose: { x: 0, y: 0, rotationDegrees: 10 },
+  });
+  assert.notDeepEqual(rotated.display, neutral.display);
+  assert.deepEqual(rotated.coverage, neutral.coverage);
 });
 
 await test("the finite camera changes reflected source position across a flat plane", () => {
@@ -122,7 +257,7 @@ await test("the finite camera changes reflected source position across a flat pl
 
 await test("a CSS flight's X tilt follows its outer quarter turn", () => {
   const m = math();
-  const n = m.orientNormal([0, 0, 1], 90, { x: 0, y: 0 }, { x: 30, y: 0 });
+  const n = m.orientNormal([0, 0, 1], 90, { x: 0, y: 0, rotationDegrees: 0 }, { x: 30, y: 0 });
   near(n[0], 0.5);
   near(n[1], 0);
   near(n[2], Math.sqrt(3) / 2);
@@ -130,11 +265,11 @@ await test("a CSS flight's X tilt follows its outer quarter turn", () => {
 
 await test("matte spreads a reflected source boundary instead of hiding the coating", () => {
   const m = math();
-  const direction = m.normalize([0.58, 0, 1]);
+  const direction = m.normalize([0.25, 0, 1]);
   const gloss = m.reflectedEnvironment(direction, m.MATERIAL_GLOSS.roughness);
   const matte = m.reflectedEnvironment(direction, m.MATERIAL_MATTE.roughness);
   assert.ok(matte > gloss + 0.05);
-  assert.ok(gloss >= 0.14 && matte <= 1);
+  assert.ok(gloss >= 0.14 && matte <= m.ENVIRONMENT.peak);
 });
 
 await test("masked-out pixels have zero isolated contribution and output alpha", () => {
@@ -145,7 +280,7 @@ await test("masked-out pixels have zero isolated contribution and output alpha",
     print: new Uint8ClampedArray(8).fill(255),
     cut: new Float32Array([0, 0.5]),
     material: m.MATERIAL_GLOSS,
-    pose: { x: 0, y: 0 },
+    pose: { x: 0, y: 0, rotationDegrees: 0 },
   });
   assert.deepEqual(Array.from(frame.coat.slice(0, 3)), [0, 0, 0]);
   assert.deepEqual(Array.from(frame.transmitted.slice(0, 3)), [0, 0, 0]);
@@ -162,7 +297,7 @@ await test("held poses produce deterministic bounded frames without a clock", ()
     print: new Uint8ClampedArray(140).fill(255),
     cut: new Float32Array(35).fill(1),
     material: m.MATERIAL_MATTE,
-    pose: { x: -0.6, y: -0.6 },
+    pose: { x: -0.6, y: -0.6, rotationDegrees: 0 },
   };
   const first = m.renderMaterialReference(input);
   assert.deepEqual(first, m.renderMaterialReference(input));

@@ -10,16 +10,12 @@ varying vec2 uv;
 uniform sampler2D printImage;
 uniform sampler2D cutImage;
 uniform sampler2D normalImage;
-uniform vec2 pose;
 uniform vec2 size;
-uniform float turn;
-uniform vec2 flightTilt;
+uniform mat3 normalTransform;
+uniform vec2 pointTurn;
 uniform float roughness;
-vec3 rz(vec3 n,float a) { return vec3(cos(a)*n.x-sin(a)*n.y,sin(a)*n.x+cos(a)*n.y,n.z); }
-vec3 rx(vec3 n,float a) { return vec3(n.x,cos(a)*n.y-sin(a)*n.z,sin(a)*n.y+cos(a)*n.z); }
-vec3 ry(vec3 n,float a) { return vec3(cos(a)*n.x+sin(a)*n.z,n.y,-sin(a)*n.x+cos(a)*n.z); }
 vec2 windowAxes(vec2 p) {
-  return 1.-smoothstep(vec2(.30,.40)-.22,vec2(.30,.40)+.22,abs(p-vec2(.14,-.24)));
+  return 1.-smoothstep(vec2(.10,.145)-.015,vec2(.10,.145)+.015,abs(p-vec2(.02,-.025)));
 }
 float environment(vec3 r) {
   if(r.z<=0.) return .14;
@@ -34,11 +30,11 @@ float display(float v) { return v<=.0031308?v*12.92:1.055*pow(v,1./2.4)-.055; }
 void main() {
   vec4 art=texture2D(printImage,uv);
   vec3 base=mix(vec3(1.),art.rgb,art.a);
-  vec3 n=normalize((texture2D(normalImage,uv).rgb*255.-128.)/127.);
-  // CSS rotate(Z) rotateX(X) rotateY(Y) composes Rz * Rx * Ry.
-  n=rz(rx(ry(n,flightTilt.y),flightTilt.x),turn);
-  n=normalize(ry(rx(n,-pose.y*.38),pose.x*.38));
-  vec2 point=rz(vec3((uv-.5)*size/min(size.x,size.y),0.),turn).xy;
+  // Frame-constant rotations are composed on the CPU, rather than at every covered fragment.
+  vec3 n=normalize(normalTransform*((texture2D(normalImage,uv).rgb*255.-128.)/127.));
+  vec2 localPoint=(uv-.5)*size/min(size.x,size.y);
+  vec2 point=vec2(pointTurn.x*localPoint.x-pointTurn.y*localPoint.y,
+    pointTurn.y*localPoint.x+pointTurn.x*localPoint.y);
   vec3 view=normalize(vec3(-point,2.4));
   float cosine=clamp(dot(n,view),0.,1.);
   float transmitted=sqrt(1.-(1.-cosine*cosine)/2.25);

@@ -4,6 +4,7 @@ import {
   mountLaminate,
   refreshLaminate,
   turnLaminate,
+  updateLaminate,
   type LaminateFinish,
 } from "./laminateRenderer";
 import "./sticker-laminate.css";
@@ -28,6 +29,10 @@ export function StickerLaminate({
   const ref = useRef<HTMLCanvasElement>(null);
   const heldTurn = useRef(turn);
   const heldActive = useRef(active);
+  const heldMaterial = useRef({ print, cut, normal, finish });
+  useLayoutEffect(() => {
+    heldMaterial.current = { print, cut, normal, finish };
+  }, [print, cut, normal, finish]);
   useLayoutEffect(() => {
     heldActive.current = active;
   }, [active]);
@@ -35,11 +40,11 @@ export function StickerLaminate({
     const canvas = ref.current;
     if (!canvas) return;
     const release = mountLaminate(canvas, {
-      print,
-      cut,
-      normal,
+      print: heldMaterial.current.print,
+      cut: heldMaterial.current.cut,
+      normal: heldMaterial.current.normal,
       turn: heldTurn.current,
-      finish,
+      finish: heldMaterial.current.finish,
       active: () => heldActive.current,
     });
     return () => {
@@ -47,6 +52,9 @@ export function StickerLaminate({
       heldTurn.current = laminateTurn(canvas) ?? heldTurn.current;
       release();
     };
+  }, []);
+  useLayoutEffect(() => {
+    if (ref.current) updateLaminate(ref.current, { print, cut, normal, finish });
   }, [print, cut, normal, finish]);
   useLayoutEffect(() => {
     heldTurn.current = turn;

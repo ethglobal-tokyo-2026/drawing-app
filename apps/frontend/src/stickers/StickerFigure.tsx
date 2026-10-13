@@ -114,6 +114,8 @@ export const StickerFigure = memo(function StickerFigure({
       {stuck && !foilSize && <span className="sticker-figure__cast" aria-hidden="true" />}
       <img ref={imgRef} className="sticker-figure__img" src={src} alt="" draggable={false} />
       <StickerLaminate
+        // Concealing artwork discards the previous bitmap before a replacement can load.
+        key={veiled ? "veiled" : "visible"}
         print={src}
         cut={mask}
         normal={crease?.normal}

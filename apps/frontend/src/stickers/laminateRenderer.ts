@@ -21,6 +21,7 @@ class LaminateRenderer {
   readonly canvas = document.createElement("canvas");
   readonly atlas = document.createElement("canvas");
   readonly uniforms = new Map<string, WebGLUniformLocation | null>();
+  readonly normalTransform = new Float32Array(9);
   readonly gl: WebGLRenderingContext;
   readonly program: WebGLProgram;
   readonly textures = new Map<
@@ -90,10 +91,9 @@ class LaminateRenderer {
         "printImage",
         "cutImage",
         "normalImage",
-        "pose",
         "size",
-        "turn",
-        "flightTilt",
+        "normalTransform",
+        "pointTurn",
         "roughness",
       ])
         this.uniforms.set(name, gl.getUniformLocation(program, name));
@@ -241,7 +241,7 @@ class LaminateRenderer {
       this.refreshFrame = 0;
       const surfaces = [...this.refreshes];
       this.refreshes.clear();
-      this.draw(surfaces);
+      timeOurWork("laminate", () => this.draw(surfaces));
     });
   }
 
@@ -258,6 +258,7 @@ class LaminateRenderer {
       const { canvas } = surface;
       if (
         !surface.textures ||
+        (!surface.hasSnapshot && surface.pendingNormal) ||
         !canvas.isConnected ||
         (surface.options.active && !surface.options.active())
       )
@@ -339,7 +340,20 @@ class LaminateRenderer {
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.disable(gl.SCISSOR_TEST);
     const pose = currentLight();
-    gl.uniform2f(this.uniforms.get("pose") ?? null, pose.x, pose.y);
+    const poseX = pose.y * 0.38,
+      poseY = -pose.x * 0.38;
+    const poseCosX = Math.cos(poseX),
+      poseSinX = Math.sin(poseX),
+      poseCosY = Math.cos(poseY),
+      poseSinY = Math.sin(poseY);
+    const normalTransform = this.normalTransform;
+    const writeNormalColumn = (column: number, x: number, y: number, z: number) => {
+      const across = poseCosX * y - poseSinX * z;
+      const toward = poseSinX * y + poseCosX * z;
+      normalTransform[column * 3] = poseCosY * x + poseSinY * toward;
+      normalTransform[column * 3 + 1] = across;
+      normalTransform[column * 3 + 2] = -poseSinY * x + poseCosY * toward;
+    };
     for (const tile of tiles) {
       const { options, textures } = tile.surface;
       if (!textures) continue;
@@ -350,15 +364,34 @@ class LaminateRenderer {
         gl.uniform1i(this.uniforms.get(["printImage", "cutImage", "normalImage"][i]) ?? null, i);
       }
       gl.uniform2f(this.uniforms.get("size") ?? null, tile.width, tile.height);
-      gl.uniform1f(this.uniforms.get("turn") ?? null, (options.turn * Math.PI) / 180);
-      gl.uniform2f(
-        this.uniforms.get("flightTilt") ?? null,
-        ((options.tiltX ?? 0) * Math.PI) / 180,
-        ((options.tiltY ?? 0) * Math.PI) / 180,
+      const turn = ((options.turn + pose.rotationDegrees) * Math.PI) / 180,
+        flightX = ((options.tiltX ?? 0) * Math.PI) / 180,
+        flightY = ((options.tiltY ?? 0) * Math.PI) / 180;
+      const cosTurn = Math.cos(turn),
+        sinTurn = Math.sin(turn),
+        cosX = Math.cos(flightX),
+        sinX = Math.sin(flightX),
+        cosY = Math.cos(flightY),
+        sinY = Math.sin(flightY);
+      // Ry(poseY) Rx(poseX) Rz(turn) Rx(flightX) Ry(flightY), in GL column order.
+      writeNormalColumn(
+        0,
+        cosTurn * cosY - sinTurn * sinX * sinY,
+        sinTurn * cosY + cosTurn * sinX * sinY,
+        -cosX * sinY,
       );
+      writeNormalColumn(1, -sinTurn * cosX, cosTurn * cosX, sinX);
+      writeNormalColumn(
+        2,
+        cosTurn * sinY + sinTurn * sinX * cosY,
+        sinTurn * sinY - cosTurn * sinX * cosY,
+        cosX * cosY,
+      );
+      gl.uniformMatrix3fv(this.uniforms.get("normalTransform") ?? null, false, normalTransform);
+      gl.uniform2f(this.uniforms.get("pointTurn") ?? null, cosTurn, sinTurn);
       gl.uniform1f(
         this.uniforms.get("roughness") ?? null,
-        options.finish === "matte" ? 0.38 : 0.055,
+        options.finish === "matte" ? 0.16 : 0.016,
       );
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
@@ -366,25 +399,21 @@ class LaminateRenderer {
     if (this.atlas.height < height) this.atlas.height = height;
     const atlas = this.atlas.getContext("2d");
     if (!atlas) throw new Error("The laminate atlas 2D context is unavailable");
-    atlas.clearRect(0, 0, width, height);
+    atlas.globalCompositeOperation = "copy";
     // One GPU-to-2D copy for this bounded batch, then ordinary 2D region copies.
     atlas.drawImage(this.canvas, 0, 0, width, height, 0, 0, width, height);
-    for (const {
-      surface: { canvas },
-      x,
-      y,
-      w,
-      h,
-    } of tiles) {
+    for (const { surface, x, y, w, h } of tiles) {
+      const { canvas } = surface;
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w;
         canvas.height = h;
       }
       const context = canvas.getContext("2d");
       if (!context) throw new Error("The sticker snapshot 2D context is unavailable");
-      context.clearRect(0, 0, w, h);
+      context.globalCompositeOperation = "copy";
       context.drawImage(this.atlas, x, y, w, h, 0, 0, w, h);
-      canvas.dataset.state = "ready";
+      surface.hasSnapshot = true;
+      if (canvas.dataset.state !== "ready") canvas.dataset.state = "ready";
     }
   }
 
@@ -425,6 +454,14 @@ const mounted = new WeakMap<HTMLCanvasElement, MountedSurface>();
 class MountedSurface {
   gpu: LaminateRenderer | null = null;
   textures: WebGLTexture[] | null = null;
+  hasSnapshot = false;
+  printCut: { print: string; cut: string; textures: [WebGLTexture, WebGLTexture] } | null = null;
+  pendingPrintCut: { print: string; cut: string; gpu: LaminateRenderer } | null = null;
+  printCutError: string | null = null;
+  normalError: string | null = null;
+  normalUrl?: string;
+  normalTexture: WebGLTexture | null = null;
+  pendingNormal: { url: string; gpu: LaminateRenderer } | null = null;
   live = true;
   readonly canvas: HTMLCanvasElement;
   readonly options: LaminateSurface;
@@ -436,25 +473,21 @@ class MountedSurface {
   reload() {
     if (!this.live) return;
     this.textures = null;
+    this.hasSnapshot = false;
+    this.printCut = null;
+    this.pendingPrintCut = null;
+    this.printCutError = this.normalError = null;
+    delete this.canvas.dataset.error;
+    this.normalUrl = undefined;
+    this.normalTexture = null;
+    this.pendingNormal = null;
     try {
       this.gpu = renderer ??= new LaminateRenderer();
       this.gpu.surfaces.add(this);
       const gpu = this.gpu;
-      Promise.all([
-        gpu.acquire(this.options.print),
-        gpu.acquire(this.options.cut),
-        this.options.normal ? gpu.acquire(this.options.normal) : Promise.resolve(gpu.flat),
-      ]).then(
-        (textures) => {
-          if (!this.live || this.gpu !== gpu) return;
-          this.textures = textures;
-          this.draw();
-        },
-        (error: unknown) => {
-          // Retirement aborts old requests; the replacement renderer owns their surface now.
-          if (this.live && this.gpu === gpu && !gpu.disposed) this.failed(String(error));
-        },
-      );
+      this.normalTexture = gpu.flat;
+      this.replaceNormal(this.options.normal);
+      this.replacePrintCut(this.options.print, this.options.cut);
     } catch (error) {
       this.failed(String(error));
     }
@@ -465,13 +498,128 @@ class MountedSurface {
     console.error(`Rendering sticker laminate for ${this.options.print} failed: ${why}`);
     notePerformance("laminate", why);
   }
+  loadError(kind: "printCut" | "normal", why: string | null) {
+    if (kind === "printCut") this.printCutError = why;
+    else this.normalError = why;
+    const errors = [this.printCutError, this.normalError].filter(Boolean).join("; ");
+    if (errors) this.canvas.dataset.error = errors;
+    else delete this.canvas.dataset.error;
+    if (why) {
+      console.error(`Rendering sticker laminate for ${this.options.print} failed: ${why}`);
+      notePerformance("laminate", why);
+    }
+  }
+  /** A sharp print replaces its cut with it, while the previous complete sticker remains visible. */
+  replacePrintCut(print: string, cut: string) {
+    const gpu = this.gpu;
+    if (
+      !gpu ||
+      gpu.disposed ||
+      !this.live ||
+      (this.pendingPrintCut?.print === print && this.pendingPrintCut.cut === cut)
+    )
+      return;
+    if (this.pendingPrintCut) {
+      const old = this.pendingPrintCut;
+      this.pendingPrintCut = null;
+      old.gpu.release(old.print);
+      old.gpu.release(old.cut);
+    }
+    if (this.printCut?.print === print && this.printCut.cut === cut) {
+      this.loadError("printCut", null);
+      return;
+    }
+    const pending = { print, cut, gpu };
+    this.pendingPrintCut = pending;
+    Promise.all([gpu.acquire(print), gpu.acquire(cut)]).then(
+      ([printTexture, cutTexture]) => {
+        if (!this.live || this.gpu !== gpu || gpu.disposed || this.pendingPrintCut !== pending)
+          return;
+        this.pendingPrintCut = null;
+        const old = this.printCut;
+        this.printCut = { print, cut, textures: [printTexture, cutTexture] };
+        this.textures = [printTexture, cutTexture, this.normalTexture ?? gpu.flat];
+        if (old) {
+          gpu.release(old.print);
+          gpu.release(old.cut);
+        }
+        this.loadError("printCut", null);
+        this.draw();
+      },
+      (error: unknown) => {
+        // Canceled generations already released their refs; the current pair alone reports failure.
+        if (!this.live || this.gpu !== gpu || gpu.disposed || this.pendingPrintCut !== pending)
+          return;
+        this.pendingPrintCut = null;
+        gpu.release(print);
+        gpu.release(cut);
+        const why = `Replacing sticker print and cut (${print}, ${cut}) failed: ${String(error)}`;
+        if (!this.hasSnapshot) this.canvas.dataset.state = "failed";
+        this.loadError("printCut", why);
+      },
+    );
+  }
+  /** A crease rebake keeps its last ready snapshot until the replacement normal is uploaded. */
+  replaceNormal(url?: string) {
+    const gpu = this.gpu;
+    if (
+      !gpu ||
+      gpu.disposed ||
+      !this.live ||
+      (this.pendingNormal && this.pendingNormal.url === url)
+    )
+      return;
+    if (this.pendingNormal) {
+      const old = this.pendingNormal;
+      this.pendingNormal = null;
+      old.gpu.release(old.url);
+    }
+    if (this.normalUrl === url) {
+      this.loadError("normal", null);
+      if (!this.hasSnapshot) this.draw();
+      return;
+    }
+    if (!url) {
+      const old = this.normalUrl;
+      this.normalUrl = undefined;
+      this.normalTexture = gpu.flat;
+      if (this.textures) this.textures[2] = gpu.flat;
+      if (old) gpu.release(old);
+      this.loadError("normal", null);
+      this.draw();
+      return;
+    }
+    const pending = { url, gpu };
+    this.pendingNormal = pending;
+    gpu.acquire(url).then(
+      (texture) => {
+        if (!this.live || this.gpu !== gpu || gpu.disposed || this.pendingNormal !== pending)
+          return;
+        this.pendingNormal = null;
+        const old = this.normalUrl;
+        this.normalUrl = url;
+        this.normalTexture = texture;
+        if (this.textures) this.textures[2] = texture;
+        if (old) gpu.release(old);
+        this.loadError("normal", null);
+        this.draw();
+      },
+      (error: unknown) => {
+        // Canceled generations have released their ownership; only the current request reports failure.
+        if (!this.live || this.gpu !== gpu || gpu.disposed || this.pendingNormal !== pending)
+          return;
+        this.pendingNormal = null;
+        gpu.release(url);
+        const why = `Replacing crease normal ${url} failed: ${String(error)}`;
+        // Keep the ready laminate visible; its last normal remains valid after a failed rebake.
+        this.loadError("normal", why);
+        if (!this.hasSnapshot) this.draw();
+      },
+    );
+  }
   draw() {
     if (!this.textures) return;
-    try {
-      this.gpu?.draw([this]);
-    } catch (error) {
-      this.failed(String(error));
-    }
+    this.gpu?.refresh(this);
   }
   release() {
     if (!this.live) return;
@@ -482,9 +630,21 @@ class MountedSurface {
     if (!gpu) return;
     gpu.surfaces.delete(this);
     gpu.refreshes.delete(this);
-    gpu.release(this.options.print);
-    gpu.release(this.options.cut);
-    if (this.options.normal) gpu.release(this.options.normal);
+    if (this.printCut) {
+      gpu.release(this.printCut.print);
+      gpu.release(this.printCut.cut);
+    }
+    if (this.pendingPrintCut) {
+      this.pendingPrintCut.gpu.release(this.pendingPrintCut.print);
+      this.pendingPrintCut.gpu.release(this.pendingPrintCut.cut);
+    }
+    this.printCut = null;
+    this.pendingPrintCut = null;
+    if (this.normalUrl) gpu.release(this.normalUrl);
+    if (this.pendingNormal) this.pendingNormal.gpu.release(this.pendingNormal.url);
+    this.normalUrl = undefined;
+    this.normalTexture = null;
+    this.pendingNormal = null;
     if (!gpu.surfaces.size) {
       gpu.destroy();
       if (renderer === gpu) renderer = null;
@@ -523,6 +683,20 @@ export function mountLaminate(canvas: HTMLCanvasElement, options: LaminateSurfac
 /** The displayed turn survives a texture replacement before a live gesture commits. */
 export function laminateTurn(canvas: HTMLCanvasElement): number | undefined {
   return mounted.get(canvas)?.options.turn;
+}
+
+/** Material changes preserve the print, cut and ready snapshot owned by this surface. */
+export function updateLaminate(
+  canvas: HTMLCanvasElement,
+  options: Pick<LaminateSurface, "print" | "cut" | "normal" | "finish">,
+) {
+  const surface = mounted.get(canvas);
+  if (!surface) return;
+  const finishChanged = surface.options.finish !== options.finish;
+  Object.assign(surface.options, options);
+  surface.replacePrintCut(options.print, options.cut);
+  surface.replaceNormal(options.normal);
+  if (finishChanged) surface.draw();
 }
 
 /** Board gestures and finite flights change the surface geometry under the held light. */

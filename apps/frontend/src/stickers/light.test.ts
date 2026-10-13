@@ -64,7 +64,7 @@ const lightAt = () => lightOn(film);
 /** A pointer moved to (x, y): a mouse unless it says it's a pen or a finger. */
 const pointAt = (x: number, y: number, pointerType = "mouse", type = "pointermove") =>
   window.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, pointerType }));
-const tiltTo = (gamma: number | null, beta: number | null, alpha = 0) =>
+const tiltTo = (gamma: number | null, beta: number | null, alpha: number | null = 0) =>
   window.dispatchEvent(Object.assign(new Event("deviceorientation"), { alpha, gamma, beta }));
 /** Happy DOM has no ScreenOrientation; supply its complete event-target interface. */
 const screenAt = (angle: number) => {
@@ -162,6 +162,92 @@ afterEach(() => {
 });
 
 describe("the shared light", () => {
+  it("acquires a delayed heading without rotating an already-held reflection", () => {
+    screenAt(0);
+    uninstall = installLight(root);
+    showScreen();
+    tiltTo(0, 40, null);
+    tiltTo(8, 40, null);
+    vi.advanceTimersByTime(2000);
+    const before = currentLight();
+    expect(before.x).toBeGreaterThan(0.1);
+    tiltTo(8, 40, 123);
+    vi.advanceTimersByTime(2000);
+    expect(currentLight()).toEqual(before);
+    tiltTo(8, 40, 124);
+    vi.advanceTimersByTime(2000);
+    expect(Math.abs(currentLight().rotationDegrees - before.rotationDegrees)).toBeLessThan(2);
+    expect(currentLight().rotationDegrees).not.toBe(before.rotationDegrees);
+  });
+
+  it("publishes and then holds a flat wrist rotation without inventing normal tilt", () => {
+    screenAt(0);
+    uninstall = installLight(root);
+    showScreen();
+    tiltTo(0, 0, 0);
+    const frames: ReturnType<typeof currentLight>[] = [];
+    const stop = subscribeLight((pose) => frames.push(pose));
+    try {
+      tiltTo(0, 0, 10);
+      vi.advanceTimersByTime(256);
+      expect(frames.length).toBeGreaterThanOrEqual(12);
+      vi.advanceTimersByTime(2000);
+      expect(currentLight()).toEqual({ x: 0, y: 0, rotationDegrees: -10 });
+      expect(film.style.getPropertyValue("--light-rotation")).toBe("-10.000");
+      const count = frames.length;
+      vi.advanceTimersByTime(22000);
+      expect(frames).toHaveLength(count);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      stop();
+    }
+  });
+
+  it("takes the short angular path through the sensor heading wrap", () => {
+    screenAt(0);
+    uninstall = installLight(root);
+    showScreen();
+    tiltTo(0, 0, 0);
+    tiltTo(0, 0, 359);
+    vi.advanceTimersByTime(2000);
+    expect(currentLight().rotationDegrees).toBeCloseTo(1, 8);
+    const rotations: number[] = [];
+    const stop = subscribeLight((pose) => rotations.push(pose.rotationDegrees));
+    try {
+      tiltTo(0, 0, 1);
+      vi.advanceTimersByTime(2000);
+      expect(currentLight().rotationDegrees).toBeCloseTo(-1, 8);
+      expect(rotations.length).toBeGreaterThan(2);
+      expect(rotations.every((rotation) => Math.abs(rotation) <= 1)).toBe(true);
+    } finally {
+      stop();
+    }
+  });
+
+  it("keeps angular state through acquisition, screen-axis rebasing, and controller reinstall", () => {
+    screenAt(0);
+    uninstall = installLight(root);
+    showScreen();
+    const initial = currentLight();
+    tiltTo(0, 0, 37);
+    vi.advanceTimersByTime(2000);
+    expect(currentLight()).toEqual(initial);
+    tiltTo(0, 0, 47);
+    vi.advanceTimersByTime(2000);
+    expect(currentLight().rotationDegrees).toBeCloseTo(-10, 8);
+    const before = currentLight();
+    screenAt(90);
+    tiltTo(0, 0, 47);
+    vi.advanceTimersByTime(2000);
+    expect(currentLight()).toEqual(before);
+    uninstall();
+    uninstall = installLight(root);
+    tiltTo(0, 0, 47);
+    vi.advanceTimersByTime(2000);
+    expect(currentLight()).toEqual(before);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it("publishes moving laminate at display cadence while keeping foil style writes throttled", () => {
     screenAt(0);
     uninstall = installLight(root);
@@ -495,6 +581,20 @@ describe("the shared light", () => {
     tiltTo(-5, 90, 10);
     vi.advanceTimersByTime(10 * GLIDE_MS);
     expect(lightAt()).toEqual(before);
+  });
+
+  it("retains the last yaw reading when a later sensor event temporarily omits alpha", () => {
+    uninstall = installLight(root);
+    showScreen();
+    tiltTo(0, 40, 123);
+    tiltTo(2, 42, 128);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
+    const before = currentLight();
+    window.dispatchEvent(
+      Object.assign(new Event("deviceorientation"), { alpha: null, beta: 42, gamma: 2 }),
+    );
+    vi.advanceTimersByTime(10 * GLIDE_MS);
+    expect(currentLight()).toEqual(before);
   });
 
   it("glides to a new tilt rather than jumping, and lands on it", () => {

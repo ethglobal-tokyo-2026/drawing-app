@@ -16,13 +16,11 @@ import {
   type LightMode,
   type RotationInput,
   type RotationOrigin,
+  type LightPose,
 } from "./lightMode";
 
-export interface LightPose {
-  x: number;
-  y: number;
-}
-let publishedPose: LightPose = { x: 0, y: 0 };
+export type { LightPose } from "./lightMode";
+let publishedPose: LightPose = { x: 0, y: 0, rotationDegrees: 0 };
 const subscribers = new Set<(pose: LightPose) => void>();
 /** The held pose, or the common static pose before the first published input. */
 export const currentLight = (): LightPose => ({ ...publishedPose });
@@ -59,6 +57,8 @@ export const CREASE_SETTLE_MS = 250;
 const BEAT_MS = 45;
 /** A move shorter than this, on the -1 to 1 scale, isn't written, so the hand's tremor keeps still. */
 const STEP = 0.02;
+/** The same finite glide ignores an angular tremor smaller than a quarter degree. */
+const ROTATION_STEP_DEGREES = 0.25;
 /** The tilt's light glides toward where the phone points, most of the way in this long, so it never jumps. */
 export const GLIDE_MS = 160;
 
@@ -72,7 +72,7 @@ let light: { on: () => void; off: () => void } | null = null;
 let holders = 0;
 
 /** The light as it's written onto what reads it. */
-type Light = { lx: string; ly: string };
+type Light = { lx: string; ly: string; rotation: string };
 
 /** Where the light last was, or null before it first moves: what a newly shown highlight starts at. */
 let lightNow: Light | null = null;
@@ -88,6 +88,7 @@ const documentLights = new WeakMap<
     seenRotation: boolean;
     fallbackPhase: number;
     origin?: RotationOrigin;
+    lastAlpha?: number;
   }
 >();
 
@@ -97,9 +98,11 @@ function setLight(els: NodeListOf<HTMLElement> | HTMLElement[], light: Light | n
     if (light) {
       el.style.setProperty("--lx", light.lx);
       el.style.setProperty("--ly", light.ly);
+      el.style.setProperty("--light-rotation", light.rotation);
     } else {
       el.style.removeProperty("--lx");
       el.style.removeProperty("--ly");
+      el.style.removeProperty("--light-rotation");
     }
   }
   return els.length;
@@ -170,7 +173,11 @@ function glideOnReplays(win: Window, moving: boolean) {
 export function lightUp(el: HTMLElement) {
   const within = (selector: string) =>
     el.matches(selector) ? [el] : el.querySelectorAll<HTMLElement>(selector);
-  const held = lightNow ?? { lx: written(publishedPose.x), ly: written(publishedPose.y) };
+  const held = lightNow ?? {
+    lx: written(publishedPose.x),
+    ly: written(publishedPose.y),
+    rotation: written(publishedPose.rotationDegrees),
+  };
   setLight(within(MOVING), held);
   setLight(within(CREASES), creaseLightNow ?? held);
 }
@@ -198,7 +205,7 @@ function sensorPolicy(doc: Document): "allowed" | "blocked" | "unknown" {
 export function installLight(root: HTMLElement, win: typeof window = window): () => void {
   const doc = root.ownerDocument;
   const kept = documentLights.get(doc) ?? {
-    pose: { x: 0, y: 0 },
+    pose: { x: 0, y: 0, rotationDegrees: 0 },
     light: null,
     crease: null,
     seenRotation: false,
@@ -231,6 +238,7 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
   let fallbackPublished = kept.fallbackPhase;
   let x = 0;
   let y = 0;
+  let rotationDegrees = 0;
   /** Where the light was last written, or null before it first moves. */
   let lit: LightPose = { ...kept.pose };
   let frame = 0;
@@ -261,7 +269,11 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
 
   /** Sets the light from `lit` on every highlight; returns how many. Made once, not per write. */
   const writeLit = () => {
-    const count = setLightNow({ lx: written(lit.x), ly: written(lit.y) });
+    const count = setLightNow({
+      lx: written(lit.x),
+      ly: written(lit.y),
+      rotation: written(lit.rotationDegrees),
+    });
     kept.light = lightNow;
     return count;
   };
@@ -284,29 +296,53 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     } else {
       // A low-pass on the tilt, by the time since the last write; close enough, it lands.
       const k = 1 - Math.exp(-since / GLIDE_MS);
-      const next = { x: lit.x + (x - lit.x) * k, y: lit.y + (y - lit.y) * k };
-      const near = Math.abs(x - next.x) < STEP / 2 && Math.abs(y - next.y) < STEP / 2;
-      lit = near ? { x, y } : next;
+      const next = {
+        x: lit.x + (x - lit.x) * k,
+        y: lit.y + (y - lit.y) * k,
+        rotationDegrees: lit.rotationDegrees + (rotationDegrees - lit.rotationDegrees) * k,
+      };
+      const near =
+        Math.abs(x - next.x) < STEP / 2 &&
+        Math.abs(y - next.y) < STEP / 2 &&
+        Math.abs(rotationDegrees - next.rotationDegrees) < ROTATION_STEP_DEGREES / 2;
+      lit = near ? { x, y, rotationDegrees } : next;
     }
     publishedPose = { ...lit };
     kept.pose = publishedPose;
     // The coating has no CSS transition: publish each display frame during finite smoothing.
     // Foil and crease style writes retain their existing throttle and transitions.
     for (const listener of subscribers) listener(currentLight());
-    const settled = mode !== "fallback-wave" && lit.x === x && lit.y === y;
+    const settled =
+      mode !== "fallback-wave" &&
+      lit.x === x &&
+      lit.y === y &&
+      lit.rotationDegrees === rotationDegrees;
     if (now - lastWrite >= BEAT_MS || settled) {
       lastWrite = now;
       writeLight();
     }
-    if (mode === "fallback-wave" || lit.x !== x || lit.y !== y)
+    if (
+      mode === "fallback-wave" ||
+      lit.x !== x ||
+      lit.y !== y ||
+      lit.rotationDegrees !== rotationDegrees
+    )
       frame = win.requestAnimationFrame(write);
   };
 
-  const aim = (nx: number, ny: number) => {
+  const aim = (to: LightPose) => {
     if (mode !== "device-tilt") return;
-    x = clamp11(nx);
-    y = clamp11(ny);
-    if (lit && Math.abs(x - lit.x) < STEP && Math.abs(y - lit.y) < STEP) return;
+    x = clamp11(to.x);
+    y = clamp11(to.y);
+    const difference =
+      ((((to.rotationDegrees - lit.rotationDegrees + 180) % 360) + 360) % 360) - 180;
+    rotationDegrees = lit.rotationDegrees + difference;
+    if (
+      Math.abs(x - lit.x) < STEP &&
+      Math.abs(y - lit.y) < STEP &&
+      Math.abs(rotationDegrees - lit.rotationDegrees) < ROTATION_STEP_DEGREES
+    )
+      return;
     if (!frame) {
       // Time spent holding a pose is not interpolation time toward a newly received target.
       lastFrame = win.performance.now();
@@ -323,6 +359,7 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     // Drop an unfinished target. A resumed rotation source waits for a fresh reading.
     x = lit.x;
     y = lit.y;
+    rotationDegrees = lit.rotationDegrees;
     lastFrame = win.performance.now();
     lastWrite = lightNow ? lastFrame : -Infinity;
     if (cancelReplays) glideOnReplays(win, false);
@@ -374,9 +411,18 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     refresh();
     const angle = win.screen.orientation?.angle ?? Reflect.get(win, "orientation");
     const screenAngle = typeof angle === "number" && Number.isFinite(angle) ? angle : 0;
-    const alpha = e.alpha !== null && Number.isFinite(e.alpha) ? e.alpha : 0;
-    if (!kept.origin || kept.origin.screenAngle !== screenAngle) {
-      // Sensor acquisition and screen rotation keep the displayed coating, without a jump.
+    // A temporarily missing heading must not become an artificial rotation back to zero.
+    const acquiredHeading =
+      kept.lastAlpha === undefined && e.alpha !== null && Number.isFinite(e.alpha);
+    if (e.alpha !== null && Number.isFinite(e.alpha)) kept.lastAlpha = e.alpha;
+    const alpha = kept.lastAlpha ?? 0;
+    if (isPerformanceRecorderOn())
+      notePerformance(
+        "orientation",
+        `alpha=${e.alpha}, beta=${e.beta}, gamma=${e.gamma}, screen=${screenAngle}; heading=${alpha}`,
+      );
+    if (!kept.origin || kept.origin.screenAngle !== screenAngle || acquiredHeading) {
+      // Sensor/heading acquisition and screen rotation keep the displayed coating, without a jump.
       pause(false);
       kept.origin = { alpha, beta: e.beta, gamma: e.gamma, screenAngle, pose: { ...lit } };
       if (mode === "device-tilt" && !lightNow) {
@@ -386,7 +432,7 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
       return;
     }
     const to = relativeTiltPose(alpha, e.beta, e.gamma, kept.origin);
-    aim(to.x, to.y);
+    aim(to);
   };
 
   // The light never asks for the tilt: where a browser wants permission first (iOS), no tilt

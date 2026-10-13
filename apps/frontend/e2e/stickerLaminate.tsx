@@ -20,6 +20,9 @@ const count = Number(new URLSearchParams(location.search).get("count") ?? 1);
 const turn = Number(new URLSearchParams(location.search).get("turn") ?? 0);
 const side = Number(new URLSearchParams(location.search).get("side") ?? 240);
 const tall = Number(new URLSearchParams(location.search).get("height") ?? side);
+const foil = new URLSearchParams(location.search).has("foil");
+const board = new URLSearchParams(location.search).has("board");
+const detail = new URLSearchParams(location.search).has("detail");
 document.body.style.cssText = "margin:0;background:#ddd;padding:20px";
 const uninstall = installLight(document.documentElement);
 const releaseLight = acquireLight();
@@ -49,7 +52,11 @@ if (!rampContext || !rampPixels) throw new Error("The diagnostic ramp normal is 
 rampContext.putImageData(new ImageData(rampPixels.normal, 240, 240), 0, 0);
 const rampNormal = rampCanvas.toDataURL();
 const reload = new URLSearchParams(location.search).has("reload");
-const replacement: { print: string; normal?: string; turn: number } = { print, turn };
+const replacement: { print: string; normal?: string; turn: number; veiled: boolean } = {
+  print,
+  turn,
+  veiled: false,
+};
 let started = 0;
 const costs: number[] = [];
 subscribeLight(() => {
@@ -59,7 +66,7 @@ declare global {
   interface Window {
     laminateFixture: {
       getPose: typeof currentLight;
-      tilt: (beta: number, gamma: number) => void;
+      tilt: (beta: number, gamma: number, alpha?: number) => void;
       flight: (x: number, y: number) => void;
       update: (options: Partial<typeof replacement>) => void;
       rampHeight: number[];
@@ -83,8 +90,8 @@ window.laminateFixture = {
     figure.style.transform = `rotateX(${x}deg) rotateY(${y}deg)`;
     turnLaminate(canvas, turn, x, y);
   },
-  tilt: (beta, gamma) => {
-    window.dispatchEvent(Object.assign(new Event("deviceorientation"), { beta, gamma }));
+  tilt: (beta, gamma, alpha = 0) => {
+    window.dispatchEvent(Object.assign(new Event("deviceorientation"), { alpha, beta, gamma }));
   },
 };
 setTimeout(
@@ -107,22 +114,33 @@ const render = () =>
             data-sticker={i}
             style={{ position: "relative", width: side, height: tall, rotate: `${turn}deg` }}
           >
-            <StickerFigure urls={urls} width={240} height={240} turn={turn} />
+            <StickerFigure
+              urls={urls}
+              width={240}
+              height={240}
+              turn={turn}
+              kyotoSeika={foil}
+              stuck={board}
+            />
           </div>
         ))}
-        <div data-white style={{ position: "relative", width: side, height: side }}>
-          <StickerLaminate print={white} cut={mask} />
-        </div>
-        <div data-reference-matte style={{ position: "relative", width: side, height: side }}>
-          <StickerLaminate print={print} cut={mask} finish="matte" />
-        </div>
-        <div data-matte style={{ width: side, height: side }}>
-          <FinishPreview
-            sticker={{ urls, width: 240, height: 240 }}
-            side={side / 0.74}
-            finish={{ laminate: "matte" }}
-          />
-        </div>
+        {!board && !detail && (
+          <>
+            <div data-white style={{ position: "relative", width: side, height: side }}>
+              <StickerLaminate print={white} cut={mask} />
+            </div>
+            <div data-reference-matte style={{ position: "relative", width: side, height: side }}>
+              <StickerLaminate print={print} cut={mask} finish="matte" />
+            </div>
+            <div data-matte style={{ width: side, height: side }}>
+              <FinishPreview
+                sticker={{ urls, width: 240, height: 240 }}
+                side={side / 0.74}
+                finish={{ laminate: "matte" }}
+              />
+            </div>
+          </>
+        )}
         {ramp && (
           <div data-ramp style={{ position: "relative", width: side, height: side }}>
             <StickerLaminate print={white} cut={mask} normal={rampNormal} turn={turn} />
@@ -142,6 +160,16 @@ const render = () =>
               <img className="sticker-figure__img" src={print} alt="" />
               <StickerLaminate {...replacement} cut={mask} />
             </span>
+          </div>
+        )}
+        {new URLSearchParams(location.search).has("conceal") && (
+          <div data-conceal style={{ position: "relative", width: side, height: side }}>
+            <StickerFigure
+              urls={{ png: replacement.print, mask }}
+              width={240}
+              height={240}
+              veiled={replacement.veiled}
+            />
           </div>
         )}
       </div>

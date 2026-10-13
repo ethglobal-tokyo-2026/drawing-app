@@ -57,12 +57,19 @@ const easeToEdge = (v: number) => {
   return 1.5 * c - 0.5 * c * c * c;
 };
 
+export interface LightPose {
+  x: number;
+  y: number;
+  /** Physical rotation in displayed CSS axes, in degrees. */
+  rotationDegrees: number;
+}
+
 export interface RotationOrigin {
   alpha: number;
   beta: number;
   gamma: number;
   screenAngle: number;
-  pose: { x: number; y: number };
+  pose: LightPose;
 }
 
 /** Device rotations relative to the first reading, before displayed-axis easing or clamping. */
@@ -71,7 +78,7 @@ export function relativeTiltPose(
   beta: number,
   gamma: number,
   origin: RotationOrigin,
-): { x: number; y: number } {
+): LightPose {
   const a = alpha * RAD,
     b = beta * RAD,
     g = gamma * RAD;
@@ -93,6 +100,26 @@ export function relativeTiltPose(
   const up = Math.atan2(-by, cz) / RAD;
   const angle = origin.screenAngle * RAD;
   const quiet = (v: number) => (Math.abs(v) < 1e-9 ? 0 : v);
+  const referenceAxes = (vx: number, vy: number, vz: number) => {
+    const dx = Math.cos(a0) * vx + Math.sin(a0) * vy;
+    const dy = -Math.sin(a0) * vx + Math.cos(a0) * vy;
+    const ey = Math.cos(b0) * dy + Math.sin(b0) * vz;
+    const ez = -Math.sin(b0) * dy + Math.cos(b0) * vz;
+    return [Math.cos(g0) * dx - Math.sin(g0) * ez, ey] as const;
+  };
+  const tangentX = referenceAxes(
+    Math.cos(a) * Math.cos(g) - Math.sin(a) * Math.sin(b) * Math.sin(g),
+    Math.sin(a) * Math.cos(g) + Math.cos(a) * Math.sin(b) * Math.sin(g),
+    -Math.cos(b) * Math.sin(g),
+  );
+  const tangentY = referenceAxes(
+    -Math.sin(a) * Math.cos(b),
+    Math.cos(a) * Math.cos(b),
+    Math.sin(b),
+  );
+  // The full relative frame retains twist about its normal, even when the normal does not move.
+  // DeviceOrientation's upward-y rotation has the opposite sign from displayed CSS axes.
+  const twist = Math.atan2(tangentX[1] - tangentY[0], tangentX[0] + tangentY[1]) / RAD;
   return {
     x: clamp11(
       origin.pose.x +
@@ -102,11 +129,12 @@ export function relativeTiltPose(
       origin.pose.y +
         easeToEdge(quiet(up * Math.cos(angle) - across * Math.sin(angle)) / TILT_RANGE),
     ),
+    rotationDegrees: origin.pose.rotationDegrees - quiet(twist),
   };
 }
 
 /** Rotate device gravity into displayed axes before applying the established reading range. */
-export function tiltPose(beta: number, gamma: number, screenAngle = 0): { x: number; y: number } {
+export function tiltPose(beta: number, gamma: number, screenAngle = 0): LightPose {
   const b = beta * RAD;
   const angle = screenAngle * RAD;
   const gx = Math.cos(b) * Math.sin(gamma * RAD);
@@ -117,11 +145,12 @@ export function tiltPose(beta: number, gamma: number, screenAngle = 0): { x: num
   return {
     x: easeToEdge(across / ACROSS_RANGE),
     y: easeToEdge((lean - HELD_BETA) / TILT_RANGE),
+    rotationDegrees: 0,
   };
 }
 
 /** One virtual reading pose per cycle: provisional 12° horizontal and 4° vertical excursions. */
-export function fallbackPose(phase: number): { x: number; y: number } {
+export function fallbackPose(phase: number): LightPose {
   const angle = (phase - Math.floor(phase)) * 2 * Math.PI;
   return tiltPose(HELD_BETA + 4 * Math.cos(angle), 12 * Math.sin(angle));
 }

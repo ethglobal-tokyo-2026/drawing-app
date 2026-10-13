@@ -4,7 +4,7 @@ import { createRoot } from "react-dom/client";
 import { beforeEach, expect, it, vi } from "vitest";
 import { StickerLaminate } from "./StickerLaminate";
 
-import { mountLaminate, turnLaminate } from "./laminateRenderer";
+import { mountLaminate, turnLaminate, updateLaminate } from "./laminateRenderer";
 
 const anyActiveCallback: unknown = expect.any(Function);
 
@@ -20,12 +20,14 @@ vi.mock("./laminateRenderer", () => {
     }),
     laminateTurn: (canvas: HTMLCanvasElement) => turns.get(canvas),
     refreshLaminate: vi.fn(),
+    updateLaminate: vi.fn(),
   };
 });
 
 beforeEach(() => {
   vi.mocked(mountLaminate).mockClear();
   vi.mocked(turnLaminate).mockClear();
+  vi.mocked(updateLaminate).mockClear();
 });
 
 it("preserves a live gesture's displayed turn when its crease texture changes before commit", () => {
@@ -36,19 +38,27 @@ it("preserves a live gesture's displayed turn when its crease texture changes be
     act(() => root.render(<StickerLaminate print="print.png" cut="cut.png" turn={0} />));
     const canvas = host.querySelector("canvas");
     if (!canvas) throw new Error("The sticker laminate did not mount");
+    expect(mountLaminate).toHaveBeenLastCalledWith(canvas, {
+      print: "print.png",
+      cut: "cut.png",
+      normal: undefined,
+      turn: 0,
+      finish: "gloss",
+      active: anyActiveCallback,
+    });
     // The board gesture changes the surface before its saved placement reaches React.
     turnLaminate(canvas, 67);
     act(() =>
       root.render(<StickerLaminate print="print.png" cut="cut.png" normal="normal.png" turn={0} />),
     );
-    expect(mountLaminate).toHaveBeenLastCalledWith(canvas, {
+    expect(mountLaminate).toHaveBeenCalledOnce();
+    expect(updateLaminate).toHaveBeenLastCalledWith(canvas, {
       print: "print.png",
       cut: "cut.png",
       normal: "normal.png",
-      turn: 67,
       finish: "gloss",
-      active: anyActiveCallback,
     });
+    expect(turnLaminate).toHaveBeenLastCalledWith(canvas, 67);
     act(() =>
       root.render(
         <StickerLaminate print="print.png" cut="cut.png" normal="next-normal.png" turn={90} />,
@@ -83,15 +93,50 @@ it("turns the mounted material without replacing textures and keeps that turn on
         <StickerLaminate print="print.png" cut="cut.png" normal="normal.png" turn={90} />,
       ),
     );
-    expect(mountLaminate).toHaveBeenCalledTimes(2);
-    expect(release).toHaveBeenCalledOnce();
-    expect(mountLaminate).toHaveBeenLastCalledWith(canvas, {
+    expect(mountLaminate).toHaveBeenCalledOnce();
+    expect(release).not.toHaveBeenCalled();
+    expect(updateLaminate).toHaveBeenLastCalledWith(canvas, {
       print: "print.png",
       cut: "cut.png",
       normal: "normal.png",
-      turn: 90,
       finish: "gloss",
-      active: anyActiveCallback,
+    });
+    act(() =>
+      root.render(<StickerLaminate print="print.png" cut="cut.png" turn={90} finish="matte" />),
+    );
+    expect(mountLaminate).toHaveBeenCalledOnce();
+    expect(release).not.toHaveBeenCalled();
+    expect(updateLaminate).toHaveBeenLastCalledWith(canvas, {
+      print: "print.png",
+      cut: "cut.png",
+      normal: undefined,
+      finish: "matte",
+    });
+  } finally {
+    act(() => root.unmount());
+    host.remove();
+  }
+});
+
+it("keeps the mounted surface during a sharper print replacement", () => {
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    act(() => root.render(<StickerLaminate print="print.png" cut="cut.png" />));
+    const canvas = host.querySelector("canvas");
+    if (!canvas) throw new Error("The sticker laminate did not mount");
+    const mounted = vi.mocked(mountLaminate).mock.results[0];
+    if (!mounted || mounted.type !== "return")
+      throw new Error("The laminate mount did not return its cleanup");
+    act(() => root.render(<StickerLaminate print="sharp.png" cut="sharp-cut.png" />));
+    expect(mountLaminate).toHaveBeenCalledOnce();
+    expect(mounted.value).not.toHaveBeenCalled();
+    expect(updateLaminate).toHaveBeenLastCalledWith(canvas, {
+      print: "sharp.png",
+      cut: "sharp-cut.png",
+      normal: undefined,
+      finish: "gloss",
     });
   } finally {
     act(() => root.unmount());

@@ -32,10 +32,10 @@ async function paperPixels(paper: Locator): Promise<number[]> {
     if (!(element instanceof HTMLCanvasElement)) throw new Error("The paper canvas is missing");
     const context = element.getContext("2d");
     if (!context) throw new Error("The paper snapshot context is unavailable");
-    const x = Math.floor(element.width * 0.1),
-      y = Math.floor(element.height * 0.1),
-      width = Math.floor(element.width * 0.8),
-      height = Math.floor(element.height * 0.8);
+    const x = Math.floor(element.width * 0.05),
+      y = Math.floor(element.height * 0.05),
+      width = Math.floor(element.width * 0.9),
+      height = Math.floor(element.height * 0.9);
     if (!width || !height) throw new Error("The paper snapshot has no readable interior");
     return [...context.getImageData(x, y, width, height).data];
   });
@@ -55,7 +55,55 @@ function readablePaper(pixels: number[]) {
   expect(missingCoverage, "Opaque paper must retain complete coverage").toBe(0);
   expect(tinted, "Clear laminate should reflect neutral light on white paper").toBe(0);
   expect(min, "The clear film should preserve near-white paper").toBeGreaterThanOrEqual(238);
-  return { min, max, span: max - min };
+  let bright = 0;
+  for (let i = 0; i < pixels.length; i += 4) if (pixels[i] >= min + (max - min) / 2) bright++;
+  const brightFraction = bright / (pixels.length / 4);
+  expect(
+    max - min,
+    "White paper must reveal a distinct reflected source edge",
+  ).toBeGreaterThanOrEqual(12);
+  expect(
+    brightFraction,
+    "The source should occupy a localized part of the cut",
+  ).toBeGreaterThanOrEqual(0.1);
+  expect(
+    brightFraction,
+    "The source must leave a visible surrounding paper region",
+  ).toBeLessThanOrEqual(0.45);
+  return { min, max, span: max - min, brightFraction };
+}
+
+/** A sharp gloss boundary must remain visible without relying on the artwork beneath it. */
+async function glossEdge(paper: Locator) {
+  return paper.evaluate((element) => {
+    if (!(element instanceof HTMLCanvasElement)) throw new Error("The paper canvas is missing");
+    const context = element.getContext("2d");
+    if (!context) throw new Error("The paper snapshot context is unavailable");
+    const left = Math.floor(element.width * 0.05),
+      top = Math.floor(element.height * 0.05),
+      width = Math.floor(element.width * 0.9),
+      height = Math.floor(element.height * 0.9);
+    const pixels = context.getImageData(left, top, width, height).data;
+    let best: number[] = [],
+      span = -1;
+    for (let y = 0; y < height; y++) {
+      const row = Array.from({ length: width }, (_, x) => pixels[(y * width + x) * 4]);
+      const difference = Math.max(...row) - Math.min(...row);
+      if (difference > span) {
+        best = row;
+        span = difference;
+      }
+    }
+    if (span <= 0) throw new Error("The gloss source has no measurable edge");
+    const min = Math.min(...best),
+      max = Math.max(...best),
+      peak = best.indexOf(max);
+    const rising = best.slice(0, peak + 1);
+    const start = rising.findIndex((value) => value >= min + span * 0.1);
+    const end = rising.findIndex((value) => value >= min + span * 0.9);
+    if (start < 0 || end < start) throw new Error("The gloss source edge cannot be read");
+    return (end - start) / Math.min(element.width, element.height);
+  });
 }
 
 function paperChange(before: number[], after: number[]) {
@@ -158,8 +206,11 @@ test("the first iPad sensor reading retains the already visible neutral laminate
   );
   expect(
     readablePaper(initial).span,
-    "Neutral paper needs a visible soft reflection",
-  ).toBeGreaterThanOrEqual(8);
+    "Neutral paper needs a localized reflection even when the ink is absent",
+  ).toBeGreaterThanOrEqual(12);
+  expect(await glossEdge(paper), "Gloss should reveal a short source boundary").toBeLessThanOrEqual(
+    0.15,
+  );
 });
 
 test("a five-degree iPad tilt visibly moves full-cut gloss while preserving the ink", async ({
@@ -172,7 +223,8 @@ test("a five-degree iPad tilt visibly moves full-cut gloss while preserving the 
   await expect(print).toHaveAttribute("data-state", "ready");
   await page.evaluate(() => window.laminateFixture.tilt(40, 0));
   const neutral = await settledPaper(page, paper);
-  expect(readablePaper(neutral).span).toBeGreaterThanOrEqual(8);
+  expect(readablePaper(neutral).span).toBeGreaterThanOrEqual(12);
+  expect(await glossEdge(paper)).toBeLessThanOrEqual(0.15);
   expect(await inkContrast(paper, print)).toBeGreaterThanOrEqual(5);
   await info.attach("neutral-laminate", {
     body: await page.screenshot({ path: info.outputPath("neutral.png") }),

@@ -99,7 +99,32 @@ function makeFlyer(view: HTMLElement, figure: HTMLElement, to: Spot) {
   const flyer = document.createElement("div");
   flyer.className = "detail-lift__flyer";
   flyer.setAttribute("aria-hidden", "true");
-  flyer.append(figure.cloneNode(true));
+  const copy = figure.cloneNode(true);
+  if (!(copy instanceof HTMLElement)) throw new Error("The sticker flight copy is not an element");
+  const originals = figure.querySelectorAll("canvas");
+  const snapshots = copy.querySelectorAll("canvas");
+  originals.forEach((original, index) => {
+    const snapshot = snapshots[index];
+    if (!snapshot) return;
+    if (!original.width || !original.height) {
+      // A coating still loading has no snapshot; its original print remains the flight image.
+      snapshot.dataset.state = "loading";
+      return;
+    }
+    try {
+      snapshot.width = original.width;
+      snapshot.height = original.height;
+      const context = snapshot.getContext("2d");
+      if (!context) throw new Error("The sticker flight snapshot context is unavailable");
+      context.drawImage(original, 0, 0);
+    } catch (error) {
+      // Preserve the original print when a flight snapshot cannot be copied.
+      snapshot.dataset.state = "failed";
+      snapshot.dataset.error = String(error);
+      console.error("Copying the sticker laminate into its flight failed", error);
+    }
+  });
+  flyer.append(copy);
   view.after(flyer);
   // Where a left and top of 0 put it, whatever the borders and padding of what holds it.
   const zero = flyer.getBoundingClientRect();

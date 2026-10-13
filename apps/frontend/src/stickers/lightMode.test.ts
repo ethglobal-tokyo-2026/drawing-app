@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { fallbackPose, lightMode, rotationInputForLight, type LightInputs } from "./lightMode";
+import {
+  fallbackPose,
+  lightMode,
+  relativeTiltPose,
+  rotationInputForLight,
+  type LightInputs,
+} from "./lightMode";
 
 const desktop: LightInputs = {
   device: "desktop",
@@ -10,6 +16,37 @@ const desktop: LightInputs = {
   visible: true,
   holders: 1,
 };
+
+describe("the complete relative rotation", () => {
+  const origin = {
+    alpha: 0,
+    beta: 0,
+    gamma: 0,
+    screenAngle: 0,
+    pose: { x: 0, y: 0, rotationDegrees: 0 },
+  };
+
+  it("retains a pure in-plane rotation while its surface normal remains unchanged", () => {
+    expect(relativeTiltPose(10, 0, 0, origin)).toEqual({ x: 0, y: 0, rotationDegrees: -10 });
+  });
+
+  it("includes the coupled twist from Rz alpha, Rx beta, and Ry gamma", () => {
+    const rad = Math.PI / 180;
+    const pose = relativeTiltPose(10, 5, 5, origin);
+    const expected = 10 + (2 * Math.atan(Math.tan(2.5 * rad) ** 2)) / rad;
+    expect(pose.rotationDegrees).toBeCloseTo(-expected, 10);
+    expect(pose.x).toBeGreaterThan(0);
+    expect(pose.y).toBeGreaterThan(0);
+  });
+
+  it("expresses a heading turn about a tilted reference frame", () => {
+    const rad = Math.PI / 180;
+    const pose = relativeTiltPose(10, 40, 0, { ...origin, beta: 40 });
+    const expected = (2 * Math.atan(Math.cos(40 * rad) * Math.tan(5 * rad))) / rad;
+    expect(pose.rotationDegrees).toBeCloseTo(-expected, 10);
+    expect(pose.x).toBeGreaterThan(0);
+  });
+});
 
 describe("lightMode", () => {
   it.each([

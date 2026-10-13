@@ -44,7 +44,7 @@ test("the displayed full-cut coat agrees with the independent linear reference o
       const reference = compositePrint(
         [rgb[0] / 255, rgb[1] / 255, rgb[2] / 255],
         coatField({
-          point: screenPoint(actual.uv[0], actual.uv[1], side, height, turn),
+          point: screenPoint(actual.uv[0], actual.uv[1], side, height, turn + pose.rotationDegrees),
           normal: orientNormal([0, 0, 1], turn, pose),
           material: MATERIAL_GLOSS,
         }),

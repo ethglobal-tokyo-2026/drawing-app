@@ -23,6 +23,16 @@ test("a turn-only React update redraws the held reflection in the sticker's new 
   });
   await page.evaluate(() => window.laminateFixture.update({ turn: 90 }));
   await expect(coat).toHaveAttribute("data-state", "ready");
+  // A retained ready snapshot redraws on the shared frame queue; readiness alone is not a new frame.
+  await expect
+    .poll(() =>
+      coat.evaluate((el) => {
+        if (!(el instanceof HTMLCanvasElement))
+          throw new Error("The material snapshot is not a canvas");
+        return el.toDataURL();
+      }),
+    )
+    .not.toBe(before);
   const sample = await coat.evaluate((el) => {
     if (!(el instanceof HTMLCanvasElement))
       throw new Error("The material snapshot is not a canvas");
@@ -51,7 +61,7 @@ test("a turn-only React update redraws the held reflection in the sticker's new 
     const expected = compositePrint(
       print,
       coatField({
-        point: screenPoint(point.uv[0], point.uv[1], 240, 240, 90),
+        point: screenPoint(point.uv[0], point.uv[1], 240, 240, 90 + pose.rotationDegrees),
         normal: orientNormal([0, 0, 1], 90, pose),
         material: MATERIAL_GLOSS,
       }),
@@ -66,7 +76,12 @@ test("a tilted flight reflects in the same axes as its turned sticker", async ({
   const coat = page.locator('[data-sticker="0"] canvas.sticker-laminate');
   await expect(coat).toHaveAttribute("data-state", "ready");
   const pose = await page.evaluate(() => window.laminateFixture.getPose());
-  await page.evaluate(() => window.laminateFixture.flight(30, 12));
+  await page.evaluate(async () => {
+    window.laminateFixture.flight(30, 12);
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+  });
   const points = await coat.evaluate((el) => {
     if (!(el instanceof HTMLCanvasElement)) throw new Error("The flight snapshot is not a canvas");
     const context = el.getContext("2d");
@@ -93,7 +108,7 @@ test("a tilted flight reflects in the same axes as its turned sticker", async ({
     const reference = compositePrint(
       print[i],
       coatField({
-        point: screenPoint(points[i].uv[0], points[i].uv[1], 240, 240, 90),
+        point: screenPoint(points[i].uv[0], points[i].uv[1], 240, 240, 90 + pose.rotationDegrees),
         normal: orientNormal([0, 0, 1], 90, pose, { x: 30, y: 12 }),
         material: MATERIAL_GLOSS,
       }),
@@ -114,7 +129,8 @@ test("the draped ramp changes reflection by slope while raised plateaus stay fla
     "ready",
   );
   await page.evaluate(() => window.laminateFixture.tilt(40, 0));
-  await page.evaluate(() => window.laminateFixture.tilt(35, 10));
+  // Keep the localized source edge over the diagnostic ramp rather than outside the cut.
+  await page.evaluate(() => window.laminateFixture.tilt(40, 2));
   await page.waitForTimeout(1000);
   const pose = await page.evaluate(() => window.laminateFixture.getPose());
   const sample = await ramp.evaluate((el) => {
@@ -143,7 +159,7 @@ test("the draped ramp changes reflection by slope while raised plateaus stay fla
     const reference = compositePrint(
       [1, 1, 1],
       coatField({
-        point: screenPoint(point.uv[0], point.uv[1], 240, 240),
+        point: screenPoint(point.uv[0], point.uv[1], 240, 240, pose.rotationDegrees),
         normal: orientNormal(
           normalFromHeight(new Float32Array(sample.height), 240, 240, point.x, 100),
           0,
@@ -187,7 +203,7 @@ test("Shop matte uses the same held light and broadens the white-paper reflectio
   let differs = false;
   for (const point of points) {
     const input = {
-      point: screenPoint(point.uv[0], point.uv[1], 240, 240, -4),
+      point: screenPoint(point.uv[0], point.uv[1], 240, 240, -4 + pose.rotationDegrees),
       normal: orientNormal([0, 0, 1], -4, pose),
     };
     const expected = compositePrint([1, 1, 1], coatField({ ...input, material: MATERIAL_MATTE }));

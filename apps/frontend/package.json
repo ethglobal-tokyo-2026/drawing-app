@@ -10,6 +10,7 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "test:e2e": "env -u NO_COLOR playwright test",
+    "test:sticker-performance": "env -u NO_COLOR STICKER_FRAME_BUDGET=on playwright test --config playwright.performance.config.ts stickerLaminateFrames.e2e.ts stickerLaminateSelection.e2e.ts --grep 'display frame budget|selecting overlapping'",
     "chat-menus": "tsx --tsconfig tsconfig.scripts.json scripts/renderChatMenus.tsx",
     "croquis-sans": "uv run --script scripts/buildCroquisSans.py",
     "test:ipad-safari": "tsx --tsconfig tsconfig.scripts.json scripts/ipadSafari.ts",
