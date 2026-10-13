@@ -44,7 +44,7 @@
 Renderer API after Task 2:
 
 ```ts
-type StickerFinish = "gloss" | "matte";
+type LaminateFinish = "gloss" | "matte";
 interface StickerFoilMaterial {
   style: FoilStyle; // existing tones plus explicit Shop gold/silver/roseGold previews
   size: FoilSize;
@@ -52,7 +52,7 @@ interface StickerFoilMaterial {
 }
 interface StickerSurface {
   print: string; cut: string; normal?: string;
-  turn: number; finish: StickerFinish;
+  turn: number; finish: LaminateFinish;
   foil?: StickerFoilMaterial;
   tiltX?: number; tiltY?: number;
   active?: () => boolean;
