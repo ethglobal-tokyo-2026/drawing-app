@@ -65,6 +65,7 @@
   display: flex;
   min-height: 0;
   flex: none;
+  width: 44px;
   border-radius: var(--r-label);
 }
 
@@ -88,23 +89,18 @@
   );
 }
 
-/* The padding keeps rings, shadows and 44px touch targets inside the scroll box, which clips them. The
-   width holds a clipped chip's step in too, so the column doesn't widen when a layer starts clipping. */
+/* The inward gutter paints a magnified Pencil target without widening the resting column. */
 .layer-list {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
   flex: none;
-  gap: 4px;
-  width: 44px;
-  padding: 4px;
+  width: 72px;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   scroll-padding-block: 4px;
   scrollbar-width: none;
   touch-action: pan-y;
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 .layer-list::-webkit-scrollbar {
@@ -112,13 +108,45 @@
 }
 
 .layer-column[data-edge="right"] .layer-list {
+  margin-left: -28px;
+}
+
+/* Clip transformed ink inside the fixed content extent so hover cannot change the scroll range. */
+.layer-chips {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-height: 100%;
+  padding: 4px 32px 4px 4px;
+  overflow: clip;
+}
+
+/* Only the original track and the actual chips take input; the blank paint gutter still draws. */
+.layer-chips::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 44px;
+  pointer-events: auto;
+}
+
+.layer-column[data-edge="right"] .layer-chips {
   align-items: flex-end;
+  padding-inline: 32px 4px;
+}
+
+.layer-column[data-edge="right"] .layer-chips::before {
+  left: auto;
+  right: 0;
 }
 
 /* Each chip is its own small sheet of paper: a hairline edge and a label's contact shadow. */
 .layer-chip {
   --chip-cast: 0 1px 0 rgba(28, 24, 36, 0.06), 1px 3px 5px -2px rgba(28, 24, 36, 0.16);
   position: relative;
+  pointer-events: auto;
   flex: none;
   display: block;
   width: 36px;
@@ -252,6 +280,18 @@
   --fly: 6px;
   left: auto;
   right: calc(100% + 8px);
+}
+
+/* A Pencil enlarges the target toward these papers; keep their controls clear of its visible edge. */
+.layer-column:has(.layer-list[data-pen-hover])
+  :is(.layer-options, .layer-options-hint, .layer-recovery-paper) {
+  left: calc(100% + 28px);
+}
+
+.layer-column[data-edge="right"]:has(.layer-list[data-pen-hover])
+  :is(.layer-options, .layer-options-hint, .layer-recovery-paper) {
+  left: auto;
+  right: calc(100% + 28px);
 }
 
 .layer-options-hint {

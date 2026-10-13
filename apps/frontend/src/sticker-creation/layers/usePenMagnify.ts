@@ -38,25 +38,49 @@ function scaleAt(pitches: number): number {
 /**
  * Each chip's scale, and how far it moves along the column to make room, with the pen at `penY`.
  * A chip's growth pushes the chips beyond it away, so the shifts sum the growth between a chip and the
- * pen; the pen's own place in the column stays put, even between two chips.
+ * pen. Near a viewport edge, the group shifts inward to keep the targeted chip visible.
  */
-function magnify(rests: readonly Rest[], pitch: number, penY: number) {
+function magnify(rests: readonly Rest[], pitch: number, penY: number, top: number, bottom: number) {
   const n = rests.length;
-  const scales = rests.map((rest) => scaleAt((rest.center - penY) / pitch));
+  const nearest = rests.reduce(
+    (best, rest, i) =>
+      Math.abs(rest.center - penY) < Math.abs(rests[best].center - penY) ? i : best,
+    0,
+  );
+  const availableScale = Math.max(1, (bottom - top) / rests[nearest].height);
+  const strength = Math.min(1, (availableScale - 1) / (MAGNIFY_NEAREST - 1));
+  const scales = rests.map((rest) => 1 + (scaleAt((rest.center - penY) / pitch) - 1) * strength);
   const growth = rests.map((rest, i) => (scales[i] - 1) * rest.height);
   const shifts = rests.map(() => 0);
+  let k = 0;
+  let between = 0;
   if (n > 1) {
-    let k = 0;
     while (k < n - 2 && penY > rests[k + 1].center) k++;
     const span = rests[k + 1].center - rests[k].center;
-    const between = span > 0 ? clamp((penY - rests[k].center) / span, 0, 1) : 0;
+    between = span > 0 ? clamp((penY - rests[k].center) / span, 0, 1) : 0;
     const apart = (growth[k] + growth[k + 1]) / 2;
     shifts[k] = -between * apart;
     shifts[k + 1] = (1 - between) * apart;
     for (let i = k + 2; i < n; i++) shifts[i] = shifts[i - 1] + (growth[i - 1] + growth[i]) / 2;
     for (let i = k - 1; i >= 0; i--) shifts[i] = shifts[i + 1] - (growth[i] + growth[i + 1]) / 2;
   }
-  return rests.map((_, i) => ({ scale: scales[i], shift: shifts[i] }));
+  const corrections = rests.map((rest, i) => {
+    const middle = rest.center + shifts[i];
+    const half = (rest.height * scales[i]) / 2;
+    return clamp(middle, top + half, bottom - half) - middle;
+  });
+  // Blend the bounds correction continuously between chips, including the first and last pair.
+  const anchored =
+    n === 1 ? corrections[0] : lerp(corrections[k], corrections[k + 1], smoothstep(between));
+  const firstTop = rests[0].center + shifts[0] - (rests[0].height * scales[0]) / 2;
+  const lastBottom =
+    rests[n - 1].center + shifts[n - 1] + (rests[n - 1].height * scales[n - 1]) / 2;
+  const fromTop = top - firstTop;
+  const fromBottom = bottom - lastBottom;
+  // A group that fits stays whole. Sorting the bounds also relaxes this constraint continuously
+  // as the group becomes taller than the viewport, where the normal scroll fades take over.
+  const correction = clamp(anchored, Math.min(fromTop, fromBottom), Math.max(fromTop, fromBottom));
+  return rests.map((_, i) => ({ scale: scales[i], shift: shifts[i] + correction }));
 }
 
 /**
@@ -113,19 +137,29 @@ export function usePenMagnify(
       }
       if (!over) {
         over = true;
+        el.dataset.penHover = "";
         setHovering(true);
       }
       if (pitch <= 0) return;
       const transition = latest.current.reduced ? "none" : `transform ${FOLLOW_MS}ms linear`;
       // The chips rest where they were measured, so a list scrolled since moves the pen instead.
       const penY = e.clientY + el.scrollTop - scrollAt;
-      magnify(at, pitch, penY).forEach(({ scale, shift }, i) => {
+      const viewport = el.getBoundingClientRect();
+      const scrollOffset = el.scrollTop - scrollAt;
+      magnify(
+        at,
+        pitch,
+        penY,
+        viewport.top + scrollOffset + 4,
+        viewport.bottom + scrollOffset - 4,
+      ).forEach(({ scale, shift }, i) => {
         const { chip } = at[i];
         const value = `translateY(${px(shift)}) scale(${scale.toFixed(3)})`;
         chip.style.transition = transition;
         chip.style.transformOrigin = `${edge} center`;
         chip.style.transform = value;
-        written.set(chip, value);
+        // Browsers normalize decimal lengths; compare their stored value when releasing ownership.
+        written.set(chip, chip.style.transform);
       });
     };
 
@@ -148,11 +182,13 @@ export function usePenMagnify(
       }
       if (over) {
         over = false;
+        delete el.dataset.penHover;
         setHovering(false);
       }
     };
 
     el.addEventListener("pointermove", hover, { signal });
+    el.addEventListener("scroll", () => release(true), { passive: true, signal });
     el.addEventListener(
       "pointerdown",
       (e) => {

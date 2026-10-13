@@ -123,16 +123,17 @@ export function mountChipList<R>(
  * and how far it has scrolled.
  */
 export function layOut(list: HTMLElement, visible = Infinity) {
-  const total = list.children.length * PITCH;
+  const chips = Array.from(list.querySelectorAll<HTMLElement>("[data-layer-chip]"));
+  const total = chips.length * PITCH;
   const height = Math.min(visible, total);
   Object.defineProperties(list, {
     scrollHeight: { configurable: true, value: total },
     clientHeight: { configurable: true, value: height },
   });
   list.getBoundingClientRect = () => new DOMRect(0, LIST_TOP, CHIP.width, height);
-  for (const chip of Array.from(list.children)) {
+  for (const chip of chips) {
     chip.getBoundingClientRect = () => {
-      const place = Array.from(list.children).indexOf(chip);
+      const place = chips.indexOf(chip);
       return new DOMRect(0, LIST_TOP + place * PITCH - list.scrollTop, CHIP.width, CHIP.height);
     };
   }

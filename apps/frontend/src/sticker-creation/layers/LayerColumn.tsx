@@ -148,10 +148,11 @@ export function LayerColumn({
       screenBox.top + 8,
       paper === hintBox.current ? addBottom + 8 : screenBox.top + 8,
     );
+    const inwardGap = root.current.querySelector(".layer-list[data-pen-hover]") ? 28 : 8;
     const room =
       edge === "left"
-        ? screenBox.right - columnBox.right - 16
-        : columnBox.left - screenBox.left - 16;
+        ? screenBox.right - columnBox.right - inwardGap - 8
+        : columnBox.left - screenBox.left - inwardGap - 8;
     paper.style.maxWidth = `${Math.max(0, room)}px`;
     const heightAvailable = Math.max(0, lower - upper);
     paper.style.maxHeight = `${heightAvailable}px`;
@@ -183,7 +184,7 @@ export function LayerColumn({
     const list = root.current?.querySelector<HTMLElement>(".layer-list") ?? null;
     const chip = chipAt(list, current);
     if (!list || !chip) return;
-    const { paddingTop, paddingBottom } = getComputedStyle(list);
+    const { paddingTop, paddingBottom } = getComputedStyle(chip.parentElement ?? list);
     const above = chip.offsetTop - parseFloat(paddingTop);
     const below =
       chip.offsetTop + chip.offsetHeight + parseFloat(paddingBottom) - list.clientHeight;
@@ -261,23 +262,25 @@ export function LayerColumn({
               if (!e.currentTarget.contains(e.relatedTarget)) setFocused(null);
             }}
           >
-            {chips.toReversed().map((chip) => {
-              const isCurrent = chip.id === current;
-              return (
-                <LayerChip
-                  key={chip.id}
-                  chip={chip}
-                  current={isCurrent}
-                  thumbnails={thumbnails}
-                  tabStop={chip.id === stop}
-                  expanded={isCurrent ? showOptions : undefined}
-                  controls={isCurrent && showOptions ? optionsId : undefined}
-                  describedBy={isCurrent && showHint ? hintId : undefined}
-                  onPress={press}
-                  onFocus={setFocused}
-                />
-              );
-            })}
+            <div className="layer-chips">
+              {chips.toReversed().map((chip) => {
+                const isCurrent = chip.id === current;
+                return (
+                  <LayerChip
+                    key={chip.id}
+                    chip={chip}
+                    current={isCurrent}
+                    thumbnails={thumbnails}
+                    tabStop={chip.id === stop}
+                    expanded={isCurrent ? showOptions : undefined}
+                    controls={isCurrent && showOptions ? optionsId : undefined}
+                    describedBy={isCurrent && showHint ? hintId : undefined}
+                    onPress={press}
+                    onFocus={setFocused}
+                  />
+                );
+              })}
+            </div>
           </div>
           {overflowing && (
             <span id={overflowId} className="visually-hidden layer-overflow-description">

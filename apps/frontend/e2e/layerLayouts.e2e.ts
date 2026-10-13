@@ -36,7 +36,7 @@ async function runningSeconds(page: Page) {
   return match ? Number(match[1]) * 60 + Number(match[2]) : null;
 }
 
-/** Watches the begun Kyoto Seika clock advance while the interaction remains in place. */
+/** Watches the begun Kyoto Seika clock resume once a recording tool is put down. */
 async function clockContinues(page: Page) {
   await expect.poll(() => runningSeconds(page)).not.toBeNull();
   const before = await runningSeconds(page);
@@ -51,6 +51,19 @@ async function clockContinues(page: Page) {
       { timeout: 6_000 },
     )
     .toBe(true);
+}
+
+/** Recording temporarily holds the Kyoto Seika clock while layer tools are in use. */
+async function clockHolds(page: Page, reason: "layerOptions" | "reorder") {
+  const status = say(stickerCreation.timer.status[reason], language, { time: "TIME" });
+  await expect(timer(page)).toHaveAccessibleDescription(
+    new RegExp(`^${status.replace("TIME", "\\d+:\\d\\d")}$`),
+  );
+  const face = page.locator(".timer-time");
+  const held = await face.textContent();
+  if (held === null) throw new Error("The held Kyoto Seika clock has no time");
+  await page.waitForTimeout(1200);
+  await expect(face).toHaveText(held);
 }
 
 async function expectCornerPrintClearOfLayers(page: Page) {
@@ -131,7 +144,7 @@ test("a left drawing hand mirrors the layer column, slider and options toward th
   ).toBeVisible();
 });
 
-test("a begun Kyoto Seika clock continues through layer options, opacity and reorder", async ({
+test("a begun Kyoto Seika clock holds for layer tools during recording and resumes afterward", async ({
   page,
 }) => {
   test.setTimeout(90_000);
@@ -162,7 +175,7 @@ test("a begun Kyoto Seika clock continues through layer options, opacity and reo
       name: say(stickerCreation.layers.options, language, { number: 2 }),
     }),
   ).toBeVisible();
-  await clockContinues(page);
+  await clockHolds(page, "layerOptions");
 
   const thumb = page.locator(".opacity-slider");
   const thumbBox = await thumb.boundingBox();
@@ -170,9 +183,10 @@ test("a begun Kyoto Seika clock continues through layer options, opacity and reo
   await page.mouse.move(thumbBox.x + thumbBox.width / 2, thumbBox.y + thumbBox.height / 2);
   await page.mouse.down();
   await expect(page.locator(".opacity-slider")).toBeFocused();
-  await clockContinues(page);
+  await clockHolds(page, "layerOptions");
   await page.mouse.up();
   await chip(page, 2).click();
+  await clockContinues(page);
 
   const top = await chip(page, 2).boundingBox();
   const bottom = await chip(page, 1).boundingBox();
@@ -180,13 +194,14 @@ test("a begun Kyoto Seika clock continues through layer options, opacity and reo
   await page.mouse.move(top.x + top.width / 2, top.y + top.height / 2);
   await page.mouse.down();
   await expect.poll(() => chip(page, 2).evaluate((el) => el.style.boxShadow)).not.toBe("");
-  await clockContinues(page);
+  await clockHolds(page, "reorder");
   await page.mouse.move(bottom.x + bottom.width / 2, bottom.y + bottom.height / 2, { steps: 6 });
   await page.mouse.up();
   await expect(layers(page).locator("[data-layer-chip]").first()).toHaveAttribute(
     "data-layer-chip",
     "1",
   );
+  await clockContinues(page);
   const add = page.getByRole("button", { name: say(stickerCreation.layers.add, language) });
   for (let number = 3; number <= 10; number++) await add.click();
   await expectCornerPrintClearOfLayers(page);

@@ -102,6 +102,15 @@ describe("usePenMagnify", () => {
     after.forEach((mid, i) => expect(Math.abs(mid - before[i])).toBeLessThan(2));
   });
 
+  it.each([0, 5])("does not jump while the pen crosses near scroll end %s", (slot) => {
+    const column = mount();
+    const between = (slotY(slot) + slotY(slot + 1)) / 2;
+    hover(column, between - 0.5);
+    const before = centers(column);
+    hover(column, between + 0.5);
+    centers(column).forEach((middle, i) => expect(Math.abs(middle - before[i])).toBeLessThan(2));
+  });
+
   it("follows the pen along the column", () => {
     const column = mount();
     hover(column, slotY(1));
@@ -165,6 +174,14 @@ describe("usePenMagnify", () => {
     // The pen hasn't moved, but the chip that was in slot 4 is now under it.
     hover(column, slotY(3));
     expect(scales(column).indexOf(Math.max(...scales(column)))).toBe(4);
+  });
+
+  it("clears magnification when scrolling moves the viewport under a still Pencil", () => {
+    const column = mount();
+    hover(column, slotY(3));
+    pointer(column.list, "scroll");
+    expect(scales(column)).toEqual(ORDER.map(() => 1));
+    expect(column.result().hovering).toBe(false);
   });
 
   it.each([["left"], ["right"]] as const)(
