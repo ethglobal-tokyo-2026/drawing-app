@@ -26,10 +26,10 @@
 ## Review Focus
 
 1. Sharp-image upgrades and repeated resize must preserve print scale and normal registration — Task 3 browser assertions.
-2. Concealment during an active/reversed detail flight must discard every unblurred retained output — Task 4 lifecycle assertion.
+2. Concealment during an active/reversed detail flight must discard every unblurred retained output — Task 5 lifecycle assertion.
 3. Failed foil-mask replacement must retain a complete prior finish, settle with diagnostics, and reject stale completions — Task 2 lifecycle assertion.
 4. Partial sealing coating must not expose metal inside the paper cut or hide its timed plain/gloss passes — Task 3 composition assertion.
-5. Outgoing gifts and used tray slots must preserve frost/fade and resource admission — Task 4 tray assertion.
+5. Outgoing gifts and used tray slots must preserve frost/fade and resource admission — Task 5 tray assertion.
 
 ## File and interface map
 
@@ -121,21 +121,33 @@ Creased overflow requires a supplied normal covering the complete output bounds.
 - [ ] Run `pnpm --filter frontend test src/stickers src/shop src/sticker-creation/sealing` and `pnpm --filter frontend test:e2e foil stickerFoil stickerLaminateDrawing stickerLaminateConceal stickerLaminateReadability --workers=2`. Verify paired frames at enlarged/minified/fractional scales; record no seams, moiré, shifted print, green hue excursions, or paper changes. Run frontend typecheck and unit suite once before committing.
 - [ ] Commit explicit task paths with `feat: apply physical foil to sticker figures and sealing`.
 
-### Task 4: Live board, tray, and detail-flight integration
+### Task 4: Conditional registered crease geometry
 
-**Files:** Modify `sticker-board/useBoardGestures.ts`, `boardComplete.ts`, `useCreases.ts`, `stickers/creaseWorker.ts`, `tray/traySheets.ts`, `tray/trayPeel.ts`, `tray/sticker-tray.css`, `detailLift.ts`, affected board/detail/tray/receiving/Explore selectors and tests, and `stickerLaminateFlight.e2e.ts`, `stickerBoardDrag.e2e.ts`, `stickerLightFrames.e2e.ts`.
+**Files:** Modify `sticker-board/useCreases.ts` and its tests, `stickers/creaseWorker.ts`, necessary bounds/support helpers in `crease.ts` and tests, `StickerFigure.tsx`, `StickerCrease.tsx`, and focused crease/geometry fixtures. Keep the existing drape calculation and ordinary bake path unchanged.
+
+**Interfaces:** Consumes the existing own/lower silhouettes and shared foil growth rule. Produces optional source-normalized `normalBounds` on the accepted crease and forwards it to `StickerFinish`. The normal alone may have expanded bounds; painted base/four sides remain in the original source frame. Explicitly enumerate image keys when releasing or decoding crease URLs so metadata is never treated as an image.
+
+- [ ] Add failing cases for unchanged ordinary margins, empty masks, real outside-source support geometry, asymmetric/rotated registration, and normal-only outside-source bends. Record RED before changing the worker.
+- [ ] Detect actual grown coverage overflow after mask decoding; retain enough original alpha extent information to avoid downsampling changing eligibility. Only that case uses an expanded registered raster with real lower-mask context through the drape dependency reach. Crop the normal to the required outer bounds and painted images to the original source frame.
+- [ ] Preserve source-frame support-plane averaging while extending accepted support levels into the added region. Corrected boundary geometry may change the exceptional overflow case, but paper, foil, and painted crease must use the same accepted surface. Never duplicate or stretch old edge normals.
+- [ ] Carry bounds through the success reply and accepted crease metadata, URL release/paint decoding, and React finish registration. Retain current scheduling, timeouts, stale-batch rejection, reveal grants, and failure diagnostics; no stored sticker or database change.
+- [ ] Run focused crease/store/component unit tests, frontend typecheck/lint, and Chromium/WebKit crease/geometry browser cases. Verify ordinary normal/paint results unchanged, conditional padding, and no invalid registration diagnostic after a real padded bake.
+- [ ] Commit explicit task paths with `fix: register crease geometry beyond overflowing foil` and report the metadata/geometry evidence.
+
+### Task 5: Live board, tray, and detail-flight integration
+
+**Files:** Modify `sticker-board/useBoardGestures.ts`, `boardComplete.ts`, `tray/traySheets.ts`, `tray/trayPeel.ts`, `tray/sticker-tray.css`, `detailLift.ts`, affected board/detail/tray/receiving/Explore selectors and tests, and `stickerLaminateFlight.e2e.ts`, `stickerBoardDrag.e2e.ts`, `stickerLightFrames.e2e.ts`.
 
 **Interfaces:** Consumes complete surface registration, imperative turn/amount/refresh/settlement operations and live-copy ownership. Temporary flyers sample the existing flight geometry; they do not control shared light. The destination is paused during flight, refreshed before exposure, and retained through reversal.
 
 - [ ] Add failing assertions for live foil through drag, sheet peel, detail forward/reverse lift, concealed active flyer, canceled/paged flight, outgoing frost/fade, used-slot non-admission, and complete board readiness. Record the failing behavioral output before integration.
 - [ ] Replace manual tray live foil with the same material/coverage registration as React. Keep outgoing gift coating omission/frost/fade and empty used slots. Forward existing peel/curl geometry and release all flyer resources on completion/cancellation.
 - [ ] Use live copied owners for detail flights, preserve the owner during reversed playback, and refresh the destination before restoring exposure. Concealment invalidates originals and their copies. Forward board gesture geometry to the complete output and make board readiness wait for committed foil assets without changing its deadline.
-- [ ] For actual creased foil overflow, bake a correspondingly padded field from the existing underlying silhouettes and pass its explicit source-frame normal bounds. Keep painted crease overlays aligned with their original frame, preserve ordinary non-overflow bakes, and do not change the crease drape calculation. Test both registration and conditional admission.
 - [ ] Update affected material/clipping/shadow/exposure selectors; verify inheriting Artist Board, Explore lift, receiving, and tray/detail presentations. Keep the closed GiftBag and decorative ArtistChip behavior separate.
 - [ ] Run focused board/tray/detail unit tests and `pnpm --filter frontend test:e2e stickerLaminateFlight stickerBoardDrag stickerLightFrames stickerLaminateAttribution stickerLaminateSelection --workers=2`. Run frontend typecheck and unit suite once before committing. Expect coherent retained finishes and no active work/resource leak after cancellation or concealment.
 - [ ] Commit explicit task paths with `fix: keep sticker foil live through placement and lifts`.
 
-### Task 5: Acceptance, performance, and whole-branch verification
+### Task 6: Acceptance, performance, and whole-branch verification
 
 **Files:** Extend `stickerFoil.e2e.ts`, relevant existing lifecycle/frame/selection/performance fixtures, and `docs/research/sticker-foil/calibration.md`; update current `docs/research/sticker-laminate/README.md` renderer references. Fix defects in their owning production files. Do not modify DESIGN.md or add new standing rules.
 
