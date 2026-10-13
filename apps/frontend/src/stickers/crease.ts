@@ -34,13 +34,19 @@ export const CREASE_SIDES: Record<CreaseSide, readonly [number, number]> = {
 };
 
 /** How far a sticker's ramp reaches beside a step one sticker high, in CSS px. */
-export const RAMP = 4;
+export const RAMP = 12;
 
 /** Height changes below a quarter of a sticker do not bend or shade its laminate. */
 const MIN_CREASE_HEIGHT = 0.25;
 
 /** How much the ramp's corners are rounded off, as a blur, in CSS px. */
 const ROUND = 1;
+
+/** The neighborhood of one ramp, including its rounded ends, in CSS px. */
+const ROUNDED_REACH = RAMP + 4 * ROUND;
+
+/** Include rotated antialiased boundary cells in the circular bridge footprint, in pixels. */
+const bridgeRadiusAt = (scale: number) => ROUNDED_REACH * scale + 1;
 
 /**
  * Each part's tone where one sticker's step beneath peaks, the rest shaded in proportion. STRENGTH
@@ -113,9 +119,13 @@ function boxPass(
   }
 }
 
+/** The radius of each box pass for a Gaussian spread, in pixels. */
+const boxRadius = (sigma: number) =>
+  Math.max(1, Math.round(Math.sqrt(sigma * sigma + 1 / 4) - 1 / 2));
+
 /** Three box passes each way, in place: close to a Gaussian of spread `sigma`, in pixels. */
 function blur(field: Float32Array, width: number, height: number, sigma: number) {
-  const r = Math.max(1, Math.round(Math.sqrt(sigma * sigma + 1 / 4) - 1 / 2));
+  const r = boxRadius(sigma);
   const tmp = new Float32Array(field.length);
   for (let pass = 0; pass < 3; pass++) {
     boxPass(field, tmp, width, height, r, true);
@@ -158,14 +168,46 @@ function extremumPass(
   }
 }
 
-/** Close valleys narrower than the ramp at their support height, without lowering a real step. */
+/** A circular maximum or minimum; equal horizontal chords share their sliding-extremum pass. */
+function diskPass(
+  src: Float32Array,
+  dst: Float32Array,
+  row: Float32Array,
+  width: number,
+  height: number,
+  radius: number,
+  maximum: boolean,
+) {
+  dst.fill(maximum ? -Infinity : Infinity);
+  let previous = -1;
+  for (let dy = 0; dy <= Math.floor(radius); dy++) {
+    const rx = Math.floor(Math.sqrt(radius * radius - dy * dy));
+    if (rx !== previous) {
+      extremumPass(src, row, width, height, rx, true, maximum);
+      previous = rx;
+    }
+    for (let y = 0; y < height; y++) {
+      const above = Math.max(0, y - dy) * width;
+      const below = Math.min(height - 1, y + dy) * width;
+      const base = y * width;
+      for (let x = 0; x < width; x++) {
+        const value = maximum
+          ? Math.max(row[above + x], row[below + x])
+          : Math.min(row[above + x], row[below + x]);
+        const i = base + x;
+        dst[i] = maximum ? Math.max(dst[i], value) : Math.min(dst[i], value);
+      }
+    }
+  }
+}
+
+/** Bridge neighboring supports at the lower height, with the same reach in every direction. */
 function bridgeGaps(field: Float32Array, width: number, height: number, scale: number) {
-  const r = Math.max(1, Math.round((RAMP * scale) / 2));
-  const tmp = new Float32Array(field.length);
-  extremumPass(field, tmp, width, height, r, true, true);
-  extremumPass(tmp, field, width, height, r, false, true);
-  extremumPass(field, tmp, width, height, r, true, false);
-  extremumPass(tmp, field, width, height, r, false, false);
+  const radius = bridgeRadiusAt(scale);
+  const row = new Float32Array(field.length);
+  const closed = new Float32Array(field.length);
+  diskPass(field, closed, row, width, height, radius, true);
+  diskPass(closed, field, row, width, height, radius, false);
 }
 
 /** The lower envelope's scratch, grown to the longest line yet. */
@@ -229,17 +271,43 @@ export function drape(
   height: number,
   scale: number,
 ): Float32Array {
-  const out = Float32Array.from(field);
-  bridgeGaps(out, width, height, scale);
+  let lowest = Infinity;
+  let highest = -Infinity;
+  for (const value of field) {
+    lowest = Math.min(lowest, value);
+    highest = Math.max(highest, value);
+  }
+  if (highest <= lowest) return Float32Array.from(field);
   const reach = RAMP * scale;
+  const bridgeRadius = bridgeRadiusAt(scale);
+  const parabolaReach = reach * Math.sqrt(highest - lowest);
+  // Each closing samples twice; keep its full reach and the blur's footprint beyond the crop.
+  const padding = Math.ceil(2 * bridgeRadius + 2 * parabolaReach + 3 * boxRadius(ROUND * scale));
+  const extendedWidth = width + 2 * padding;
+  const extendedHeight = height + 2 * padding;
+  const out = new Float32Array(extendedWidth * extendedHeight);
+  // Continue the original surface, rather than clamping an intermediate dilation at the image edge.
+  for (let y = 0; y < extendedHeight; y++) {
+    const source = Math.max(0, Math.min(height - 1, y - padding)) * width;
+    const start = y * extendedWidth;
+    out.fill(field[source], start, start + padding);
+    out.set(field.subarray(source, source + width), start + padding);
+    out.fill(field[source + width - 1], start + padding + width, start + extendedWidth);
+  }
+  bridgeGaps(out, extendedWidth, extendedHeight, scale);
   // The parabola falls one sticker's thickness over the ramp.
   const k = 1 / (reach * reach);
-  envelopePass(out, width, height, k, -1, true);
-  envelopePass(out, width, height, k, -1, false);
-  envelopePass(out, width, height, k, 1, true);
-  envelopePass(out, width, height, k, 1, false);
-  blur(out, width, height, ROUND * scale);
-  return out;
+  envelopePass(out, extendedWidth, extendedHeight, k, -1, true);
+  envelopePass(out, extendedWidth, extendedHeight, k, -1, false);
+  envelopePass(out, extendedWidth, extendedHeight, k, 1, true);
+  envelopePass(out, extendedWidth, extendedHeight, k, 1, false);
+  blur(out, extendedWidth, extendedHeight, ROUND * scale);
+  const crop = new Float32Array(width * height);
+  for (let y = 0; y < height; y++) {
+    const start = (y + padding) * extendedWidth + padding;
+    crop.set(out.subarray(start, start + width), y * width);
+  }
+  return crop;
 }
 
 /**
@@ -290,7 +358,7 @@ const stepResponses = new Map<number, StepResponse>();
 function stepResponse(scale: number): StepResponse {
   const known = stepResponses.get(scale);
   if (known) return known;
-  const half = Math.ceil((RAMP + 4 * ROUND) * scale) + 2;
+  const half = Math.ceil(ROUNDED_REACH * scale) + 2;
   const width = 2 * half + 1;
   // A few rows, every one the same: the step runs down the columns.
   const step = new Float32Array(width * 3);
@@ -342,7 +410,7 @@ export function creasePixels({
 }: CreaseInput): CreasePixels | null {
   const field = drape(surface, width, height, scale);
   // Include both plateaus of a complete ramp, with its rounded ends, when measuring its height.
-  const reach = Math.max(1, Math.ceil((RAMP + 4 * ROUND) * scale));
+  const reach = Math.max(1, Math.ceil(ROUNDED_REACH * scale));
   const scratch = new Float32Array(field.length);
   const highest = new Float32Array(field.length);
   const lowest = new Float32Array(field.length);

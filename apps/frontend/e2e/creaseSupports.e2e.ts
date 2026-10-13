@@ -124,7 +124,7 @@ test("touching and nearby separate supports produce flat crease images and tilte
   const coat = page.locator("[data-reload] canvas.sticker-laminate");
   await expect(coat).toHaveAttribute("data-state", "ready");
   await page.evaluate(() => window.laminateFixture.tilt(40, 0));
-  for (const gap of [0, 2, 4]) {
+  for (const gap of [0, 2, 4, 8, 12, 16, 24, 32]) {
     const baked = await bakeSupports(page, gap);
     const differences: number[] = [];
     for (const pose of [
@@ -175,7 +175,7 @@ test("an exposed edge and a wide support gap retain painted creases and laminate
   page,
 }) => {
   await page.goto("/e2e/stickerLaminate.html?reload=1");
-  for (const gap of [null, 16]) {
+  for (const gap of [null, 48, 64]) {
     const baked = await bakeSupports(page, gap);
     await page.evaluate((url) => URL.revokeObjectURL(url), baked.normalUrl);
     expect(baked.paintedPeak, `Support ${gap}: real edge was suppressed`).toBeGreaterThan(0);
@@ -184,18 +184,26 @@ test("an exposed edge and a wide support gap retain painted creases and laminate
 });
 
 test.describe("finite supports on an iPad-sized board", () => {
-  test.use({ viewport: { width: 1032, height: 1376 }, deviceScaleFactor: 2 });
+  test.use({ viewport: { width: 1200, height: 1480 }, deviceScaleFactor: 2 });
 
-  for (const foil of [
+  for (const arrangement of [
     "kyoto-seika",
     "pink",
     "adjacent-left-first",
     "adjacent-right-first",
+    "gap12-turn17",
+    "gap16-turn45",
+    "gap32-turn45",
+    "gap48-turn45",
   ] as const) {
-    const adjacent = foil.startsWith("adjacent");
-    const description = adjacent
-      ? `lightly overlapping finite supports keep their seam flat, ${foil}`
-      : `a rotated finite ${foil} support hides its buried edge and keeps its exposed edge`;
+    const adjacent = arrangement.startsWith("adjacent");
+    const separated = arrangement.startsWith("gap");
+    const wide = arrangement === "gap48-turn45";
+    const description = separated
+      ? `${wide ? "wide" : "nearby"} rotated finite supports ${wide ? "retain separate edges" : "bridge their gap"}, ${arrangement}`
+      : adjacent
+        ? `lightly overlapping finite supports keep their seam flat, ${arrangement}`
+        : `a rotated finite ${arrangement} support hides its buried edge and keeps its exposed edge`;
     test(description, async ({ page }) => {
       const errors: string[] = [];
       page.on("pageerror", (error) => errors.push(error.message));
@@ -217,13 +225,30 @@ test.describe("finite supports on an iPad-sized board", () => {
       await page.goto("/e2e/stickerLaminate.html?reload=1&side=390");
       const coat = page.locator("[data-reload] canvas.sticker-laminate");
       await expect(coat).toHaveAttribute("data-state", "ready");
-      const result = await page.evaluate(async (foil) => {
+      const result = await page.evaluate(async (arrangement) => {
         const { creaseJobs } = await import("../src/sticker-board/useCreases.ts");
         const { fieldOf, unitOf } = await import("../src/sticker-board/placement.ts");
         const { boardFoil } = await import("../src/stickers/madeFoil.ts");
         const source = 512;
-        const adjacent = foil.startsWith("adjacent");
-        const reverse = foil === "adjacent-right-first";
+        const adjacent = arrangement.startsWith("adjacent");
+        const reverse = arrangement === "adjacent-right-first";
+        const gap =
+          arrangement === "gap12-turn17"
+            ? 12
+            : arrangement === "gap16-turn45"
+              ? 16
+              : arrangement === "gap32-turn45"
+                ? 32
+                : arrangement === "gap48-turn45"
+                  ? 48
+                  : null;
+        const pair = adjacent || gap !== null;
+        const turn =
+          arrangement === "gap16-turn45" ||
+          arrangement === "gap32-turn45" ||
+          arrangement === "gap48-turn45"
+            ? 45
+            : 17;
         const mask = (kind: "step" | "cover" | "foil" | "full" | "left" | "right") => {
           const canvas = document.createElement("canvas");
           canvas.width = canvas.height = source;
@@ -234,7 +259,18 @@ test.describe("finite supports on an iPad-sized board", () => {
             // Their common finite rectangle is 384px wide. Each support occupies 55% of it,
             // so the 10% shared strip covers about 18% of either support, in either stack order.
             const span = source - 128;
-            context.fillRect(64 + (kind === "right" ? span * 0.45 : 0), 64, span * 0.55, span);
+            if (gap === null) {
+              context.fillRect(64 + (kind === "right" ? span * 0.45 : 0), 64, span * 0.55, span);
+            } else {
+              // Both support frames are 312 CSS px wide; convert the perpendicular gap into
+              // their 512px source masks before the real worker downsamples and turns them.
+              const space = (gap * source) / 312;
+              const left = kind === "right" ? source / 2 + space / 2 : 64;
+              const width = span / 2 - space / 2;
+              context.beginPath();
+              context.roundRect(left, 64, width, span, 24);
+              context.fill();
+            }
           } else if (kind === "cover" || kind === "foil") {
             const inset = kind === "cover" ? 64 : 44;
             context.beginPath();
@@ -253,7 +289,7 @@ test.describe("finite supports on an iPad-sized board", () => {
             mask:
               id === "top"
                 ? full
-                : adjacent
+                : pair
                   ? mask(id === "lower" ? (reverse ? "right" : "left") : reverse ? "left" : "right")
                   : id === "lower"
                     ? mask("step")
@@ -264,18 +300,18 @@ test.describe("finite supports on an iPad-sized board", () => {
             on: true,
             x: 0.5,
             y: 0.5,
-            s: id === "top" ? 1 : adjacent ? 0.8 : id === "support" ? 0.65 : 1,
-            r: id === "support" || (adjacent && id === "lower") ? 17 : -11,
+            s: id === "top" ? 1 : pair ? 0.8 : id === "support" ? 0.65 : 1,
+            r: id === "support" || (pair && id === "lower") ? turn : -11,
             z: id === "lower" ? 0 : id === "support" ? 1 : 2,
           },
-          nsfw: id === "support" && foil === "pink",
-          kyotoSeika: id === "support" && foil === "kyoto-seika",
+          nsfw: id === "support" && arrangement === "pink",
+          kyotoSeika: id === "support" && arrangement === "kyoto-seika",
           byOther: false,
         }));
         const jobs = creaseJobs(
           stickers,
-          fieldOf(1032, 1376),
-          unitOf("large", 1032),
+          fieldOf(1200, 1369),
+          unitOf("large", 1200),
           boardFoil,
           Math.min(1, devicePixelRatio),
         );
@@ -354,11 +390,11 @@ test.describe("finite supports on an iPad-sized board", () => {
           edgeNormal,
           normalUrl: URL.createObjectURL(reply.crease.normal),
         };
-      }, foil);
+      }, arrangement);
       await page.evaluate(() => window.laminateFixture.tilt(40, 0));
       for (const pose of [
-        [35, 12],
-        [55, -18],
+        [47, -12],
+        [45, -14],
       ]) {
         await page.evaluate((pose) => {
           window.laminateFixture.update({ normal: undefined, turn: -11 });
@@ -376,6 +412,10 @@ test.describe("finite supports on an iPad-sized board", () => {
         const heldPose = await page.evaluate(() => window.laminateFixture.getPose());
         const center = { left: 0.44, top: 0.44, width: 0.12, height: 0.12 };
         const flat = await laminatePixels(page, center);
+        expect(
+          flat.some((value, q) => q % 4 === 3 && value > 0),
+          "The laminate comparison must contain visible paper",
+        ).toBe(true);
         await page.evaluate(async (normal) => {
           window.laminateFixture.update({ normal });
           await new Promise<void>((resolve) =>
@@ -383,29 +423,46 @@ test.describe("finite supports on an iPad-sized board", () => {
           );
         }, result.normalUrl);
         await expect(coat).toHaveAttribute("data-state", "ready");
+        await expect(coat).toBeVisible();
         const actual = await laminatePixels(page, center);
         expect(await page.evaluate(() => window.laminateFixture.getPose())).toEqual(heldPose);
         let difference = 0;
         for (let q = 0; q < flat.length; q++)
           difference = Math.max(difference, Math.abs(actual[q] - flat[q]));
-        expect(difference, `${foil}: buried edge changed the tilted laminate`).toBeLessThanOrEqual(
-          1,
-        );
+        if (!wide)
+          expect(
+            difference,
+            `${arrangement}: a hidden or nearby edge changed the tilted laminate`,
+          ).toBeLessThanOrEqual(1);
       }
       await page.evaluate((url) => URL.revokeObjectURL(url), result.normalUrl);
-      expect(result.insidePaint, `${foil}: the buried edge painted through its finite cover`).toBe(
-        0,
-      );
+      if (wide) {
+        expect(
+          result.insidePaint,
+          `${arrangement}: separate edges lost their painted creases`,
+        ).toBeGreaterThan(0);
+        expect(
+          result.insideNormal,
+          `${arrangement}: separate edges lost their slopes`,
+        ).toBeGreaterThan(0);
+      } else {
+        expect(
+          result.insidePaint,
+          `${arrangement}: a hidden or nearby edge produced a painted crease`,
+        ).toBe(0);
+        expect(
+          result.insideNormal,
+          `${arrangement}: a hidden or nearby edge bent the laminate`,
+        ).toBe(0);
+      }
       expect(
-        result.insideNormal,
-        `${foil}: the buried edge bent the laminate through its finite cover`,
-      ).toBe(0);
-      expect(result.edgePaint, `${foil}: the exposed support edge was suppressed`).toBeGreaterThan(
-        0,
-      );
-      expect(result.edgeNormal, `${foil}: the exposed support edge lost its slope`).toBeGreaterThan(
-        0,
-      );
+        result.edgePaint,
+        `${arrangement}: the exposed support edge was suppressed`,
+      ).toBeGreaterThan(0);
+      expect(
+        result.edgeNormal,
+        `${arrangement}: the exposed support edge lost its slope`,
+      ).toBeGreaterThan(0);
       expect(errors).toEqual([]);
     });
   }

@@ -11,21 +11,21 @@ import {
 const W = 120;
 const H = 60;
 
-/** A W×H field of `value(x, y)`. */
-const field = (value: (x: number, y: number) => number) => {
-  const f = new Float32Array(W * H);
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) f[y * W + x] = value(x, y);
+/** A field of `value(x, y)`, using the usual test dimensions unless another size is needed. */
+const field = (value: (x: number, y: number) => number, width = W, height = H) => {
+  const f = new Float32Array(width * height);
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) f[y * width + x] = value(x, y);
   return f;
 };
 const everywhere = field(() => 1);
 
 /** The finished crease images over separate supports, including the laminate's normal. */
-function pixelsOver(layers: Float32Array[], scale = 1) {
+function pixelsOver(layers: Float32Array[], scale = 1, width = W, height = H) {
   const pixels = creasePixels({
-    width: W,
-    height: H,
-    surface: stackedSurface(layers, W, H),
-    own: everywhere,
+    width,
+    height,
+    surface: stackedSurface(layers, width, height),
+    own: width === W && height === H ? everywhere : new Float32Array(width * height).fill(1),
     scale,
     lights: CREASE_SIDES,
   });
@@ -38,23 +38,50 @@ const creaseOver = (layers: Float32Array[], image: CreaseImage = "topLeft") =>
   pixelsOver(layers)[image];
 
 /** The strongest painted highlight or shadow over a column interval. */
-function peakTone(pixels: ReturnType<typeof pixelsOver>, x0 = 0, x1 = W) {
+function peakTone(
+  pixels: ReturnType<typeof pixelsOver>,
+  x0 = 0,
+  x1 = W,
+  y0 = 1,
+  y1 = H - 1,
+  width = W,
+) {
   let peak = 0;
   for (const side of ["base", "topLeft", "bottomRight", "topRight", "bottomLeft"] as const)
-    for (let y = 1; y < H - 1; y++)
-      for (let x = x0; x < x1; x++) peak = Math.max(peak, pixels[side][(y * W + x) * 4 + 3]);
+    for (let y = y0; y < y1; y++)
+      for (let x = x0; x < x1; x++) peak = Math.max(peak, pixels[side][(y * width + x) * 4 + 3]);
   return peak;
 }
 
 /** Whether any laminate pixel bends away from a flat plane over a column interval. */
-function bends(pixels: ReturnType<typeof pixelsOver>, x0 = 0, x1 = W) {
-  for (let y = 1; y < H - 1; y++)
+function bends(
+  pixels: ReturnType<typeof pixelsOver>,
+  x0 = 0,
+  x1 = W,
+  y0 = 1,
+  y1 = H - 1,
+  width = W,
+) {
+  for (let y = y0; y < y1; y++)
     for (let x = x0; x < x1; x++) {
-      const q = (y * W + x) * 4;
+      const q = (y * width + x) * 4;
       if (pixels.normal[q] !== 128 || pixels.normal[q + 1] !== 128 || pixels.normal[q + 2] !== 255)
         return true;
     }
   return false;
+}
+
+/** Separate painted highlight bands across the middle of the sticker. */
+function highlightBands(pixels: ReturnType<typeof pixelsOver>) {
+  let bands = 0;
+  let previous = false;
+  for (let x = 0; x < W; x++) {
+    const q = ((H / 2) * W + x) * 4;
+    const lit = pixels.topLeft[q] === 255 && pixels.topLeft[q + 3] > 0;
+    if (lit && !previous) bands++;
+    previous = lit;
+  }
+  return bands;
 }
 
 /** The crease's lit (white) and shaded (ink) alpha, summed over a box. */
@@ -141,7 +168,7 @@ describe("crease", () => {
       expect(pixels?.[image][center + 3]).toBe(0);
   });
 
-  it("bridges a gap narrower than the ramp between stickers beneath, and dips into a wide one", () => {
+  it("bridges nearby supports and dips into a clearly separated gap", () => {
     /** How far the draped surface falls in the middle of a gap `gap` px wide in a plateau. */
     const dipAcross = (gap: number) => {
       const left = Math.round((W - gap) / 2);
@@ -149,7 +176,7 @@ describe("crease", () => {
       return 1 - drape(plateau, W, H, 1)[(H / 2) * W + Math.round(left + gap / 2)];
     };
     expect(dipAcross(RAMP / 2)).toBeLessThan(0.15);
-    expect(dipAcross(RAMP * 4)).toBeGreaterThan(0.9);
+    expect(dipAcross(48)).toBeGreaterThan(0.9);
   });
 
   it.each([false, true])(
@@ -167,9 +194,9 @@ describe("crease", () => {
   );
 
   it.each([1, 0.5])(
-    "bridges narrow gaps in both crease shading and laminate geometry at scale %s",
+    "bridges nearby gaps in both crease shading and laminate geometry at scale %s",
     (scale) => {
-      for (const gap of [1, 2, 4]) {
+      for (const gap of [1, 2, 4, 8, 12, 16, 24, 32]) {
         const left = 60 - Math.floor((gap * scale) / 2);
         const right = left + Math.round(gap * scale);
         const supports = [field((x) => Number(x < left)), field((x) => Number(x >= right))];
@@ -182,13 +209,50 @@ describe("crease", () => {
     },
   );
 
-  it("bridges a narrow diagonal gap between separate supports", () => {
-    const pixels = pixelsOver([
-      field((x, y) => Number(x + y < 88)),
-      field((x, y) => Number(x + y >= 91)),
-    ]);
-    expect(peakTone(pixels)).toBe(0);
-    expect(bends(pixels)).toBe(false);
+  it.each([0, 17, 45, 81])(
+    "bridges nearby supports at the same distance when turned %s degrees",
+    (angle) => {
+      const side = 160;
+      const raised = field(() => 1, side, side);
+      const radians = (angle * Math.PI) / 180;
+      const distance = (x: number, y: number, scale: number) =>
+        ((x - side / 2) * Math.cos(radians) + (y - side / 2) * Math.sin(radians)) / scale;
+      for (const scale of [1, 0.5])
+        for (const gap of [8, 12, 16, 24, 32]) {
+          const supports = [
+            field((x, y) => Number(distance(x, y, scale) < -gap / 2), side, side),
+            field((x, y) => Number(distance(x, y, scale) >= gap / 2), side, side),
+          ];
+          for (const below of [[], [raised]])
+            for (const neighbors of [supports, [...supports].reverse()]) {
+              const pixels = pixelsOver([...below, ...neighbors], scale, side, side);
+              expect(peakTone(pixels, 56, 104, 56, 104, side), `gap ${gap}, scale ${scale}`).toBe(
+                0,
+              );
+              expect(bends(pixels, 56, 104, 56, 104, side), `gap ${gap}, scale ${scale}`).toBe(
+                false,
+              );
+            }
+        }
+    },
+  );
+
+  it.each([0, 17, 45, 81])("keeps separated supports visible when turned %s degrees", (angle) => {
+    const side = 160;
+    const radians = (angle * Math.PI) / 180;
+    const distance = (x: number, y: number) =>
+      (x - side / 2) * Math.cos(radians) + (y - side / 2) * Math.sin(radians);
+    const pixels = pixelsOver(
+      [
+        field((x, y) => Number(distance(x, y) < -20), side, side),
+        field((x, y) => Number(distance(x, y) >= 20), side, side),
+      ],
+      1,
+      side,
+      side,
+    );
+    expect(peakTone(pixels, 56, 104, 56, 104, side)).toBeGreaterThan(0);
+    expect(bends(pixels, 56, 104, 56, 104, side)).toBe(true);
   });
 
   it("does not turn antialiased touching edges into a crease", () => {
@@ -205,12 +269,82 @@ describe("crease", () => {
   });
 
   it("leaves a wide gap's two edges visible in both shading and reflection", () => {
-    const pixels = pixelsOver([field((x) => Number(x < 52)), field((x) => Number(x >= 68))]);
-    expect(peakTone(pixels, 44, 60)).toBeGreaterThan(0);
-    expect(peakTone(pixels, 60, 76)).toBeGreaterThan(0);
-    expect(bends(pixels, 44, 60)).toBe(true);
-    expect(bends(pixels, 60, 76)).toBe(true);
+    const pixels = pixelsOver([field((x) => Number(x < 36)), field((x) => Number(x >= 84))]);
+    expect(peakTone(pixels, 24, 54)).toBeGreaterThan(0);
+    expect(peakTone(pixels, 66, 98)).toBeGreaterThan(0);
+    expect(bends(pixels, 24, 54)).toBe(true);
+    expect(bends(pixels, 66, 98)).toBe(true);
   });
+
+  it.each([
+    [12, 1],
+    [48, 2],
+  ])(
+    "joins nearby ascending steps and keeps distant steps separate (spacing %s)",
+    (spacing, bands) => {
+      const pixels = pixelsOver([
+        everywhere,
+        field((x) => Number(x >= 32)),
+        field((x) => Number(x >= 32 + spacing)),
+      ]);
+      expect(highlightBands(pixels)).toBe(bands);
+      for (const x of [32, 32 + spacing]) {
+        const q = ((H / 2) * W + x) * 4;
+        expect(pixels.topLeft[q + 3]).toBeGreaterThan(0);
+        expect(pixels.normal[q]).toBeLessThan(128);
+      }
+      const middle = 32 + spacing / 2;
+      expect(bends(pixels, middle, middle + 1)).toBe(spacing === 12);
+    },
+  );
+
+  it("bridges unequal supports at the lower height and keeps only the taller step", () => {
+    const pixels = creasePixels({
+      width: W,
+      height: H,
+      surface: field((x) => (x < 48 ? 1 : x < 72 ? 0 : 2)),
+      own: everywhere,
+      scale: 1,
+      lights: CREASE_SIDES,
+    });
+    if (!pixels) throw new Error("The taller support lost its material geometry");
+    expect(peakTone(pixels, 36, 50)).toBe(0);
+    expect(bends(pixels, 36, 50)).toBe(false);
+    expect(peakTone(pixels, 60, 90)).toBeGreaterThan(0);
+    expect(bends(pixels, 60, 90)).toBe(true);
+  });
+
+  it.each([false, true])(
+    "preserves an exposed edge next to the sampling boundary (reverse %s)",
+    (reverse) => {
+      const pixels = pixelsOver([field((x) => Number(reverse ? x >= 6 : x < W - 6))]);
+      expect(peakTone(pixels)).toBeGreaterThan(0);
+      expect(bends(pixels)).toBe(true);
+    },
+  );
+
+  it.each([1, 2, 4])(
+    "keeps the same drape beside a sampling boundary for a step %s high",
+    (height) => {
+      for (const reverse of [false, true]) {
+        const support = (x: number) => ((reverse ? x >= 6 : x < W - 6) ? height : 0);
+        const actual = drape(field(support), W, H, 1);
+        const padding = 120;
+        const referenceWidth = W + 2 * padding;
+        const reference = drape(
+          field((x) => support(Math.max(0, Math.min(W - 1, x - padding))), referenceWidth, H),
+          referenceWidth,
+          H,
+          1,
+        );
+        for (let x = 0; x < W; x++)
+          expect(actual[(H / 2) * W + x]).toBeCloseTo(
+            reference[(H / 2) * referenceWidth + padding + x],
+            5,
+          );
+      }
+    },
+  );
 
   it("keeps a small supported sticker a full layer higher with a real crease at its edge", () => {
     const small = field((x, y) => Number(x >= 55 && x < 65 && y >= 25 && y < 35));
