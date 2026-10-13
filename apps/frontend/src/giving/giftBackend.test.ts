@@ -52,7 +52,10 @@ function setup() {
     ...packed,
     escrowStatus: "pending",
   }));
-  const reportShared = vi.fn(async () => ({ ...packed, status: "sent" as const }));
+  const reportShared = vi.fn<ApiClient["reportShared"]>(async (_giftId, _attemptId, outcome) => ({
+    ...packed,
+    status: outcome === "sent" ? "sent" : "packed",
+  }));
   const startTakeOut = vi.fn<ApiClient["startTakeOut"]>(async () => ({
     gift: packed,
     takeOut: takeOutTx,
@@ -294,24 +297,135 @@ describe("Giving through the Sui wallet", () => {
   });
 
   it.each(["user-bob", null])(
-    "preserves a missing-token gift for its original recipient %s until explicit Take out",
+    "automatically replaces a known-unsent missing-token gift while preserving recipient %s",
     async (originalRecipient) => {
       const t = setup();
-      t.packageGift.mockReset().mockResolvedValue({
-        gift: t.packed,
-        forUserId: originalRecipient,
-        giftClaimToken: null,
-        deposit: null,
-        messageAttempt: null,
-      });
+      const freshGift = gift({ ...t.packed, id: "gift-new", status: "packed" });
+      t.packageGift
+        .mockReset()
+        .mockResolvedValueOnce({
+          gift: t.packed,
+          forUserId: originalRecipient,
+          giftClaimToken: null,
+          deposit: null,
+          messageAttempt: null,
+        })
+        .mockResolvedValueOnce({
+          gift: freshGift,
+          forUserId: originalRecipient,
+          giftClaimToken: token,
+          deposit: null,
+          messageAttempt: null,
+        });
       const { createApiGiftBackend: fresh } = await reload();
       await expect(
         fresh({ ...t.options, forUserId: "user-carol" }).pack(t.sticker),
-      ).rejects.toMatchObject({ giftId: t.packed.id, cause: { problem: "no_link" } });
-      expect(t.startTakeOut).not.toHaveBeenCalled();
-      expect(t.packageGift).toHaveBeenCalledOnce();
+      ).resolves.toMatchObject({ giftId: freshGift.id, forUserId: originalRecipient });
+      expect(t.startTakeOut).toHaveBeenCalledExactlyOnceWith(t.packed.id, null);
+      expect(t.packageGift).toHaveBeenCalledTimes(2);
+      expect(t.packageGift).toHaveBeenLastCalledWith(t.sticker.id, originalRecipient ?? undefined);
     },
   );
+
+  it("bounds automatic missing-token recovery to one replacement", async () => {
+    const t = setup();
+    t.packageGift.mockReset().mockResolvedValue({
+      gift: t.packed,
+      forUserId: "user-bob",
+      giftClaimToken: null,
+      deposit: null,
+      messageAttempt: null,
+    });
+    const { createApiGiftBackend: fresh } = await reload();
+    await expect(fresh(t.options).pack(t.sticker)).rejects.toMatchObject({
+      cause: { problem: "no_link" },
+    });
+    expect(t.startTakeOut).toHaveBeenCalledExactlyOnceWith(t.packed.id, null);
+    expect(t.packageGift).toHaveBeenCalledTimes(2);
+  });
+
+  it("replaces a cancelled gift after reload when its link was lost", async () => {
+    const t = setup();
+    const freshGift = gift({ ...t.packed, id: "gift-after-cancel", status: "packed" });
+    t.packageGift
+      .mockReset()
+      .mockResolvedValueOnce({
+        gift: t.packed,
+        forUserId: "user-bob",
+        giftClaimToken: null,
+        deposit: null,
+        messageAttempt: { id: attemptId, state: "cancelled" },
+      })
+      .mockResolvedValueOnce({
+        gift: freshGift,
+        forUserId: "user-bob",
+        giftClaimToken: token,
+        deposit: null,
+        messageAttempt: null,
+      });
+    const { createApiGiftBackend: fresh } = await reload();
+    await expect(fresh(t.options).pack(t.sticker)).resolves.toMatchObject({ giftId: freshGift.id });
+    expect(t.startTakeOut).toHaveBeenCalledExactlyOnceWith(t.packed.id, {
+      id: attemptId,
+      state: "cancelled",
+    });
+    expect(t.packageGift).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps a known cancelled send retryable after reload when its report is still failing", async () => {
+    const t = setup();
+    await t.backend.pack(t.sticker);
+    const refused = new ApiError(503, { error: "network", detail: "Cancellation report failed" });
+    t.reportShared.mockRejectedValue(refused);
+    await expect(t.backend.markCancelled(t.packed.id, attemptId)).rejects.toBe(refused);
+    const waitingGift = {
+      gift: t.packed,
+      forUserId: "user-bob",
+      giftClaimToken: null,
+      deposit: null,
+      messageAttempt: { id: attemptId, state: "pending" as const },
+    };
+    t.packageGift.mockReset().mockResolvedValue(waitingGift);
+    const { createApiGiftBackend: fresh, GiftMessageOutError } = await reload();
+    const reopened = fresh(t.options);
+    const failure = await reopened.pack(t.sticker).catch((error: unknown) => error);
+    expect(failure).not.toBeInstanceOf(GiftMessageOutError);
+    expect(failure).toMatchObject({ giftId: t.packed.id, cause: refused });
+    expect(t.startTakeOut).not.toHaveBeenCalled();
+
+    t.reportShared.mockResolvedValue(t.packed);
+    const freshGift = gift({ ...t.packed, id: "gift-recorded-cancel", status: "packed" });
+    t.packageGift.mockReset().mockResolvedValueOnce(waitingGift).mockResolvedValueOnce({
+      gift: freshGift,
+      forUserId: "user-bob",
+      giftClaimToken: token,
+      deposit: null,
+      messageAttempt: null,
+    });
+    await expect(reopened.pack(t.sticker)).resolves.toMatchObject({ giftId: freshGift.id });
+    expect(t.startTakeOut).toHaveBeenCalledExactlyOnceWith(t.packed.id, {
+      id: attemptId,
+      state: "cancelled",
+    });
+    expect(t.reportShared).toHaveBeenLastCalledWith(t.packed.id, attemptId, "cancelled");
+  });
+
+  it("stops automatic recovery when reclaim loses a race to receiving", async () => {
+    const t = setup();
+    const received = new ApiError(409, { error: "already_received", detail: "Gift was received" });
+    t.packageGift.mockReset().mockResolvedValue({
+      gift: t.packed,
+      forUserId: "user-bob",
+      giftClaimToken: null,
+      deposit: null,
+      messageAttempt: null,
+    });
+    t.startTakeOut.mockRejectedValue(received);
+    const { createApiGiftBackend: fresh } = await reload();
+    await expect(fresh(t.options).pack(t.sticker)).rejects.toMatchObject({ cause: received });
+    expect(t.packageGift).toHaveBeenCalledOnce();
+    expect(t.takeOutGift).not.toHaveBeenCalled();
+  });
 
   it("shares an in-progress pack across Giving instances instead of replacing its token", async () => {
     const t = setup();
@@ -323,6 +437,58 @@ describe("Giving through the Sui wallet", () => {
     expect(firstGift).toEqual(secondGift);
     expect(t.packageGift).toHaveBeenCalledOnce();
     expect(t.sign).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the original recipient after sharing preparation with another Giving instance", async () => {
+    const t = setup();
+    const reopened = createApiGiftBackend({ ...t.options, forUserId: "user-carol" });
+    const [firstGift] = await Promise.all([t.backend.pack(t.sticker), reopened.pack(t.sticker)]);
+    await reopened.takeOut(firstGift.giftId);
+    const replacement = gift({ ...t.packed, id: "gift-shared-recipient", status: "packed" });
+    t.packageGift.mockResolvedValue({
+      gift: replacement,
+      forUserId: "user-bob",
+      giftClaimToken: token,
+      messageAttempt: null,
+      deposit: null,
+    });
+    await expect(reopened.pack(t.sticker)).resolves.toMatchObject({ giftId: replacement.id });
+    expect(t.packageGift).toHaveBeenLastCalledWith(t.sticker.id, "user-bob");
+  });
+
+  it("refreshes a competing send after guarded automatic replacement is refused", async () => {
+    const t = setup();
+    t.packageGift
+      .mockReset()
+      .mockResolvedValueOnce({
+        gift: t.packed,
+        forUserId: "user-bob",
+        giftClaimToken: null,
+        messageAttempt: null,
+        deposit: null,
+      })
+      .mockResolvedValueOnce({
+        gift: t.packed,
+        forUserId: "user-bob",
+        giftClaimToken: null,
+        messageAttempt: { id: attemptId, state: "pending" },
+        deposit: null,
+      });
+    const { createApiGiftBackend: fresh } = await reload();
+    const { ApiError: FreshApiError } = await import("../api/apiClient");
+    t.startTakeOut.mockRejectedValue(
+      new FreshApiError(409, {
+        error: "gift_message_unresolved",
+        detail: "Another page started this gift message",
+      }),
+    );
+    await expect(fresh(t.options).pack(t.sticker)).rejects.toMatchObject({
+      giftId: t.packed.id,
+      outcome: "maybeSent",
+      attemptId,
+    });
+    expect(t.startTakeOut).toHaveBeenCalledExactlyOnceWith(t.packed.id, null);
+    expect(t.takeOutGift).not.toHaveBeenCalled();
   });
 
   it("stops before LINE when the gift was taken out before its deposit landed", async () => {

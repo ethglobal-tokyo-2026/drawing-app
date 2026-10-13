@@ -1,6 +1,8 @@
+// @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
 import { boardSticker, people, sticker, TEST_KYOTO_SEIKA_SUBJECTS } from "../api/testFixtures";
 import { toApiPlacement, toPerson, toRecordPlacement } from "../api/views";
+import { forgetKeptGift, keepGift } from "../giving/keptGifts";
 import {
   movedIn,
   movedSince,
@@ -14,6 +16,45 @@ import { FIRST_SPOT, LAID_OUT_SPOTS, LARGE_LANDING_GROWTH, type Placement } from
 import { placedAt } from "./testBoardSticker";
 
 describe("toBoardSticker", () => {
+  it("keeps a matching confirmed LINE send visible before its server report lands", () => {
+    const attemptId = `0x${"12".repeat(32)}`;
+    const source = boardSticker({
+      openGift: {
+        id: "local-send",
+        status: "packed",
+        for: null,
+        messageAttempt: { id: attemptId, state: "pending" },
+      },
+    });
+    keepGift(source.sticker.ownerId, "local-send", { message: "sent", attemptId });
+    expect(toBoardSticker(source).openGift).toMatchObject({
+      status: "sent",
+      messageAttempt: { id: attemptId, state: "sent" },
+    });
+    forgetKeptGift(source.sticker.ownerId, "local-send");
+  });
+
+  it("does not apply an older local outcome to a newer gift message attempt", () => {
+    const attemptId = `0x${"34".repeat(32)}`;
+    const source = boardSticker({
+      openGift: {
+        id: "newer-send",
+        status: "packed",
+        for: null,
+        messageAttempt: { id: attemptId, state: "pending" },
+      },
+    });
+    keepGift(source.sticker.ownerId, "newer-send", {
+      message: "sent",
+      attemptId: `0x${"56".repeat(32)}`,
+    });
+    expect(toBoardSticker(source).openGift).toMatchObject({
+      status: "packed",
+      messageAttempt: { id: attemptId, state: "pending" },
+    });
+    forgetKeptGift(source.sticker.ownerId, "newer-send");
+  });
+
   it("draws the API's board sticker with the app's names and milliseconds", () => {
     const placement = { onBoard: false, x: 0.3, y: 0.6, scale: 0.25, rotation: -8, z: 4 };
     const drawn = sticker({
@@ -126,7 +167,10 @@ describe("placeUnplaced", () => {
     const where = (p: Placement) => ({ x: p.x, y: p.y });
     const alone = where(placeUnplaced([fresh]).stickers[0].placements.phone);
     const atFirstSpot = { ...placedAt(FIRST_SPOT.x), y: FIRST_SPOT.y };
-    const gone = [{ held: false }, { openGift: { id: "g", status: "packed" as const, for: null } }];
+    const gone = [
+      { held: false },
+      { openGift: { messageAttempt: null, id: "g", status: "packed" as const, for: null } },
+    ];
     for (const left of gone) {
       const leftAt = toBoardSticker(boardSticker({ placement: atFirstSpot, ...left }));
       const [, landed] = placeUnplaced([leftAt, fresh]).stickers;
@@ -170,7 +214,12 @@ describe("placeUnplaced", () => {
 
 describe("onTheBoard", () => {
   it("takes a sticker you hold stuck on, and none in a gift, packed or on its way, nor one given away", () => {
-    const inAGift = (status: "packed" | "sent") => ({ id: `gift-${status}`, status, for: null });
+    const inAGift = (status: "packed" | "sent") => ({
+      id: `gift-${status}`,
+      status,
+      for: null,
+      messageAttempt: null,
+    });
     const stuckOn = [
       {},
       { openGift: inAGift("packed") },

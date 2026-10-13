@@ -12,6 +12,13 @@ const keyFor = (userId: string) => personKey("draw.gifts.kept", userId);
 const fallback = new Map<string, Map<string, KeptGift | null>>();
 /** Last readable state, available when this device later refuses reads. */
 const remembered = new Map<string, Map<string, KeptGift>>();
+const changes = new Set<(userId: string) => void>();
+
+/** A local outcome changed, so the giver's tray and detail can show it before its report lands. */
+export function onKeptGiftChanged(listener: (userId: string) => void): () => void {
+  changes.add(listener);
+  return () => void changes.delete(listener);
+}
 
 function keptOf(value: unknown): KeptGift | null {
   if (typeof value !== "object" || value === null) return null;
@@ -85,6 +92,7 @@ export function keepGift(userId: string, giftId: string, gift: KeptGift): boolea
   const pending = fallback.get(userId) ?? new Map<string, KeptGift | null>();
   pending.set(giftId, gift.message === undefined ? null : gift);
   fallback.set(userId, pending);
+  for (const changed of changes) changed(userId);
   // A failed read leaves other gifts unknown. Keep changes in memory until a readable map can be merged.
   if (blocked) return false;
   const saved = writeStored(

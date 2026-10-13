@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from "react";
 import { Check } from "../icons";
 import { useTranslation } from "../i18n/react";
 import { formatNo } from "../stickers/format";
@@ -22,10 +23,34 @@ interface Props {
  */
 export function StickerPicker({ stickers, picked, onPick, label, blocked = () => false }: Props) {
   const { t } = useTranslation();
+  const choices = stickers.map((sticker) => ({ sticker, off: blocked(sticker) }));
+  const eligible = choices.filter(({ off }) => !off).map(({ sticker }) => sticker);
+  const tabStop = eligible.find((s) => s.id === picked)?.id ?? eligible[0]?.id;
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const buttons = [
+      ...e.currentTarget.querySelectorAll<HTMLButtonElement>('button:not([aria-disabled="true"])'),
+    ];
+    const at = buttons.findIndex(
+      (button) => button === e.currentTarget.ownerDocument.activeElement,
+    );
+    if (at < 0) return;
+    // The grid's arrows follow radio-group reading order, skipping stickers that can't be given.
+    const next = {
+      ArrowRight: (at + 1) % eligible.length,
+      ArrowDown: (at + 1) % eligible.length,
+      ArrowLeft: (at - 1 + eligible.length) % eligible.length,
+      ArrowUp: (at - 1 + eligible.length) % eligible.length,
+      Home: 0,
+      End: eligible.length - 1,
+    }[e.key];
+    if (next === undefined) return;
+    e.preventDefault();
+    buttons[next].focus();
+    onPick(eligible[next].id);
+  };
   return (
-    <div className="sticker-picker" role="radiogroup" aria-label={label}>
-      {stickers.map((s) => {
-        const off = blocked(s);
+    <div className="sticker-picker" role="radiogroup" aria-label={label} onKeyDown={onKeyDown}>
+      {choices.map(({ sticker: s, off }) => {
         const named = [
           off && t(($) => $.giving.nsfw.blocked),
           s.veiled && t(($) => $.stickers.nsfw.veiled),
@@ -37,6 +62,7 @@ export function StickerPicker({ stickers, picked, onPick, label, blocked = () =>
             role="radio"
             aria-checked={picked === s.id}
             aria-disabled={off || undefined}
+            tabIndex={s.id === tabStop ? 0 : -1}
             aria-label={named.length > 0 ? [formatNo(s.no), ...named].join(", ") : undefined}
             className={`pick ${picked === s.id ? "picked" : ""} ${off ? "is-blocked" : ""}`}
             onClick={() => {

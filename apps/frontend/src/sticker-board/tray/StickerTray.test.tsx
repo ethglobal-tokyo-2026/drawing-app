@@ -221,7 +221,9 @@ const givenSticker = (id: string, arrivedAt: number) =>
   });
 /** A sticker on its way to someone: its gift is sent, and not yet received. */
 const sentSticker = (id: string, arrivedAt: number) =>
-  sticker(id, arrivedAt, false, { openGift: { id: `gift-${id}`, status: "sent" } });
+  sticker(id, arrivedAt, false, {
+    openGift: { messageAttempt: null, id: `gift-${id}`, status: "sent" },
+  });
 /** The points of an SVG path of straight segments, as [x, y] pairs. */
 const pathPoints = (d: string | null | undefined): [number, number][] => {
   const numbers = (d?.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number);
@@ -460,16 +462,25 @@ describe("StickerTray", () => {
   });
 
   it.each([
-    ["in the bag", "packed", "inTheBag"],
-    ["on its way", "sent", "onItsWay"],
+    ["ready to send", "packed", "inTheBag", null],
+    ["sent", "sent", "onItsWay", null],
+    [
+      "send not confirmed",
+      "packed",
+      "sendNotConfirmed",
+      { id: `0x${"cd".repeat(32)}`, state: "pending" },
+    ],
   ] as const)(
     "shows a sticker %s under frost with its centered status, which a tap opens among your stickers and nothing peels",
-    async (_, status, state) => {
+    async (_, status, state, messageAttempt) => {
       const openYours = vi.fn();
       const place = vi.fn((_id: string) => Promise.resolve(null));
       // Stuck on before it was packed, it still waits in its spot.
       render(
-        [sticker("gift", 3, true, { openGift: { id: "g", status } }), sticker("newer", 4, false)],
+        [
+          sticker("gift", 3, true, { openGift: { messageAttempt, id: "g", status } }),
+          sticker("newer", 4, false),
+        ],
         { openYours, place },
       );
       await openTray();
@@ -480,7 +491,9 @@ describe("StickerTray", () => {
       expect(spot?.querySelector(".tray__frost")).not.toBeNull();
       expect(spot?.querySelector(".tray__given-outline")).not.toBeNull();
       const dot = dotOf("gift");
-      expect(dot?.querySelector("path")?.getAttribute("d")).toBe(ICONS[state]);
+      expect(dot?.querySelector("path")?.getAttribute("d")).toBe(
+        ICONS[state === "onItsWay" ? "onItsWay" : "inTheBag"],
+      );
       expect(dot?.className).toBe("tray__gift-label");
       // Its status lies over the newer sticker beside it, which comes before the label in the page.
       const newer = slotOf("newer");
@@ -499,17 +512,21 @@ describe("StickerTray", () => {
   );
 
   it.each([
-    ["en", "packed", undefined, "In the bag"],
-    ["en", "sent", undefined, "On its way"],
-    ["en", "sent", "bob", "On its way to @bob"],
-    ["ja", "packed", undefined, "ギフト袋の中"],
-    ["ja", "sent", undefined, "お届け中"],
-    ["ja", "sent", "bob", "@bobさんへお届け中"],
+    ["en", "packed", undefined, "Ready to send"],
+    ["en", "sent", undefined, "Sent"],
+    ["en", "sent", "bob", "Sent · Waiting for @bob"],
+    ["ja", "packed", undefined, "送信できます"],
+    ["ja", "sent", undefined, "送信済み"],
+    ["ja", "sent", "bob", "送信済み・@bobさんの受け取り待ち"],
   ] as const)(
     "shows the outgoing gift's full status on its sheet in %s (%s, %s)",
     async (language, status, to, expected) => {
       await inLanguage(language);
-      render([sticker("gift", 3, false, { openGift: { id: "g", status, ...(to && { to }) } })]);
+      render([
+        sticker("gift", 3, false, {
+          openGift: { messageAttempt: null, id: "g", status, ...(to && { to }) },
+        }),
+      ]);
       await openTray();
       const label = frontSheet()?.querySelector(
         '.tray__dot-spot[data-id="gift"] .tray__gift-label',
@@ -523,13 +540,13 @@ describe("StickerTray", () => {
     endAnimationsAtOnce();
     render([
       sticker("gift", 3, false, {
-        openGift: { id: "g", status: "sent", to: "abcdefghijklmnopqrstuvwx" },
+        openGift: { messageAttempt: null, id: "g", status: "sent", to: "abcdefghijklmnopqrstuvwx" },
       }),
     ]);
     await openTray();
     const pulled = await pullOut();
     expect(pulled?.querySelector(".tray__gift-label")?.textContent).toBe(
-      "On its way to @abcdefghijklmnopqrstuvwx",
+      "Sent · Waiting for @abcdefghijklmnopqrstuvwx",
     );
   });
 
@@ -539,7 +556,7 @@ describe("StickerTray", () => {
         width: 120,
         height: 20,
         outline: "M0 0L120 0L120 20L0 20Z",
-        openGift: { id: "g", status: "sent", to: "bob" },
+        openGift: { messageAttempt: null, id: "g", status: "sent", to: "bob" },
       }),
     ]);
     await openTray();

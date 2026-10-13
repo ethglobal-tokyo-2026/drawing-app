@@ -462,12 +462,13 @@
 
 /* A sticker in a gift, in the bag or on its way: in its spot under the sleeve's frost, inside its own
    cut line, so its sheet's packing never moves. It opens, never peels. */
-.tray__slot:is([data-state="inTheBag"], [data-state="onItsWay"]) {
+.tray__slot:is([data-state="inTheBag"], [data-state="sendNotConfirmed"], [data-state="onItsWay"]) {
   cursor: pointer;
 }
 
 /* Outgoing stickers remain inspectable, while their faded ink and foil say they cannot be placed. */
-.tray__slot:is([data-state="inTheBag"], [data-state="onItsWay"]) :is(.tray__img, .sticker-foil) {
+.tray__slot:is([data-state="inTheBag"], [data-state="sendNotConfirmed"], [data-state="onItsWay"])
+  :is(.tray__img, .sticker-foil) {
   opacity: 0.3;
 }
 

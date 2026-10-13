@@ -34,7 +34,13 @@ export function GiftsForYouBadge({ gifts, onOpen, nudging = false }: Props) {
     <LabelButton
       tone="grape"
       className={nudging ? "gifts-for-you-badge is-nudging" : "gifts-for-you-badge"}
-      aria-label={t(($) => $.receiving.giftsForYou.label, { count, name })}
+      aria-label={t(
+        nsfw ? ($) => $.receiving.giftsForYou.nsfwLabel : ($) => $.receiving.giftsForYou.label,
+        {
+          count,
+          name,
+        },
+      )}
       onClick={() => onOpen(newest)}
     >
       <span className="gifts-for-you-badge__bag" aria-hidden="true">

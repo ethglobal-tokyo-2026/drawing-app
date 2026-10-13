@@ -1,4 +1,4 @@
-import { MAX_HITS, MAX_LARGE_SCALE, MAX_SCALE, stickerPlacements } from "@drawing-app/db";
+import { gifts, MAX_HITS, MAX_LARGE_SCALE, MAX_SCALE, stickerPlacements } from "@drawing-app/db";
 import { insertUser, packGift } from "@drawing-app/db/testing";
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -103,6 +103,22 @@ const sendGift = (stickerId: string, giverId: string) =>
     escrowStatus: "pending",
   });
 
+it("keeps a pending message attempt in the giver's board so an uncertain send is not called unsent", async () => {
+  const me = insertUser(test.db);
+  const stickerId = seal(me);
+  const giftId = packGift(test.db, stickerId, me, { escrowStatus: "pending" });
+  const attemptId = `0x${"ab".repeat(32)}`;
+  test.db
+    .update(gifts)
+    .set({ messageAttemptId: attemptId, messageAttemptState: "pending" })
+    .where(eq(gifts.id, giftId))
+    .run();
+  const board = await boardOf(me, "me");
+  expect(board.boardStickers.find((s) => s.stickerId === stickerId)?.openGift).toMatchObject({
+    messageAttempt: { id: attemptId, state: "pending" },
+  });
+});
+
 const minuteAfter = (at: Date) => new Date(at.getTime() + MINUTE_MS);
 
 /** Sets when each sticker reached `userId`, a minute apart in the order given. */
@@ -155,8 +171,14 @@ describe("GET /api/sticker-boards/:userId", () => {
       id: packedGiftId,
       status: "packed",
       for: null,
+      messageAttempt: null,
     });
-    expect(stickers.get(sent)?.openGift).toEqual({ id: sentGiftId, status: "sent", for: null });
+    expect(stickers.get(sent)?.openGift).toEqual({
+      id: sentGiftId,
+      status: "sent",
+      for: null,
+      messageAttempt: null,
+    });
     expect(stickers.get(given)).toMatchObject({ held: false, openGift: null });
     expect(stickers.get(received)).toMatchObject({ held: true, openGift: null });
   });

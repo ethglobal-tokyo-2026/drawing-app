@@ -10,6 +10,7 @@ import {
   optedIntoNsfw,
   refuse,
   sponsoredTransactionSchema,
+  signedTransactionSchema,
   toGift,
   toSponsoredTransaction,
   type Refusal,
@@ -106,6 +107,21 @@ export const takeOutStartSchema = z.object({
   takeOut: sponsoredTransactionSchema.optional(),
 });
 export type TakeOutStart = z.infer<typeof takeOutStartSchema>;
+
+/** Automatic lost-link recovery may close only this same known-unsent message attempt. */
+const unsentMessageAttemptSchema = z
+  .object({
+    id: bytes32Schema,
+    state: z.literal("cancelled"),
+  })
+  .nullable();
+export type UnsentGiftMessage = z.infer<typeof unsentMessageAttemptSchema>;
+export const takeOutRequestSchema = z.object({
+  unsentMessageAttempt: unsentMessageAttemptSchema.optional(),
+});
+export const signedTakeOutSchema = signedTransactionSchema.extend({
+  unsentMessageAttempt: unsentMessageAttemptSchema.optional(),
+});
 
 export const messageAttemptBodySchema = z.object({ attemptId: bytes32Schema });
 export const sharedBodySchema = messageAttemptBodySchema.extend({
@@ -411,6 +427,7 @@ type MessageStep = GiftStep<
   | "not_deposited"
   | "gift_message_unresolved"
   | "gift_message_attempt_changed"
+  | "take_out_not_landed"
 >;
 
 /** Records the attempt before the giver opens LINE; pending never expires. */
@@ -432,6 +449,12 @@ export function beginMessageAttempt(
       if (gift.status !== "packed") return closed(gift);
       if (gift.escrowStatus !== "pending")
         return refuse("not_deposited", `Gift ${giftId}'s deposit hasn't landed in the escrow`);
+      const withdrawal = openGiftTransaction(tx, giftId);
+      if (withdrawal?.kind === "take_out" && withdrawal.submittedAt !== null)
+        return refuse(
+          "take_out_not_landed",
+          `Gift ${giftId}'s submitted take-out has not settled; a new message cannot start yet`,
+        );
       if (gift.messageAttemptId === attemptId) return owned;
       if (gift.messageAttemptState === "pending")
         return refuse(

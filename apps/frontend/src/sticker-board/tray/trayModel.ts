@@ -495,7 +495,9 @@ export function createTrayModel(
     const items: PackItem[] = ui.model.slots.map((s, i) => ({
       id: s.id,
       shape: shapes[i],
-      ...(s.state === "inTheBag" || s.state === "onItsWay" ? { label: GIFT_LABEL_SIZE } : {}),
+      ...(s.state === "inTheBag" || s.state === "sendNotConfirmed" || s.state === "onItsWay"
+        ? { label: GIFT_LABEL_SIZE }
+        : {}),
     }));
     const slotsById = new Map(ui.model.slots.map((s) => [s.id, s]));
     const packOn = (h: number) =>

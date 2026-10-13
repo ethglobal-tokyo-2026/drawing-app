@@ -37,6 +37,7 @@ import type {
   TimelapseV4,
   UnseenGratitude,
   UserStats,
+  UnsentGiftMessage,
 } from "@drawing-app/api/client";
 
 /** POST /api/stickers's parts. */
@@ -149,9 +150,13 @@ export interface ApiClient {
   /** POST /api/gifts/:giftId/shared */
   reportShared: (giftId: string, attemptId: string, outcome: "sent" | "cancelled") => Promise<Gift>;
   /** POST /api/gifts/:giftId/take-out/start */
-  startTakeOut: (giftId: string) => Promise<TakeOutStart>;
+  startTakeOut: (giftId: string, unsentMessageAttempt?: UnsentGiftMessage) => Promise<TakeOutStart>;
   /** POST /api/gifts/:giftId/take-out: the signed take-out, which the server runs. */
-  takeOutGift: (giftId: string, signed: SignedTransaction) => Promise<Gift>;
+  takeOutGift: (
+    giftId: string,
+    signed: SignedTransaction,
+    unsentMessageAttempt?: UnsentGiftMessage,
+  ) => Promise<Gift>;
   /** POST /api/gifts/preview */
   previewGift: (body: GiftOpening) => Promise<GiftPreview>;
   /** POST /api/gifts/receive */

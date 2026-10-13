@@ -61,6 +61,7 @@ import {
   shownIn,
   spotsById,
   toBoardSticker,
+  giftWithKeptOutcome,
   type BoardSticker,
   type BoardStickerView,
   type NewSpots,
@@ -119,6 +120,7 @@ import { useBoardLayout, useBoardSize } from "./useBoardSize";
 import { CreasesContext, useCreases } from "./useCreases";
 import { detailReadsKey, detailsAhead, preloadStickerDetails } from "./stickerDetailQuery";
 import { onMyStickerBoardChanged, useMyStickerBoard } from "./useMyStickerBoard";
+import { onKeptGiftChanged } from "../giving/keptGifts";
 import { useBoardPlacementSaves } from "./BoardPlacementSavesProvider";
 import "./StickerBoard.css";
 
@@ -525,6 +527,21 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
 
   // Your board changed on the server behind the one on screen, so it loads again.
   useEffect(() => onMyStickerBoardChanged(() => setReloadForGift(true)), []);
+  useEffect(
+    () =>
+      onKeptGiftChanged((userId) => {
+        if (userId !== owner?.id) return;
+        setStickers(
+          (current) =>
+            current?.map((s) => {
+              const openGift = giftWithKeptOutcome(userId, s.openGift);
+              return openGift === s.openGift ? s : { ...s, openGift };
+            }) ?? null,
+        );
+        setReloadForGift(true);
+      }),
+    [owner?.id],
+  );
   // A preview can make a gift wait here even when the person chooses Not now.
   const forYou = useApiQuery(`gifts-for-you:${giftClosures}`, (client) => client.giftsForYou());
   const waiting = forYou.state === "ready" ? forYou.data.gifts : [];
@@ -736,7 +753,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
    */
   const givenSpot = (id: string) =>
     face?.querySelector<HTMLElement>(
-      `.tray__sheet.is-top .tray__slot:is([data-state="given"], [data-state="inTheBag"], [data-state="onItsWay"])[data-id="${CSS.escape(id)}"]`,
+      `.tray__sheet.is-top .tray__slot:is([data-state="given"], [data-state="inTheBag"], [data-state="sendNotConfirmed"], [data-state="onItsWay"])[data-id="${CSS.escape(id)}"]`,
     ) ?? null;
   // What the sticker tray asks of the board, all in board pixels.
   const trayBoard: TrayBoard = {
@@ -1129,6 +1146,9 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
             fromHandle={account.handle ?? me.displayName}
             sender={giftSender}
             liffId={LIFF_ID}
+            returnFocus={() =>
+              stickerEl(giving.id) ?? face?.querySelector<HTMLElement>(".zip__slider") ?? null
+            }
             onClose={(sent) => {
               setGiving(null);
               // Given, it has left the board.

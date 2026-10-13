@@ -127,6 +127,124 @@ afterEach(() => {
 });
 
 describe("giving through a LINE chat", () => {
+  it("replaces an uncertain send once and waits for a fresh synchronous Send tap", async () => {
+    const server = fakeBackend();
+    const reclaimed = new Deferred<void>();
+    const pack = vi.fn(server.backend.pack);
+    const takeOut = vi.fn(async (giftId: string) => {
+      await reclaimed.promise;
+      await server.backend.takeOut(giftId);
+    });
+    const markSent = vi.fn(server.backend.markSent);
+    const t = setup({ backend: { ...server.backend, pack, takeOut, markSent } });
+    await openPicker(t);
+    const previousPicker = t.picker();
+    await wait(PICKER_ANSWER_MS);
+
+    t.flow.retry();
+    t.flow.retry();
+    t.flow.sendInLine();
+    await wait();
+    expect(t.step()).toBe("retrying");
+    expect(takeOut).toHaveBeenCalledExactlyOnceWith("gift-1");
+    expect(pack).toHaveBeenCalledOnce();
+    expect(t.messages).toHaveLength(1);
+
+    reclaimed.resolve();
+    await wait();
+    expect(t.step()).toBe("ready");
+    expect(server.states()).toEqual(["taken_out", "maybeSent"]);
+    expect(t.messages).toHaveLength(1);
+    previousPicker.resolve("sent");
+    await wait();
+    expect(t.step()).toBe("ready");
+    expect(markSent).not.toHaveBeenCalled();
+    expect(server.states()).toEqual(["taken_out", "maybeSent"]);
+
+    t.flow.sendInLine();
+    expect(t.step()).toBe("picking");
+    expect(t.messages).toHaveLength(2);
+    expect(t.messages[1]).not.toEqual(t.messages[0]);
+  });
+
+  it("keeps replacement failures visible and never prepares a gift when reclaim was refused", async () => {
+    const server = fakeBackend();
+    const refused = new ApiError(409, {
+      error: "already_received",
+      detail: "Gift gift-1 was received while replacement started",
+    });
+    const takeOut = vi.fn().mockRejectedValue(refused);
+    const pack = vi.fn(server.backend.pack);
+    const t = setup({ backend: { ...server.backend, pack, takeOut } });
+    await openPicker(t);
+    await wait(PICKER_ANSWER_MS);
+    t.flow.retry();
+    await wait();
+    const failedRetry = t.state();
+    expect(failedRetry.step).toBe("maybeSent");
+    if (failedRetry.step !== "maybeSent") throw new Error("expected retry to stay uncertain");
+    expect(failedRetry.retryError?.detail).toContain(refused.detail);
+    expect(pack).toHaveBeenCalledOnce();
+    expect(t.messages).toHaveLength(1);
+    t.flow.sendInLine();
+    expect(t.messages).toHaveLength(1);
+    t.flow.retry();
+    await wait();
+    expect(takeOut).toHaveBeenCalledTimes(2);
+    expect(pack).toHaveBeenCalledOnce();
+  });
+
+  it("shows a late confirmed send if replacement fails before its link is invalidated", async () => {
+    const server = fakeBackend();
+    const reclaimed = new Deferred<void>();
+    const pack = vi.fn(server.backend.pack);
+    const t = setup({
+      backend: { ...server.backend, pack, takeOut: () => reclaimed.promise },
+    });
+    await openPicker(t);
+    const previousPicker = t.picker();
+    await wait(PICKER_ANSWER_MS);
+    t.flow.retry();
+    await wait();
+    previousPicker.resolve("sent");
+    await wait();
+    expect(t.step()).toBe("retrying");
+    reclaimed.reject(new Error("The previous gift link could not be closed"));
+    await wait();
+    const failedRetry = t.state();
+    expect(failedRetry.step).toBe("sent");
+    if (failedRetry.step !== "sent") throw new Error("expected LINE's confirmed send");
+    expect(failedRetry.retryError?.detail).toContain("The previous gift link could not be closed");
+    expect(pack).toHaveBeenCalledOnce();
+    expect(server.states()).toEqual(["sent"]);
+  });
+
+  it.each(["cancelled", "failed"] as const)(
+    "keeps a known %s outcome retryable when its cancellation report fails",
+    async (outcome) => {
+      const server = fakeBackend();
+      const failure = new ApiError(503, { error: "network", detail: "Cancellation report failed" });
+      const cancelled = vi.fn(server.backend.markCancelled).mockRejectedValueOnce(failure);
+      const takeOut = vi.fn(server.backend.takeOut);
+      const t = setup({ backend: { ...server.backend, markCancelled: cancelled, takeOut } });
+      await openPicker(t);
+      if (outcome === "cancelled") t.picker().resolve("cancelled");
+      else t.picker().reject(new PickerSendError("CREATE_SUBWINDOW_FAILED", false));
+      await wait();
+      expect(t.step()).toBe("failed");
+      expect(t.failure().detail).toContain(failure.detail);
+      expect(t.messages).toHaveLength(1);
+      expect(takeOut).not.toHaveBeenCalled();
+      t.flow.sendInLine();
+      await wait();
+      expect(t.step()).toBe("ready");
+      expect(t.messages).toHaveLength(1);
+      t.flow.sendInLine();
+      expect(t.messages).toHaveLength(2);
+      expect(takeOut).not.toHaveBeenCalled();
+    },
+  );
+
   it("prepares an acknowledged gift and opens LINE synchronously only on a separate send", async () => {
     const t = setup();
     t.flow.give();
@@ -329,7 +447,7 @@ describe("giving through a LINE chat", () => {
     t.flow.give();
     await wait();
     expect(t.failure().message).toMatch(
-      /^No\.0147 couldn’t be packed: This gift came without a link to send\./,
+      /^No\.0147 couldn’t be packed: Croquis couldn’t prepare a gift link\./,
     );
     expect(t.failure().detail).toBe("No.0147 is in a gift the server gave no link for");
   });

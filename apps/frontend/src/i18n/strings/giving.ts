@@ -19,10 +19,10 @@ export const giving = {
       en: "This device couldn’t read or save LINE’s answer. Your gift is protected on the server; keep this page open until its outcome is recorded.",
       ja: "この端末でLINEの結果を読み込むか保存することができませんでした。ギフトはサーバーで保護されています。結果が記録されるまで、この画面を開いたままにしてください。",
     },
-    /** Giving's “Not sent yet” screen, in “couldn’t be packed”: the gift has no link to send; taking the sticker out and giving it again makes a new one */
+    /** Giving's preparation error screen: a replacement still returned no gift link, so Try again retries preparation */
     no_link: {
-      en: "This gift came without a link to send. Take the sticker out, then give it again.",
-      ja: "このギフトには送るためのリンクがありませんでした。シールを取り出してから、もう一度贈ってください。",
+      en: "Croquis couldn’t prepare a gift link. Try again to prepare it.",
+      ja: "ギフトリンクを準備できませんでした。もう一度お試しください。",
     },
   },
   giftMessage: {
@@ -149,9 +149,9 @@ export const giving = {
   /** The sticker in the open bag, until it's sent or taken out. */
   inTheBag: {
     /** Giving's preparation error screen: retries gift preparation before a fresh Send in LINE tap. */
-    prepareAgain: { en: "Prepare again", ja: "もう一度準備する" },
-    /** Giving, once the sticker drops into the open gift bag: the sheet's title while LINE's friend picker opens and is up; and the sticker detail of a sticker in a packed gift: its note */
-    title: { en: "In the bag", ja: "ギフト袋に入れました" },
+    prepareAgain: { en: "Try again", ja: "もう一度試す" },
+    /** Giving, after preparation and while LINE's picker is open; and the sticker detail of a gift whose send has not started: its note */
+    title: { en: "Ready to send", ja: "送る準備ができました" },
     /** Giving, with the sticker in the open gift bag: the line under "In the bag" */
     lead: {
       en: "The bag closes when it’s sent. Pick your chat with them in LINE: whoever opens it first gets it.",
@@ -161,8 +161,8 @@ export const giving = {
     notSent: { en: "Not sent yet", ja: "まだ送っていません" },
     /** Giving's "Not sent yet" screen: the line under its title */
     notSentLead: {
-      en: "It’s still in the open bag. Pick a chat again, or take it out.",
-      ja: "封をしないまま、<wbr/>まだ<wbr/>袋の中に<wbr/>あります。<wbr/>もう一度<wbr/>トークを<wbr/>選ぶか、<wbr/>取り出してください。",
+      en: "Your sticker wasn’t sent. You can try again when you’re ready.",
+      ja: "シールは<wbr/>送られていません。<wbr/>準備ができたら、<wbr/>もう一度<wbr/>お試しください。",
     },
     /** Giving, with the sticker in the open gift bag: the aqua key that opens LINE's friend picker (again) */
     send: { en: "Send in LINE", ja: "LINEで送る" },
@@ -186,14 +186,24 @@ export const giving = {
       ja: "クロッキーに記録できませんでした：{{reason}}",
     },
   },
-  /** Giving's error after an unresolved LINE send, which stays pending until LINE confirms or the sticker is taken out. */
+  /** Giving's recovery after an unresolved LINE send: Try again replaces its link before another Send in LINE tap. */
   lineSendError: {
     /** Giving's LINE send error screen: the title over the open gift bag */
-    title: { en: "LINE send error", ja: "LINE送信エラー" },
+    title: { en: "Send not confirmed", ja: "送信を確認できません" },
     /** Giving's LINE send error screen: recovery instructions under the title */
     lead: {
-      en: "Take the sticker out before trying to give it again. This closes the previous gift link.",
-      ja: "もう一度<wbr/>贈るには、<wbr/>シールを<wbr/>取り出してください。<wbr/>前の<wbr/>ギフトリンクは<wbr/>使えなくなります。",
+      en: "Try again prepares a new gift. The previous gift link will stop working, even if it reached a LINE chat.",
+      ja: "もう一度<wbr/>試すと、<wbr/>新しい<wbr/>ギフトを<wbr/>準備します。<wbr/>前の<wbr/>リンクは、<wbr/>LINEの<wbr/>トークに<wbr/>届いていても<wbr/>使えなくなります。",
+    },
+    /** Giving, after Try again replaces an uncertain gift: the progress line while its previous link is closed */
+    retrying: {
+      en: "Replacing the previous gift link. This can take a minute or two.",
+      ja: "前の<wbr/>ギフトリンクを<wbr/>入れ替えています。<wbr/>数分<wbr/>かかることも<wbr/>あります。",
+    },
+    /** Giving's Send not confirmed screen: the persistent alert if replacing its previous link fails, with the affected sticker and reason */
+    couldntRetry: {
+      en: "{{no}} couldn’t be prepared again: {{reason}}",
+      ja: "{{no}}をもう一度準備できませんでした：{{reason}}",
     },
     /** Giving's LINE send error screen: the persistent alert when the picker fails or its answer does not arrive */
     message: {

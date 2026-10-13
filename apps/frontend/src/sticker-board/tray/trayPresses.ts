@@ -295,7 +295,12 @@ export function createTrayPresses(
   /** A given sticker's spot, or one in a gift, packed or sent: it opens on its click, and never peels. */
   function opens(el: HTMLElement) {
     const { state } = el.dataset;
-    return state === "given" || state === "inTheBag" || state === "onItsWay";
+    return (
+      state === "given" ||
+      state === "inTheBag" ||
+      state === "sendNotConfirmed" ||
+      state === "onItsWay"
+    );
   }
   /**
    * A click on a given sticker's spot opens it among the stickers you gave; on a sticker in a gift,

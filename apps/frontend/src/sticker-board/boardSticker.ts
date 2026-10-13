@@ -1,4 +1,5 @@
 import type { BoardSticker as ApiBoardSticker } from "@drawing-app/api/client";
+import { keptGift } from "../giving/keptGifts";
 import {
   toMs,
   toPerson,
@@ -68,7 +69,12 @@ export interface BoardStickerView extends BoardSticker {
    * Its gift while packed or on its way. `to` is the handle of who it waits for: the person the giver
    * picked in the app, or whoever first opened its link, since LINE's friend picker never says who.
    */
-  openGift: { id: string; status: "packed" | "sent"; to?: string } | null;
+  openGift: {
+    id: string;
+    status: "packed" | "sent";
+    messageAttempt: { id: string; state: "pending" | "cancelled" | "sent" } | null;
+    to?: string;
+  } | null;
   /** When the open sticker tray showed it, in milliseconds; null shows NEW. */
   seenAt: number | null;
   /** When it came to you, in milliseconds: the sticker tray's order. */
@@ -112,6 +118,25 @@ export interface NewSpots {
   spots: Spots;
 }
 
+/** A matching local LINE answer is visible while Croquis retries saving its report. */
+export function giftWithKeptOutcome(
+  userId: string,
+  gift: BoardStickerView["openGift"],
+): BoardStickerView["openGift"] {
+  if (!gift || gift.status === "sent" || !gift.messageAttempt) return gift;
+  const kept = keptGift(userId, gift.id);
+  if (
+    kept?.attemptId !== gift.messageAttempt.id ||
+    (kept.message !== "sent" && kept.message !== "cancelled")
+  )
+    return gift;
+  return {
+    ...gift,
+    status: kept.message === "sent" ? "sent" : gift.status,
+    messageAttempt: { ...gift.messageAttempt, state: kept.message },
+  };
+}
+
 export function toBoardSticker(b: ApiBoardSticker): UnplacedBoardSticker {
   const s = toSticker(b.sticker);
   return {
@@ -139,11 +164,15 @@ export function toBoardSticker(b: ApiBoardSticker): UnplacedBoardSticker {
       receiver: toPerson(b.givenTo.receiver),
       receivedAt: toMs(b.givenTo.receivedAt),
     },
-    openGift: b.openGift && {
-      id: b.openGift.id,
-      status: b.openGift.status,
-      ...(b.openGift.for?.handle && { to: b.openGift.for.handle }),
-    },
+    openGift: giftWithKeptOutcome(
+      b.sticker.ownerId,
+      b.openGift && {
+        id: b.openGift.id,
+        status: b.openGift.status,
+        messageAttempt: b.openGift.messageAttempt,
+        ...(b.openGift.for?.handle && { to: b.openGift.for.handle }),
+      },
+    ),
     seenAt: b.seenAt === null ? null : toMs(b.seenAt),
     arrivedAt: toMs(b.arrivedAt),
   };

@@ -22,7 +22,7 @@ describe("inGiftsLast", () => {
   type GiftStatus = NonNullable<BoardStickerView["openGift"]>["status"];
   const yours = (id: string, gift?: GiftStatus) => ({
     id,
-    openGift: gift ? { id: `gift-${id}`, status: gift } : null,
+    openGift: gift ? { id: `gift-${id}`, status: gift, messageAttempt: null } : null,
   });
 
   it("puts the stickers in a gift after the rest, each part in the order it came", () => {

@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { gift, people, sticker } from "../api/testFixtures";
 import { formatHandle } from "../stickers/format";
+import { inLanguage } from "../ui/testing";
 import { GiftsForYouBadge, type GiftForYou } from "./GiftsForYouBadge";
 
 let host: HTMLDivElement;
@@ -53,5 +54,32 @@ describe("GiftsForYouBadge", () => {
     show([waiting()]);
     expect(count()).toBeUndefined();
     expect(badge()?.textContent).toContain("A gift for you");
+  });
+
+  it.each([
+    ["en", 1, "An 18+ gift for you from @mika. Open it"],
+    ["en", 3, "3 gifts for you. Open the newest, an 18+ gift from @mika"],
+    ["ja", 1, "ギフトが1件。@mikaさんからの最新の18+ギフトをひらく"],
+    ["ja", 3, "ギフトが3件。@mikaさんからの最新の18+ギフトをひらく"],
+  ] as const)(
+    "names the newest gift's 18+ warning in %s with %i waiting",
+    async (language, count, name) => {
+      await inLanguage(language);
+      const newest = waiting();
+      newest.sticker = { ...newest.sticker, nsfw: true };
+      show([newest, ...Array.from({ length: count - 1 }, () => waiting(people.ken))]);
+      expect(badge()?.getAttribute("aria-label")).toBe(name);
+      expect(host.querySelector(".gifts-for-you-badge__nsfw")?.textContent).toBe("18+");
+    },
+  );
+
+  it("warns about the gift it opens, not an older 18+ gift", () => {
+    const older = waiting(people.ken);
+    older.sticker = { ...older.sticker, nsfw: true };
+    show([waiting(), older]);
+    expect(badge()?.getAttribute("aria-label")).toBe(
+      "2 gifts for you. Open the newest, from @mika",
+    );
+    expect(host.querySelector(".gifts-for-you-badge__nsfw")).toBeNull();
   });
 });

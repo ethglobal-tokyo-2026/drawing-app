@@ -11,6 +11,7 @@ import { and, asc, count, eq, inArray, isNull, notExists, or } from "drizzle-orm
 import { z } from "zod";
 import {
   giftSchema,
+  bytes32Schema,
   isoTimeSchema,
   largeColumns,
   largePlacementSchema,
@@ -53,7 +54,15 @@ const boardStickerSchema = stickerPlacementSchema.extend({
   givenTo: z.object({ receiver: personSchema, receivedAt: isoTimeSchema }).nullable(),
   /** `for`: who the giver picked in the app, or who first opened its link; null through LINE alone. */
   openGift: z
-    .object({ id: giftSchema.shape.id, status: openGiftStatusSchema, for: personSchema.nullable() })
+    .object({
+      id: giftSchema.shape.id,
+      status: openGiftStatusSchema,
+      for: personSchema.nullable(),
+      /** The giver's last LINE attempt, so their tray distinguishes a prepared gift from an unanswered send. */
+      messageAttempt: z
+        .object({ id: bytes32Schema, state: z.enum(["pending", "cancelled", "sent"]) })
+        .nullable(),
+    })
     .nullable(),
 });
 export type BoardSticker = z.infer<typeof boardStickerSchema>;
@@ -111,19 +120,37 @@ const openGiftFrom = (ownerId: string) =>
 /** The owner's open gifts, by sticker. */
 function openGiftsOf(db: Db, ownerId: string) {
   const rows = db
-    .select({ id: gifts.id, stickerId: gifts.stickerId, status: gifts.status, for: users })
+    .select({
+      id: gifts.id,
+      stickerId: gifts.stickerId,
+      status: gifts.status,
+      for: users,
+      messageAttemptId: gifts.messageAttemptId,
+      messageAttemptState: gifts.messageAttemptState,
+    })
     .from(gifts)
     .leftJoin(users, eq(users.id, gifts.forUserId))
     .where(openGiftFrom(ownerId))
     .all();
   const open = new Map<string, BoardSticker["openGift"]>();
-  for (const { id, stickerId, status, for: forUser } of rows) {
+  for (const {
+    id,
+    stickerId,
+    status,
+    for: forUser,
+    messageAttemptId,
+    messageAttemptState,
+  } of rows) {
     const openStatus = openGiftStatusSchema.safeParse(status);
     if (openStatus.success) {
       open.set(stickerId, {
         id,
         status: openStatus.data,
         for: forUser ? toPerson(forUser) : null,
+        messageAttempt:
+          messageAttemptId !== null && messageAttemptState !== "not_started"
+            ? { id: messageAttemptId, state: messageAttemptState }
+            : null,
       });
     }
   }

@@ -225,9 +225,13 @@ export function StickerDetail({
   const takeOut = useTakeOut(sticker?.id ?? null);
   const openGift = sticker && !takenOut.has(sticker.id) ? sticker.openGift : null;
   const sent = openGift?.status === "sent";
+  const sendNotConfirmed =
+    openGift?.status === "packed" && openGift.messageAttempt?.state === "pending";
   const giftWords = (gift: NonNullable<BoardStickerView["openGift"]>) =>
     gift.status === "packed"
-      ? t(($) => $.giving.inTheBag.title)
+      ? gift.messageAttempt?.state === "pending"
+        ? t(($) => $.giving.lineSendError.title)
+        : t(($) => $.giving.inTheBag.title)
       : gift.to
         ? t(($) => $.stickerBoard.detail.onItsWayTo, { receiver: formatHandle(gift.to) })
         : t(($) => $.stickerBoard.detail.onItsWay);
@@ -427,7 +431,8 @@ export function StickerDetail({
   // confirm opening on Cancel as Mark 18+'s does. The take-out goes on if the detail closes.
   const takeOutLink = useRef<HTMLButtonElement>(null);
   const cancelTakeOut = useRef<HTMLButtonElement>(null);
-  const askingTakeOut = takeOutAsk === sticker?.id && sent && takeOut?.step !== "takingOut";
+  const askingTakeOut =
+    takeOutAsk === sticker?.id && (sent || sendNotConfirmed) && takeOut?.step !== "takingOut";
   const backToTakeOut = useRef(false);
   useEffect(() => {
     if (askingTakeOut) cancelTakeOut.current?.focus({ preventScroll: true });
@@ -832,6 +837,9 @@ export function StickerDetail({
                             no: formatNo(sticker.no),
                           })}
                         </p>
+                        <p className="sticker-detail__confirm-lead">
+                          {t(($) => $.stickerBoard.detail.takeOut.lead)}
+                        </p>
                         <div className="sticker-detail__confirm-actions">
                           <QuietLink ref={cancelTakeOut} onClick={stopAskingTakeOut}>
                             {t(($) => $.stickerBoard.detail.takeOut.cancel)}
@@ -851,7 +859,7 @@ export function StickerDetail({
                         aria-disabled={takeOut?.step === "takingOut" || undefined}
                         onClick={() => {
                           if (takeOut?.step === "takingOut") return;
-                          if (sent) setTakeOutAsk(sticker.id);
+                          if (sent || sendNotConfirmed) setTakeOutAsk(sticker.id);
                           else startTakeOut(sticker.id, openGift.id);
                         }}
                       >
@@ -913,7 +921,9 @@ export function StickerDetail({
                         icon={<GiveIcon size={18} />}
                         onClick={() => onGive(sticker)}
                       >
-                        {t(($) => $.stickerBoard.detail.give)}
+                        {openGift
+                          ? t(($) => $.stickerBoard.detail.continueSending)
+                          : t(($) => $.stickerBoard.detail.give)}
                       </LabelButton>
                     )}
                   </div>
@@ -921,7 +931,9 @@ export function StickerDetail({
                   onGive && (
                     <div className="sticker-detail__acts">
                       <Key tone="aqua" icon={<GiveIcon />} onClick={() => onGive(sticker)}>
-                        {t(($) => $.stickerBoard.detail.give)}
+                        {openGift
+                          ? t(($) => $.stickerBoard.detail.continueSending)
+                          : t(($) => $.stickerBoard.detail.give)}
                       </Key>
                     </div>
                   )

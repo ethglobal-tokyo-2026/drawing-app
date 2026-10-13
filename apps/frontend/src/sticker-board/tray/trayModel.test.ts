@@ -183,17 +183,25 @@ describe("packing the sheets", () => {
     expect(ui.model.slots[3].pos?.n).toBe(3);
   });
 
-  it("reserves label space for packed and sent gifts while keeping their sticker size", () => {
-    const { ui, model } = packedTray(2, true, 1200);
-    const before = ui.model.slots.map((s) => ({ w: positionOf(s).w, h: positionOf(s).h }));
-    ui.model.slots[0].state = "inTheBag";
-    ui.model.slots[1].state = "onItsWay";
-    model.applyPack();
-    expect(
-      Math.abs(positionOf(ui.model.slots[0]).y - positionOf(ui.model.slots[1]).y),
-    ).toBeGreaterThan(100);
-    expect(ui.model.slots.map((s) => ({ w: positionOf(s).w, h: positionOf(s).h }))).toEqual(before);
-  });
+  it.each([
+    ["inTheBag", "onItsWay"],
+    ["sendNotConfirmed", "sendNotConfirmed"],
+  ] as const)(
+    "reserves label space for %s and %s while keeping their sticker size",
+    (first, second) => {
+      const { ui, model } = packedTray(2, true, 1200);
+      const before = ui.model.slots.map((s) => ({ w: positionOf(s).w, h: positionOf(s).h }));
+      ui.model.slots[0].state = first;
+      ui.model.slots[1].state = second;
+      model.applyPack();
+      expect(
+        Math.abs(positionOf(ui.model.slots[0]).y - positionOf(ui.model.slots[1]).y),
+      ).toBeGreaterThan(100);
+      expect(ui.model.slots.map((s) => ({ w: positionOf(s).w, h: positionOf(s).h }))).toEqual(
+        before,
+      );
+    },
+  );
 
   it("enlarges the packed sticker cuts by a quarter on a large screen, keeping the pouch its size", () => {
     const packed = (large: boolean) => {

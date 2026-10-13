@@ -147,6 +147,38 @@ afterEach(() => {
 });
 
 describe("Giving", () => {
+  it("offers one Try again action for an uncertain send and explains replacement before the tap", async () => {
+    const api = giftsApi();
+    const packageGift = vi.spyOn(api, "packageGift");
+    const reclaim = vi.spyOn(api, "startTakeOut");
+    const send = vi.spyOn(sender, "send");
+    const report = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      open("s-retry-uncertain", { api });
+      await startPicker();
+      await wait(PICKER_ANSWER_MS);
+      expect(title()).toBe("Send not confirmed");
+      expect(document.querySelector(".giving__sub")?.textContent).toContain(
+        "The previous gift link will stop working",
+      );
+      const primary = document.querySelector<HTMLButtonElement>(".giving__acts .key");
+      expect(primary?.textContent).toContain("Try again");
+      expect(document.querySelector(".giving__acts")?.textContent).not.toContain("Take it out");
+      tap("Try again");
+      expect(primary?.getAttribute("aria-busy")).toBe("true");
+      await wait(0);
+      expect(reclaim).toHaveBeenCalledOnce();
+      expect(packageGift).toHaveBeenCalledTimes(2);
+      expect(title()).toBe("Ready to send");
+      expect(send).toHaveBeenCalledOnce();
+      tap("Send in LINE");
+      expect(send).toHaveBeenCalledTimes(2);
+    } finally {
+      send.mockRestore();
+      report.mockRestore();
+    }
+  });
+
   it("prepares before sending and opens LINE synchronously from a fresh Send tap", async () => {
     const send = vi.spyOn(sender, "send");
     try {
@@ -217,7 +249,7 @@ describe("Giving", () => {
     try {
       open("s-read-blocked", { api });
       await wait(1150);
-      expect(title()).toBe("LINE send error");
+      expect(title()).toBe("Send not confirmed");
       expect(document.querySelector('.giving__scroll [role="alert"]')?.textContent).toContain(
         "LINE didn’t confirm that No.0147 was sent",
       );
@@ -236,7 +268,7 @@ describe("Giving", () => {
     }
   });
 
-  it("keeps a missing-token gift in the bag when Giving closes", async () => {
+  it("bounds missing-token replacement and leaves another retry available when preparation still fails", async () => {
     const api = giftsApi();
     const original = await api.packageGift("s-no-token");
     vi.spyOn(api, "packageGift").mockResolvedValue({ ...original, giftClaimToken: null });
@@ -244,10 +276,11 @@ describe("Giving", () => {
     open("s-no-token", { api });
     await wait(1150);
     expect(document.body.textContent).toContain(giving.transferProblem.no_link.en);
-    expect(takeOut).not.toHaveBeenCalled();
+    expect(takeOut).toHaveBeenCalledOnce();
+    expect(document.querySelector(".giving__acts .key")?.textContent).toContain("Try again");
     pressEscape();
     expect(onClose).toHaveBeenCalledExactlyOnceWith(false);
-    expect(takeOut).not.toHaveBeenCalled();
+    expect(takeOut).toHaveBeenCalledOnce();
   });
 
   /** A server whose packing waits until `finishPacking` runs. */
@@ -286,7 +319,7 @@ describe("Giving", () => {
     expect(title()).toBe("Preparing your gift");
 
     await act(async () => finishPacking());
-    expect(title()).toBe("In the bag");
+    expect(title()).toBe("Ready to send");
     expect(send).not.toHaveBeenCalled();
     tap("Send in LINE");
     expect(send).toHaveBeenCalledTimes(1);
@@ -353,7 +386,7 @@ describe("Giving", () => {
     open("s-late");
     await startPicker();
     await wait(PICKER_ANSWER_MS);
-    expect(title()).toBe("LINE send error");
+    expect(title()).toBe("Send not confirmed");
     const error = document.querySelector('[role="alert"]')?.textContent;
     expect(error).toContain("LINE didn’t confirm that No.0147 was sent");
     expect(giftOf("s-late")).toBe("packed");
@@ -390,7 +423,7 @@ describe("Giving", () => {
     try {
       open("s-empty-line-error");
       await startPicker();
-      expect(title()).toBe("LINE send error");
+      expect(title()).toBe("Send not confirmed");
       await act(async () => tap("Copy"));
       expect(writeText).toHaveBeenCalledExactlyOnceWith(expect.stringContaining("(empty message)"));
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining("sdk.js:1:2"));
@@ -517,13 +550,17 @@ it.each([
   async ({ recipient, attempt, status }) => {
     const sticker = boardSticker();
     const originalGift = gift({ stickerId: sticker.stickerId, status });
-    const packageGift = vi.fn(async () => ({
-      gift: originalGift,
-      forUserId: recipient,
-      giftClaimToken: null,
-      messageAttempt: attempt,
-      deposit: null,
-    }));
+    let packageCalls = 0;
+    const packageGift = vi.fn(async () => {
+      packageCalls += 1;
+      return {
+        gift: packageCalls === 1 ? originalGift : { ...originalGift, id: `${originalGift.id}-new` },
+        forUserId: recipient,
+        giftClaimToken: packageCalls === 1 ? null : token,
+        messageAttempt: packageCalls === 1 ? attempt : null,
+        deposit: null,
+      };
+    });
     const startTakeOut = vi.fn(async () => ({
       gift: { ...originalGift, status: "taken_out" as const },
     }));
@@ -541,6 +578,7 @@ it.each([
         stickerBoard: async () => ({ owner: TEST_ME, boardStickers: [sticker] }),
         packageGift,
         startTakeOut,
+        beginMessageAttempt: async () => originalGift,
       }),
     );
     try {
@@ -562,16 +600,12 @@ it.each([
           ),
       ).toBe(mismatch);
       expect(stalePickerSend).not.toHaveBeenCalled();
-      expect(startTakeOut).not.toHaveBeenCalled();
       if (attempt === null) {
-        expect(error).toHaveBeenCalledWith(
-          expect.stringContaining("couldn’t be packed"),
-          expect.any(Error),
-        );
-        tap("Take it out");
-        await wait(1000);
-        expect(startTakeOut).toHaveBeenCalledWith(originalGift.id);
-      } else expect(error).not.toHaveBeenCalled();
+        expect(startTakeOut).toHaveBeenCalledExactlyOnceWith(originalGift.id, null);
+        expect(packageGift).toHaveBeenLastCalledWith(sticker.stickerId, recipient ?? undefined);
+        expect(title()).toBe("Ready to send");
+      } else expect(startTakeOut).not.toHaveBeenCalled();
+      expect(error).not.toHaveBeenCalled();
     } finally {
       error.mockRestore();
     }

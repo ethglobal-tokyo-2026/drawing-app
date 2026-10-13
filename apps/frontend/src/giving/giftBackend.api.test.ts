@@ -136,9 +136,19 @@ describe("Giving against the actual API", () => {
       claimCommitment: commitment,
       messageAttemptState: "cancelled",
     });
-    // A tab with no token presents explicit recovery, even after confirmed cancellation.
-    await expect(otherTab.pack(t.sticker)).rejects.toMatchObject({ cause: { problem: "no_link" } });
-    expect(t.giftRow(packed.giftId).status).toBe("packed");
+    // After a confirmed cancellation, a tab with no token prepares a fresh link automatically.
+    const replacement = await otherTab.pack(t.sticker);
+    expect(replacement.giftId).not.toBe(packed.giftId);
+    expect(t.giftRow(packed.giftId).status).toBe("taken_out");
+    expect(t.giftRow(replacement.giftId)).toMatchObject({
+      status: "packed",
+      forUserId: t.recipient,
+      messageAttemptState: "not_started",
+    });
+    expect(t.giftRow(replacement.giftId).claimCommitment).not.toBe(commitment);
+    await expect(t.api.beginMessageAttempt(packed.giftId, attemptId)).rejects.toMatchObject({
+      code: "gift_closed",
+    });
   });
 
   it("keeps a failed cancellation report in memory with blocked storage and recovers server pending after reload", async () => {

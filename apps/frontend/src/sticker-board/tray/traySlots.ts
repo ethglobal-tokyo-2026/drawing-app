@@ -5,7 +5,7 @@ import type { BoardStickerView } from "../boardSticker";
  * in a gift and "onItsWay" sent (its spot shows it under frost), "given" away (its spot stays, with
  * only its cut line traced).
  */
-type TraySlotState = "here" | "used" | "inTheBag" | "onItsWay" | "given";
+type TraySlotState = "here" | "used" | "inTheBag" | "sendNotConfirmed" | "onItsWay" | "given";
 
 /** A sticker's permanent place in the sticker tray. */
 export interface TraySlot {
@@ -36,7 +36,12 @@ export const PER_SHEET = STAND_IN.length;
 /** A sticker in a gift waits in its spot, wherever its spot on the board. */
 function stateOf(s: Pick<BoardStickerView, "placement" | "held" | "openGift">): TraySlotState {
   if (!s.held) return "given";
-  if (s.openGift) return s.openGift.status === "sent" ? "onItsWay" : "inTheBag";
+  if (s.openGift)
+    return s.openGift.status === "sent"
+      ? "onItsWay"
+      : s.openGift.messageAttempt?.state === "pending"
+        ? "sendNotConfirmed"
+        : "inTheBag";
   return s.placement.on ? "used" : "here";
 }
 

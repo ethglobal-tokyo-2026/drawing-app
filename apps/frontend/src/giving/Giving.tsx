@@ -113,7 +113,8 @@ export function Giving({
     (state.step === "ready" && (state.cancelled === true || state.error !== undefined));
   const [cantFind, setCantFind] = useState(false);
   const view: View = unsent && cantFind ? "cantFind" : screen;
-  const preparing = state.step === "packed" || state.step === "preparing";
+  const preparing =
+    state.step === "packed" || state.step === "preparing" || state.step === "retrying";
   const slow = (state.step === "packed" || state.step === "preparing") && state.slow === true;
   // Out of the bag, the sticker is back where it was given from, and Giving closes on it.
   const takenOut = state.step === "takenOut";
@@ -134,6 +135,9 @@ export function Giving({
   // itself does nothing.
   const sendInLine = () => {
     if (!busy) flow?.sendInLine();
+  };
+  const retry = () => {
+    if (!busy) flow?.retry();
   };
   const takeOut = () => {
     if (canTakeOut) flow?.takeOut();
@@ -207,6 +211,11 @@ export function Giving({
               {t(($) => $.giving.sent.couldntRecord, { reason: state.recordError.message })}
             </ErrorLine>
           )}
+          {state.retryError && (
+            <ErrorLine className="giving__problem" detail={state.retryError.detail}>
+              {state.retryError.message}
+            </ErrorLine>
+          )}
         </div>
         <LabelButton
           block
@@ -218,25 +227,48 @@ export function Giving({
         </LabelButton>
       </div>
     );
-  } else if (state.step === "maybeSent") {
-    // No Send in LINE: if the gift message went out, a second one would put its link in two chats.
-    title = t(($) => $.giving.lineSendError.title);
-    lead = t(($) => $.giving.lineSendError.lead);
-    const error = state.error;
+  } else if (state.step === "maybeSent" || state.step === "retrying") {
+    // Retry closes the previous link before a fresh gift can be sent from its own LINE tap.
+    title =
+      state.step === "retrying"
+        ? t(($) => $.giving.preparing.title)
+        : t(($) => $.giving.lineSendError.title);
+    lead =
+      state.step === "retrying"
+        ? t(($) => $.giving.lineSendError.retrying)
+        : t(($) => $.giving.lineSendError.lead);
     head = titleHead(title);
     content = (
       <>
         <div className="giving__scroll">
           <p className="giving__sub keep-phrases">{lead}</p>
-          <ErrorLine className="giving__problem" detail={error.detail}>
-            {error.message}
-          </ErrorLine>
+          {state.step === "maybeSent" && (
+            <>
+              <ErrorLine className="giving__problem" detail={state.error.detail}>
+                {state.error.message}
+              </ErrorLine>
+              {state.retryError && (
+                <ErrorLine className="giving__problem" detail={state.retryError.detail}>
+                  {state.retryError.message}
+                </ErrorLine>
+              )}
+            </>
+          )}
           {bag("open")}
         </div>
         <div className="giving__acts">
-          <QuietLink onClick={takeOut} aria-disabled={!canTakeOut || undefined} data-autofocus>
-            <ArrowUUpLeft /> {t(($) => $.giving.inTheBag.takeOut)}
-          </QuietLink>
+          <Key
+            tone="aqua"
+            icon={<PaperPlaneTilt weight="fill" />}
+            onClick={retry}
+            data-press="off"
+            {...busyKey}
+            data-autofocus
+          >
+            {state.step === "retrying"
+              ? t(($) => $.giving.preparing.button)
+              : t(($) => $.giving.inTheBag.prepareAgain)}
+          </Key>
         </div>
       </>
     );

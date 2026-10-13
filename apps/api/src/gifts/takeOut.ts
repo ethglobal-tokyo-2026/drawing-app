@@ -28,6 +28,36 @@ import {
   type GiftStep,
 } from "./giftTransactions.ts";
 import { recordClaimShown } from "./receiving.ts";
+import type { UnsentGiftMessage } from "./packaging.ts";
+
+type SendChanged = "gift_message_unresolved" | "gift_message_attempt_changed";
+
+/** Rechecks a known-unsent snapshot while the gift's operations are serialized. */
+function unchangedUnsentMessage(
+  gift: GiftRow,
+  expected: UnsentGiftMessage | undefined,
+): Refusal<SendChanged> | null {
+  if (expected === undefined) return null;
+  if (
+    gift.status === "sent" ||
+    gift.messageAttemptState === "pending" ||
+    gift.messageAttemptState === "sent"
+  )
+    return refuse(
+      "gift_message_unresolved",
+      `Gift ${gift.id}'s message started after recovery was prepared`,
+    );
+  const matches =
+    expected === null
+      ? gift.messageAttemptId === null && gift.messageAttemptState === "not_started"
+      : gift.messageAttemptId === expected.id && gift.messageAttemptState === expected.state;
+  return matches
+    ? null
+    : refuse(
+        "gift_message_attempt_changed",
+        `Gift ${gift.id}'s message attempt changed after recovery was prepared`,
+      );
+}
 
 /**
  * A take-out its gift's status already answers: one that landed before, answered again, or a
@@ -48,6 +78,7 @@ export type TakeOutStarting =
       | "deposit_not_landed"
       | "take_out_not_landed"
       | "giving_limit_reached"
+      | SendChanged
     >
   | { refusal: null; gift: GiftRow; takeOut: SuiTransaction | null };
 
@@ -60,6 +91,7 @@ export async function startTakeOut(
   deps: AppDeps,
   userId: string,
   giftId: string,
+  unsentMessageAttempt?: UnsentGiftMessage,
 ): Promise<TakeOutStarting> {
   const owned = ownGift(
     deps.db.select().from(gifts).where(eq(gifts.id, giftId)).get(),
@@ -68,13 +100,22 @@ export async function startTakeOut(
   );
   if (owned.refusal !== null) return owned;
   const sui = suiDepsOf(deps);
-  if (!sui) return takeOutOnMockChain(deps, owned.gift);
-  return oneAtATime(`gift:${giftId}`, () => startTakeOutOnSui(deps, sui, giftId));
+  return oneAtATime(`gift:${giftId}`, async () =>
+    sui
+      ? startTakeOutOnSui(deps, sui, giftId, unsentMessageAttempt)
+      : takeOutOnMockChain(deps, currentGift(deps.db, giftId), unsentMessageAttempt),
+  );
 }
 
-function takeOutOnMockChain({ db, clock }: AppDeps, gift: GiftRow): TakeOutStarting {
+function takeOutOnMockChain(
+  { db, clock }: AppDeps,
+  gift: GiftRow,
+  expected?: UnsentGiftMessage,
+): TakeOutStarting {
   const answered = takeOutState(gift);
   if (answered) return answered.refusal === null ? { ...answered, takeOut: null } : answered;
+  const changed = unchangedUnsentMessage(gift, expected);
+  if (changed) return changed;
   recordTakenOut(db, gift, clock.now());
   return { refusal: null, gift: currentGift(db, gift.id), takeOut: null };
 }
@@ -83,11 +124,14 @@ async function startTakeOutOnSui(
   deps: AppDeps,
   sui: SuiTransactionDeps,
   giftId: string,
+  expected?: UnsentGiftMessage,
 ): Promise<TakeOutStarting> {
   const { db } = sui;
   const before = currentGift(db, giftId);
   const answered = takeOutState(before);
   if (answered) return answered.refusal === null ? { ...answered, takeOut: null } : answered;
+  const changed = unchangedUnsentMessage(before, expected);
+  if (changed) return changed;
   const open = openGiftTransaction(db, giftId);
   if (open?.kind === "take_out" && isLive(open, sui.clock.now())) {
     return { refusal: null, gift: before, takeOut: open };
@@ -104,6 +148,8 @@ async function startTakeOutOnSui(
   const gift = currentGift(db, giftId);
   const after = takeOutState(gift);
   if (after) return after.refusal === null ? { ...after, takeOut: null } : after;
+  const changedAfter = unchangedUnsentMessage(gift, expected);
+  if (changedAfter) return changedAfter;
   // A claim the receiver hasn't recorded yet still sent the sticker on.
   if (claimSucceeded(db, giftId)) return alreadyReceived(gift);
   if (gift.escrowStatus === "missing") {
@@ -133,6 +179,7 @@ export type TakingOut = GiftStep<
   | "sponsorship_expired"
   | "transaction_failed"
   | "take_out_not_landed"
+  | SendChanged
 >;
 
 /** The giver's signed take-out, which the server checks and submits: the gift as the escrow left it. */
@@ -141,6 +188,7 @@ export async function submitTakeOut(
   userId: string,
   giftId: string,
   signed: SignedTransaction,
+  expected?: UnsentGiftMessage,
 ): Promise<TakingOut> {
   const owned = ownGift(
     deps.db.select().from(gifts).where(eq(gifts.id, giftId)).get(),
@@ -164,6 +212,10 @@ export async function submitTakeOut(
       );
     }
     const gift = currentGift(sui.db, giftId);
+    const closed = takeOutState(gift);
+    if (closed) return closed;
+    const changed = unchangedUnsentMessage(gift, expected);
+    if (changed) return changed;
     const now = sui.clock.now();
     const { row } = await runSigned(sui, takeOut, signed.signature, giftRecord(takeOut, gift, now));
     if (row.outcome === "succeeded") return { refusal: null, gift: currentGift(sui.db, giftId) };

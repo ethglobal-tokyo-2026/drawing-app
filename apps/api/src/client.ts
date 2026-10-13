@@ -60,7 +60,7 @@ export type { ChatMenuLink } from "./chatMenu/menus.ts";
 export type { ErrorBody } from "./errors.ts";
 export type { Explore, PilePage, PileSticker } from "./explore/explore.ts";
 export type { LeaderboardRow } from "./explore/leaderboards.ts";
-export type { PackagedGift, TakeOutStart } from "./gifts/packaging.ts";
+export type { PackagedGift, TakeOutStart, UnsentGiftMessage } from "./gifts/packaging.ts";
 export type {
   GiftPreview,
   GiftsForYou,

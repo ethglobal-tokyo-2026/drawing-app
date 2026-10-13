@@ -10,6 +10,8 @@ import {
   packageGift,
   reportShared,
   sharedBodySchema,
+  takeOutRequestSchema,
+  signedTakeOutSchema,
 } from "../gifts/packaging.ts";
 import { startTakeOut, submitTakeOut } from "../gifts/takeOut.ts";
 import {
@@ -23,6 +25,7 @@ import {
 } from "../gifts/receiving.ts";
 import type { AppEnv } from "../session.ts";
 import { giftIdParam, signedTransactionSchema, toGift, toSponsoredTransaction } from "../shapes.ts";
+import { oneAtATime } from "../sui/oneAtATime.ts";
 
 /** A Receiving's answer: the sticker on the receiver's board, or why not. */
 function received(c: Context<AppEnv>, receiving: Receiving) {
@@ -96,12 +99,10 @@ export const giftRoutes = (deps: AppDeps) =>
       "/:giftId/message-attempt",
       validate("param", giftIdParam),
       validate("json", messageAttemptBodySchema),
-      (c) => {
-        const started = beginMessageAttempt(
-          deps,
-          c.var.userId,
-          c.req.valid("param").giftId,
-          c.req.valid("json").attemptId,
+      async (c) => {
+        const giftId = c.req.valid("param").giftId;
+        const started = await oneAtATime(`gift:${giftId}`, async () =>
+          beginMessageAttempt(deps, c.var.userId, giftId, c.req.valid("json").attemptId),
         );
         if (started.refusal !== null) return refused(c, started);
         return c.json({ gift: toGift(started.gift) }, 200);
@@ -111,42 +112,49 @@ export const giftRoutes = (deps: AppDeps) =>
       "/:giftId/shared",
       validate("param", giftIdParam),
       validate("json", sharedBodySchema),
-      (c) => {
+      async (c) => {
         const { giftId } = c.req.valid("param");
-        const shared = reportShared(
-          deps,
-          c.var.userId,
-          giftId,
-          c.req.valid("json").attemptId,
-          c.req.valid("json").outcome,
+        const shared = await oneAtATime(`gift:${giftId}`, async () =>
+          reportShared(
+            deps,
+            c.var.userId,
+            giftId,
+            c.req.valid("json").attemptId,
+            c.req.valid("json").outcome,
+          ),
         );
         if (shared.refusal !== null) return refused(c, shared);
         return c.json({ gift: toGift(shared.gift) }, 200);
       },
     )
-    .post("/:giftId/take-out/start", validate("param", giftIdParam), async (c) => {
-      const giftId = c.req.valid("param").giftId;
-      const started = await diagnosticStep(
-        "gift.take_out.start",
-        { giftId, userId: c.var.userId },
-        () => startTakeOut(deps, c.var.userId, giftId),
-      );
-      if (started.refusal !== null) return refused(c, started);
-      const gift = toGift(started.gift);
-      if (!started.takeOut) return c.json({ gift }, 200);
-      return c.json({ gift, takeOut: toSponsoredTransaction(started.takeOut) }, 200);
-    })
+    .post(
+      "/:giftId/take-out/start",
+      validate("param", giftIdParam),
+      validate("json", takeOutRequestSchema),
+      async (c) => {
+        const giftId = c.req.valid("param").giftId;
+        const started = await diagnosticStep(
+          "gift.take_out.start",
+          { giftId, userId: c.var.userId },
+          () => startTakeOut(deps, c.var.userId, giftId, c.req.valid("json").unsentMessageAttempt),
+        );
+        if (started.refusal !== null) return refused(c, started);
+        const gift = toGift(started.gift);
+        if (!started.takeOut) return c.json({ gift }, 200);
+        return c.json({ gift, takeOut: toSponsoredTransaction(started.takeOut) }, 200);
+      },
+    )
     .post(
       "/:giftId/take-out",
       validate("param", giftIdParam),
-      validate("json", signedTransactionSchema),
+      validate("json", signedTakeOutSchema),
       async (c) => {
         const giftId = c.req.valid("param").giftId;
         const signed = c.req.valid("json");
         const takenOut = await diagnosticStep(
           "gift.take_out",
           { giftId, userId: c.var.userId, txDigest: signed.digest },
-          () => submitTakeOut(deps, c.var.userId, giftId, signed),
+          () => submitTakeOut(deps, c.var.userId, giftId, signed, signed.unsentMessageAttempt),
         );
         if (takenOut.refusal !== null) return refused(c, takenOut);
         return c.json({ gift: toGift(takenOut.gift) }, 200);

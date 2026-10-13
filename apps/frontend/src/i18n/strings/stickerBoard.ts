@@ -603,11 +603,16 @@ export const stickerBoard = {
     new: { en: "NEW", ja: "NEW" },
     giftStatus: {
       /** Sticker tray: the centered paper label over an unavailable sticker packed in an unsent gift */
-      inTheBag: { en: "In the bag", ja: "ギフト袋の中" },
+      inTheBag: { en: "Ready to send", ja: "送信できます" },
+      /** Sticker tray: an outgoing gift whose LINE send has no definitive confirmation, opened for recovery */
+      sendNotConfirmed: { en: "Send not confirmed", ja: "送信を確認できません" },
       /** Sticker tray: the centered paper label over an unavailable sticker sent without a named recipient */
-      onItsWay: { en: "On its way", ja: "お届け中" },
+      onItsWay: { en: "Sent", ja: "送信済み" },
       /** Sticker tray: the centered paper label over an unavailable sticker sent to {{recipient}}, whose full handle wraps */
-      onItsWayTo: { en: "On its way to {{recipient}}", ja: "{{recipient}}さんへお届け中" },
+      onItsWayTo: {
+        en: "Sent · Waiting for {{recipient}}",
+        ja: "送信済み・{{recipient}}さんの受け取り待ち",
+      },
     },
     slot: {
       /** Sticker tray: screen readers' name for a used sticker silhouette, whose sticker is on the board; a tap makes that sticker pulse there */
@@ -630,13 +635,21 @@ export const stickerBoard = {
         ja: "{{no}}、{{recipient}}さんへ贈ったシールをひらく",
       },
       /** Sticker tray: screen readers' name for the spot of a sticker packed in a gift you haven't sent yet, a button that opens it among your stickers */
-      inTheBag: { en: "{{no}}, in the bag. Open it", ja: "{{no}}、ギフト袋に入れたシールをひらく" },
+      inTheBag: { en: "{{no}}, ready to send. Open it", ja: "{{no}}、送信できるギフトをひらく" },
+      /** Sticker tray: screen readers' name for a gift whose LINE send is unconfirmed, opened for recovery */
+      sendNotConfirmed: {
+        en: "{{no}}, send not confirmed. Open it",
+        ja: "{{no}}、送信を確認できないギフトをひらく",
+      },
       /** Sticker tray: screen readers' name for the spot of a sticker you sent that no one has received yet, a button that opens it among your stickers */
-      onItsWay: { en: "{{no}}, on its way. Open it", ja: "{{no}}、お届け中のシールをひらく" },
+      onItsWay: {
+        en: "{{no}}, sent, waiting to be received. Open it",
+        ja: "{{no}}、送信済み、受け取り待ちのギフトをひらく",
+      },
       /** Sticker tray: screen readers' name for the spot of a sticker you sent to someone that they haven't received yet, a button that opens it among your stickers; {{recipient}} is who it waits for, such as "@bob" */
       onItsWayTo: {
-        en: "{{no}}, on its way to {{recipient}}. Open it",
-        ja: "{{no}}、{{recipient}}さんへお届け中のシールをひらく",
+        en: "{{no}}, sent, waiting for {{recipient}} to receive it. Open it",
+        ja: "{{no}}、送信済み、{{recipient}}さんの受け取り待ちのギフトをひらく",
       },
     },
     /** Sticker tray: screen readers' name for the +1 button under the stack, which spreads every sheet out over the board */
@@ -754,15 +767,25 @@ export const stickerBoard = {
       ja: "<receiver/>さんに贈りました・{{day}}",
     },
     /** Sticker detail, a sticker you've sent that hasn't been received: the aqua status label in place of Give and the thumbnail's spoken gift status */
-    onItsWay: { en: "On its way", ja: "お届け中" },
+    onItsWay: { en: "Sent · Waiting to be received", ja: "送信済み・受け取り待ち" },
     /** Sticker detail, a sticker you've sent to someone in the app that hasn't been received: the aqua status label and the thumbnail's spoken gift status, naming its recipient */
-    onItsWayTo: { en: "On its way to {{receiver}}", ja: "{{receiver}}さんへお届け中" },
+    onItsWayTo: {
+      en: "Sent · Waiting for {{receiver}}",
+      ja: "送信済み・{{receiver}}さんの受け取り待ち",
+    },
+    /** Sticker detail, an outgoing gift ready to send or needing recovery: opens Giving to continue that gift */
+    continueSending: { en: "Continue sending", ja: "送信を続ける" },
     /** Sticker detail, the left thumbnail strip: screen readers' name for an outgoing gift, naming its sticker number and gift status, including its recipient when known */
     thumbnailGiftLabel: { en: "{{no}} · {{status}}", ja: "{{no}}・{{status}}" },
     /** Take it out, on the detail of a sticker in a gift you sent or packed. */
     takeOut: {
       /** Sticker detail, a sticker you sent: the in-place confirm Take it out opens, its title; {{no}} is its number, such as "No.0147" */
       title: { en: "Take {{no}} out?", ja: "{{no}}を取り出しますか？" },
+      /** Sticker detail, before taking out a sent or unconfirmed gift: explains the old link will stop working */
+      lead: {
+        en: "This closes the gift link, even if its message reached LINE.",
+        ja: "LINEにメッセージが届いていても、ギフトリンクは使えなくなります。",
+      },
       /** Sticker detail, Take it out's confirm: the quiet link that closes it with nothing taken out */
       cancel: { en: "Cancel", ja: "キャンセル" },
       /** Sticker detail: said to screen readers once Take it out landed and the sticker is back on your board; {{no}} is its number */

@@ -433,6 +433,12 @@
   font: 700 15px/1.25 var(--font-ui);
 }
 
+.sticker-detail__confirm-lead {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.42;
+}
+
 .sticker-detail__mark-lines {
   display: grid;
   gap: 4px;

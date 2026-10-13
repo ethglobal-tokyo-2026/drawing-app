@@ -1,4 +1,8 @@
-import type { SignedTransaction, SponsoredTransaction } from "@drawing-app/api/client";
+import type {
+  SignedTransaction,
+  SponsoredTransaction,
+  UnsentGiftMessage,
+} from "@drawing-app/api/client";
 import type { ApiClient } from "../api/apiClient";
 import { ApiError } from "../api/apiClient";
 import { messageOf } from "../i18n/errorMessage";
@@ -164,14 +168,22 @@ export function takeOutGift(
     sign = signWithSuiWallet,
   }: { api: ApiClient; userId: string; sign?: SignSponsored },
   giftId: string,
+  unsentMessageAttempt?: UnsentGiftMessage,
 ): Promise<void> {
   const pending = takingOut.get(giftId);
   if (pending) return pending;
   const operation = (async () => {
     // The server answers a take-out for the giver's wallet to sign, or none when the sticker never
     // went into the escrow.
-    const { takeOut } = await api.startTakeOut(giftId);
-    if (takeOut) await api.takeOutGift(giftId, await sign(takeOut));
+    const { takeOut } =
+      unsentMessageAttempt === undefined
+        ? await api.startTakeOut(giftId)
+        : await api.startTakeOut(giftId, unsentMessageAttempt);
+    if (takeOut) {
+      const signed = await sign(takeOut);
+      if (unsentMessageAttempt === undefined) await api.takeOutGift(giftId, signed);
+      else await api.takeOutGift(giftId, signed, unsentMessageAttempt);
+    }
     tokens.delete(giftId);
     forgetKeptGift(userId, giftId);
   })().finally(() => takingOut.delete(giftId));
@@ -199,6 +211,8 @@ export function createApiGiftBackend({
   packaging.set(api, packing);
 
   let storageFailure: GiftTransferError | undefined;
+  /** Replacing an existing gift keeps its original recipient, including a LINE-only gift. */
+  let packedRecipient: string | null | undefined;
   const keep = (giftId: string, attemptId: string, message: "sent" | "cancelled" | "maybeSent") => {
     if (!keepGift(userId, giftId, { message, attemptId })) {
       storageFailure = new GiftTransferError(
@@ -256,9 +270,14 @@ export function createApiGiftBackend({
     sticker: GiftSticker,
     onWait: ((wait: PackWait) => void) | undefined,
     again: boolean,
+    recoverLink = true,
   ): Promise<PackedGift> => {
     onWait?.("asking");
-    const packaged = await api.packageGift(sticker.id, forUserId);
+    const packaged = await api.packageGift(
+      sticker.id,
+      packedRecipient !== undefined ? (packedRecipient ?? undefined) : forUserId,
+    );
+    packedRecipient = packaged.forUserId;
     forgetMyStickerBoard();
     try {
       const local = keptGift(userId, packaged.gift.id, () => {
@@ -297,17 +316,8 @@ export function createApiGiftBackend({
           );
         }
         if (local.message === "cancelled") {
-          try {
-            await markCancelled(packaged.gift.id, attemptId);
-          } catch (error) {
-            throw new GiftMessageOutError(
-              packaged.gift.id,
-              "maybeSent",
-              attemptId,
-              error,
-              packaged.forUserId,
-            );
-          }
+          // LINE's definitive cancellation remains known even when Croquis cannot record it yet.
+          await markCancelled(packaged.gift.id, attemptId);
         } else if (local.message === "maybeSent" && server?.state !== "cancelled") {
           throw new GiftMessageOutError(
             packaged.gift.id,
@@ -333,6 +343,27 @@ export function createApiGiftBackend({
       const { gift } = packaged;
       const token = packaged.giftClaimToken ?? tokens.get(gift.id);
       if (!token) {
+        // A cancelled or never-started send cannot have a delivered link. Replace its lost token
+        // once, preserving the recipient; unresolved and confirmed sends stop above this point.
+        if (recoverLink) {
+          const unsentMessageAttempt: UnsentGiftMessage =
+            server?.state === "cancelled"
+              ? { id: server.id, state: "cancelled" }
+              : local?.message === "cancelled" && attemptId
+                ? { id: attemptId, state: "cancelled" }
+                : null;
+          try {
+            await takeOutGift({ api, userId, sign }, gift.id, unsentMessageAttempt);
+          } catch (error) {
+            if (
+              refusedWith("gift_message_unresolved")(error) ||
+              refusedWith("gift_message_attempt_changed")(error)
+            )
+              return await pack(sticker, onWait, again, false);
+            throw error;
+          }
+          return await pack(sticker, onWait, again, false);
+        }
         throw new GiftTransferError(
           "no_link",
           `${formatNo(sticker.no)} is in a gift the server gave no link for`,
@@ -345,7 +376,7 @@ export function createApiGiftBackend({
         } catch (error) {
           // Signed after its sponsorship lapsed: the server sponsors a fresh deposit for the gift.
           if (!again || !refusedWith("sponsorship_expired")(error)) throw error;
-          return await pack(sticker, onWait, false);
+          return await pack(sticker, onWait, false, recoverLink);
         }
       }
       const message = buildGiftMessage({
@@ -367,7 +398,17 @@ export function createApiGiftBackend({
   return {
     pack: (sticker, onWait) => {
       const pending = packing.get(sticker.id);
-      if (pending) return pending;
+      if (pending)
+        return pending.then(
+          (packed) => {
+            packedRecipient = packed.forUserId;
+            return packed;
+          },
+          (error: unknown) => {
+            if (error instanceof GiftPackagingError) packedRecipient = error.forUserId;
+            throw error;
+          },
+        );
       const operation = pack(sticker, onWait, true).finally(() => packing.delete(sticker.id));
       packing.set(sticker.id, operation);
       return operation;

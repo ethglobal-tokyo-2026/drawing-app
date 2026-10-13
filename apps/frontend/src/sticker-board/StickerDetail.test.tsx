@@ -353,8 +353,31 @@ describe("StickerDetail", () => {
   });
 
   describe("a gift in flight", () => {
+    it("warns before taking out a gift whose LINE send is unconfirmed", async () => {
+      const startTakeOut = vi.fn(() => Promise.resolve({ gift: gift({ status: "taken_out" }) }));
+      const uncertain = sticker(148, day(14), {
+        openGift: {
+          id: "uncertain",
+          status: "packed",
+          messageAttempt: { id: `0x${"cd".repeat(32)}`, state: "pending" },
+        },
+      });
+      open(
+        { stickers: [uncertain], startId: uncertain.id, ownerId: you.id },
+        detailApi({ startTakeOut }),
+      );
+      expect(document.querySelector(".sticker-detail__on-its-way")?.textContent).toContain(
+        "Send not confirmed",
+      );
+      act(() => button(i18next.t(($) => $.giving.inTheBag.takeOut))?.click());
+      expect(document.querySelector(".sticker-detail__confirm")).not.toBeNull();
+      expect(startTakeOut).not.toHaveBeenCalled();
+      await settle();
+    });
     const inFlight = (no: number, status: "packed" | "sent", to?: string) =>
-      sticker(no, day(14), { openGift: { id: `g-${no}`, status, ...(to && { to }) } });
+      sticker(no, day(14), {
+        openGift: { messageAttempt: null, id: `g-${no}`, status, ...(to && { to }) },
+      });
     /** The detail of `s`, opened by its owner, whose take-outs go to `startTakeOut`. */
     const openInFlight = (s: BoardStickerView, startTakeOut?: ApiClient["startTakeOut"]) =>
       open(
@@ -409,43 +432,43 @@ describe("StickerDetail", () => {
         language: "en",
         giftStatus: "packed",
         to: undefined,
-        words: "In the bag",
-        label: "No.0133 · In the bag",
+        words: "Ready to send",
+        label: "No.0133 · Ready to send",
       },
       {
         language: "en",
         giftStatus: "sent",
         to: undefined,
-        words: "On its way",
-        label: "No.0133 · On its way",
+        words: "Sent · Waiting to be received",
+        label: "No.0133 · Sent · Waiting to be received",
       },
       {
         language: "en",
         giftStatus: "sent",
         to: "bob",
-        words: "On its way to @bob",
-        label: "No.0133 · On its way to @bob",
+        words: "Sent · Waiting for @bob",
+        label: "No.0133 · Sent · Waiting for @bob",
       },
       {
         language: "ja",
         giftStatus: "packed",
         to: undefined,
-        words: "ギフト袋に入れました",
-        label: "No.0133・ギフト袋に入れました",
+        words: "送る準備ができました",
+        label: "No.0133・送る準備ができました",
       },
       {
         language: "ja",
         giftStatus: "sent",
         to: undefined,
-        words: "お届け中",
-        label: "No.0133・お届け中",
+        words: "送信済み・受け取り待ち",
+        label: "No.0133・送信済み・受け取り待ち",
       },
       {
         language: "ja",
         giftStatus: "sent",
         to: "bob",
-        words: "@bobさんへお届け中",
-        label: "No.0133・@bobさんへお届け中",
+        words: "送信済み・@bobさんの受け取り待ち",
+        label: "No.0133・送信済み・@bobさんの受け取り待ち",
       },
     ] as const)(
       "names a $giftStatus gift's status in its inspectable thumbnail in $language",
@@ -533,7 +556,10 @@ describe("StickerDetail", () => {
       // A diamond leaves its box's corner empty: the nearest point is halfway along its top-right side.
       const diamond = { width: 100, height: 100, outline: "M50 0L100 50L50 100L0 50Z" };
       openInFlight(
-        sticker(150, day(14), { openGift: { id: "g-150", status: "packed" }, ...diamond }),
+        sticker(150, day(14), {
+          openGift: { messageAttempt: null, id: "g-150", status: "packed" },
+          ...diamond,
+        }),
       );
       expect(
         ["--spot-x", "--spot-y"].map((p) => Number(layer()?.style.getPropertyValue(p))),
@@ -541,7 +567,7 @@ describe("StickerDetail", () => {
       await settle();
     });
 
-    it("says its state only, Take it out under it, and keeps Give the key while it's in the bag", async () => {
+    it("says its state, with Take it out and Continue sending for an unsent gift", async () => {
       openInFlight(inFlight(133, "sent", "bob"));
       expect(note()).toBe(i18next.t(($) => $.stickerBoard.detail.onItsWayTo, { receiver: "@bob" }));
       expect(button(GIVE)).toBeUndefined();
@@ -552,8 +578,9 @@ describe("StickerDetail", () => {
       openInFlight(packed);
       expect(note()).toBe(i18next.t(($) => $.giving.inTheBag.title));
       expect(button(takeOut())).toBeDefined();
-      expect(giveIsTheKey()).toBe(true);
-      press(GIVE);
+      const continueSending = i18next.t(($) => $.stickerBoard.detail.continueSending);
+      expect(button(continueSending)?.classList.contains("key")).toBe(true);
+      press(continueSending);
       expect(onGive).toHaveBeenCalledExactlyOnceWith(packed);
       await settle();
     });

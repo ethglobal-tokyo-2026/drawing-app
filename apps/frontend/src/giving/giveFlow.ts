@@ -38,9 +38,11 @@ type GiveFlowStep =
   | { step: "ready"; cancelled?: true; error?: Problem }
   /** Waiting for LINE's confirmed send or cancellation. */
   | { step: "picking" }
-  | { step: "sent"; sentAt: number; recordError?: Problem }
-  /** An unresolved LINE send stays pending until LINE confirms it or the sticker is taken out. */
-  | { step: "maybeSent"; error: Problem; recordError?: Problem }
+  | { step: "sent"; sentAt: number; recordError?: Problem; retryError?: Problem }
+  /** An unresolved LINE send can be replaced explicitly without a separate take-out step. */
+  | { step: "maybeSent"; error: Problem; recordError?: Problem; retryError?: Problem }
+  /** Replacing the earlier link before preparing a fresh gift. */
+  | ({ step: "retrying" } & PackingWait)
   | { step: "failed"; error: Problem; recordError?: Problem }
   /** The sticker lifts back out of the bag. */
   | { step: "takingOut" }
@@ -69,6 +71,8 @@ export interface GiveFlow {
   give: () => void;
   /** Opens LINE synchronously from ready; a failed preparation only prepares it again. */
   sendInLine: () => void;
+  /** Replaces an uncertain gift link and prepares a fresh gift for a separate Send in LINE tap. */
+  retry: () => void;
   takeOut: () => void;
   /** Closes the flow. A gift message already in LINE's hands still records its outcome. */
   dispose: () => void;
@@ -86,6 +90,10 @@ interface Attempt {
   beginning?: Promise<void>;
   pickerStarted: boolean;
   takingOut?: true;
+  /** Its link was closed by replacement; late LINE answers cannot revive it. */
+  retired?: true;
+  /** A late LINE confirmation retained while replacement is still waiting on its result. */
+  sent?: { sentAt: number; recordError?: Problem };
 }
 
 /** A picker report always names the attempt that was acknowledged before it. */
@@ -162,7 +170,7 @@ export function createGiveFlow({
   };
   const set = (next: GiveFlowState) => {
     if (disposed) return;
-    if (next.step !== "packed" && next.step !== "preparing") {
+    if (next.step !== "packed" && next.step !== "preparing" && next.step !== "retrying") {
       clearSlowTimer();
       packing = {};
     }
@@ -174,10 +182,14 @@ export function createGiveFlow({
     };
     listeners.forEach((l) => l());
   };
-  const packingState = (step: "packed" | "preparing"): GiveFlowState => ({ step, ...packing });
+  const packingState = (step: "packed" | "preparing" | "retrying"): GiveFlowState => ({
+    step,
+    ...packing,
+  });
   const packingChanged = (change: PackingWait) => {
     packing = { ...packing, ...change };
-    if (state.step === "packed" || state.step === "preparing") set(packingState(state.step));
+    if (state.step === "packed" || state.step === "preparing" || state.step === "retrying")
+      set(packingState(state.step));
   };
   const clearTimer = () => {
     clearTimeout(timer);
@@ -308,18 +320,29 @@ export function createGiveFlow({
     giftId: string,
     outcome: GiftSendOutcome | { failed: unknown },
   ) => {
+    // Replacing a link finishes before another gift is prepared. A late picker cannot restore it.
+    if (a.retired) return;
     const awaited = waiting?.a === a;
     if (awaited) {
       waiting = null;
       clearTimer();
     }
-    const shown = () => attempt === a && state.step === (awaited ? "picking" : "maybeSent");
+    const shown = () =>
+      attempt === a &&
+      (state.step === (awaited ? "picking" : "maybeSent") || (state.step === "sent" && a.sent));
     if (outcome === "sent") {
       a.open = false;
+      a.sent = { sentAt: now() };
       const recordError = await record("the send", () =>
         backend.markSent(giftId, messageAttemptId(a)),
       );
-      if (shown()) set({ step: "sent", sentAt: now(), recordError });
+      a.sent.recordError = recordError;
+      if (shown())
+        set({
+          step: "sent",
+          ...a.sent,
+          ...(state.step === "sent" && state.retryError && { retryError: state.retryError }),
+        });
       return;
     }
     if (outcome !== "cancelled") {
@@ -342,7 +365,16 @@ export function createGiveFlow({
       );
       if (recordError) {
         a.open = false;
-        if (shown()) set({ step: "maybeSent", error: lineSendProblem(recordError), recordError });
+        if (shown())
+          set({
+            step: "failed",
+            error: {
+              message: i18next.t(($) => $.giving.inTheBag.couldntRecord, {
+                reason: recordError.message,
+              }),
+              detail: recordError.detail,
+            },
+          });
         return;
       }
       a.messageAttemptId = undefined;
@@ -430,6 +462,47 @@ export function createGiveFlow({
     sendInLine: () => {
       if (state.step === "failed") void prepare();
       else openPicker();
+    },
+    retry: () => {
+      if (disposed || state.step !== "maybeSent" || !attempt) return;
+      const previous = state;
+      const a = attempt;
+      a.open = false;
+      a.takingOut = true;
+      waiting = null;
+      clearTimer();
+      packing = { wait: "asking" };
+      set(packingState("retrying"));
+      slowTimer = setTimeout(() => {
+        slowTimer = undefined;
+        packingChanged({ slow: true });
+      }, PREPARING_SLOW_MS);
+      void (async () => {
+        const packed = await packingOf(a);
+        try {
+          if (!packed.giftId) throw new Error("The previous gift could not be identified");
+          await backend.takeOut(packed.giftId);
+        } catch (error) {
+          report(`${which}: the previous gift link couldn't be replaced`, error);
+          const cause = describe(error);
+          a.takingOut = undefined;
+          const retryError = {
+            message: i18next.t(($) => $.giving.lineSendError.couldntRetry, {
+              no: which,
+              reason: cause.message,
+            }),
+            detail: cause.detail,
+          };
+          set(a.sent ? { step: "sent", ...a.sent, retryError } : { ...previous, retryError });
+          return;
+        }
+        a.retired = true;
+        a.takingOut = undefined;
+        attempt = null;
+        if (disposed) return;
+        set({ step: "packed" });
+        await prepare();
+      })();
     },
     takeOut: () => {
       const leavable = inTheBag() || state.step === "preparing" || state.step === "maybeSent";

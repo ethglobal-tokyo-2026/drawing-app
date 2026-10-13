@@ -358,14 +358,20 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       if (!response.ok) throw await refusal(response, `POST /api/gifts/${giftId}/shared`);
       return (await response.json()).gift;
     },
-    startTakeOut: async (giftId) => {
-      const response = await api.gifts[":giftId"]["take-out"].start.$post(gift(giftId));
+    startTakeOut: async (giftId, unsentMessageAttempt) => {
+      const response = await api.gifts[":giftId"]["take-out"].start.$post({
+        ...gift(giftId),
+        json: { ...(unsentMessageAttempt !== undefined && { unsentMessageAttempt }) },
+      });
       if (!response.ok) throw await refusal(response, `POST /api/gifts/${giftId}/take-out/start`);
       return response.json();
     },
-    takeOutGift: async (giftId, signed) => {
+    takeOutGift: async (giftId, signed, unsentMessageAttempt) => {
       const response = await api.gifts[":giftId"]["take-out"].$post(
-        { ...gift(giftId), json: signed },
+        {
+          ...gift(giftId),
+          json: { ...signed, ...(unsentMessageAttempt !== undefined && { unsentMessageAttempt }) },
+        },
         { init: { signal: AbortSignal.timeout(SIGNED_TIMEOUT_MS) } },
       );
       if (!response.ok) throw await refusal(response, `POST /api/gifts/${giftId}/take-out`);

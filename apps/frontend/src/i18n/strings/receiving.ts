@@ -201,5 +201,12 @@ export const receiving = {
       en: "{{count}} gifts for you. Open the newest, from {{name}}",
       ja: "ギフトが{{count}}件。{{name}}さんからの最新のギフトをひらく",
     },
+    /** Gifts for you badge on your own sticker board, with one 18+ gift: its name for assistive tech, including the visible warning before opening */
+    nsfwLabel_one: { en: "An 18+ gift for you from {{name}}. Open it" },
+    /** Gifts for you badge on your own sticker board, with the newest gift marked 18+: its name for assistive tech with the count and warning before opening */
+    nsfwLabel_other: {
+      en: "{{count}} gifts for you. Open the newest, an 18+ gift from {{name}}",
+      ja: "ギフトが{{count}}件。{{name}}さんからの最新の18+ギフトをひらく",
+    },
   },
 } as const satisfies Section;

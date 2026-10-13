@@ -16,10 +16,23 @@ const sticker = (
   openGift: null,
   ...gift,
 });
-const sent = { openGift: { id: "x", status: "sent" as const } };
-const packed = { openGift: { id: "y", status: "packed" as const } };
+const sent = { openGift: { messageAttempt: null, id: "x", status: "sent" as const } };
+const packed = { openGift: { messageAttempt: null, id: "y", status: "packed" as const } };
 
 describe("traySlots", () => {
+  it("separates ready gifts from gifts whose LINE send has not been confirmed", () => {
+    const attempt = { id: `0x${"78".repeat(32)}`, state: "pending" as const };
+    const [ready, uncertain] = traySlots([
+      sticker("ready", 1, false, {
+        openGift: { id: "ready-gift", status: "packed", messageAttempt: null },
+      }),
+      sticker("uncertain", 2, false, {
+        openGift: { id: "uncertain-gift", status: "packed", messageAttempt: attempt },
+      }),
+    ]);
+    expect(ready.state).toBe("inTheBag");
+    expect(uncertain.state).toBe("sendNotConfirmed");
+  });
   it("keeps each sticker's slot for good, in arrival order, a given one's too", () => {
     const given = { held: false };
     const later = Array.from({ length: PER_SHEET }, (_, i) => sticker(`later-${i}`, 3 + i));

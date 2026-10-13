@@ -18,6 +18,7 @@ import { MeContext } from "../api/meContext";
 import { TicketsProvider } from "../tickets/TicketsProvider";
 import { toApiPlacement, toPerson, toRecordPlacement } from "../api/views";
 import { forgetNoticedHere, markNoticed, noticeReceivesFromNow } from "../giving/noticedGifts";
+import { forgetKeptGift, keepGift } from "../giving/keptGifts";
 import type { GiftForYou } from "../receiving/GiftsForYouBadge";
 import { errorMessage } from "../i18n/errorMessage";
 import { i18next, withBreakHints } from "../i18n/i18n";
@@ -723,7 +724,7 @@ describe("StickerBoard's sticker detail", () => {
   it("opens on the sticker viewed, and pages through yours with the ones in a gift last", async () => {
     const inTheBag = boardSticker({
       placement: placedAt(0.2),
-      openGift: { id: "g-packed", status: "packed", for: null },
+      openGift: { messageAttempt: null, id: "g-packed", status: "packed", for: null },
       sticker: sticker({ ownerId: TEST_OWNER.id }),
     });
     const viewed = boardSticker({
@@ -774,6 +775,52 @@ describe("StickerBoard's sticker detail", () => {
 });
 
 describe("StickerBoard after a gift", () => {
+  it("shows a local LINE confirmation even when refreshing the board fails", async () => {
+    const attemptId = `0x${"ab".repeat(32)}`;
+    const giftId = "offline-confirmation";
+    const outgoing = boardSticker({
+      placement: placedAt(0.5),
+      sticker: sticker({ ownerId: TEST_OWNER.id }),
+      openGift: {
+        id: giftId,
+        status: "packed",
+        for: null,
+        messageAttempt: { id: attemptId, state: "pending" },
+      },
+    });
+    const stickerBoard = vi
+      .fn<ApiClient["stickerBoard"]>()
+      .mockResolvedValueOnce({ owner: TEST_OWNER, boardStickers: [outgoing] })
+      .mockRejectedValue(
+        new ApiError(0, { error: "network", detail: "Board refresh unavailable" }),
+      );
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    onTestFinished(() => forgetKeptGift(TEST_OWNER.id, giftId));
+    const view = await openBoard(
+      boardApi([outgoing], {
+        stickerBoard,
+        stickerDetail: async () => ({
+          sticker: outgoing.sticker,
+          owner: TEST_OWNER,
+          transferTrail: [],
+        }),
+      }),
+    );
+    await act(() => vi.dynamicImportSettled());
+    const slot = () =>
+      view.host.querySelector<HTMLElement>(`.tray__slot[data-id="${outgoing.stickerId}"]`);
+    expect(slot()?.dataset.state).toBe("sendNotConfirmed");
+    act(() => slot()?.click());
+    await act(() => vi.dynamicImportSettled());
+    const note = () => document.querySelector(".sticker-detail__on-its-way")?.textContent;
+    expect(note()).toContain("Send not confirmed");
+    await act(async () => keepGift(TEST_OWNER.id, giftId, { message: "sent", attemptId }));
+    await act(() => vi.dynamicImportSettled());
+    await act(async () => {});
+    expect(stickerBoard).toHaveBeenCalledTimes(2);
+    expect(keptBoardFor(TEST_ME.id)?.stickers[0].openGift?.status).toBe("sent");
+    expect(note()).toContain("Sent · Waiting to be received");
+  });
   /** When @bob received the sticker you gave him. */
   const RECEIVED_AT = "2026-09-23T11:52:00.000Z";
   const given = () =>
@@ -1260,7 +1307,10 @@ describe("StickerBoard after Giving", () => {
   it("loads again when its fresh load had failed, so the sticker on its way leaves the board", async () => {
     const a = boardSticker({ placement: placedAt(0.3) });
     keep(TEST_ME.id, a);
-    const onItsWay = { ...a, openGift: { id: "g1", status: "sent" as const, for: null } };
+    const onItsWay = {
+      ...a,
+      openGift: { messageAttempt: null, id: "g1", status: "sent" as const, for: null },
+    };
     const stickerBoard = vi
       .fn<ApiClient["stickerBoard"]>()
       .mockRejectedValueOnce(

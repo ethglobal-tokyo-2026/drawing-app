@@ -237,7 +237,8 @@ export function createTraySheets(
   }
   function slotEl(s: Slot, isNew: boolean, use: SlotUse) {
     const q = placeOf(s);
-    const inAGift = s.state === "inTheBag" || s.state === "onItsWay";
+    const inAGift =
+      s.state === "inTheBag" || s.state === "sendNotConfirmed" || s.state === "onItsWay";
     const el: HTMLElement = make(
       use === "picture" ? "span" : "button",
       `tray__slot${matches(s) ? "" : " is-out"}`,
@@ -273,20 +274,22 @@ export function createTraySheets(
       const name =
         s.state === "inTheBag"
           ? i18next.t(($) => $.stickerBoard.tray.slot.inTheBag, no)
-          : s.state === "onItsWay"
-            ? s.onItsWayTo === undefined
-              ? i18next.t(($) => $.stickerBoard.tray.slot.onItsWay, no)
-              : i18next.t(($) => $.stickerBoard.tray.slot.onItsWayTo, {
-                  ...no,
-                  recipient: s.onItsWayTo,
-                })
-            : s.state === "used"
-              ? isNew
-                ? i18next.t(($) => $.stickerBoard.tray.slot.usedNew, no)
-                : i18next.t(($) => $.stickerBoard.tray.slot.used, no)
-              : isNew
-                ? i18next.t(($) => $.stickerBoard.tray.slot.newOnSheet, no)
-                : i18next.t(($) => $.stickerBoard.tray.slot.onSheet, no);
+          : s.state === "sendNotConfirmed"
+            ? i18next.t(($) => $.stickerBoard.tray.slot.sendNotConfirmed, no)
+            : s.state === "onItsWay"
+              ? s.onItsWayTo === undefined
+                ? i18next.t(($) => $.stickerBoard.tray.slot.onItsWay, no)
+                : i18next.t(($) => $.stickerBoard.tray.slot.onItsWayTo, {
+                    ...no,
+                    recipient: s.onItsWayTo,
+                  })
+              : s.state === "used"
+                ? isNew
+                  ? i18next.t(($) => $.stickerBoard.tray.slot.usedNew, no)
+                  : i18next.t(($) => $.stickerBoard.tray.slot.used, no)
+                : isNew
+                  ? i18next.t(($) => $.stickerBoard.tray.slot.newOnSheet, no)
+                  : i18next.t(($) => $.stickerBoard.tray.slot.onSheet, no);
       // A sticker in a gift opens, as a given one's spot does: it takes the shared press.
       if (inAGift) el.dataset.press = "";
       // A used sticker silhouette shows no sticker, so nothing on it is blurred.
@@ -373,19 +376,21 @@ export function createTraySheets(
    */
   function dotOf(s: Slot, isNew: boolean) {
     let dot: HTMLElement | null = null;
-    if (s.state === "inTheBag" || s.state === "onItsWay") {
+    if (s.state === "inTheBag" || s.state === "sendNotConfirmed" || s.state === "onItsWay") {
       const status =
         s.state === "inTheBag"
           ? i18next.t(($) => $.stickerBoard.tray.giftStatus.inTheBag)
-          : s.onItsWayTo === undefined
-            ? i18next.t(($) => $.stickerBoard.tray.giftStatus.onItsWay)
-            : i18next.t(($) => $.stickerBoard.tray.giftStatus.onItsWayTo, {
-                recipient: s.onItsWayTo,
-              });
+          : s.state === "sendNotConfirmed"
+            ? i18next.t(($) => $.stickerBoard.tray.giftStatus.sendNotConfirmed)
+            : s.onItsWayTo === undefined
+              ? i18next.t(($) => $.stickerBoard.tray.giftStatus.onItsWay)
+              : i18next.t(($) => $.stickerBoard.tray.giftStatus.onItsWayTo, {
+                  recipient: s.onItsWayTo,
+                });
       dot = make(
         "span",
         "tray__gift-label",
-        icon(s.state === "inTheBag" ? ICONS.inTheBag : ICONS.onItsWay),
+        icon(s.state === "onItsWay" ? ICONS.onItsWay : ICONS.inTheBag),
         make("span", "", status),
       );
     } else if (isNew) dot = make("span", "tray__new", words.new);
