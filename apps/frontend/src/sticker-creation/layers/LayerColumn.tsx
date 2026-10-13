@@ -43,7 +43,7 @@ export interface LayerColumnProps {
   onRecoveryHidden?: () => void;
   onRecoveryHover?: (hovered: boolean) => void;
   onRecoveryFocus?: (focused: boolean) => void;
-  /** The chips' list element, for the drag and pen-hover hooks. */
+  /** The chips' list element, for holding and dragging a layer. */
   listRef?: Ref<HTMLDivElement>;
 }
 
@@ -148,11 +148,10 @@ export function LayerColumn({
       screenBox.top + 8,
       paper === hintBox.current ? addBottom + 8 : screenBox.top + 8,
     );
-    const inwardGap = root.current.querySelector(".layer-list[data-pen-hover]") ? 28 : 8;
     const room =
       edge === "left"
-        ? screenBox.right - columnBox.right - inwardGap - 8
-        : columnBox.left - screenBox.left - inwardGap - 8;
+        ? screenBox.right - columnBox.right - 16
+        : columnBox.left - screenBox.left - 16;
     paper.style.maxWidth = `${Math.max(0, room)}px`;
     const heightAvailable = Math.max(0, lower - upper);
     paper.style.maxHeight = `${heightAvailable}px`;

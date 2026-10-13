@@ -55,7 +55,6 @@ import { useHiddenLayerGuidance } from "./layers/useHiddenLayerGuidance";
 import { FIRST_LAYER, FIRST_LAYERS, baseOf, mergeDownTarget } from "./layers/layerState";
 import type { LayerView } from "./layers/layerView";
 import { useLayerDrag } from "./layers/useLayerDrag";
-import { usePenMagnify } from "./layers/usePenMagnify";
 import { SealKey } from "./SealKey";
 import { SealSheet } from "./SealSheet";
 import { makeSticker, type SealedSticker } from "./sealing/makeSticker";
@@ -311,14 +310,13 @@ export function DrawingScreen({
       ),
     );
   };
-  const drag = useLayerDrag(layerList, {
+  useLayerDrag(layerList, {
     enabled:
       active && !controlsPending && (session.phase === "primed" || session.phase === "drawing"),
     order: layers.state.layers.map((layer) => layer.id),
     onMove: moveLayer,
     onLift: setReordering,
   });
-  const penHover = usePenMagnify(layerList, { enabled: active && drag.lifted === null, edge });
   // The deal of a ticket spent in Kyoto Seika Manga Expression Practice Mode.
   const kyotoSeikaSheet = useKyotoSeikaSheet({ userId: me.id, keeper });
   const begin = useRef<BeginKeyHandle>(null);
@@ -1457,7 +1455,7 @@ export function DrawingScreen({
           onChange={setSize}
           onHold={setSizing}
         />
-        <div className={`drawing-layer-column ${penHover.hovering ? "is-pen-hovered" : ""}`}>
+        <div className="drawing-layer-column">
           <LayerColumn
             chips={chips}
             current={layers.current}

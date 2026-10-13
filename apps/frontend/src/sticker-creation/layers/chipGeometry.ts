@@ -15,8 +15,8 @@ export interface Rest {
 }
 
 /**
- * Where each chip rests. The lift and the pen's magnifier both leave a transform and a transition on
- * chips, and a transformed chip's box is not where it rests, so both are cleared first, instantly.
+ * Where each chip rests. A previous lift can leave a transform and transition on chips, so both are
+ * cleared instantly before measuring their resting positions.
  */
 export function measureRests(chips: readonly HTMLElement[]): Rest[] {
   for (const chip of chips) {
@@ -37,7 +37,7 @@ export function pitchOf(rests: readonly Rest[]): number {
   return rests.length > 1 ? (last.center - first.center) / (rests.length - 1) : first.height;
 }
 
-/** The chips back at rest at once, with nothing the hooks put on them left. */
+/** The chips back at rest at once, with nothing the drag put on them left. */
 export function snap(chips: Iterable<HTMLElement>, list: HTMLElement) {
   const all = Array.from(chips);
   for (const { style } of all) {
