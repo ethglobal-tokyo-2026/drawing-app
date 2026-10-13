@@ -10,6 +10,8 @@ export interface BalloonSpec {
   /** The word area, the furigana over the word included, in px. */
   w: number;
   h: number;
+  /** White beside the word area, when compact lettering needs less than the deal's padding. */
+  padX?: number;
   /** How far the white reaches above and below the word area before its lobes, in px. */
   padY: number;
   /** The most a lobe bulges, in px. */
@@ -131,7 +133,7 @@ interface Lobe {
  */
 function lobesOf(spec: BalloonSpec): { white: Pt[]; lobes: Lobe[] } {
   const random = seededRandom(spec.seed);
-  const ax = spec.w / 2 + PAD_X;
+  const ax = spec.w / 2 + (spec.padX ?? PAD_X);
   const ay = spec.h / 2 + spec.padY;
   const base = (t: number): Pt => {
     const c = Math.cos(t);
@@ -379,7 +381,7 @@ function mixSeed(...ns: number[]): number {
 function reachToward(spec: BalloonSpec, u: Pt): number {
   const v = rotate(u, -spec.tilt);
   const dual = SQUARENESS / (SQUARENESS - 1);
-  const ax = spec.w / 2 + PAD_X;
+  const ax = spec.w / 2 + (spec.padX ?? PAD_X);
   const ay = spec.h / 2 + spec.padY;
   const ellipse = (Math.abs(ax * v.x) ** dual + Math.abs(ay * v.y) ** dual) ** (1 / dual);
   return ellipse + spec.lobe * LOBE_REACH;
@@ -842,20 +844,20 @@ const PEEK_FIT: PairFit = {
   lobe: 10,
 };
 const DETAIL_FIT: PairFit = {
-  ja: WORD_PX.tight,
-  enPx: 17,
+  ja: WORD_PX.tighter,
+  enPx: 13,
   maxW: 150,
   wordMaxW: 190,
   minW: 44,
-  padY: 8,
-  lobe: 13,
+  padY: 6,
+  lobe: 10,
 };
 const PAIR_FITS: Record<PairSize, PairFit> = { peek: PEEK_FIT, detail: DETAIL_FIT };
 /**
- * The widest a pair's clouds reach: inside a phone's board, and inside the detail's column on a
- * phone. A wider pair sets its words smaller until it fits.
+ * A pair's fitting width. The board shows the pair over its sticker; the detail places each cloud
+ * independently beside the cut, so long English words can keep readable lettering.
  */
-export const PAIR_MAX_W: Record<PairSize, number> = { peek: 300, detail: 280 };
+export const PAIR_MAX_W: Record<PairSize, number> = { peek: 300, detail: 320 };
 /** A peek's trail, finer than the deal's: its bubbles' radii, largest by its cloud, in px. */
 const PEEK_TRAIL = [5, 3.6, 2.5] as const;
 /** The white space between the two clouds' ink, in px. */
@@ -900,8 +902,8 @@ function enTokens(text: string) {
     );
 }
 
-/** English in at most EN_MAX_LINES lines: as few as fit `maxChars`, the evenest of those. */
-function enLines(text: string, maxChars: number): string[] {
+/** English in at most `maxLines`: as few as fit `maxChars`, the evenest of those. */
+function enLines(text: string, maxChars: number, maxLines = EN_MAX_LINES): string[] {
   const tokens = enTokens(text);
   const join = (from: number, to: number) =>
     tokens
@@ -911,7 +913,7 @@ function enLines(text: string, maxChars: number): string[] {
   const splits: string[][] = [];
   const split = (from: number, lines: string[]) => {
     if (from === tokens.length) splits.push(lines);
-    else if (lines.length < EN_MAX_LINES)
+    else if (lines.length < maxLines)
       for (let to = from + 1; to <= tokens.length; to++) split(to, [...lines, join(from, to)]);
   };
   split(0, []);
@@ -930,11 +932,19 @@ function letter(word: ThoughtWord, size: PairSize, scale: number) {
   const fit = PAIR_FITS[size];
   const maxW = fit.maxW * scale;
   if (word.english) {
-    const enPx = fit.enPx * scale;
-    const lines = enLines(word.text, Math.floor(maxW / (enPx * CAPS_EM)));
+    // The detail shares a phone's sticker stage: wrap phrases before shrinking their lettering.
+    const enPx = size === "detail" ? Math.max(13, fit.enPx * scale) : fit.enPx * scale;
+    const lines = enLines(
+      word.text,
+      Math.floor((size === "detail" ? Math.min(maxW, 84) : maxW) / (enPx * CAPS_EM)),
+      size === "detail" ? 4 : EN_MAX_LINES,
+    );
     const longest = Math.max(...lines.map((l) => l.length));
     // One word too long for a line widens the word area as far as `wordMaxW` before it shrinks.
-    const fontPx = Math.min(enPx, (fit.wordMaxW * scale) / (longest * CAPS_EM));
+    const fontPx =
+      size === "detail"
+        ? Math.max(13, Math.min(enPx, fit.wordMaxW / (longest * CAPS_EM)))
+        : Math.min(enPx, (fit.wordMaxW * scale) / (longest * CAPS_EM));
     return { lines, fontPx, w: longest * fontPx * CAPS_EM, h: lines.length * fontPx * EN_LINE };
   }
   const chars = Math.max(charCount(word.text), 1);
@@ -972,8 +982,9 @@ export function pairLayout(
     const specs = lettered.map((l, i): BalloonSpec => ({
       w: Math.ceil(Math.max(fit.minW * scale, l.w)),
       h: Math.ceil(l.h),
-      padY: fit.padY,
-      lobe: fit.lobe,
+      ...(pair[i].english && size === "detail" && { padX: 4 }),
+      padY: pair[i].english && size === "detail" ? 6 : fit.padY,
+      lobe: pair[i].english && size === "detail" ? 6 : fit.lobe,
       tilt: i === 0 ? -2 : 2.5,
       seed: wordSeed(pair[i].text, i),
     }));

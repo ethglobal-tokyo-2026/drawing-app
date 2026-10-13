@@ -1,5 +1,5 @@
 /* A sticker's pair in the deal's thought clouds, G-pen on the paper's white, each with a trail of bubbles
-   back to the sticker: a peek over it on a board, or in its detail's column. Placed from its own
+   back to the sticker: a peek over it on a board, or in its detail's sticker stage. Placed from its own
    top-left by the clouds' centers, as the deal is. */
 .subject-thought {
   position: relative;
@@ -8,10 +8,6 @@
 
 .subject-thought--peek {
   position: absolute;
-}
-
-.subject-thought--detail {
-  margin: 14px 0 2px;
 }
 
 .subject-thought__cloud {

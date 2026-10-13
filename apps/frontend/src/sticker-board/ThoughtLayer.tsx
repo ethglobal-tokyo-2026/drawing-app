@@ -95,7 +95,7 @@ export function ThoughtLayer({
           size="peek"
           toward={spot.toward}
           at={{ x: spot.left, y: spot.top }}
-          trails={spot.trails}
+          layout={spot.layout}
           reduced={reduced}
           onDone={onDone}
         />

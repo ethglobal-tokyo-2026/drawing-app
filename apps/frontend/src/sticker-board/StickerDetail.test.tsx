@@ -754,16 +754,59 @@ describe("StickerDetail", () => {
     expect(giveIsTheKey()).toBe(true);
   });
 
-  describe("beside Timelapse", () => {
+  describe("beside the sticker", () => {
+    beforeEach(() => {
+      // Happy DOM has no layout. These are the phone stage and its 216px sticker after layout.
+      vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        if (this.classList.contains("sticker-detail__subjects")) return 304;
+        if (this.classList.contains("sticker-figure")) return 216;
+        return 0;
+      });
+      vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        if (this.classList.contains("sticker-detail__subjects")) return 318;
+        if (this.classList.contains("sticker-figure")) return 180;
+        return 0;
+      });
+      vi.spyOn(HTMLElement.prototype, "offsetLeft", "get").mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        return this.classList.contains("sticker-figure") ? 44 : 0;
+      });
+      vi.spyOn(HTMLElement.prototype, "offsetTop", "get").mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        return this.classList.contains("sticker-figure") ? 108 : 0;
+      });
+    });
     const openOn = (shown: BoardStickerView) => open({ stickers: [shown], startId: shown.id });
     const thought = () => host.querySelector(".subject-thought");
+
+    it("keeps its Kyoto Seika Subjects with the sticker above the pager and the replay controls", async () => {
+      openOn(sticker(150, day(20), { kyotoSeikaSubjects: TEST_KYOTO_SEIKA_SUBJECTS }));
+      await settle();
+      const subjects = thought();
+      const stage = host.querySelector(".sticker-detail__stage");
+      const pager = host.querySelector(".sticker-detail__pager");
+      const metadata = host.querySelector(".sticker-detail__meta");
+      expect(stage?.contains(subjects)).toBe(true);
+      expect(metadata?.contains(subjects)).toBe(false);
+      if (!subjects || !pager) throw new Error("The detail has no subjects or pager");
+      expect(subjects.compareDocumentPosition(pager) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(
+        0,
+      );
+    });
 
     it("shows the two Kyoto Seika Subjects a sticker drawn in Kyoto Seika Practice Mode combined, which screen readers hear", async () => {
       openOn(sticker(150, day(20), { kyotoSeikaSubjects: TEST_KYOTO_SEIKA_SUBJECTS }));
       const [first, second] = TEST_KYOTO_SEIKA_SUBJECTS;
       expect(thought()).not.toBeNull();
       // In English, screen readers hear each word's English too.
-      const spoken = () => thought()?.nextElementSibling?.textContent;
+      const spoken = () =>
+        host.querySelector(".sticker-detail__slide .visually-hidden")?.textContent;
       const withEnglish = ({ ja, en }: KyotoSeikaSubject) =>
         i18next.t(($) => $.kyotoSeika.pair.subject, { word: ja, english: en });
       expect(spoken()).toBe(

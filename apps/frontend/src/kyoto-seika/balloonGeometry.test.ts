@@ -252,6 +252,29 @@ describe("a pair's thought clouds", () => {
   const english = (text: string): ThoughtWord => ({ text, reading: "", english: true });
   const LONGEST = [english("meeting with a view to marriage"), english("hospitalization")] as const;
 
+  it("keeps long English detail subjects readable inside a phone's sticker stage", () => {
+    const layout = pairLayout(LONGEST, "detail", { x: 0, y: 1 });
+    expect(layout.clouds.maxX - layout.clouds.minX).toBeLessThanOrEqual(288);
+    for (const balloon of layout.balloons) {
+      expect(balloon.fontPx).toBeGreaterThanOrEqual(13);
+      for (const line of balloon.lines)
+        expect(line.length * balloon.fontPx * CAPS_EM).toBeLessThanOrEqual(balloon.spec.w);
+    }
+  });
+
+  it("keeps two long English words readable when the detail places their clouds separately", () => {
+    for (const pair of [
+      [english("hospitalization"), english("administrator")],
+      [english("hospitalization"), english("weightlessness")],
+    ] as const) {
+      const layout = pairLayout(pair, "detail", { x: 0, y: 1 });
+      for (const balloon of layout.balloons) {
+        expect(balloon.fontPx).toBeGreaterThanOrEqual(13);
+        expect(balloon.cloudBox.maxX - balloon.cloudBox.minX).toBeLessThanOrEqual(180);
+      }
+    }
+  });
+
   it("breaks English into lines and keeps the pair inside its widest reach", () => {
     for (const size of ["peek", "detail"] as const) {
       const layout = pairLayout(LONGEST, size, { x: -0.6, y: 0.8 });

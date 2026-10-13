@@ -17,10 +17,10 @@ interface Props {
   /** The way from the clouds to the sticker, which the trail runs. */
   toward: Pt;
   reduced: boolean;
-  /** Where it sits on a board, by its top-left; the detail's sits in its column. */
+  /** Where it sits on the board or in the detail's sticker stage, by its top-left. */
   at?: Pt;
-  /** On a board, both trails lead back to the selected sticker's edge. */
-  trails?: PairLayout["trails"];
+  /** Clouds and trails placed beside the sticker's cut. */
+  layout?: PairLayout;
   /** A peek has played and faded. */
   onDone?: () => void;
 }
@@ -30,14 +30,22 @@ interface Props {
  * each with a trail of bubbles back to it. Hidden from screen readers, which hear the pair in the sticker's
  * name or the detail's line instead.
  */
-export function SubjectThought({ subjects, size, toward, reduced, at, trails, onDone }: Props) {
+export function SubjectThought({
+  subjects,
+  size,
+  toward,
+  reduced,
+  at,
+  layout: placedLayout,
+  onDone,
+}: Props) {
   // Rendered again as the language changes, so the words follow it.
   useTranslation();
   const english = currentLanguage() === "en";
   const { x, y } = toward;
   const layout = useMemo(
-    () => thoughtLayout(subjects, size, { x, y }, english),
-    [subjects, size, x, y, english],
+    () => placedLayout ?? thoughtLayout(subjects, size, { x, y }, english),
+    [placedLayout, subjects, size, x, y, english],
   );
   const inks = useMemo(() => layout.balloons.map((b) => cloudShape(b.spec).inks), [layout]);
   const root = useRef<HTMLDivElement>(null);
@@ -133,7 +141,7 @@ export function SubjectThought({ subjects, size, toward, reduced, at, trails, on
       style={style}
       aria-hidden="true"
     >
-      {(trails ?? layout.trails).map((trail, i) => (
+      {layout.trails.map((trail, i) => (
         <ThoughtTrail
           key={i}
           trail={trail}

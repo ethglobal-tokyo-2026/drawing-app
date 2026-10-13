@@ -5,10 +5,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import { inLanguage } from "../ui/testing";
 import type { PairSize } from "./balloonGeometry";
 import { SubjectThought } from "./SubjectThought";
-import { DETAIL_TOWARD } from "./thoughtLayout";
 import { REUNION, SPORTS, WIND } from "./testSubjects";
 
 const cleanups: Array<() => void> = [];
+const toward = { x: -0.6, y: -0.8 };
 
 /** The pair's clouds at `size`, in `language`. */
 async function thought(size: PairSize, language: "en" | "ja", pair = [WIND, REUNION] as const) {
@@ -20,9 +20,7 @@ async function thought(size: PairSize, language: "en" | "ja", pair = [WIND, REUN
     root.unmount();
     host.remove();
   });
-  act(() =>
-    root.render(<SubjectThought subjects={pair} size={size} toward={DETAIL_TOWARD} reduced />),
-  );
+  act(() => root.render(<SubjectThought subjects={pair} size={size} toward={toward} reduced />));
   const clouds = host.querySelector(".subject-thought");
   if (!clouds) throw new Error("No thought clouds");
   return clouds;

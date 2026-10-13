@@ -291,7 +291,9 @@ export const blurredMark = (language: Language) => ({
 /** Opens a sticker on your own board in its sticker detail: a tap selects it, View opens it. */
 export async function openDetail(page: Page, language: Language, no: string) {
   await boardSticker(page, language, no).click();
-  await page.getByRole("button", { name: say(stickerBoard.toolbar.view, language) }).click();
+  await page
+    .getByRole("button", { name: say(stickerBoard.toolbar.view, language), exact: true })
+    .click();
   const detail = page.getByRole("dialog", { name: no });
   await expect(detail).toBeVisible();
   return detail;

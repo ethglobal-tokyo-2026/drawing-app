@@ -1,154 +1,251 @@
-import type { PairLayout, Pt } from "../kyoto-seika/balloonGeometry";
+import type { Bead, PairLayout, Pt } from "../kyoto-seika/balloonGeometry";
 import { clamp } from "../ui/easing";
-import { extentsOf, meets, type Box } from "./placement";
-import { THOUGHT_TIP_GAP_PX, thoughtTrails } from "./thoughtTrails";
+import { meets, type Box } from "./placement";
+import {
+  closestOutlines,
+  supportFace,
+  supportPoint,
+  turnedStickerCut,
+  type ThoughtSticker,
+} from "./thoughtGeometry";
+import { thoughtTrail } from "./thoughtTrails";
 
-/** Ways a trail runs from the clouds down or up to the sticker, leaning back toward it. */
-const LEAN = { x: 0.62, y: 0.78 };
-/** The thought keeps this far inside the board's edges, and from what it stays clear of, in px. */
+/** Room inside the board and around its controls, in board pixels. */
 export const THOUGHT_INSET_PX = 8;
 export const THOUGHT_CLEAR_PX = 6;
-/** How far the tip may slide along the sticker's edge, as shares of its width, nearest the middle first. */
-const ALONG = [0.25, 0.1, 0.4, 0, -0.15, 0.55, -0.3];
-/** How far the thought may rise off the sticker to clear the knob or the toolbar, in px. */
-const RISE_STEP_PX = 12;
-const RISES = 8;
+/** Preferred white-to-cut distance: the clouds' ink and short trails sit within this gap. */
+const CLOUD_GAP_PX = 32;
+const INK_REACH_PX = 4;
+const TOWARD = { x: 0, y: 1 };
+const SIDES = Array.from({ length: 32 }, (_, i) => ({
+  x: Math.cos(-Math.PI / 2 + (i * Math.PI) / 16),
+  y: Math.sin(-Math.PI / 2 + (i * Math.PI) / 16),
+}));
+const AXES = SIDES.slice(0, 16);
 
 export interface ThoughtSpot {
   left: number;
   top: number;
-  /** The way the trail runs, from the clouds to the sticker. */
   toward: Pt;
-  /** Both clouds' trails, attached to the sticker's turned edge. */
-  trails: PairLayout["trails"];
+  /** Both word clouds and their short trails, placed beside the selected cut. */
+  layout: PairLayout;
 }
 
-/** What costs a spot most: covering controls, then spilling past the board, then longer trails. */
-const COST = { covered: 1000, outsidePx: 10, trailPx: 0.01, below: 0.8, outward: 0.1 };
+function bounds(points: readonly Pt[], padding = 0): Box {
+  return {
+    left: Math.min(...points.map((p) => p.x)) - padding,
+    top: Math.min(...points.map((p) => p.y)) - padding,
+    right: Math.max(...points.map((p) => p.x)) + padding,
+    bottom: Math.max(...points.map((p) => p.y)) + padding,
+  };
+}
 
-/**
- * Where a peek at a sticker's subjects goes on the board: above the sticker toward the board's middle,
- * its trail's tip at the sticker's edge, or below it when there's no room above; always inside the
- * board, `top` and `bottom` keeping it off the header and the foot, and clear of `avoid` (the rotate
- * knob, the toolbar, the header's controls and the board's key). With no clear spot, the one that
- * covers the least of them.
- */
+const beadBox = (bead: Bead): Box => ({
+  left: bead.x - bead.r - 2,
+  top: bead.y - bead.r - 2,
+  right: bead.x + bead.r + 2,
+  bottom: bead.y + bead.r + 2,
+});
+
+interface Candidate {
+  center: Pt;
+  cloud: Box;
+  dots: Box[];
+  trail: Bead[];
+  cost: number;
+  clear: boolean;
+  projections: readonly (readonly [number, number])[];
+}
+
+/** Nearby spots usually fit immediately; the denser search is reserved for a crowded sticker. */
+function choosePair(candidates: readonly Candidate[][]) {
+  let best: { pair: readonly [Candidate, Candidate]; cost: number; clear: boolean } | null = null;
+  for (const first of candidates[0])
+    for (const second of candidates[1]) {
+      if (best && first.cost + second.cost >= best.cost) break;
+      const crossing =
+        Number(overlap(first, second)) +
+        first.trail.filter((dot) => touchesCloud(dot, second)).length +
+        second.trail.filter((dot) => touchesCloud(dot, first)).length +
+        first.trail.filter((dot) =>
+          second.trail.some(
+            (other) => Math.hypot(dot.x - other.x, dot.y - other.y) < dot.r + other.r + 3,
+          ),
+        ).length;
+      const cost =
+        first.cost +
+        second.cost +
+        crossing * 1_000_000 +
+        Number(first.center.x > second.center.x) * 100 +
+        Math.hypot(first.center.x - second.center.x, first.center.y - second.center.y) * 0.01;
+      if (!best || cost < best.cost)
+        best = {
+          pair: [first, second],
+          cost,
+          clear: first.clear && second.clear && crossing === 0,
+        };
+    }
+  return best;
+}
+
+/** Separating axes follow the rounded clouds, rather than the empty corners of their boxes. */
+function overlap(a: Candidate, b: Candidate) {
+  return a.projections.every(
+    ([low, high], i) => low < b.projections[i][1] + 8 && high > b.projections[i][0] - 8,
+  );
+}
+
+function touchesCloud(dot: Bead, cloud: Candidate) {
+  return cloud.projections.every(([low, high], i) => {
+    const at = dot.x * AXES[i].x + dot.y * AXES[i].y;
+    return at + dot.r + 6 > low && at - dot.r - 6 < high;
+  });
+}
+
+/** Each cloud finds a nearby edge of the actual cut, then the pair clears the controls together. */
 export function thoughtPlacement({
   sticker,
   board,
   shape,
   avoid,
 }: {
-  /** The sticker's center, size and turn, in board pixels. */
-  sticker: { x: number; y: number; w: number; h: number; r: number; cut?: readonly Pt[] };
+  sticker: ThoughtSticker;
   board: { W: number; H: number; top: number; bottom: number };
-  /** The thought laid out with its trail running `toward`. */
   shape: (toward: Pt) => PairLayout;
   avoid: readonly Box[];
 }): ThoughtSpot {
-  const { ex: halfW, ey: halfH } = extentsOf(sticker.w, sticker.h, sticker.r);
-  const own: Box = {
-    left: sticker.x - halfW,
-    top: sticker.y - halfH,
-    right: sticker.x + halfW,
-    bottom: sticker.y + halfH,
-  };
-  // The middle is the way the clouds lean, so the trail leans back from it to the sticker.
-  const middle = sticker.x <= board.W / 2 ? 1 : -1;
-  const clearOf = avoid.map((b) => ({
-    left: b.left - THOUGHT_CLEAR_PX,
-    top: b.top - THOUGHT_CLEAR_PX,
-    right: b.right + THOUGHT_CLEAR_PX,
-    bottom: b.bottom + THOUGHT_CLEAR_PX,
-  }));
-  let best: { spot: ThoughtSpot; cost: number } | null = null;
-  for (const above of [true, false])
-    for (const side of [middle, -middle]) {
-      const toward = { x: -side * LEAN.x, y: above ? LEAN.y : -LEAN.y };
-      const thought = shape(toward);
-      const lefts = [
-        ...ALONG.map((along) => sticker.x + side * along * sticker.w - thought.tip.x),
-        THOUGHT_INSET_PX - thought.clouds.minX,
-        board.W - THOUGHT_INSET_PX - thought.clouds.maxX,
-      ];
-      for (let rise = 0; rise < RISES; rise++)
-        for (const desiredLeft of lefts) {
-          const tipY = above
-            ? own.top - THOUGHT_TIP_GAP_PX - rise * RISE_STEP_PX
-            : own.bottom + THOUGHT_TIP_GAP_PX + rise * RISE_STEP_PX;
-          const left = clamp(
-            desiredLeft,
-            THOUGHT_INSET_PX - thought.clouds.minX,
-            board.W - THOUGHT_INSET_PX - thought.clouds.maxX,
-          );
-          const top = clamp(
-            tipY - thought.tip.y,
-            board.top - thought.clouds.minY,
-            board.bottom - thought.clouds.maxY,
-          );
-          const clouds = {
-            left: left + thought.clouds.minX,
-            top: top + thought.clouds.minY,
-            right: left + thought.clouds.maxX,
-            bottom: top + thought.clouds.maxY,
-          };
-          const trails = thoughtTrails(thought, { left, top, toward }, sticker, clearOf);
-          const bubbles = trails.flatMap((trail) =>
-            trail.map((bead) => ({
-              left: left + bead.x - bead.r - 2,
-              top: top + bead.y - bead.r - 2,
-              right: left + bead.x + bead.r + 2,
-              bottom: top + bead.y + bead.r + 2,
-            })),
-          );
-          const parts = [clouds, ...bubbles];
-          const box = {
-            left: Math.min(...parts.map((b) => b.left)),
-            top: Math.min(...parts.map((b) => b.top)),
-            right: Math.max(...parts.map((b) => b.right)),
-            bottom: Math.max(...parts.map((b) => b.bottom)),
-          };
-          const outside =
-            Math.max(0, THOUGHT_INSET_PX - box.left) +
-            Math.max(0, box.right - (board.W - THOUGHT_INSET_PX)) +
-            Math.max(0, board.top - box.top) +
-            Math.max(0, box.bottom - board.bottom);
-          const covered =
-            avoid.filter((b) => parts.some((part) => meets(part, b, THOUGHT_CLEAR_PX))).length +
-            Number(meets(clouds, own)) +
-            Number(
-              trails.some((trail) =>
-                trail
-                  .slice(1)
-                  .some(
-                    (bead, i) =>
-                      Math.hypot(bead.x - trail[i].x, bead.y - trail[i].y) <
-                      bead.r + trail[i].r + 3,
+  const cut = turnedStickerCut(sticker);
+  const natural = shape(TOWARD);
+  const controls = avoid.map((b) => [
+    { x: b.left, y: b.top },
+    { x: b.right, y: b.top },
+    { x: b.right, y: b.bottom },
+    { x: b.left, y: b.bottom },
+  ]);
+  const candidates = (expanded: boolean) =>
+    natural.balloons.map((balloon, index) => {
+      const angle = (balloon.spec.tilt * Math.PI) / 180;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const white = balloon.white.map((p) => ({
+        x: p.x * cos - p.y * sin,
+        y: p.x * sin + p.y * cos,
+      }));
+      const cloud = bounds(white, INK_REACH_PX);
+      const projections = AXES.map((axis) => {
+        const values = white.map((p) => p.x * axis.x + p.y * axis.y);
+        return [Math.min(...values), Math.max(...values)] as const;
+      });
+      return SIDES.flatMap((side) =>
+        supportFace(cut, side).flatMap((anchor) =>
+          (expanded ? [0, -24, 24, -48, 48] : [0]).flatMap((slide) =>
+            // The last distance is a fallback for small stickers boxed in by controls and wide words.
+            (expanded ? [18, 24, CLOUD_GAP_PX, 39, 80] : [24, CLOUD_GAP_PX, 39]).map(
+              (space): Candidate => {
+                const departure = supportPoint(white, { x: -side.x, y: -side.y }, { x: 0, y: 0 });
+                const wanted = {
+                  x: anchor.x - departure.x + side.x * space - side.y * slide,
+                  y: anchor.y - departure.y + side.y * space + side.x * slide,
+                };
+                const center = {
+                  x: clamp(
+                    wanted.x,
+                    THOUGHT_INSET_PX - cloud.left,
+                    board.W - THOUGHT_INSET_PX - cloud.right,
                   ),
-              ),
-            );
-          const spot = { left, top, toward, trails };
-          const trailLength = trails.reduce(
-            (total, trail) =>
-              total +
-              trail
-                .slice(1)
-                .reduce(
-                  (distance, bead, i) =>
-                    distance + Math.hypot(bead.x - trail[i].x, bead.y - trail[i].y),
+                  y: clamp(wanted.y, board.top - cloud.top, board.bottom - cloud.bottom),
+                };
+                const outline = white.map((p) => ({ x: center.x + p.x, y: center.y + p.y }));
+                // Unconstrained support points have this exact gap; a constrained cloud needs an edge search.
+                const gap =
+                  slide === 0 && Math.hypot(center.x - wanted.x, center.y - wanted.y) < 0.001
+                    ? {
+                        from: { x: anchor.x + side.x * space, y: anchor.y + side.y * space },
+                        to: anchor,
+                        distance: space,
+                        overlapping: false,
+                      }
+                    : closestOutlines(outline, cut);
+                const trail = thoughtTrail(
+                  gap,
+                  natural.trails[index].map((bead) => bead.r),
+                );
+                const box = bounds(outline, INK_REACH_PX);
+                const dots = trail.map(beadBox);
+                const parts = [box, ...dots];
+                const covered = controls.filter((control, i) => {
+                  const distance = closestOutlines(outline, control);
+                  return (
+                    distance.overlapping ||
+                    distance.distance < INK_REACH_PX + THOUGHT_CLEAR_PX ||
+                    dots.some((dot) => meets(dot, avoid[i], THOUGHT_CLEAR_PX))
+                  );
+                }).length;
+                const outside = parts.reduce(
+                  (sum, part) =>
+                    sum +
+                    Math.max(0, THOUGHT_INSET_PX - part.left) +
+                    Math.max(0, part.right - board.W + THOUGHT_INSET_PX) +
+                    Math.max(0, board.top - part.top) +
+                    Math.max(0, part.bottom - board.bottom),
                   0,
-                ),
-            0,
-          );
-          const cost =
-            outside * COST.outsidePx +
-            covered * COST.covered +
-            trailLength * COST.trailPx +
-            (above ? 0 : COST.below) +
-            (side === middle ? 0 : COST.outward);
-          if (!best || cost < best.cost) best = { spot, cost };
-        }
-    }
+                );
+                return {
+                  center,
+                  cloud: box,
+                  dots,
+                  trail,
+                  clear:
+                    covered === 0 &&
+                    !gap.overlapping &&
+                    trail.length > 0 &&
+                    outside < 0.001 &&
+                    gap.distance <= 40,
+                  projections: projections.map(([low, high], i) => {
+                    const shift = center.x * AXES[i].x + center.y * AXES[i].y;
+                    return [low + shift, high + shift] as const;
+                  }),
+                  cost:
+                    covered * 1_000_000 +
+                    Number(gap.overlapping) * 1_000_000 +
+                    Number(trail.length === 0) * 1_000_000 +
+                    outside * 1000 +
+                    Math.max(0, gap.distance - 40) * 1000 +
+                    Math.abs(gap.distance - CLOUD_GAP_PX) * 0.01 +
+                    Math.max(0, center.y - sticker.y) * 0.1,
+                };
+              },
+            ),
+          ),
+        ),
+      ).toSorted((a, b) => a.cost - b.cost);
+    });
+  const nearby = choosePair(candidates(false));
+  const best = nearby?.clear ? nearby : choosePair(candidates(true));
   if (!best) throw new Error("thoughtPlacement offered no spot");
-  return best.spot;
+  const [first, second] = best.pair;
+  const parts = best.pair.flatMap((p) => [p.cloud, ...p.dots]);
+  const left = Math.min(...parts.map((part) => part.left));
+  const top = Math.min(...parts.map((part) => part.top));
+  const shift = (p: Pt): Pt => ({ x: p.x - left, y: p.y - top });
+  const localTrail = (p: Candidate) => p.trail.map((bead) => ({ ...shift(bead), r: bead.r }));
+  const trails: PairLayout["trails"] = [localTrail(first), localTrail(second)];
+  const layout: PairLayout = {
+    ...natural,
+    balloons: [
+      { ...natural.balloons[0], center: shift(first.center) },
+      { ...natural.balloons[1], center: shift(second.center) },
+    ],
+    trails,
+    w: Math.max(...parts.map((part) => part.right)) - left,
+    h: Math.max(...parts.map((part) => part.bottom)) - top,
+    tip: trails[0].at(-1) ?? shift(sticker),
+    clouds: {
+      minX: Math.min(first.cloud.left, second.cloud.left) - left,
+      minY: Math.min(first.cloud.top, second.cloud.top) - top,
+      maxX: Math.max(first.cloud.right, second.cloud.right) - left,
+      maxY: Math.max(first.cloud.bottom, second.cloud.bottom) - top,
+    },
+  };
+  return { left, top, toward: TOWARD, layout };
 }

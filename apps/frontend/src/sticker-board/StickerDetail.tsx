@@ -36,8 +36,6 @@ import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatMonthDay, formatNo, handleOf } from "../stickers/format";
 import { useLight } from "../stickers/light";
 import { spokenPair } from "../kyoto-seika/spokenSubject";
-import { SubjectThought } from "../kyoto-seika/SubjectThought";
-import { DETAIL_TOWARD } from "../kyoto-seika/thoughtLayout";
 import { ArtistChip } from "../stickers/ArtistChip";
 import { useMyNsfwOptIn, veiledFor, withoutNsfwDrawings } from "../stickers/nsfw";
 import { StickerFigure } from "../stickers/StickerFigure";
@@ -53,6 +51,7 @@ import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import type { BoardStickerView } from "./boardSticker";
 import { useDetailLift, type LiftView } from "./detailLift";
+import { DetailThoughtLayer } from "./DetailThoughtLayer";
 import { useSwipePaging } from "./detailPaging";
 import { forgetKeptBoard } from "./lastBoard";
 import { combosLeftNow, useStickerDetail } from "./stickerDetailQuery";
@@ -560,7 +559,7 @@ export function StickerDetail({
   const page = (
     <div
       ref={root}
-      className="sticker-detail"
+      className={`sticker-detail${kyotoSeika ? " sticker-detail--kyoto-seika" : ""}`}
       role="dialog"
       aria-modal="true"
       aria-label={sticker ? formatNo(sticker.no) : t(($) => $.stickerBoard.detail.label)}
@@ -643,6 +642,22 @@ export function StickerDetail({
                     kyotoSeika={kyotoSeika}
                     veiled={veiled}
                   />
+                  {sticker.kyotoSeikaSubjects && (
+                    <>
+                      <DetailThoughtLayer
+                        key={sticker.id}
+                        subjects={sticker.kyotoSeikaSubjects}
+                        art={{
+                          width: sticker.width,
+                          height: sticker.height,
+                          outline: sticker.outline ?? loaded?.sticker.outline,
+                        }}
+                        figure={figure}
+                        reduced={reduced}
+                      />
+                      <p className="visually-hidden">{spokenPair(sticker.kyotoSeikaSubjects)}</p>
+                    </>
+                  )}
                   <TimelapseOverlay timelapse={timelapse} />
                   {/* A gift's state, stuck on the sticker as it pages; its note says it in words. */}
                   {giftDot && (
@@ -745,17 +760,6 @@ export function StickerDetail({
                   </span>
                   <TimelapseButton timelapse={timelapse} />
                 </p>
-                {sticker.kyotoSeikaSubjects && (
-                  <>
-                    <SubjectThought
-                      subjects={sticker.kyotoSeikaSubjects}
-                      size="detail"
-                      toward={DETAIL_TOWARD}
-                      reduced={reduced}
-                    />
-                    <p className="visually-hidden">{spokenPair(sticker.kyotoSeikaSubjects)}</p>
-                  </>
-                )}
                 {/* The Transfer Trail says it too, once it's in or while its place is held. */}
                 {mode === "given" && sticker.givenTo && trail.length === 0 && !trailHeld && (
                   <p className="fine sticker-detail__fine-print">

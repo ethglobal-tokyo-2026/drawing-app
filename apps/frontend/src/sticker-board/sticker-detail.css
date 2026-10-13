@@ -137,6 +137,21 @@
   display: none;
 }
 
+/* The subjects share the sticker's stage, with one compact band above it instead of a separate
+   block pushing the replay, Give and Transfer Trail down through the metadata. */
+.sticker-detail--kyoto-seika {
+  --subjects-room: 96px;
+  --stage-room: calc(24px + var(--subjects-room));
+}
+
+/* A wide sticker already has unused liner above it inside the figure square. The subjects use that
+   space first, so a short sticker adds little or no height to its stage. Figure sizing on a large
+   screen keeps the dialog's upper budget, avoiding a circular dependency on this stage's height. */
+.sticker-detail--kyoto-seika .sticker-detail__main {
+  --subjects-room: max(0px, 96px - var(--figure) * (1 - min(1, 1 / var(--ar))) / 2);
+  --stage-room: calc(24px + var(--subjects-room));
+}
+
 /* Only a vertical pan goes to the page; a sideways swipe pages between stickers. */
 .sticker-detail__stage {
   position: relative;
@@ -153,6 +168,24 @@
   display: grid;
   place-items: center;
   will-change: transform;
+  padding-top: var(--subjects-room, 0px);
+}
+
+.sticker-detail__subjects {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.sticker-detail__subjects .subject-thought--detail {
+  position: absolute;
+  margin: 0;
+}
+
+/* The sheet fills the stage while the replay plays; its subjects wait with the sealed sticker. */
+.sticker-detail__slide:has(> .timelapse-overlay) .sticker-detail__subjects,
+.sticker-detail:has(+ .detail-lift__flyer) .sticker-detail__subjects {
+  visibility: hidden;
 }
 
 /* Its own shape, inside the --figure square; the gift dot's layer takes the same box. */
@@ -531,7 +564,11 @@
      as its --ar makes it, centered in its stage. */
   .sticker-detail__column {
     min-height: 0;
-    padding-top: calc((var(--main-h) - var(--pager-h) - var(--figure) * min(1, 1 / var(--ar))) / 2);
+    padding-top: calc(
+      (var(--main-h) - var(--pager-h) - var(--figure) * min(1, 1 / var(--ar)) +
+          var(--subjects-room, 0px)) /
+        2
+    );
     padding-bottom: var(--main-foot);
     overflow-y: auto;
     overscroll-behavior: contain;

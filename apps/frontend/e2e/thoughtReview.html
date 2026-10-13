@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      .review-board {
+        position: relative;
+        width: 390px;
+        height: 596px;
+        background: var(--liner);
+      }
+      .review-sticker {
+        position: absolute;
+        transform-origin: center;
+      }
+      .review-sticker img {
+        width: 100%;
+        height: 100%;
+      }
+      .review-selection {
+        position: absolute;
+        inset: -7px;
+        border: 2px solid #99949f;
+      }
+      .review-knob {
+        position: absolute;
+        border: 2px solid var(--ink);
+        border-radius: 50%;
+        background: var(--canvas);
+      }
+      .sticker-toolbar {
+        position: absolute;
+        left: 0;
+        top: 503px;
+        width: 350px;
+        height: 57px;
+        border-radius: 12px;
+        background: var(--canvas);
+        border: 2px solid var(--rule);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./thoughtReview.tsx"></script>
+  </body>
+</html>

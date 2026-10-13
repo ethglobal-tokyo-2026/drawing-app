@@ -17,9 +17,6 @@ function thoughtWords(pair: Pair, size: PairSize, english: boolean): [ThoughtWor
   return [word(pair[0]), word(pair[1])];
 }
 
-/** In the detail the sticker stands above the clouds' column, or beside it on a large screen. */
-export const DETAIL_TOWARD = { x: -0.6, y: -0.8 };
-
 /** The pair's clouds and trails at `size`, laid out for the language on screen. */
 export const thoughtLayout = (
   pair: Pair,
