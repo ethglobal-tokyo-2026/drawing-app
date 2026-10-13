@@ -126,6 +126,8 @@ export const requireSession = (
   deps: Pick<AppDeps, "db" | "sessionSecret" | "clock" | "personSwitch">,
 ) =>
   createMiddleware<AppEnv>(async (c, next) => {
+    // Bootstrap refusals must not be cached before the profile handler can run.
+    if (c.req.path === "/api/me") c.header("Cache-Control", "no-store");
     const session = await resolveSession(c, deps);
     if (!session) return apiError(c, 401, "signed_out");
     const expected = c.req.header("x-croquis-user-id");

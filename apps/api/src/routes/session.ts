@@ -190,7 +190,6 @@ export const sessionRoutes = (deps: AppDeps) =>
       return c.body(null, 204);
     })
     .get("/me", validate("header", meHeaders), (c) => {
-      c.header("Cache-Control", "no-store");
       const user = liveUser(deps.db, c.var.session.authenticatedUserId);
       if (!user) return apiError(c, 401, "signed_out");
       // The signed cookie authenticates; LIFF's account only restricts which session can be reused.
