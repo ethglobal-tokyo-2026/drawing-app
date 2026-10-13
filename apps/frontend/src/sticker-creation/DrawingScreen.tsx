@@ -321,7 +321,6 @@ export function DrawingScreen({
     enabled:
       active && !controlsPending && (session.phase === "primed" || session.phase === "drawing"),
     order: layers.state.layers.map((layer) => layer.id),
-    current: layers.current,
     onMove: moveLayer,
     onLift: setReordering,
   });

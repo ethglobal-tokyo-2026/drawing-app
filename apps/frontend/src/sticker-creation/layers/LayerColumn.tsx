@@ -10,12 +10,13 @@ import {
   type ReactNode,
   type Ref,
 } from "react";
-import { NewLayerIcon, X } from "../../icons";
+import { CaretDown, CaretUp, NewLayerIcon, X } from "../../icons";
 import { useTranslation } from "../../i18n/react";
 import { LabelButton } from "../../ui/LabelButton";
 import { deviceSetting } from "../../ui/deviceSetting";
+import { useReducedMotion } from "../../ui/useReducedMotion";
 import type { LayerId } from "../canvas/ops";
-import { LayerChip } from "./LayerChip";
+import { CHIP_HEIGHT, LayerChip } from "./LayerChip";
 import { NewLayerMenu } from "./NewLayerMenu";
 import type { LayerChipView, ThumbnailSource } from "./layerView";
 import "./LayerColumn.css";
@@ -100,6 +101,7 @@ export function LayerColumn({
   listRef,
 }: LayerColumnProps) {
   const { t } = useTranslation();
+  const reduced = useReducedMotion();
   const orderKey = chips.map((chip) => chip.id).join(",");
   const optionsId = useId();
   const addMenuId = useId();
@@ -107,6 +109,7 @@ export function LayerColumn({
   const hintId = useId();
   const maximumId = useId();
   const overflowId = useId();
+  const listId = useId();
   const root = useRef<HTMLDivElement>(null);
   const optionsBox = useRef<HTMLDivElement>(null);
   const addBox = useRef<HTMLDivElement>(null);
@@ -116,11 +119,17 @@ export function LayerColumn({
   const learned = useSyncExternalStore(optionsLearned.subscribe, optionsLearned.get);
   const [scroll, setScroll] = useState({ position: 0, portion: 1 });
   const measureScroll = useCallback(() => {
-    const list = root.current?.querySelector<HTMLElement>(".layer-list");
-    if (!list) return;
+    const column = root.current;
+    const list = column?.querySelector<HTMLElement>(".layer-list");
+    if (!column || !list) return;
     const distance = list.scrollHeight - list.clientHeight;
     const position = distance > 0 ? Math.max(0, Math.min(1, list.scrollTop / distance)) : 0;
-    const portion = distance > 0 ? list.clientHeight / list.scrollHeight : 1;
+    const controls = column.querySelector<HTMLElement>(".layer-scroll-controls");
+    // Test overflow against the room without arrows, so removing layers can retire the controls.
+    const available =
+      list.clientHeight +
+      (controls ? controls.offsetHeight + (parseFloat(getComputedStyle(column).rowGap) || 0) : 0);
+    const portion = list.scrollHeight > available ? list.clientHeight / list.scrollHeight : 1;
     setScroll((before) =>
       before.position === position && before.portion === portion ? before : { position, portion },
     );
@@ -128,6 +137,15 @@ export function LayerColumn({
   const overflowing = scroll.portion < 1;
   const moreAbove = overflowing && scroll.position > 0;
   const moreBelow = overflowing && scroll.position < 1;
+  const scrollLayers = (direction: -1 | 1) => {
+    const list = root.current?.querySelector<HTMLElement>(".layer-list");
+    if (!list) return;
+    const pitch = CHIP_HEIGHT + 4;
+    list.scrollBy({
+      top: direction * Math.max(pitch, list.clientHeight - pitch),
+      behavior: reduced ? "auto" : "smooth",
+    });
+  };
   const [hiddenCurrent, setHiddenCurrent] = useState<LayerId | null>(null);
   if (hiddenCurrent !== null && hiddenCurrent !== current) setHiddenCurrent(null);
   // The chip focused by the arrow keys holds the Tab stop until focus leaves the list.
@@ -158,11 +176,15 @@ export function LayerColumn({
       : chipAt(root.current, current);
     if (!root.current || !paper || !chip) return;
     const columnBox = root.current.getBoundingClientRect();
+    const scrollControls = root.current
+      .querySelector(".layer-scroll-controls")
+      ?.getBoundingClientRect();
     const screenBox =
       root.current.closest(".drawing-screen")?.getBoundingClientRect() ??
       new DOMRect(0, 0, window.innerWidth, window.innerHeight);
     const lower = Math.min(
       columnBox.height > 0 ? columnBox.bottom : screenBox.bottom,
+      scrollControls && scrollControls.height > 0 ? scrollControls.top - 4 : screenBox.bottom,
       screenBox.bottom - 8,
     );
     const addBottom =
@@ -206,7 +228,7 @@ export function LayerColumn({
     chipAt(root.current, current)?.focus({ preventScroll: true });
   });
 
-  // A layer made current or reordered is brought into view. Only the list scrolls, where
+  // Selection, reordering and changes in room bring the current layer into view. Only the list scrolls, where
   // scrollIntoView would scroll every box round it, the drawing screen's too.
   useLayoutEffect(() => {
     const list = root.current?.querySelector<HTMLElement>(".layer-list") ?? null;
@@ -218,7 +240,7 @@ export function LayerColumn({
       chip.offsetTop + chip.offsetHeight + parseFloat(paddingBottom) - list.clientHeight;
     if (list.scrollTop > above) list.scrollTop = above;
     else if (list.scrollTop < below) list.scrollTop = below;
-  }, [current, orderKey]);
+  }, [current, orderKey, scroll.portion]);
 
   // Recheck content changes and automatic selection scrolling before paint, then follow resizes.
   useLayoutEffect(measureScroll);
@@ -291,6 +313,7 @@ export function LayerColumn({
         >
           <div
             ref={listRef}
+            id={listId}
             className="layer-list"
             role="listbox"
             aria-label={t(($) => $.stickerCreation.layers.label)}
@@ -324,12 +347,16 @@ export function LayerColumn({
                     chip={chip}
                     current={isCurrent}
                     thumbnails={thumbnails}
-                    dragReady={isCurrent && dragEnabled && chips.length > 1}
+                    dragReady={dragEnabled && chips.length > 1}
                     tabStop={chip.id === stop}
                     expanded={isCurrent ? showOptions : undefined}
                     controls={isCurrent && showOptions ? optionsId : undefined}
                     describedBy={
-                      isCurrent && chips.length > 1 ? (showHint ? hintId : dragHintId) : undefined
+                      dragEnabled && chips.length > 1
+                        ? isCurrent && showHint
+                          ? hintId
+                          : dragHintId
+                        : undefined
                     }
                     onPress={press}
                     onFocus={setFocused}
@@ -408,6 +435,30 @@ export function LayerColumn({
           </div>
         )}
       </div>
+      {overflowing && (
+        <div className="layer-scroll-controls">
+          <button
+            type="button"
+            data-direction="up"
+            aria-label={t(($) => $.stickerCreation.layers.scrollUp)}
+            aria-controls={listId}
+            disabled={!moreAbove}
+            onClick={() => scrollLayers(-1)}
+          >
+            <CaretUp size={20} weight="bold" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            data-direction="down"
+            aria-label={t(($) => $.stickerCreation.layers.scrollDown)}
+            aria-controls={listId}
+            disabled={!moreBelow}
+            onClick={() => scrollLayers(1)}
+          >
+            <CaretDown size={20} weight="bold" aria-hidden="true" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

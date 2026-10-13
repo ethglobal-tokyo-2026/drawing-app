@@ -70,6 +70,46 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("LayerColumn", () => {
+  it("makes every enabled chip draggable and describes the same gesture", () => {
+    renderColumn();
+    for (const id of [1, 2, 3]) {
+      expect(chip(id).getAttribute("data-drag-ready")).toBe("true");
+      expect(chip(id).getAttribute("aria-describedby")).toBeTruthy();
+    }
+    renderColumn({ dragEnabled: false });
+    expect(findAll("[data-drag-ready]")).toHaveLength(0);
+  });
+
+  it("pages the overflowing list with stable scroll controls and disables its reached ends", () => {
+    renderColumn();
+    const list = find(".layer-list");
+    layOut(list, 100);
+    const scrollBy = vi.fn();
+    Object.defineProperty(list, "scrollBy", { configurable: true, value: scrollBy });
+    act(() => {
+      list.dispatchEvent(new Event("scroll"));
+    });
+    const up = find<HTMLButtonElement>('.layer-scroll-controls button[data-direction="up"]');
+    const down = find<HTMLButtonElement>('.layer-scroll-controls button[data-direction="down"]');
+    expect(up.disabled).toBe(true);
+    expect(down.disabled).toBe(false);
+    click(down);
+    expect(scrollBy).toHaveBeenCalledWith({ top: 50, behavior: "smooth" });
+    act(() => {
+      list.scrollTop = 50;
+      list.dispatchEvent(new Event("scroll"));
+    });
+    expect(up.disabled).toBe(false);
+    expect(down.disabled).toBe(true);
+    click(up);
+    expect(scrollBy).toHaveBeenLastCalledWith({ top: -50, behavior: "smooth" });
+    layOut(list);
+    act(() => {
+      list.dispatchEvent(new Event("scroll"));
+    });
+    expect(findAll(".layer-scroll-controls")).toHaveLength(0);
+  });
+
   it("describes the continuing ends and fades only edges with more layers", () => {
     renderColumn();
     const list = find('[role="listbox"]');
@@ -326,6 +366,25 @@ describe("LayerColumn", () => {
   it("shows the front layer on top, from chips listed back to front", () => {
     renderColumn({ chips: chipsOf([4, 1, 7]), current: 1 });
     expect(findAll('[role="option"]').map((el) => Number(el.dataset.layerChip))).toEqual([7, 1, 4]);
+  });
+
+  it("keeps the selected chip visible when overflow controls reduce the list's room", () => {
+    renderColumn({ current: 1 });
+    const list = find(".layer-list");
+    layOut(list, 100);
+    const selected = chip(1);
+    const parent = selected.parentElement;
+    if (!parent) throw new Error("The selected chip has no layer list");
+    parent.style.padding = "4px";
+    Object.defineProperties(selected, {
+      offsetTop: { value: 104 },
+      offsetHeight: { value: 46 },
+    });
+    act(() => {
+      list.dispatchEvent(new Event("scroll"));
+    });
+    expect(findAll(".layer-scroll-controls")).toHaveLength(1);
+    expect(list.scrollTop).toBe(54);
   });
 
   it("keeps the selected chip visible when reordering moves it beyond the list's foot", () => {
