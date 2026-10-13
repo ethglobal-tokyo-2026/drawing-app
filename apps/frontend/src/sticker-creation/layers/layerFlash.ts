@@ -3,17 +3,14 @@ import { releaseCanvas } from "../../ui/releaseCanvas";
 import { blankCanvas } from "../canvas/context2d";
 import type { Rect } from "../sealing/stickerPasses";
 import { glintGroup, pickInkEdges } from "./layerGlints";
+import { layerOutlineCrop, prepareLayerOutline } from "./layerOutline";
 import "./layerFlash.css";
 
 export const FLASH_MS = 280;
 /** Includes the last satellite's delay and a cleanup allowance. */
 export const GLINT_TAIL_MS = 940;
 const REDUCED = "(prefers-reduced-motion: reduce)";
-const INK = "#1C1824";
 const LIGHT = "#FFFFFF";
-const AROUND = [-1, 0, 1].flatMap((dx) =>
-  [-1, 0, 1].filter((dy) => dx || dy).map((dy) => [dx, dy] as const),
-);
 const glintImage = (pink: boolean) => {
   const art = pink ? GLINT_SVG.replace('fill="#fff"', 'fill="#ff4f9a"') : GLINT_SVG;
   const path = art.match(/<path[^>]+\/>/)?.[0];
@@ -24,70 +21,6 @@ const glintImage = (pink: boolean) => {
   return 'url("' + svgDataUrl(art.replace(path, undercut + path)) + '")';
 };
 const GLINT_IMAGES = [glintImage(true), glintImage(false)];
-
-/** Two edges identify selected ink regardless of its opacity or covering layers. */
-function inkOutline(
-  ink: HTMLCanvasElement,
-  edge: number,
-  full: boolean,
-  allocate: typeof blankCanvas,
-) {
-  const made = allocate(ink.width, ink.height);
-  const inner = allocate(ink.width, ink.height);
-  for (const [dx, dy] of AROUND) {
-    made.g.drawImage(ink, dx * edge * 2, dy * edge * 2);
-    inner.g.drawImage(ink, dx * edge, dy * edge);
-  }
-  for (const [part, color] of [
-    [made, LIGHT],
-    [inner, INK],
-  ] as const) {
-    part.g.globalCompositeOperation = "source-in";
-    part.g.fillStyle = color;
-    part.g.fillRect(0, 0, ink.width, ink.height);
-  }
-  const { g } = made;
-  g.globalCompositeOperation = "source-over";
-  g.drawImage(inner.canvas, 0, 0);
-  g.globalCompositeOperation = "destination-out";
-  g.drawImage(ink, 0, 0);
-  // Project only occupied crop edges onto the inset, then cut it to the ink at that position.
-  // Interior holes keep the sheet's extent visible; islands and erased notches gain no border.
-  g.globalCompositeOperation = "source-over";
-  const inset = edge * 5;
-  for (const [offset, color] of [
-    [0, LIGHT],
-    [edge, INK],
-  ] as const) {
-    const at = inset + offset;
-    const w = ink.width - at * 2;
-    const h = ink.height - at * 2;
-    if (w <= 0 || h <= 0) continue;
-    if (full) {
-      // Keep the filled sheet's authored rectangle antialiasing, without resampling its edges.
-      g.fillStyle = color;
-      g.fillRect(at, at, w, edge);
-      g.fillRect(at, ink.height - at - edge, w, edge);
-      g.fillRect(at, at, edge, h);
-      g.fillRect(ink.width - at - edge, at, edge, h);
-      continue;
-    }
-    inner.g.clearRect(0, 0, ink.width, ink.height);
-    inner.g.globalCompositeOperation = "source-over";
-    inner.g.drawImage(ink, at, 0, w, 1, at, at, w, edge);
-    inner.g.drawImage(ink, at, ink.height - 1, w, 1, at, ink.height - at - edge, w, edge);
-    inner.g.drawImage(ink, 0, at, 1, h, at, at, edge, h);
-    inner.g.drawImage(ink, ink.width - 1, at, 1, h, ink.width - at - edge, at, edge, h);
-    inner.g.globalCompositeOperation = "destination-in";
-    inner.g.drawImage(ink, 0, 0);
-    inner.g.globalCompositeOperation = "source-in";
-    inner.g.fillStyle = color;
-    inner.g.fillRect(0, 0, ink.width, ink.height);
-    g.drawImage(inner.canvas, 0, 0);
-  }
-  releaseCanvas(inner.canvas);
-  return made;
-}
 
 export interface LayerFlash {
   readonly cancel: () => void;
@@ -158,6 +91,25 @@ export function flashLayer(parts: FlashParts): LayerFlash | null {
     if (document.hidden) letGo();
   };
   try {
+    const crop = layerOutlineCrop(
+      layer.width,
+      layer.height,
+      inked,
+      cssWidth,
+      cssHeight,
+      window.devicePixelRatio,
+    );
+    if (!crop) return null;
+    const outline = prepareLayerOutline(layer, crop, allocate);
+    if (!outline) {
+      letGo();
+      return null;
+    }
+    outline.canvas.style.inset = "auto";
+    outline.canvas.style.left = `${crop.raster.x / crop.density}px`;
+    outline.canvas.style.top = `${crop.raster.y / crop.density}px`;
+    outline.canvas.style.width = `${crop.raster.w / crop.density}px`;
+    outline.canvas.style.height = `${crop.raster.h / crop.density}px`;
     const source = allocate(width, height, { willReadFrequently: true });
     // Each bilinear pass reads every source pixel. A single 3:1 reduction can skip a hairline.
     let reading = layer;
@@ -189,27 +141,6 @@ export function flashLayer(parts: FlashParts): LayerFlash | null {
       : pickInkEdges(ink.data, width, height, width / cssWidth, height / cssHeight).flatMap(
           (spark, group) => glintGroup(spark, group, cssWidth, cssHeight),
         );
-    // Source alpha stays on its canvas for the pulse; contour subtraction uses an opaque silhouette.
-    let inkPixels = 0;
-    for (let i = 3; i < ink.data.length; i += 4)
-      if (ink.data[i]) {
-        ink.data[i] = 255;
-        inkPixels++;
-      }
-    if (!inkPixels) {
-      letGo();
-      return null;
-    }
-    const silhouette = allocate(width, height);
-    silhouette.g.putImageData(ink, 0, 0);
-    const outline = inkOutline(
-      silhouette.canvas,
-      (width / cssWidth) * 1.25,
-      inkPixels === width * height,
-      allocate,
-    );
-    releaseCanvas(silhouette.canvas);
-
     const pulse = allocate(width, height);
     pulse.g.drawImage(source.canvas, 0, 0);
     pulse.g.globalCompositeOperation = "source-in";

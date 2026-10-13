@@ -709,7 +709,7 @@ describe("the sheet's display", () => {
       expect(removedDocument).toHaveBeenCalledWith("visibilitychange", expect.any(Function));
     });
 
-    it.each(["inner contour", "pulse", "source read", "animation", "listener"])(
+    it.each(["crop read", "outline write", "source read", "pulse draw", "animation", "listener"])(
       "releases partial feedback and preserves borrowed ink when %s construction fails",
       (failure) => {
         const { ink, above, host, before } = coveredSheet(RIGHT);
@@ -718,18 +718,28 @@ describe("the sheet's display", () => {
         const borrowed = [pixelsOf(selected), pixelsOf(above)];
         const originalError = new Error(`Failed ${failure}`);
         const allocate = canvas2d.blankCanvas;
-        let allocations = 0;
-        vi.spyOn(canvas2d, "blankCanvas").mockImplementation((...args) => {
-          allocations++;
-          if (
-            (failure === "inner contour" && allocations === 4) ||
-            (failure === "pulse" && allocations === 5)
-          )
+        if (failure === "crop read") {
+          vi.spyOn(context(selected), "getImageData").mockImplementationOnce(() => {
             throw originalError;
+          });
+        }
+        vi.spyOn(canvas2d, "blankCanvas").mockImplementation((...args) => {
           const made = allocate(...args);
-          if (failure === "source read" && allocations === 1) {
+          if (failure === "outline write") {
+            vi.spyOn(made.g, "putImageData").mockImplementation(() => {
+              throw originalError;
+            });
+          }
+          if (failure === "source read") {
             vi.spyOn(made.g, "getImageData").mockImplementation(() => {
               throw originalError;
+            });
+          }
+          if (failure === "pulse draw") {
+            const draw = made.g.drawImage.bind(made.g);
+            vi.spyOn(made.g, "drawImage").mockImplementation((...drawArgs) => {
+              if (drawArgs[0] === above) throw originalError;
+              return draw(...drawArgs);
             });
           }
           return made;
@@ -767,7 +777,6 @@ describe("the sheet's display", () => {
         const made = madeContexts()
           .slice(before)
           .map(({ canvas }) => canvas);
-        expect(made.length).toBeGreaterThan(0);
         expect(made.map(sizeOf)).toEqual(made.map(() => [0, 0]));
         expect(flashParts(host)).toHaveLength(0);
         for (const canceled of started) expect(canceled).toHaveBeenCalledOnce();

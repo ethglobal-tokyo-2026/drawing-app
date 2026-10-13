@@ -37,8 +37,9 @@ for (const device of ["phone", "tablet"] as const) {
           }),
         );
         await page.goto("/e2e-layer-feedback");
-        await page.clock.install();
-        await page.clock.pauseAt(new Date());
+        const clockStart = new Date();
+        await page.clock.install({ time: clockStart });
+        await page.clock.pauseAt(new Date(clockStart.getTime() + 10_000));
         const initial = await page.evaluate(async (dark) => {
           const { flashLayer } = await import("../src/sticker-creation/layers/layerFlash.ts");
           document.body.style.cssText = `margin:0;padding:16px;background:${dark ? "#1c1824" : "#f2f1f6"}`;
@@ -326,11 +327,14 @@ test("real ink has a readable dual contour and a gentle white pulse at every sel
         animation.pause();
         animation.currentTime = 100;
       }
-      const data = og.getImageData(0, 0, 160, 160).data;
+      const data = og.getImageData(0, 0, outline.width, outline.height).data;
+      const density = outline.width / Number.parseFloat(outline.style.width);
+      const left = Number.parseFloat(outline.style.left);
+      const top = Number.parseFloat(outline.style.top);
       const edges = { exposedDark: 0, exposedWhite: 0, coveredDark: 0, coveredWhite: 0 };
       for (let i = 0; i < data.length; i += 4) {
         if (data[i + 3] < 200) continue;
-        const covered = (i / 4) % 160 >= 80;
+        const covered = left + (((i / 4) % outline.width) + 0.5) / density >= 80;
         if (data[i] < 60) edges[covered ? "coveredDark" : "exposedDark"]++;
         if (data[i] > 240) edges[covered ? "coveredWhite" : "exposedWhite"]++;
       }
@@ -344,7 +348,12 @@ test("real ink has a readable dual contour and a gentle white pulse at every sel
         edges,
         pulse: [...pg.getImageData(60, 80, 1, 1).data],
         coveredPulse: pg.getImageData(100, 80, 1, 1).data[3],
-        interiorContour: og.getImageData(80, 80, 1, 1).data[3],
+        interiorContour: og.getImageData(
+          Math.floor((80 - left) * density),
+          Math.floor((80 - top) * density),
+          1,
+          1,
+        ).data[3],
         pulsePeak: Number(getComputedStyle(pulse).opacity),
         contourPeak: Number(getComputedStyle(outline).opacity),
         unchanged: before[0] === layer.toDataURL() && before[1] === above.toDataURL(),

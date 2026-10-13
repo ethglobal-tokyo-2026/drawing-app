@@ -4,6 +4,7 @@
  * doesn't join hang together by narrow bridges of border. Pure functions over pixel arrays; the ink is
  * measured scaled down to at most GRID pixels on its long side.
  */
+import { squaredDistanceTransform } from "../canvas/distanceTransform";
 import type { Pixels } from "./pixels";
 
 export type Point = [x: number, y: number];
@@ -85,39 +86,6 @@ function inkMask(
   return mask;
 }
 
-/** Felzenszwalb–Huttenlocher squared distance transform along one line; `at` gets each argmin. */
-function distanceLine(
-  f: Float64Array,
-  n: number,
-  d: Float64Array,
-  v: Int32Array,
-  z: Float64Array,
-  at?: Int32Array,
-) {
-  let k = 0;
-  v[0] = 0;
-  z[0] = -Infinity;
-  z[1] = Infinity;
-  for (let q = 1; q < n; q++) {
-    let s = (f[q] + q * q - (f[v[k]] + v[k] * v[k])) / (2 * q - 2 * v[k]);
-    while (s <= z[k]) {
-      k--;
-      s = (f[q] + q * q - (f[v[k]] + v[k] * v[k])) / (2 * q - 2 * v[k]);
-    }
-    k++;
-    v[k] = q;
-    z[k] = s;
-    z[k + 1] = Infinity;
-  }
-  k = 0;
-  for (let q = 0; q < n; q++) {
-    while (z[k + 1] < q) k++;
-    const dq = q - v[k];
-    d[q] = dq * dq + f[v[k]];
-    if (at) at[q] = v[k];
-  }
-}
-
 /**
  * The Euclidean distance from every cell to the nearest cell that's set in `on`. Given `nearest`, it
  * also fills in that cell's index for every cell.
@@ -126,28 +94,8 @@ function distanceTo(on: Uint8Array, w: number, h: number, nearest?: Int32Array):
   const FAR = 1e12;
   const g = new Float64Array(w * h);
   for (let i = 0; i < w * h; i++) g[i] = on[i] ? 0 : FAR;
-  const n = Math.max(w, h);
-  const f = new Float64Array(n);
-  const d = new Float64Array(n);
-  const v = new Int32Array(n);
-  const z = new Float64Array(n + 1);
-  const at = nearest && new Int32Array(n);
-  // Down each column, the row of its nearest set cell; along each row, the column whose is nearest.
-  const row = nearest && new Int32Array(w * h);
-  for (let x = 0; x < w; x++) {
-    for (let y = 0; y < h; y++) f[y] = g[y * w + x];
-    distanceLine(f, h, d, v, z, at);
-    for (let y = 0; y < h; y++) g[y * w + x] = d[y];
-    if (row && at) for (let y = 0; y < h; y++) row[y * w + x] = at[y];
-  }
-  for (let y = 0; y < h; y++) {
-    const o = y * w;
-    for (let x = 0; x < w; x++) f[x] = g[o + x];
-    distanceLine(f, w, d, v, z, at);
-    for (let x = 0; x < w; x++) g[o + x] = Math.sqrt(d[x]);
-    if (nearest && row && at)
-      for (let x = 0; x < w; x++) nearest[o + x] = row[o + at[x]] * w + at[x];
-  }
+  squaredDistanceTransform(g, w, h, nearest);
+  for (let i = 0; i < g.length; i++) g[i] = Math.sqrt(g[i]);
   return g;
 }
 
