@@ -45,6 +45,11 @@ afterEach(() => {
 
 describe("SwitchPersonControls", () => {
   it("exposes live selections only from server authorization and preserves BIGWHEEL", () => {
+    const selection = vi.spyOn(personSwitch, "usePersonSwitch").mockReturnValue({
+      pending: false,
+      error: null,
+      request: vi.fn(),
+    });
     const session: SessionEnvelope = {
       me: { ...TEST_ME, id: "hana" },
       authenticated: { ...TEST_ME, id: "bigwheel" },
@@ -66,7 +71,7 @@ describe("SwitchPersonControls", () => {
     );
     expect(view.host.querySelector("button")).toBeNull();
     for (const pending of [false, true]) {
-      vi.spyOn(personSwitch, "usePersonSwitch").mockReturnValue({
+      selection.mockReturnValue({
         pending,
         error: null,
         request: vi.fn(),
