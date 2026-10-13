@@ -3,6 +3,7 @@
  * the board or back in its slot; and a tap's quick peel onto a free spot on the board.
  */
 import { timeOurWork } from "../../performance/performanceRecorder";
+import { i18next } from "../../i18n/i18n";
 import { formatNo } from "../../stickers/format";
 import { EASE_OUT, EASE_PEEL, clamp, lerp } from "../../ui/easing";
 import {
@@ -65,7 +66,18 @@ export function createTrayPeel(
   const { win, reduced, later, cancel, make, decorative, zip, api, problem, fly, land, ui } = tray;
   const { Wb, Hb, lipLeft, boardView } = tray;
   const { itemOf } = trayModel;
-  const { placeOf, slotFor, stackHome, sayStuckOn } = traySheets;
+  const {
+    placeOf,
+    slotFor,
+    stackHome,
+    sayStuckOn,
+    coatSticker,
+    releaseMaterials,
+    turnMaterials,
+    turnOf,
+    animateWithLaminate,
+    refreshMaterials,
+  } = traySheets;
   /** Where a sticker in hand would land: its shadow, cut to its shape. */
   const landMark = make("i", "");
   land.append(landMark);
@@ -96,11 +108,62 @@ export function createTrayPeel(
     el.style.width = px(size.w);
     el.style.height = px(size.h);
     fly.append(el);
+    const canvas = decorative(make("canvas", "sticker-laminate"));
+    curl.append(canvas);
+    coatSticker(canvas, s, 0, () => !ui.destroyed);
+    if (s.veiled)
+      curl.append(
+        decorative(
+          make(
+            "span",
+            "fine tray__mark",
+            i18next.t(($) => $.stickers.nsfw.mark),
+          ),
+        ),
+      );
     return { el, curl };
+  }
+  /** The curl's axis angle becomes the same Z/X/Y order as the sticker's actual CSS transforms. */
+  function turnFlyer(el: HTMLElement) {
+    const curl = el.querySelector<HTMLElement>(".tray__curl");
+    const axis = /rotate3d\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*0\s*,\s*([-\d.]+)deg\s*\)/.exec(
+      curl?.style.transform ?? "",
+    );
+    let turn = turnOf(el);
+    let tiltX = 0;
+    let tiltY = 0;
+    if (axis) {
+      const x = Number(axis[1]);
+      const y = Number(axis[2]);
+      const length = Math.hypot(x, y);
+      if (length) {
+        const a = x / length;
+        const b = y / length;
+        const angle = (Number(axis[3]) * Math.PI) / 180;
+        const sin = Math.sin(angle);
+        const cos = Math.cos(angle);
+        const degrees = 180 / Math.PI;
+        tiltX = Math.asin(a * sin) * degrees;
+        tiltY = Math.atan2(b * sin, cos) * degrees;
+        turn += Math.atan2(-a * b * (1 - cos), cos + b * b * (1 - cos)) * degrees;
+      }
+    }
+    turnMaterials(el, turn, tiltX, tiltY);
+  }
+  function animateFlyer(el: HTMLElement, frames: Keyframe[], timing: KeyframeAnimationOptions) {
+    return animateWithLaminate(el, frames, timing, () => turnFlyer(el));
+  }
+  /** The flight ends before its sticker's canvas, textures, and finite movement tracking leave. */
+  function removeFlyer(el: HTMLElement) {
+    releaseMaterials(el);
+    el.remove();
   }
   function setSlotState(id: string, state: SlotState) {
     const el = slotFor(id);
-    if (el) el.dataset.state = state;
+    if (el) {
+      el.dataset.state = state;
+      if (state === "here") refreshMaterials(el);
+    }
     return el;
   }
   function startPeel(g: Gesture) {
@@ -158,6 +221,7 @@ export function createTrayPeel(
         pk.scale * (1 + CURL.grow * k),
         pk.r.r,
       );
+      turnFlyer(pk.el);
       if (dist >= PEEL_FREE) freePeel(pk);
       return;
     }
@@ -169,6 +233,7 @@ export function createTrayPeel(
     pk.curl.style.transformOrigin = "0 0";
     // The world's peel: lifted and tilted.
     pk.curl.style.transform = reduced() ? "" : "rotate3d(1,-1,0,11deg)";
+    turnFlyer(pk.el);
     pk.x = pk.r.x;
     pk.y = pk.r.y;
     // The tray gets out of the way: its mouth sags to a crack, still unzipped.
@@ -191,6 +256,7 @@ export function createTrayPeel(
         const lean = clamp(pk.vx * FOLLOW.lean, -FOLLOW.leanMax, FOLLOW.leanMax);
         pk.rot = lerp(pk.r.r, lean, ez * FOLLOW.leanShare);
         pk.el.style.transform = flyerAt(pk.x, pk.y, pk.size, pk.scale, pk.rot);
+        turnFlyer(pk.el);
         showLanding(overBoard(pk.target) ? pk : null);
       }
       pk.raf = win.requestAnimationFrame(loop);
@@ -223,17 +289,18 @@ export function createTrayPeel(
     // It lands where its shadow showed, under the finger, not where it trailed behind it; in hand
     // there until the board has drawn it.
     pk.el.style.transform = flyerAt(pt.x, pt.y, pk.size, pk.scale, rot);
+    turnFlyer(pk.el);
     api
       .place(pk.s.id, { x: pt.x, y: pt.y, r: rot })
       .then(placedOrThrow)
       .then(
         () => {
-          pk.el.remove();
+          removeFlyer(pk.el);
           sayStuckOn(pk.s);
         },
         (error: unknown) => {
           reportPlace(pk.s, error);
-          pk.el.remove();
+          removeFlyer(pk.el);
           pressIn(pk.s.id);
         },
       );
@@ -245,7 +312,8 @@ export function createTrayPeel(
     if (pk.phase === "curl") {
       // Not free yet: it lays back down.
       await ended(
-        pk.el.animate(
+        animateFlyer(
+          pk.el,
           [
             { transform: pk.el.style.transform },
             { transform: flyerAt(pk.r.x, pk.r.y, pk.size, pk.scale, pk.r.r) },
@@ -253,7 +321,7 @@ export function createTrayPeel(
           { duration: 160, easing: EASE_OUT },
         ),
       );
-      pk.el.remove();
+      removeFlyer(pk.el);
       setSlotState(pk.s.id, "here");
       return;
     }
@@ -263,7 +331,8 @@ export function createTrayPeel(
     const silhouetteEl = setSlotState(pk.s.id, "peeling");
     const to = silhouetteEl && ui.pulled ? rectOfFit(silhouetteEl) : slotHome(pk.s);
     await ended(
-      pk.el.animate(
+      animateFlyer(
+        pk.el,
         [
           { transform: pk.el.style.transform },
           { transform: flyerAt(to.x, to.y, pk.size, to.w / pk.size.w, to.r) },
@@ -271,16 +340,19 @@ export function createTrayPeel(
         { duration: 300, easing: EASE_PEEL, fill: "forwards" },
       ),
     );
-    pk.el.remove();
+    removeFlyer(pk.el);
     pressIn(pk.s.id);
   }
   /** A sticker in hand lies straight back down in its slot on `p`'s sheet. */
   function lieDown(pk: Peel, p: Pulled) {
     win.cancelAnimationFrame(pk.raf);
     showLanding(null);
-    pk.el.remove();
+    removeFlyer(pk.el);
     const el = slotFor(pk.s.id, p.el);
-    if (el) el.dataset.state = "here";
+    if (el) {
+      el.dataset.state = "here";
+      refreshMaterials(el);
+    }
   }
   /** Its placing failed, so it stays in the tray. */
   const reportPlace = (s: Slot, error: unknown) => {
@@ -337,6 +409,7 @@ export function createTrayPeel(
     setSlotState(id, "peeling");
     const { el: flyer } = makeFlyer(s, size);
     flyer.style.transform = flyerAt(r.x, r.y, size, r.w / size.w, r.r);
+    turnFlyer(flyer);
     if (!ui.pulled) zip.relax(CRACK);
     ui.shown.add(id);
     let onBoard: HTMLElement;
@@ -344,7 +417,7 @@ export function createTrayPeel(
       onBoard = placedOrThrow(await api.place(id));
     } catch (error) {
       reportPlace(s, error);
-      flyer.remove();
+      removeFlyer(flyer);
       pressIn(id);
       if (!ui.pulled) holdOpen(HOLD_OPEN.tapped);
       return;
@@ -354,7 +427,8 @@ export function createTrayPeel(
     onBoard.style.opacity = "0";
     if (!reduced())
       await ended(
-        flyer.animate(
+        animateFlyer(
+          flyer,
           [
             { transform: flyerAt(r.x, r.y, size, r.w / size.w, r.r) },
             {
@@ -372,7 +446,7 @@ export function createTrayPeel(
           { duration: 460, easing: EASE_PEEL, fill: "forwards" },
         ),
       );
-    flyer.remove();
+    removeFlyer(flyer);
     onBoard.style.opacity = "";
     if (!reduced())
       onBoard.animate(
@@ -403,6 +477,9 @@ export function createTrayPeel(
   return {
     rectOfFit,
     makeFlyer,
+    turnFlyer,
+    animateFlyer,
+    removeFlyer,
     setSlotState,
     startPeel,
     movePeel,

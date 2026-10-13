@@ -191,7 +191,7 @@ describe("CreaseStore", () => {
     crease: made
       ? {
           base: new Blob(["base"]),
-          height: new Blob(["height"]),
+          normal: new Blob(["normal"]),
           topLeft: new Blob(["topLeft"]),
           bottomRight: new Blob(["bottomRight"]),
           topRight: new Blob(["topRight"]),
@@ -211,7 +211,14 @@ describe("CreaseStore", () => {
     expect(store.creaseOf(job.id)).toBeUndefined();
 
     store.land(bake(job));
-    expect(store.creaseOf(job.id)?.height).toBeDefined();
+    expect(Object.keys(store.creaseOf(job.id) ?? {}).sort()).toEqual([
+      "base",
+      "bottomLeft",
+      "bottomRight",
+      "normal",
+      "topLeft",
+      "topRight",
+    ]);
     expect(changed).toHaveBeenCalledTimes(1);
 
     const restacked = { ...job, key: "another stack" };

@@ -5,6 +5,7 @@
 import { i18next } from "../../i18n/i18n";
 import { formatMonthDay, formatNo } from "../../stickers/format";
 import { lightUp } from "../../stickers/light";
+import { mountLaminate, refreshLaminate, turnLaminate } from "../../stickers/laminateRenderer";
 import { clamp } from "../../ui/easing";
 import { GIFT_LABEL_SIZE, STICKER_FIT } from "./sheetPacking";
 import { knownShape } from "./stickerShape";
@@ -50,6 +51,110 @@ export const shadeOf = (depth: number) => clamp(depth * 0.3, 0, 0.9);
 export function createTraySheets(tray: Tray, trayModel: TrayModel) {
   const { doc, zip, make, decorative, icon, words, hint, say, stack, ui, colLeft, trayTop } = tray;
   const { newIds, matches, sheetItems, sheetMatches, topF, resetOrder } = trayModel;
+  const laminates = new Map<HTMLCanvasElement, { turn: number; dispose: () => void }>();
+  const moving = new Map<Animation, { host: HTMLElement; stop: () => void }>();
+  /** A sticker on its sheet or in hand owns the same laminate until that presentation leaves. */
+  function coatSticker(
+    canvas: HTMLCanvasElement,
+    s: Slot,
+    turn = 0,
+    active = () => materialOn(canvas),
+  ) {
+    canvas.dataset.state = "loading";
+    canvas.dataset.finish = "gloss";
+    laminates.set(canvas, {
+      turn,
+      dispose: mountLaminate(canvas, {
+        print: s.urls.png,
+        cut: s.urls.mask,
+        turn,
+        finish: "gloss",
+        active,
+      }),
+    });
+  }
+  function materialOn(canvas: HTMLCanvasElement) {
+    if (ui.destroyed || !zip.isOpen) return false;
+    const slot = canvas.closest<HTMLElement>(".tray__slot");
+    if (slot?.dataset.state === "used" || slot?.dataset.state === "peeling") return false;
+    if (ui.spreadOpen) return canvas.closest(".tray__cell") !== null;
+    if (canvas.closest(".tray__pulled")) return true;
+    return ui.busy || ui.g?.mode === "page" || canvas.closest(".tray__sheet.is-top") !== null;
+  }
+  /** A newly exposed sheet uses the held light even when its own turn has not changed. */
+  function refreshMaterials(host: Element = tray.root) {
+    for (const canvas of laminates.keys()) if (host.contains(canvas)) refreshLaminate(canvas);
+  }
+  /** A sheet or sticker's current turn, including an in-progress browser animation. */
+  function turnOf(host: HTMLElement) {
+    const transform = tray.win.getComputedStyle(host).transform;
+    if (transform.startsWith("matrix")) {
+      const values = transform
+        .slice(transform.indexOf("(") + 1, -1)
+        .split(",")
+        .map(Number);
+      return (Math.atan2(values[1], values[0]) * 180) / Math.PI;
+    }
+    return Number(/rotate\((-?[\d.]+)deg\)/.exec(transform)?.[1] ?? 0);
+  }
+  /** A sticker turns with its own spot and the sheet or spread cell containing that spot. */
+  function turnMaterials(host: HTMLElement, turn = turnOf(host), tiltX = 0, tiltY = 0) {
+    if (ui.destroyed || doc.hidden) return;
+    for (const [canvas, material] of laminates)
+      if (host.contains(canvas)) turnLaminate(canvas, material.turn + turn, tiltX, tiltY);
+  }
+  /** Only an existing movement needs frames; its coating stops with that movement. */
+  function animateWithLaminate(
+    host: HTMLElement,
+    frames: Keyframe[],
+    timing: KeyframeAnimationOptions,
+    turn = () => turnMaterials(host),
+  ) {
+    const animation = host.animate(frames, timing);
+    turn();
+    if (animation.playState !== "running" || ui.destroyed) return animation;
+    let raf = 0;
+    const stop = () => {
+      tray.win.cancelAnimationFrame(raf);
+      moving.delete(animation);
+      turn();
+    };
+    const frame = () => {
+      raf = 0;
+      if (!host.isConnected || ui.destroyed) {
+        stop();
+        return;
+      }
+      turn();
+      if (animation.playState === "running") raf = tray.win.requestAnimationFrame(frame);
+      else stop();
+    };
+    moving.set(animation, { host, stop });
+    animation.finished.then(stop, stop);
+    raf = tray.win.requestAnimationFrame(frame);
+    return animation;
+  }
+  /** A replaced sheet releases its snapshots, shared textures, and resize listeners together. */
+  function releaseMaterials(host: Element) {
+    for (const [animation, movement] of moving)
+      if (host.contains(movement.host)) {
+        animation.cancel();
+        movement.stop();
+      }
+    for (const [canvas, material] of laminates)
+      if (host.contains(canvas)) {
+        material.dispose();
+        laminates.delete(canvas);
+      }
+  }
+  function destroyMaterials() {
+    for (const [animation, movement] of moving) {
+      animation.cancel();
+      movement.stop();
+    }
+    for (const material of laminates.values()) material.dispose();
+    laminates.clear();
+  }
   // The CSS draws every sheet, edge and +N button to these sizes.
   tray.root.style.setProperty("--sheet-w", px(SHEET.w));
   tray.root.style.setProperty("--gift-label-w", px(GIFT_LABEL_SIZE.w));
@@ -228,6 +333,11 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
       img.alt = "";
       img.draggable = false;
       fit.append(img);
+      if (!inAGift) {
+        const canvas = decorative(make("canvas", "sticker-laminate"));
+        fit.append(canvas);
+        coatSticker(canvas, s, q.r);
+      }
       // In a gift, it lies under the sleeve's frost.
       if (inAGift) fit.append(decorative(make("i", "tray__frost")));
       // Its image is the veiled one: the mark says why it's blurred, as on the board.
@@ -404,6 +514,7 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     stack.style.setProperty("--stack-foot", px(stackFootFor(ui.order.length)));
     // The only sheet is out over the board.
     if (!ui.order.length) {
+      releaseMaterials(stack);
       stack.replaceChildren();
       if (focused) keepFocus(focusedId);
       return;
@@ -422,6 +533,7 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
       more.setAttribute("aria-label", spread);
       kids.push(more);
     }
+    releaseMaterials(stack);
     stack.replaceChildren(...kids);
     if (focused) keepFocus(focusedId);
     markShown();
@@ -469,7 +581,12 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
   }
   function rerenderPulled() {
     const p = ui.pulled;
-    p?.el.querySelector(".tray__sheet")?.replaceWith(sheetEl(p.f, 0, { pulled: true }));
+    const old = p?.el.querySelector(".tray__sheet");
+    if (p && old) {
+      releaseMaterials(old);
+      old.replaceWith(sheetEl(p.f, 0, { pulled: true }));
+      turnMaterials(p.el);
+    }
   }
 
   return {
@@ -494,6 +611,13 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     sayStuckOn,
     sayReturned,
     sayFilter,
+    releaseMaterials,
+    destroyMaterials,
+    turnMaterials,
+    coatSticker,
+    turnOf,
+    animateWithLaminate,
+    refreshMaterials,
   };
 }
 

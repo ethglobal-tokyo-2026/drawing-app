@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { isAppleMobile } from "./deviceForLight";
 
 /**
  * The app's one answer about reading the device's motion. iOS asks, from a tap, once for motion and
@@ -106,15 +107,10 @@ export function createMotionPermission(host: MotionHost): MotionPermissionStore 
   };
 }
 
-/** iPhone and iPad, iPadOS included, which reports itself as a Mac with a touch screen. */
-const isAppleMobile = () =>
-  /iPhone|iPad|iPod/.test(navigator.userAgent) ||
-  (navigator.userAgent.includes("Macintosh") && navigator.maxTouchPoints > 1);
-
 /** iOS's motion prompt, which TypeScript's DOM types don't declare. */
 function iosMotionPrompt(): (() => Promise<string>) | undefined {
   // Some desktop browsers carry the prompt too; the ask is for the phones and iPads that need it.
-  if (!isAppleMobile()) return undefined;
+  if (!isAppleMobile(navigator)) return undefined;
   const motion: unknown = window.DeviceMotionEvent;
   if (typeof motion !== "function" || !("requestPermission" in motion)) return undefined;
   const ask = motion.requestPermission;
@@ -142,6 +138,9 @@ const appPermission = () =>
 
 export const askForMotion = () => appPermission().ask();
 export const declineMotion = () => appPermission().decline();
+export const getMotionPermission = (): MotionPermission => appPermission().get();
+export const subscribeMotionPermission = (listener: () => void): (() => void) =>
+  appPermission().subscribe(listener);
 
 export function useMotionPermission(): MotionPermission {
   const store = appPermission();

@@ -50,6 +50,7 @@ import {
 import { createZipper, mouthRange, showsFrom } from "./zipper";
 import "../../stickers/nsfw-mark.css";
 import "../../stickers/sticker-foil.css";
+import "../../stickers/sticker-laminate.css";
 import "./sticker-tray.css";
 
 // The tray's callers take its types and icons from here.
@@ -401,6 +402,7 @@ export function createTrayEngine(
       if (showing) {
         loadImages();
         if (ui.stale) redraw();
+        traySheets.refreshMaterials();
       }
     }
     if (range) {
@@ -608,6 +610,7 @@ export function createTrayEngine(
       if (peel) win.cancelAnimationFrame(peel.raf);
       ui.pulled?.listening.abort();
       traySpread.destroy();
+      traySheets.destroyMaterials();
       large.removeEventListener("change", fitForScreen);
       resizes.disconnect();
       listening.abort();

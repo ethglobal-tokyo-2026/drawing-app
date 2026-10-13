@@ -46,7 +46,16 @@ export function createTrayBoardDrop(
   const { itemOf, topF } = trayModel;
   const { renderStack, rerenderPulled, slotFor, sayReturned, catchUp } = traySheets;
   const { bringToFront } = trayPaging;
-  const { rectOfFit, makeFlyer, setSlotState, slotHome, pressIn } = trayPeel;
+  const {
+    rectOfFit,
+    makeFlyer,
+    turnFlyer,
+    animateFlyer,
+    removeFlyer,
+    setSlotState,
+    slotHome,
+    pressIn,
+  } = trayPeel;
   const { sendHome } = trayPresses;
 
   /* ---------------------------------------------------------------- putting a board sticker back */
@@ -212,9 +221,11 @@ export function createTrayBoardDrop(
     const start = snap ?? { x: pt.x, y: pt.y, scale: 1, r: from?.r ?? 0 };
     const { el: flyer } = makeFlyer(s, size);
     flyer.style.transform = flyerAt(start.x, start.y, size, start.scale, start.r);
+    turnFlyer(flyer);
     if (!reduced())
       await ended(
-        flyer.animate(
+        animateFlyer(
+          flyer,
           [
             { transform: flyer.style.transform },
             {
@@ -230,7 +241,7 @@ export function createTrayBoardDrop(
           { duration: 230, easing: EASE_OUT, fill: "forwards" },
         ),
       );
-    flyer.remove();
+    removeFlyer(flyer);
     // Landed: the sheets catch up with the board, which let go of it during the flight, before it's
     // pressed in.
     ui.landing.delete(id);

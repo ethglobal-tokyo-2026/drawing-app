@@ -3,6 +3,7 @@ import { expect, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
 import { drawAndSeal, drawKeyName, openDetail, say, signIn, test } from "./helpers.ts";
 import { ipad } from "./ipad.ts";
+import { tiltScreen } from "./screenTilt.ts";
 
 const { ui } = strings;
 const language = "en";
@@ -22,9 +23,7 @@ async function bandPixels(page: Page, foil: Locator) {
 
 /** Shares a device tilt with the app, and waits for the foil to reach that light and settle. */
 async function tiltLight(page: Page, foil: Locator, gamma: number, lx: string) {
-  await page.evaluate((gamma) => {
-    window.dispatchEvent(Object.assign(new Event("deviceorientation"), { gamma, beta: 40 }));
-  }, gamma);
+  await tiltScreen(page, 40, gamma);
   await expect(foil.locator(".sticker-foil__sheen")).toHaveCSS("--lx", lx);
   await expect.poll(() => runningOn(foil)).toBe(0);
 }
@@ -66,7 +65,7 @@ test("a foil follows only device tilt, holding still through mouse and Apple Pen
   const { card, no } = await drawAndSeal(page, language, { nsfw: true });
   await card.getByRole("button", { name: say(ui.backToBoard, language) }).click();
   const foil = (await openDetail(page, language, no)).locator(".sticker-foil--pink");
-  // The image, its resin and the glint follow the light too, so they're hidden: only the bands count.
+  // The image, its laminate and the glint follow the light too, so they're hidden: only the bands count.
   await page.addStyleTag({
     content: ".sticker-foil ~ *, .sticker-foil__glint { visibility: hidden !important; }",
   });

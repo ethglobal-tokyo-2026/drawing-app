@@ -15,6 +15,9 @@ import {
 import type { StickerTrayHandle } from "./tray/StickerTray";
 import { STEP_SAVE_IDLE_MS, UncommittedBoardSpots, useBoardGestures } from "./useBoardGestures";
 import { testBoardSticker } from "./testBoardSticker";
+import { turnLaminate } from "../stickers/laminateRenderer";
+
+vi.mock("../stickers/laminateRenderer", () => ({ turnLaminate: vi.fn() }));
 
 type Options = Parameters<typeof useBoardGestures>[0];
 type BoardProps = Omit<Options, "stage">;
@@ -30,6 +33,8 @@ function Board(props: BoardProps) {
       {props.stickers.map((s) => (
         <div key={s.id} className="placed-sticker" data-sticker-id={s.id} tabIndex={0}>
           <span data-handle="scale" />
+          <span data-handle="rotate" />
+          <canvas className="sticker-laminate" />
         </div>
       ))}
     </div>
@@ -123,6 +128,7 @@ const drawnAt = (placement: Placement) => {
 };
 
 beforeEach(() => {
+  vi.mocked(turnLaminate).mockClear();
   // Where things are drawn isn't tested here; happy-dom's own animations reject unhandled.
   vi.spyOn(Element.prototype, "animate").mockImplementation(() => new Animation());
   host = document.createElement("div");
@@ -138,6 +144,62 @@ afterEach(() => {
 });
 
 describe("useBoardGestures", () => {
+  it.each(["rotate", "pinch"] as const)(
+    "updates the laminate during a live %s and restores it on cancellation",
+    (kind) => {
+      const onCommit = vi.fn<Options["onCommit"]>();
+      show({ onCommit });
+      const el = stickerEl();
+      const canvas = el.querySelector("canvas");
+      if (!canvas) throw new Error("The sticker laminate is missing");
+      const { x, y } = toPx(phoneField, sticker.placement);
+      act(() => {
+        if (kind === "rotate") {
+          const handle = el.querySelector("[data-handle=rotate]");
+          if (!handle) throw new Error("The rotation handle is missing");
+          point(handle, "pointerdown", 1, x + 40, y);
+          point(el, "pointermove", 1, x, y + 40);
+        } else {
+          point(el, "pointerdown", 1, x, y);
+          point(el, "pointerdown", 2, x + 40, y);
+          point(el, "pointermove", 2, x, y + 40);
+        }
+      });
+      expect(onCommit).not.toHaveBeenCalled();
+      expect(turnLaminate).toHaveBeenLastCalledWith(canvas, 90);
+      act(() => {
+        point(el, "pointercancel", 1, 0, 0);
+      });
+      expect(turnLaminate).toHaveBeenLastCalledWith(canvas, 0);
+      expect(onCommit).not.toHaveBeenCalled();
+    },
+  );
+
+  it("reflects the tray snap's displayed turn and restores the live turn when leaving it", () => {
+    let snapped = true;
+    const onCommit = vi.fn<Options["onCommit"]>();
+    show({
+      onCommit,
+      tray: trayWith({
+        boardDrag: () =>
+          snapped ? { over: true, snap: { x: 200, y: 400, r: 67, scale: 0.6 } } : null,
+      }),
+    });
+    const el = stickerEl();
+    const canvas = el.querySelector("canvas");
+    act(() => {
+      point(el, "pointerdown", 1, 100, 300);
+      point(el, "pointermove", 1, 160, 300);
+    });
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(turnLaminate).toHaveBeenLastCalledWith(canvas, 67);
+    snapped = false;
+    act(() => {
+      point(el, "pointermove", 1, 170, 300);
+    });
+    expect(turnLaminate).toHaveBeenLastCalledWith(canvas, 0);
+    expect(onCommit).not.toHaveBeenCalled();
+  });
   it("exposes only uncommitted positions, clearing settled steps and canceled drags", () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const uncommittedSpots = new UncommittedBoardSpots();

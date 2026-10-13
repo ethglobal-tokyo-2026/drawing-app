@@ -1,0 +1,21 @@
+.sticker-laminate {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  visibility: hidden;
+  filter: var(--sticker-cut) var(--sticker-cast);
+}
+
+.sticker-laminate[data-state="ready"] {
+  visibility: inherit;
+}
+.sticker-figure:has(> .sticker-laminate[data-state="ready"]) > .sticker-figure__img {
+  visibility: hidden;
+}
+.sticker-figure.is-stuck > .sticker-laminate,
+.sticker-figure.is-veiled > .sticker-laminate {
+  filter: none;
+}

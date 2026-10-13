@@ -1,7 +1,8 @@
 import { memo, useCallback, useState, type CSSProperties, type Ref } from "react";
 import { useTranslation } from "../i18n/react";
 import type { CreaseImage } from "./crease";
-import { LiveResin } from "./LiveResin";
+import { StickerLaminate } from "./StickerLaminate";
+import type { LaminateFinish } from "./laminateRenderer";
 import { madeFoil } from "./madeFoil";
 import { useSharpSrc } from "./sharpImage";
 import { StickerCrease } from "./StickerCrease";
@@ -13,7 +14,7 @@ import "./sticker-figure.css";
 
 /**
  * A sticker's crease, baked: its base and rise lit from each side, which the one light blends between,
- * and its surface height, which shifts the laminate reflection.
+ * and its geometric normal data for the laminate reflection.
  */
 export type Crease = Record<CreaseImage, string>;
 
@@ -36,7 +37,7 @@ interface Props {
    * comes, with the 18+ mark over it; its outline and foil stay sharp.
    */
   veiled?: boolean;
-  /** Degrees it's turned on screen, which its foil's glint undoes. */
+  /** Degrees it is turned on screen, for material geometry and its foil's glint. */
   turn?: number;
   /** Stuck to a board: it sits close to it, with the board's short cast. */
   stuck?: boolean;
@@ -44,6 +45,8 @@ interface Props {
   reveal?: boolean;
   /** Where it lies over other stickers' edges: the baked crease, its lit side following the one light. */
   crease?: Crease;
+  /** Coming-soon Shop previews compare roughness; sealed stickers default to gloss. */
+  laminate?: LaminateFinish;
   className?: string;
   ref?: Ref<HTMLSpanElement>;
 }
@@ -52,8 +55,8 @@ const cssUrl = (url: string) => `url("${url}")`;
 
 /**
  * A sticker as material, filling its box: its foil when someone else drew it, it's NSFW or it was drawn in
- * Kyoto Seika Practice Mode, the image with its kiss-cut and cast shadow, a thin laminate's live resin under
- * the one light, and the gloss sweep that plays when it sticks. Memoized: a board sticker re-renders as it's selected,
+ * Kyoto Seika Practice Mode, the image with its kiss-cut and cast shadow, a thin laminate under
+ * the one light. Memoized: a board sticker re-renders as it's selected,
  * held or restacked, none of which changes its figure.
  */
 export const StickerFigure = memo(function StickerFigure({
@@ -68,6 +71,7 @@ export const StickerFigure = memo(function StickerFigure({
   stuck = false,
   reveal = false,
   crease,
+  laminate = "gloss",
   className,
   ref,
 }: Props) {
@@ -106,6 +110,13 @@ export const StickerFigure = memo(function StickerFigure({
       {/* A foil's band casts for it. */}
       {stuck && !foilSize && <span className="sticker-figure__cast" aria-hidden="true" />}
       <img ref={imgRef} className="sticker-figure__img" src={src} alt="" draggable={false} />
+      <StickerLaminate
+        print={src}
+        cut={mask}
+        normal={crease?.normal}
+        turn={turn}
+        finish={laminate}
+      />
       {nsfw && <span className="sticker-figure__gloss" aria-hidden="true" />}
       {/* Keyed by its images, so a rebaked crease presses in again. */}
       {crease && <StickerCrease key={crease.topLeft} crease={crease} />}
@@ -116,10 +127,6 @@ export const StickerFigure = memo(function StickerFigure({
           </b>
         </span>
       )}
-      <LiveResin height={crease?.height} />
-      <span className="sticker-figure__sweep" aria-hidden="true">
-        <i />
-      </span>
     </span>
   );
 });

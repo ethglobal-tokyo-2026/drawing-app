@@ -84,7 +84,7 @@
 .seal-ceremony__plain,
 .seal-ceremony__gloss,
 .seal-ceremony__pour,
-.seal-ceremony__sticker :is(.sticker-foil, .live-resin__spec) {
+.seal-ceremony__sticker :is(.sticker-foil, .sticker-laminate) {
   opacity: 0;
 }
 

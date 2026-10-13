@@ -112,11 +112,6 @@ const shows = () =>
   Object.fromEntries(Object.entries(document.querySelector("output")?.dataset ?? {}));
 const phase = () => shows().phase;
 const overlay = () => document.querySelector<HTMLElement>(".timelapse-overlay");
-const sheen = () => {
-  const band = document.querySelector(".live-resin__sheen > b");
-  if (!band) throw new Error("The figure has no sheen");
-  return band;
-};
 
 /** The longest take-off: the paper coming up, a flight onto the sheet, or a crossfade. */
 const TAKE_OFF_MS = Math.max(PAPER_IN_MS, FLIGHT_MS + LAND_MS, REDUCED_FADE_MS);
@@ -192,11 +187,10 @@ afterEach(() => {
 });
 
 describe("useTimelapse", () => {
-  it("loads, prepares and plays, then holds the ink, fades to the sticker and sweeps its sheen once", async () => {
+  it("loads, prepares and plays, then holds the ink and leaves the finished sticker still", async () => {
     const loaded = deferred<TimelapseV4>();
     client = emptyApi({ timelapse: () => loaded.promise });
     render();
-    const swept = vi.spyOn(sheen(), "animate");
 
     press();
     expect(phase()).toBe("loading");
@@ -223,12 +217,11 @@ describe("useTimelapse", () => {
     const opacity = Number(overlay()?.style.opacity);
     expect(opacity).toBeGreaterThan(0);
     expect(opacity).toBeLessThan(1);
-    expect(swept).not.toHaveBeenCalled();
 
     advance(FADE_MS / 2);
     expect(shows()).toMatchObject({ phase: "idle", said: "done" });
     expect(overlay()).toBeNull();
-    expect(swept).toHaveBeenCalledOnce();
+    expect([...figure().querySelectorAll("*")].flatMap((part) => part.getAnimations())).toEqual([]);
     expect(player.calls.at(-1)).toBe("stop");
   });
 
@@ -260,10 +253,9 @@ describe("useTimelapse", () => {
     expect(player.calls).toEqual(["prepare", "play"]);
   });
 
-  it("peels the sticker back into its spot with its ink as the sheet fades, then sweeps its sheen", async () => {
+  it("peels the sticker back into its spot with its ink as the sheet fades", async () => {
     const player = await flying();
     await tookOff();
-    const swept = vi.spyOn(sheen(), "animate");
     await finish();
     advance(HOLD_MS + LAND_MS);
     expect(figure().style.opacity).toBe("1");
@@ -277,7 +269,6 @@ describe("useTimelapse", () => {
     expect(phase()).toBe("idle");
     expect(figure().getAttribute("style") ?? "").not.toMatch(INLINE);
     expect(player.calls.filter((call) => call === "takeInk")).toHaveLength(1);
-    expect(swept).toHaveBeenCalledOnce();
   });
 
   it("puts the sticker back in its spot at once when stopped mid-flight", async () => {
@@ -357,14 +348,12 @@ describe("useTimelapse", () => {
 
   it("skips to the finished ink while it plays, and the ending still plays", async () => {
     const player = await playing();
-    const swept = vi.spyOn(sheen(), "animate");
     press();
     expect(player.calls).toContain("skip");
     await settle();
     expect(phase()).toBe("ending");
     advance(HOLD_MS + FADE_MS);
     expect(phase()).toBe("idle");
-    expect(swept).toHaveBeenCalledOnce();
   });
 
   it("keeps playing after Skip until streamed fills have actually finished", async () => {
@@ -382,26 +371,23 @@ describe("useTimelapse", () => {
     expect(phase()).toBe("ending");
   });
 
-  it("shows the sticker at once when skipped during the ending, with no sheen", async () => {
+  it("shows the sticker at once when skipped during the ending", async () => {
     await playing();
-    const swept = vi.spyOn(sheen(), "animate");
     await finish();
     advance(HOLD_MS / 2);
     press();
     expect(phase()).toBe("idle");
     expect(overlay()).toBeNull();
     advance(HOLD_MS + FADE_MS);
-    expect(swept).not.toHaveBeenCalled();
+    expect(phase()).toBe("idle");
   });
 
-  it("tells the player about reduced motion, and ends in a short fade with no sheen", async () => {
+  it("tells the player about reduced motion, and ends in a short fade", async () => {
     const player = await playing({ reduced: true });
     expect(player.options.reduced).toBe(true);
-    const swept = vi.spyOn(sheen(), "animate");
     await finish();
     advance(HOLD_MS + REDUCED_FADE_MS);
     expect(phase()).toBe("idle");
-    expect(swept).not.toHaveBeenCalled();
   });
 
   it("follows reduced motion turned on while it plays", async () => {
@@ -410,11 +396,9 @@ describe("useTimelapse", () => {
     const told = vi.spyOn(player, "setReduced");
     render(true);
     expect(told).toHaveBeenCalledExactlyOnceWith(true);
-    const swept = vi.spyOn(sheen(), "animate");
     await finish();
     advance(HOLD_MS + REDUCED_FADE_MS);
     expect(phase()).toBe("idle");
-    expect(swept).not.toHaveBeenCalled();
   });
 
   it("names each state on the one button, keeping its focus, and says when it plays and ends", async () => {

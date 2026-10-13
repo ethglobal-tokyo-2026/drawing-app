@@ -11,7 +11,7 @@ const creaseStyle = (url: string) => ({ "--crease": `url("${url}")` });
  * under any light, and over it an image of its rise lit from each side, blended by where the one light
  * is, so its lit and shaded sides follow the light without a new bake.
  */
-export function StickerCrease({ crease: { base, height: _height, ...sides } }: { crease: Crease }) {
+export function StickerCrease({ crease: { base, normal: _normal, ...sides } }: { crease: Crease }) {
   const el = useRef<HTMLSpanElement>(null);
   // Shown after the light last moved, it starts where the light is, like every crease already shown.
   useLayoutEffect(() => {

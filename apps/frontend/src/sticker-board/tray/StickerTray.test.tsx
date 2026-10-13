@@ -289,6 +289,57 @@ describe("StickerTray", () => {
     expect(board.querySelector(".tray")).toBeNull();
   });
 
+  it("releases each sheet's laminate snapshots when refreshed and when the tray leaves", async () => {
+    render([sticker("a", 1, false)]);
+    await openTray();
+    const snapshots = () => [...board.querySelectorAll<HTMLCanvasElement>(".tray__fit > canvas")];
+    const before = snapshots();
+    expect(before.length).toBeGreaterThan(0);
+
+    render([sticker("b", 2, false)]);
+    await act(async () => {});
+    expect(
+      before.every((canvas) => !canvas.isConnected && canvas.width * canvas.height === 0),
+    ).toBe(true);
+    const current = snapshots();
+    expect(current.length).toBeGreaterThan(0);
+    act(() => root.unmount());
+    expect(current.every((canvas) => canvas.width * canvas.height === 0)).toBe(true);
+  });
+
+  it("coats only exposed stickers, keeping gifts concealed and the 18+ mark above the veiled coat", async () => {
+    render([
+      sticker("exposed", 1, false),
+      sticker("used", 2, true),
+      sentSticker("gift", 3),
+      sticker("veiled", 4, false, { nsfw: true }),
+    ]);
+    await openTray();
+    const coatOf = (id: string) => slotOf(id)?.querySelector(".tray__fit > canvas");
+    expect(coatOf("exposed")?.getAttribute("aria-hidden")).toBe("true");
+    expect(coatOf("used")).toBeNull();
+    expect(coatOf("gift")).toBeNull();
+    expect(slotOf("gift")?.querySelector(".tray__frost")).not.toBeNull();
+    const mark = slotOf("veiled")?.querySelector(".tray__mark");
+    expect(mark?.textContent).toBe(i18next.t(($) => $.stickers.nsfw.mark));
+    expect(coatOf("veiled")?.nextElementSibling).toBe(mark);
+  });
+
+  it("releases the spread's laminate snapshots when its sheets return to the stack", async () => {
+    render(manyStickers(60));
+    await openTray();
+    spreadSheets();
+    const spread = board.querySelector(".tray__spread");
+    const snapshots = [
+      ...(spread?.querySelectorAll<HTMLCanvasElement>(".tray__fit > canvas") ?? []),
+    ];
+    expect(snapshots.length).toBeGreaterThan(0);
+    await act(async () => spread?.querySelector<HTMLButtonElement>(".tray__cell")?.click());
+    expect(
+      snapshots.every((canvas) => !canvas.isConnected && canvas.width * canvas.height === 0),
+    ).toBe(true);
+  });
+
   it("follows the board's size as it resizes, for a sticker dragged to the shut tray's edge", () => {
     const observers = stubResizeObservers();
     render([sticker("a", 1, true)]);
@@ -748,6 +799,78 @@ describe("StickerTray", () => {
       peeled,
       expect.objectContaining({ x: 20, y: 320 }),
     );
+  });
+
+  it.each(["placed", "failed", "canceled", "teardown"] as const)(
+    "releases the laminate on a sticker in hand when its flight is %s",
+    async (ending) => {
+      endAnimationsAtOnce();
+      let placed = (_el: HTMLElement) => {};
+      let failed = (_error: Error) => {};
+      const place = () =>
+        new Promise<HTMLElement>((resolve, reject) => {
+          placed = resolve;
+          failed = reject;
+        });
+      render([sticker("a", 1, false)], { place });
+      await openTray();
+      peelFrom(frontSheet(), stackEl());
+      const coating = board.querySelector<HTMLCanvasElement>(".tray__flyer .sticker-laminate");
+      expect(coating).not.toBeNull();
+      expect(coating?.getAttribute("aria-hidden")).toBe("true");
+
+      if (ending === "teardown") act(() => root.unmount());
+      else if (ending === "canceled") {
+        pointer(stackEl(), "pointercancel", 20, 320);
+        await act(async () => {});
+      } else {
+        pointer(stackEl(), "pointerup", 20, 320);
+        await act(async () => {
+          if (ending === "placed") placed(document.createElement("div"));
+          else failed(new Error("Placing the sticker failed"));
+        });
+      }
+      expect(coating?.isConnected).toBe(false);
+      expect((coating?.width ?? -1) * (coating?.height ?? -1)).toBe(0);
+    },
+  );
+
+  it("keeps the veiled print's 18+ mark above the laminate on a tapped sticker's flight", async () => {
+    let landed = (_el: HTMLElement) => {};
+    render([sticker("a", 1, false, { nsfw: true })], {
+      place: () =>
+        new Promise<HTMLElement>((resolve) => {
+          landed = resolve;
+        }),
+    });
+    await openTray();
+    press(hereOn(), "Enter");
+    const coating = board.querySelector<HTMLCanvasElement>(".tray__flyer .sticker-laminate");
+    expect(coating).not.toBeNull();
+    expect(coating?.nextElementSibling?.textContent).toBe(i18next.t(($) => $.stickers.nsfw.mark));
+    expect(board.querySelector<HTMLImageElement>(".tray__flyer img")?.src).toContain("a.png");
+
+    await act(async () => landed(document.createElement("div")));
+    expect(coating?.isConnected).toBe(false);
+    expect((coating?.width ?? -1) * (coating?.height ?? -1)).toBe(0);
+  });
+
+  it("releases the laminate after a sticker flies back from the board to its sheet", async () => {
+    const motion = holdAnimations();
+    const remove = () => render([sticker("a", 1, false)]);
+    render([sticker("a", 1, true)], { remove });
+    await openTray();
+    motion.animate();
+    let back: Promise<boolean> | undefined;
+    await act(async () => {
+      back = tray.current?.boardDrop("a", { x: 380, y: 300 });
+    });
+    const coating = board.querySelector<HTMLCanvasElement>(".tray__flyer .sticker-laminate");
+    expect(coating).not.toBeNull();
+    await motion.finishAll();
+    expect(await back).toBe(true);
+    expect(coating?.isConnected).toBe(false);
+    expect((coating?.width ?? -1) * (coating?.height ?? -1)).toBe(0);
   });
 
   it("keeps the mouth a crack under a sticker in hand when one tapped before it lands", async () => {

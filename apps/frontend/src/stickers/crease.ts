@@ -14,10 +14,13 @@ export const CREASE_LIGHT = unit(-0.5, -0.7);
 export type CreaseSide = "topLeft" | "bottomRight" | "topRight" | "bottomLeft";
 
 /**
- * A crease's images: its rise lit from each side, its base, and the height of the flat surface for
- * the laminate reflection. The base's shoulder and foot show however the light falls.
+ * A crease's images: its rise lit from each side, its base, and geometric normals for the laminate
+ * reflection. The base's shoulder and foot show however the light falls.
  */
-export type CreaseImage = CreaseSide | "base" | "height";
+export type CreaseImage = CreaseSide | "base" | "normal";
+
+/** The illustrative paper and film thickness, in CSS px, used only for geometric normals. */
+export const STICKER_THICKNESS = 0.35;
 
 /**
  * Toward each side's light, on screen. The board blends the four by where the one light is, so the
@@ -265,7 +268,7 @@ export interface CreaseInput {
 
 /**
  * The crease's images, as RGBA, not premultiplied: white where the laminate catches the light, ink
- * where it falls into shade. The height image's alpha is the draped height inside the silhouette.
+ * where it falls into shade. Normal RGB describes the raw draped surface independently of the cut.
  */
 export type CreasePixels = Record<CreaseImage, Uint8ClampedArray<ArrayBuffer>>;
 
@@ -276,7 +279,7 @@ const SIDES = [
   "bottomLeft",
 ] as const satisfies readonly CreaseSide[];
 
-/** The crease and surface height of a sticker laid over `surface`, or null when nothing rises. */
+/** The crease and geometric normals over `surface`, or null when nothing rises. */
 export function creasePixels({
   width,
   height,
@@ -289,7 +292,7 @@ export function creasePixels({
   const unitStep = stepResponse(scale);
   const image = () => new Uint8ClampedArray(width * height * 4);
   const base = image();
-  const heightImage = image();
+  const normal = image();
   const bakes = SIDES.map((side) => ({ light: lights[side], out: image() }));
   let any = false;
   /** Shades pixel `q` of `out` by `tone`, lit above zero and shaded below. */
@@ -311,15 +314,19 @@ export function creasePixels({
     for (let x = 1; x < width - 1; x++) {
       const i = y * width + x;
       const o = own[i];
+      // Differentiate the floating-point drape before cut coverage and visual crease tone.
+      const dx = ((field[i + 1] - field[i - 1]) * scale * STICKER_THICKNESS) / 2;
+      const dy = ((field[i + width] - field[i - width]) * scale * STICKER_THICKNESS) / 2;
+      const length = Math.hypot(dx, dy, 1);
+      const q = i * 4;
+      normal[q] = Math.round(128 - (127 * dx) / length);
+      normal[q + 1] = Math.round(128 - (127 * dy) / length);
+      normal[q + 2] = Math.round(128 + 127 / length);
+      normal[q + 3] = 255;
       if (o <= 0.004) continue;
       const h = field[i];
-      const q = i * 4;
-      if (h > 0.004) {
-        const heightAlpha = Math.round((h / (h + 1)) * o * 255);
-        if (heightAlpha > 0) any = true;
-        heightImage[q] = heightImage[q + 1] = heightImage[q + 2] = 255;
-        heightImage[q + 3] = heightAlpha;
-      }
+      // A flat raised plane still supplies normal data without inventing a visible crease.
+      if (h > 0.004 && Math.round((h / (h + 1)) * o * 255) > 0) any = true;
       const gx = (field[i + 1] - field[i - 1]) / 2 / unitStep.slope;
       const gy = (field[i + width] - field[i - width]) / 2 / unitStep.slope;
       const bend =
@@ -338,5 +345,12 @@ export function creasePixels({
   }
   if (!any) return null;
   const [topLeft, bottomRight, topRight, bottomLeft] = bakes.map(({ out }) => out);
-  return { base, height: heightImage, topLeft, bottomRight, topRight, bottomLeft };
+  // The outer sampling row stays a flat plane rather than an uninitialized curved edge.
+  for (let y = 0; y < height; y++)
+    for (let x = 0; x < width; x++) {
+      if (x !== 0 && y !== 0 && x !== width - 1 && y !== height - 1) continue;
+      const q = (y * width + x) * 4;
+      normal.set([128, 128, 255, 255], q);
+    }
+  return { base, normal, topLeft, bottomRight, topRight, bottomLeft };
 }

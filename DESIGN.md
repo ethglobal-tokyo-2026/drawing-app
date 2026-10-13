@@ -417,7 +417,7 @@ Stickers and foils follow the app's one moving light. It tracks only device tilt
 
 ### Named Rules
 
-**The One Light Rule.** One light for the whole app. Static shadows fall from the top left, and every moving highlight (a sticker's specular and sheen, the foils' glint, a crease's shading, the heart's gloss) reads the shared light. No second light; the Shop's small previews are the one exception, lit by their own loop.
+**The One Light Rule.** One light for the whole app, including Shop previews. Static shadows fall from the top left; the laminate reflection, foil glint, and crease shading read the shared material pose. On phone and iPad, real device tilt changes that pose, finite smoothing settles, and the reflection holds. Unasked, denied, blocked, silent, or uncertain rotation input stays still. Only a recognized device without rotation input may use the shared timed fallback. Pointer movement never moves material light. Reduced motion, backgrounding, and the last light owner's release stop pending motion while preserving the held pose.
 
 **The Neutral Shadow Rule.** Shadows are Ink alpha, never tinted, except on the stat board, where paper casts a cork-brown throw over an Ink contact line.
 
@@ -481,7 +481,8 @@ An extension of the drawing screen, drawn with manga's own devices instead of UI
 ### Stickers
 
 - **Die-cut:** cut from the artist's own strokes: a white border bounded by the kiss-cut groove. Parts the border doesn't join hang together by narrow bridges of border.
-- **Gloss laminate:** flat, as on a vinyl sticker, with one slim highlight that follows the light.
+- **Gloss laminate:** a thin clear film over the complete sticker cut, including blank white paper inside line art. The cut determines coverage; print color changes the transmitted image, never the film's existence or roughness. A neutral reflected environment follows surface and view orientation, with linear-light dielectric reflection and transmitted print. Overlap ramps bend the film by their geometric slope; raised flat paper stays flat. No dome, metallic ink, independent sweep, or idle sway.
+- **Matte laminate:** a coming-soon Shop preview under the same light and over the same print. Its broader reflected shape comes from roughness, rather than desaturation or white haze. Every sealed sticker uses gloss today.
 - **Crease:** on a sticker board, a sticker lying over others shows their edges beneath it, lit on the side facing the light, as a real one does pressed down over them.
 - **Foil:** a sticker drawn by someone other than the board's owner wears a holo band just outside its white edge, an even width round the cut, under a still diffraction grating with a glint where the light falls. The band is the sticker's edge.
 - **Pink foil:** the same band in pinks, on an NSFW sticker. The 18+ mark is Ink on a strip of pink foil, never a Bonbon Pink field.

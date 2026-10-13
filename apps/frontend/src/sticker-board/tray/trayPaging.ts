@@ -29,7 +29,16 @@ const DROP = { past: 12, least: 320, fallback: 470 };
 export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: TraySheets) {
   const { zip, reduced, listen, make, stack, tabsEl, ui } = tray;
   const { itemOf, resetOrder, fitPages } = trayModel;
-  const { restAt, renderStack, rerenderPulled, catchUp, sayFront, sayFilter } = traySheets;
+  const {
+    restAt,
+    renderStack,
+    rerenderPulled,
+    catchUp,
+    sayFront,
+    sayFilter,
+    animateWithLaminate,
+    refreshMaterials,
+  } = traySheets;
   /** Deals the stack anew for the filter, on pages as tall as the stack it deals needs. */
   function deal() {
     resetOrder();
@@ -66,7 +75,7 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
     const from = el.style.transform;
     el.style.transform = restAt(depthOf(el));
     return ended(
-      el.animate([{ transform: from }, { transform: el.style.transform }], {
+      animateWithLaminate(el, [{ transform: from }, { transform: el.style.transform }], {
         duration: ms,
         easing: EASE_OUT,
       }),
@@ -92,6 +101,7 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
   /** A turn or a shuffle takes the stack: nothing else turns it until it lets go. */
   function hold() {
     ui.busy = true;
+    refreshMaterials(stack);
     still = new Promise<void>((resolve) => {
       letGoOf = resolve;
     });
@@ -127,7 +137,7 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
       for (const el of sheetEls()) {
         if (el === front) continue;
         const d = depthOf(el);
-        el.animate([{ transform: restAt(d) }, { transform: restAt(d - 1) }], {
+        animateWithLaminate(el, [{ transform: restAt(d) }, { transform: restAt(d - 1) }], {
           duration: 240 * T,
           easing: EASE_OUT,
           fill: "forwards",
@@ -135,7 +145,8 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
         shade(el, d, d - 1, 240 * T);
       }
       await ended(
-        front.animate(
+        animateWithLaminate(
+          front,
           [{ transform: restAt(0, fromY) }, { transform: restAt(0, LIFT.dy, -LIFT.r) }],
           {
             duration: 150 * T,
@@ -147,11 +158,15 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
       front.style.zIndex = "-1";
       shade(front, 0, k, 200 * T);
       await ended(
-        front.animate([{ transform: restAt(0, LIFT.dy, -LIFT.r) }, { transform: restAt(k) }], {
-          duration: 200 * T,
-          easing: "cubic-bezier(.45,0,.55,1)",
-          fill: "forwards",
-        }),
+        animateWithLaminate(
+          front,
+          [{ transform: restAt(0, LIFT.dy, -LIFT.r) }, { transform: restAt(k) }],
+          {
+            duration: 200 * T,
+            easing: "cubic-bezier(.45,0,.55,1)",
+            fill: "forwards",
+          },
+        ),
       );
       // A tab, or a sheet sent home, that dealt the stack anew mid-turn keeps its order.
       if (ui.order === order) {
@@ -166,7 +181,7 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
       for (const el of sheetEls()) {
         if (el === t) continue;
         const d = depthOf(el);
-        el.animate([{ transform: restAt(d - 1) }, { transform: restAt(d) }], {
+        animateWithLaminate(el, [{ transform: restAt(d - 1) }, { transform: restAt(d) }], {
           duration: 260 * T,
           easing: EASE_OUT,
         });
@@ -176,18 +191,26 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
         shade(t, k, 0, 370 * T, "none");
         t.style.zIndex = "-1";
         await ended(
-          t.animate([{ transform: restAt(k) }, { transform: restAt(0, LIFT.dy, LIFT.r) }], {
-            duration: 170 * T,
-            easing: EASE_OUT,
-            fill: "forwards",
-          }),
+          animateWithLaminate(
+            t,
+            [{ transform: restAt(k) }, { transform: restAt(0, LIFT.dy, LIFT.r) }],
+            {
+              duration: 170 * T,
+              easing: EASE_OUT,
+              fill: "forwards",
+            },
+          ),
         );
         t.style.zIndex = "";
         await ended(
-          t.animate([{ transform: restAt(0, LIFT.dy, LIFT.r) }, { transform: restAt(0) }], {
-            duration: 200 * T,
-            easing: EASE_OUT,
-          }),
+          animateWithLaminate(
+            t,
+            [{ transform: restAt(0, LIFT.dy, LIFT.r) }, { transform: restAt(0) }],
+            {
+              duration: 200 * T,
+              easing: EASE_OUT,
+            },
+          ),
         );
         for (const a of t.getAnimations()) a.cancel();
       }
@@ -280,11 +303,15 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
     await Promise.all(
       before.map((el) =>
         ended(
-          el.animate([{ transform: el.style.transform }, { transform: pile(depthOf(el)) }], {
-            duration: 100,
-            easing: EASE_OUT,
-            fill: "forwards",
-          }),
+          animateWithLaminate(
+            el,
+            [{ transform: el.style.transform }, { transform: pile(depthOf(el)) }],
+            {
+              duration: 100,
+              easing: EASE_OUT,
+              fill: "forwards",
+            },
+          ),
         ),
       ),
     );
@@ -293,7 +320,8 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
     await Promise.all(
       drop.map((el, i) =>
         ended(
-          el.animate(
+          animateWithLaminate(
+            el,
             [
               { transform: pile(depthOf(el)) },
               { transform: pile(depthOf(el), dropBy, (i % 2 ? 1 : -1) * 2.5) },
@@ -334,7 +362,8 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
             ];
       const last = k[k.length - 1].transform;
       anims.push(
-        el.animate(
+        animateWithLaminate(
+          el,
           [
             ...k,
             { transform: last, offset: o(190), easing: EASE_OUT },
@@ -348,7 +377,8 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
       const d0 = inPile.get(Number(front.dataset.f));
       const from = d0 === undefined ? pile(0, dropBy) : pile(d0);
       anims.push(
-        front.animate(
+        animateWithLaminate(
+          front,
           [
             { transform: from, offset: 0 },
             { transform: from, offset: o(90), easing: "cubic-bezier(.2,.75,.35,1)" },

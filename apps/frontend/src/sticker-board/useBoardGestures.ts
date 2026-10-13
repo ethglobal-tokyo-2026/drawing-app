@@ -1,8 +1,8 @@
 import { MAX_LARGE_SCALE } from "@drawing-app/api/client";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { formatNo } from "../stickers/format";
-import { sheenIn, sweepSheen } from "../stickers/resinSheen";
 import { playStick } from "../stickers/stick";
+import { turnLaminate } from "../stickers/laminateRenderer";
 import { capturePointer } from "../ui/capturePointer";
 import { clamp, EASE_PEEL } from "../ui/easing";
 import {
@@ -222,12 +222,18 @@ export function useBoardGestures(options: Options) {
       return { pair: [a, b], start: [at, bt] };
     };
 
+    /** Keeps the laminate's geometry aligned with an imperative sticker turn. */
+    const turnSurface = (el: HTMLElement, turn: number) => {
+      const canvas = el.querySelector("canvas.sticker-laminate");
+      if (canvas instanceof HTMLCanvasElement) turnLaminate(canvas, turn);
+    };
     /** Puts the element where `live` says, without React. */
     const draw = (el: HTMLElement, sticker: BoardSticker, live: Live) => {
       const { w, h } = sizeOf(latest.current.size?.U ?? 0, live.s, sticker);
       el.style.width = `${w}px`;
       el.style.height = `${h}px`;
       el.style.transform = transformAt(live.x, live.y, w, h, live.r);
+      turnSurface(el, live.r);
     };
 
     /** Saves where `live` leaves the sticker, and returns that spot. */
@@ -544,9 +550,6 @@ export function useBoardGestures(options: Options) {
         pick(g.id, g.el);
         startHold(g);
         peelMark(sticker, b0);
-        // Picked up, it catches the light: a sheen sweeps across its resin.
-        const sheen = sheenIn(g.el);
-        if (sheen && !latest.current.reduced) sweepSheen(sheen);
       }
       if (g.mode === "drag") {
         // The finger may carry it over the header and the tray's edge; it settles on the field.
@@ -559,6 +562,7 @@ export function useBoardGestures(options: Options) {
         if (snap) {
           const { w, h } = sizeOf(size.U, g.live.s, sticker);
           g.el.style.transform = `${transformAt(snap.x, snap.y, w, h, snap.r)} scale(${snap.scale.toFixed(3)})`;
+          turnSurface(g.el, snap.r);
           return;
         }
       } else if (g.mode === "scale") {

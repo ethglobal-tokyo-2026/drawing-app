@@ -10,7 +10,6 @@ import {
 import { flushSync } from "react-dom";
 import { apiError } from "../../api/apiClient";
 import { useApi } from "../../api/useApi";
-import { sheenIn, sweepSheen } from "../../stickers/resinSheen";
 import { clamp01, easeInOutSine, easeOutCubic } from "../../ui/easing";
 import { browserFrames, type FrameSource } from "../../ui/frameSource";
 import type { BoardSticker } from "../boardSticker";
@@ -44,8 +43,6 @@ const LAND_AT = 0.75;
 export const PEEL_MS = 520;
 /** How far it overshoots its own size before it sticks, as every sticker does. */
 const STICK_SCALE = 1.06;
-/** The sheen that sweeps the sticker once it's back, as when it's sealed. */
-const SHEEN_MS = 640;
 
 const IN_SPOT: FigureTransform = { x: 0, y: 0, scale: 1 };
 
@@ -126,7 +123,7 @@ interface Options {
   sticker: TimelapseSticker | undefined;
   /** Whether it was sealed with its timelapse, from the detail's answer. */
   hasTimelapse: boolean;
-  /** Its figure: the ink covers its box, and its resin sheens at the end. */
+  /** Its figure: the ink covers its box. */
   figure: RefObject<HTMLElement | null>;
   reduced: boolean;
   /** The sticker was drawn in Kyoto Seika Manga Expression Practice Mode: its timelapse may play longer. */
@@ -196,8 +193,8 @@ const toError = (error: unknown) => (error instanceof Error ? error : new Error(
 /**
  * The sticker detail's timelapse. A press loads the sticker's timelapse and prepares its fills; the
  * sticker flies onto the sheet it was drawn on, which plays from blank on an overlay over the stage; the
- * finished sheet holds, the sticker peels off it back to its spot as the sheet fades, and its sheen
- * sweeps. `stop` ends it at once.
+ * finished sheet holds, then the sticker peels off it back to its spot as the sheet fades.
+ * `stop` ends it at once.
  */
 export function useTimelapse({
   sticker,
@@ -260,9 +257,7 @@ export function useTimelapse({
     setView(next);
   };
 
-  const finish = (s: Session, sheen: boolean) => {
-    const band = sheen && figure.current ? sheenIn(figure.current) : null;
-    if (band) sweepSheen(band, SHEEN_MS);
+  const finish = (s: Session) => {
     end(s, { stickerId: s.stickerId, phase: "idle", failure: null, said: "done" });
   };
 
@@ -332,7 +327,7 @@ export function useTimelapse({
         if (box) box.style.opacity = String(crossfade ? 1 - shown : clamp01(elapsed / HOLD_MS));
       }
       if (elapsed < total) s.cancelFrame = clock.request(frame);
-      else finish(s, !still);
+      else finish(s);
     };
     s.cancelFrame = clock.request(frame);
   };
@@ -442,7 +437,7 @@ export function useTimelapse({
     const s = session.current;
     if (!s) return;
     if (current.phase === "playing") s.player?.skip();
-    else if (current.phase === "ending") finish(s, false);
+    else if (current.phase === "ending") finish(s);
   };
 
   const stop = () => {

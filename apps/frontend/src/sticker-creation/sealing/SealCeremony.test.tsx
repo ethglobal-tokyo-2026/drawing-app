@@ -191,8 +191,6 @@ const stillFading = () => Number(lines().at(-1)?.style.opacity) < 1;
 
 beforeEach(() => {
   vi.useFakeTimers({ now: NOW });
-  // Whether the sheen plays isn't tested here; happy-dom's own animations reject unhandled.
-  vi.spyOn(Element.prototype, "animate").mockImplementation(() => new Animation());
   // happy-dom has no 2D canvas: the ceremony plays without its dim, used sticker silhouette and
   // cut line, and says so.
   const report = console.error.bind(console);
@@ -433,6 +431,21 @@ describe("SealCeremony", () => {
     expect(root()?.hasAttribute("data-lifted")).toBe(true);
     expect(card()?.hasAttribute("inert")).toBe(true);
     playThrough();
+    expect(card()?.hasAttribute("inert")).toBe(false);
+  });
+
+  it("applies the shared laminate after the recorded seal and keeps it on the landed sticker", async () => {
+    const coating = () => host.querySelector<HTMLCanvasElement>("canvas.sticker-laminate");
+    await seal(1, { answer: null });
+    tap();
+    expect(coating()?.style.opacity).toBe("0");
+
+    view?.rerender(ceremony(sealed));
+    playThrough();
+    expect(coating()?.style.opacity).toBe("1");
+    expect(host.querySelector<HTMLElement>(".seal-ceremony__sticker")?.style.transform).toContain(
+      LANDED_TURN,
+    );
     expect(card()?.hasAttribute("inert")).toBe(false);
   });
 

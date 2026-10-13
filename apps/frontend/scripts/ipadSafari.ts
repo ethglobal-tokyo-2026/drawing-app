@@ -13,6 +13,10 @@
  * API, HTTPS Vite (Safari drops the Secure session cookie over http://localhost, so the iPad is told to
  * trust a cert for localhost) and safaridriver, logs PASS or FAIL per check with what it measured, keeps
  * screenshots of failures only, in data/ipad-safari/failures/, and exits non-zero on any FAIL.
+ * IPAD_LAMINATE_ONLY=1 instead checks the laminate fixture in portrait and both landscape
+ * orientations. It keeps pixel measurements and screenshots in data/ipad-safari/laminate/ and
+ * limits setup, checks, and cleanup to 180 seconds. Synthetic tilt checks Safari rendering and
+ * light input handling; it does not establish that a physical iPad delivers sensor readings.
  */
 import { type ChildProcess, execFile, spawn, type SpawnOptions } from "node:child_process";
 import { once } from "node:events";
@@ -30,19 +34,33 @@ const run = promisify(execFile);
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const out = `${root}data/ipad-safari`;
 const IPAD = process.env.IPAD ?? "iPad Air 11-inch (M4)";
+const laminateOnly = process.env.IPAD_LAMINATE_ONLY === "1";
+const diagnosticStarted = Date.now();
+const diagnosticEnd = laminateOnly ? diagnosticStarted + 180_000 : Infinity;
+let cleaningUp = false;
 const { app, explore, shop, stickerBoard, stickerCreation } = strings;
 
 type Point = { x: number; y: number };
 
 const log = (line: string) =>
   console.log(`[ipad-safari ${new Date().toISOString().slice(11, 19)}] ${line}`);
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+/** Reserve 25 seconds for the existing session, server, and simulator cleanup. */
+const timeoutFor = (ms: number) => {
+  const remaining = diagnosticEnd - (cleaningUp ? 0 : 25_000) - Date.now();
+  if (remaining <= 0) throw new Error("The iPad laminate diagnostic reached its 180-second limit");
+  return Math.max(1, Math.min(ms, remaining, cleaningUp && laminateOnly ? 5_000 : Infinity));
+};
+const sleep = async (ms: number) => {
+  const bounded = timeoutFor(ms);
+  await new Promise((resolve) => setTimeout(resolve, bounded));
+  if (bounded < ms) throw new Error("The iPad laminate diagnostic exhausted its check time");
+};
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 const messageOf = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 async function until<T>(what: string, check: () => Promise<T>, ms = 30_000, every = 250) {
-  const end = Date.now() + ms;
+  const end = Date.now() + timeoutFor(ms);
   let last: unknown;
   while (Date.now() < end) {
     try {
@@ -73,7 +91,7 @@ const freePort = () =>
   });
 
 const simctl = (...args: string[]) =>
-  run("xcrun", ["simctl", ...args], { maxBuffer: 64 << 20, timeout: 180_000 });
+  run("xcrun", ["simctl", ...args], { maxBuffer: 64 << 20, timeout: timeoutFor(180_000) });
 
 /** The simulator IPAD names, on the newest iOS runtime that has it. */
 async function pickIpad() {
@@ -123,7 +141,7 @@ async function localhostCert() {
         ...["-addext", "subjectAltName=DNS:localhost,IP:127.0.0.1"],
         ...["-addext", "extendedKeyUsage=serverAuth"],
       ],
-      { timeout: 30_000 },
+      { timeout: timeoutFor(30_000) },
     );
   }
   return { key, cert };
@@ -132,6 +150,7 @@ async function localhostCert() {
 const children: ChildProcess[] = [];
 let simulator: IpadSimulator | undefined;
 async function start(name: string, command: string, args: string[], options: SpawnOptions = {}) {
+  const timeout = timeoutFor(30_000);
   const child = spawn(command, args, { ...options, stdio: ["ignore", "pipe", "pipe"] });
   const file = `${out}/${name}.log`;
   writeFileSync(file, "");
@@ -139,12 +158,12 @@ async function start(name: string, command: string, args: string[], options: Spa
   child.stdout?.on("data", append);
   child.stderr?.on("data", append);
   children.push(child);
-  await once(child, "spawn");
+  await once(child, "spawn", { signal: AbortSignal.timeout(timeout) });
 }
 
 const httpsUp = (url: string, ca: Buffer) =>
   new Promise<boolean>((resolve) => {
-    const req = request(url, { ca, timeout: 2_000 }, (res) => {
+    const req = request(url, { ca, timeout: timeoutFor(2_000) }, (res) => {
       res.resume();
       resolve(true);
     });
@@ -158,7 +177,7 @@ async function bringUp() {
   mkdirSync(out, { recursive: true });
   const ipad = await pickIpad();
   simulator = new IpadSimulator(ipad.udid, ipad.booted, (tool, args) =>
-    run("xcrun", [tool, ...args], { maxBuffer: 64 << 20, timeout: 180_000 }),
+    run("xcrun", [tool, ...args], { maxBuffer: 64 << 20, timeout: timeoutFor(180_000) }),
   );
   log(
     `preparing ${ipad.name} (${ipad.udid}, ${ipad.runtime}); ${ipad.booted ? "already booted" : "booting for this run"}`,
@@ -204,17 +223,24 @@ export default createIpadSafariServerConfig({ https });
       VITE_LIFF_MOCK: "on",
     },
   });
-  await start("safaridriver", "safaridriver", ["-p", String(driverPort)]);
+  await start("safaridriver", "safaridriver", [
+    "-p",
+    String(driverPort),
+    ...(laminateOnly ? ["--diagnose"] : []),
+  ]);
   log("waiting for API, HTTPS Vite, and safaridriver");
   const driver = `http://127.0.0.1:${driverPort}`;
   const api = async () =>
-    (await fetch(`http://127.0.0.1:${apiPort}/api/me`, { signal: AbortSignal.timeout(5_000) }))
-      .status > 0;
+    (
+      await fetch(`http://127.0.0.1:${apiPort}/api/me`, {
+        signal: AbortSignal.timeout(timeoutFor(5_000)),
+      })
+    ).status > 0;
   await until("the API", api, 60_000);
   await until("Vite over HTTPS", () => httpsUp(appOrigin, readFileSync(tls.cert)), 60_000);
   await until("safaridriver", async () => {
     const body: unknown = await (
-      await fetch(`${driver}/status`, { signal: AbortSignal.timeout(5_000) })
+      await fetch(`${driver}/status`, { signal: AbortSignal.timeout(timeoutFor(5_000)) })
     ).json();
     return isRecord(body) && isRecord(body.value) && body.value.ready === true;
   });
@@ -352,7 +378,7 @@ async function test({
       method,
       headers: { "Content-Type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body),
-      signal: AbortSignal.timeout(180_000),
+      signal: AbortSignal.timeout(timeoutFor(180_000)),
     });
     const reply: unknown = await res.json();
     const value = isRecord(reply) ? reply.value : undefined;
@@ -500,6 +526,349 @@ ${LIB}
     );
   };
 
+  /** Measurements come from the rendered canvas, including every row inside the fixture's cut. */
+  const laminateReading = async (selector = "[data-sticker]") => {
+    const seen = await page(
+      `
+      const tiles = [...document.querySelectorAll(args[0])];
+      const fixture = window.laminateFixture;
+      if (!fixture) throw new Error("The sticker laminate fixture is absent");
+      const surfaces = tiles.map((tile) => {
+        const canvases = tile.querySelectorAll("canvas.sticker-laminate");
+        if (canvases.length !== 1) throw new Error("Each sticker must have one laminate canvas");
+        const canvas = canvases[0];
+        const box = canvas.getBoundingClientRect();
+        const visible = box.right > 0 && box.bottom > 0 && box.left < innerWidth && box.top < innerHeight;
+        const state = canvas.dataset.state;
+        const source = tile.matches("[data-ramp]") ? "ramp"
+          : tile.matches("[data-white]") ? "flat-white" : "sticker";
+        const result = { source, sticker: tile.dataset.sticker, visible, state,
+          cssWidth: canvas.clientWidth, cssHeight: canvas.clientHeight,
+          width: canvas.width, height: canvas.height };
+        if (!visible || state !== "ready") return result;
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        if (!context) throw new Error("The laminate canvas has no 2D context");
+        const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+        let hash = 2166136261, covered = 0, missingRows = 0, uncoveredRows = 0, minAlpha = 255;
+        for (let i = 0; i < data.length; i++) hash = Math.imul(hash ^ data[i], 16777619);
+        for (let i = 3; i < data.length; i += 4) if (data[i] >= 254) covered++;
+        const x0 = Math.ceil(canvas.width * .12), x1 = Math.floor(canvas.width * .88);
+        const y0 = Math.ceil(canvas.height * .12), y1 = Math.floor(canvas.height * .88);
+        for (let y = y0; y < y1; y++) {
+          let rowCovered = 0;
+          for (let x = x0; x < x1; x++) {
+            const alpha = data[(y * canvas.width + x) * 4 + 3];
+            minAlpha = Math.min(minAlpha, alpha);
+            if (alpha >= 254) rowCovered++;
+          }
+          if (rowCovered === 0) missingRows++;
+          if (rowCovered < x1 - x0) uncoveredRows++;
+        }
+        const cornerAlpha = [3, (canvas.width - 1) * 4 + 3,
+          ((canvas.height - 1) * canvas.width) * 4 + 3, data.length - 1].map((at) => data[at]);
+        return { ...result, hash: (hash >>> 0).toString(16).padStart(8, "0"),
+          coveredFraction: covered / (canvas.width * canvas.height), missingRows, uncoveredRows, minAlpha, cornerAlpha };
+      });
+      const costs = fixture.costs.toSorted((a, b) => a - b);
+      return { time: performance.now(), pose: fixture.getPose(), userAgent: navigator.userAgent,
+        touchPoints: navigator.maxTouchPoints, dpr: devicePixelRatio,
+        viewport: { width: innerWidth, height: innerHeight },
+        angle: screen.orientation?.angle ?? window.orientation ?? 0,
+        total: tiles.length, surfaces, writes: costs.length,
+        rendererCostP95: costs.length ? costs[Math.ceil(costs.length * .95) - 1] : null };
+    `,
+      selector,
+    );
+    if (!isRecord(seen) || !Array.isArray(seen.surfaces) || !isPoint(seen.pose)) {
+      throw new Error("The laminate fixture returned incomplete measurements");
+    }
+    return seen;
+  };
+  const readyLaminate = async (count: number, selector = "[data-sticker]") => {
+    await page(
+      `await waitFor("visible sticker laminate canvases", () => {
+      const tiles = [...document.querySelectorAll(args[1])];
+      if (!window.laminateFixture || tiles.length !== args[0]) return false;
+      const visible = tiles.flatMap((tile) => [...tile.querySelectorAll("canvas.sticker-laminate")])
+        .filter((canvas) => { const b = canvas.getBoundingClientRect();
+          return b.right > 0 && b.bottom > 0 && b.left < innerWidth && b.top < innerHeight; });
+      if (visible.some((canvas) => canvas.dataset.state === "failed")) throw new Error("Rendering laminate failed");
+      return visible.length > 0 && visible.every((canvas) => canvas.dataset.state === "ready");
+    }); await rest(1500);`,
+      count,
+      selector,
+    );
+  };
+  const assertLaminate = (seen: Record<string, unknown>, count: number) => {
+    if (seen.total !== count || !Array.isArray(seen.surfaces)) {
+      throw new Error(`Expected ${count} stickers; measured ${JSON.stringify(seen)}`);
+    }
+    const visible = seen.surfaces.filter(
+      (surface: unknown) => isRecord(surface) && surface.visible === true,
+    );
+    if (visible.length === 0) throw new Error("No sticker laminate canvas is visible");
+    for (const surface of visible) {
+      if (
+        !isRecord(surface) ||
+        surface.state !== "ready" ||
+        typeof surface.hash !== "string" ||
+        surface.missingRows !== 0 ||
+        surface.uncoveredRows !== 0 ||
+        Number(surface.minAlpha) < 254 ||
+        Number(surface.coveredFraction) < 0.85 ||
+        !Array.isArray(surface.cornerAlpha) ||
+        surface.cornerAlpha.some((alpha: unknown) => alpha !== 0)
+      ) {
+        throw new Error(`A sticker has incomplete cut coverage: ${JSON.stringify(surface)}`);
+      }
+    }
+    return visible
+      .map((surface: unknown) => (isRecord(surface) ? String(surface.hash) : ""))
+      .join(",");
+  };
+  const laminateChecks = async () => {
+    const dir = `${out}/laminate`;
+    mkdirSync(dir, { recursive: true });
+    const evidence = {
+      simulator: udid,
+      appOrigin,
+      input: "Synthetic orientation; Safari simulator rendering, not physical sensor delivery",
+      measurements: [] as unknown[],
+      screenshots: [] as string[],
+      passes: 0,
+      failures: 0,
+      elapsedMs: 0,
+    };
+    const save = () => {
+      evidence.elapsedMs = Date.now() - diagnosticStarted;
+      evidence.passes = passes;
+      evidence.failures = failures;
+      writeFileSync(`${dir}/results.json`, `${JSON.stringify(evidence, null, 2)}\n`);
+    };
+    const shot = async (name: string) => {
+      const path = `${dir}/${name}`;
+      writeFileSync(
+        `${path}.page.png`,
+        Buffer.from(String(await wd("GET", "/screenshot")), "base64"),
+      );
+      evidence.screenshots.push(`${path}.page.png`);
+      await simctl("io", udid, "screenshot", `${path}.device.png`);
+      evidence.screenshots.push(`${path}.device.png`);
+      save();
+      log(`laminate screenshots ${path}.{page,device}.png`);
+    };
+    const read = async (name: string, count: number, selector = "[data-sticker]") => {
+      const seen = await laminateReading(selector);
+      evidence.measurements.push({ name, ...seen });
+      save();
+      return { seen, hash: assertLaminate(seen, count), pose: JSON.stringify(seen.pose) };
+    };
+    const open = async (query: string, count: number) => {
+      // This run's isolated HTTPS origin owns only diagnostic storage.
+      await page('localStorage.removeItem("draw.motion");');
+      await wd("POST", "/url", { url: `${appOrigin}/e2e/stickerLaminate.html?${query}` });
+      await readyLaminate(count);
+    };
+    log(
+      "checking iPad Safari laminate rendering with synthetic tilt; physical sensors remain unverified",
+    );
+    await wd("POST", "/url", { url: `${appOrigin}/api/me` });
+    const angles: unknown[] = [];
+    try {
+      for (const orientation of ["portrait", "landscapeLeft", "landscapeRight"] as const) {
+        timeoutFor(1);
+        await check(
+          `laminate ${orientation}: cut coverage and stationary pixels at 0/5/11/22 seconds`,
+          async () => {
+            if (orientation === "landscapeRight") {
+              await run(
+                "xcrun",
+                [
+                  "devicectl",
+                  "device",
+                  "orientation",
+                  "set",
+                  "--device",
+                  udid,
+                  orientation,
+                  "--timeout",
+                  "30",
+                ],
+                { timeout: timeoutFor(30_000), maxBuffer: 64 << 20 },
+              );
+            } else {
+              await device.orient(orientation);
+            }
+            await until(
+              `${orientation} viewport`,
+              async () =>
+                (await page("return innerWidth > innerHeight")) === (orientation !== "portrait"),
+              15_000,
+            );
+            await open("side=480&turn=-27&height=320", 1);
+            const start = Date.now();
+            const baseline = await read(`${orientation}-still-0`, 1);
+            angles.push(baseline.seen.angle);
+            await shot(`${orientation}-still-0`);
+            for (const seconds of [5, 11, 22]) {
+              await sleep(Math.max(0, start + seconds * 1000 - Date.now()));
+              const held = await read(`${orientation}-still-${seconds}`, 1);
+              if (held.hash !== baseline.hash || held.pose !== baseline.pose) {
+                throw new Error(
+                  `Stationary laminate changed after ${seconds} seconds: ${baseline.hash} -> ${held.hash}`,
+                );
+              }
+            }
+            await shot(`${orientation}-still-22`);
+            return `angle ${String(baseline.seen.angle)}; stable hash ${baseline.hash}; all cut rows covered`;
+          },
+        );
+        timeoutFor(1);
+        await check(
+          `laminate ${orientation}: finite tilt moves the light, then holds`,
+          async () => {
+            const before = await read(`${orientation}-before-tilt`, 1);
+            const poses: string[] = [];
+            for (const gamma of [-28, 28]) {
+              await page("window.laminateFixture.tilt(40, args[0]); await rest(1500);", gamma);
+              const tilted = await read(`${orientation}-tilt-${gamma}`, 1);
+              if (tilted.hash === before.hash)
+                throw new Error(`Tilt ${gamma} did not change laminate pixels`);
+              await page("await rest(1500);");
+              const held = await read(`${orientation}-held-${gamma}`, 1);
+              if (held.hash !== tilted.hash || held.pose !== tilted.pose) {
+                throw new Error(`Tilt ${gamma} continued moving after it settled`);
+              }
+              poses.push(tilted.pose);
+            }
+            if (poses[0] === poses[1])
+              throw new Error("Opposite tilts produced the same light pose");
+            await shot(`${orientation}-held-tilt`);
+            return `opposite tilts ${poses.join(" -> ")}; each held after 1.5 seconds`;
+          },
+        );
+      }
+      await check("laminate both landscape orientations are distinct", async () => {
+        if (angles.length !== 3 || angles[1] === angles[2]) {
+          throw new Error(
+            `Safari did not report distinct landscape angles: ${JSON.stringify(angles)}`,
+          );
+        }
+        return `Safari screen angles ${JSON.stringify(angles)}`;
+      });
+      await check("laminate denied motion keeps the last published light", async () => {
+        const before = await read("before-denial", 1);
+        await page(`const { declineMotion } = await import("/src/ui/motionPermission.ts");
+          declineMotion(); window.laminateFixture.tilt(60, -28); await rest(1500);`);
+        const held = await read("after-denial-and-tilt", 1);
+        if (held.hash !== before.hash || held.pose !== before.pose)
+          throw new Error("Denied motion moved laminate light");
+        await shot("denied-held");
+        return `held hash ${held.hash}`;
+      });
+      for (const count of [12, 48]) {
+        timeoutFor(1);
+        await check(
+          `${count} sticker laminates: visible cut coverage and unknown input stays static`,
+          async () => {
+            await open(`count=${count}&side=120`, count);
+            const before = await read(`count-${count}-unknown`, count);
+            await page(`window.dispatchEvent(Object.assign(new Event("deviceorientation"), { beta: null, gamma: null }));
+            window.dispatchEvent(Object.assign(new Event("deviceorientation"), { beta: NaN, gamma: Infinity }));
+            await rest(1500);`);
+            const held = await read(`count-${count}-unknown-held`, count);
+            if (held.hash !== before.hash || held.pose !== before.pose)
+              throw new Error("Unknown orientation moved laminate light");
+            await page("window.laminateFixture.tilt(40, 28); await rest(1500);");
+            const tilted = await read(`count-${count}-tilted`, count);
+            await shot(`count-${count}`);
+            const surfaces = Array.isArray(tilted.seen.surfaces) ? tilted.seen.surfaces : [];
+            const visible = surfaces.filter(
+              (surface: unknown) => isRecord(surface) && surface.visible === true,
+            ).length;
+            return `${count} stickers mounted, ${visible} visible; covered rows; renderer p95 ${String(tilted.seen.rendererCostP95)} ms`;
+          },
+        );
+      }
+      await check(
+        "laminate raw-drape ramp: same-size flat comparison changes reflection",
+        async () => {
+          await open("side=240&turn=0&ramp=1", 1);
+          const show = async (selector: string) => {
+            await page(
+              `const tile = document.querySelector(args[0]);
+            if (!tile) throw new Error("The flat/ramp comparison is absent");
+            tile.scrollIntoView({ block: "center" });`,
+              selector,
+            );
+            await readyLaminate(1, selector);
+          };
+          await show("[data-white]");
+          const flat = await read("ramp-flat-comparison", 1, "[data-white]");
+          await shot("ramp-flat-comparison");
+          await show("[data-ramp]");
+          const ramp = await read("ramp-before-tilt", 1, "[data-ramp]");
+          const flatSurface: unknown = Array.isArray(flat.seen.surfaces)
+            ? flat.seen.surfaces[0]
+            : undefined;
+          const rampSurface: unknown = Array.isArray(ramp.seen.surfaces)
+            ? ramp.seen.surfaces[0]
+            : undefined;
+          if (
+            !isRecord(flatSurface) ||
+            !isRecord(rampSurface) ||
+            flatSurface.source !== "flat-white" ||
+            rampSurface.source !== "ramp" ||
+            flatSurface.cssWidth !== rampSurface.cssWidth ||
+            flatSurface.cssHeight !== rampSurface.cssHeight ||
+            flatSurface.width !== rampSurface.width ||
+            flatSurface.height !== rampSurface.height ||
+            flat.pose !== ramp.pose
+          ) {
+            throw new Error("The flat/ramp comparison differs in source, size, or held pose");
+          }
+          const heightRange = await page(`const height = window.laminateFixture.rampHeight;
+          if (!Array.isArray(height) || height.length !== 240 * 240)
+            throw new Error("The raw-drape ramp height is absent");
+          return { samples: height.length, min: Math.min(...height), max: Math.max(...height) };`);
+          evidence.measurements.push({
+            name: "ramp-height-range",
+            ...(isRecord(heightRange) ? heightRange : {}),
+          });
+          save();
+          if (
+            !isRecord(heightRange) ||
+            !(Number(heightRange.max) > Number(heightRange.min)) ||
+            flat.hash === ramp.hash
+          ) {
+            throw new Error("The raw-drape ramp did not change the flat reflection");
+          }
+          await shot("ramp-before-tilt");
+          return `source ramp; ${String(rampSurface.cssWidth)}×${String(rampSurface.cssHeight)} CSS px, turn 0°; flat ${flat.hash} -> ramp ${ramp.hash}; height ${JSON.stringify(heightRange)}`;
+        },
+      );
+      await check(
+        "laminate raw-drape ramp: finite tilt holds with complete cut coverage",
+        async () => {
+          const before = await read("ramp-tilt-baseline", 1, "[data-ramp]");
+          await page("window.laminateFixture.tilt(40, 28); await rest(1500);");
+          const tilted = await read("ramp-tilted", 1, "[data-ramp]");
+          if (tilted.hash === before.hash || tilted.pose === before.pose)
+            throw new Error("Finite tilt did not change the ramp reflection");
+          await page("await rest(1500);");
+          const held = await read("ramp-held", 1, "[data-ramp]");
+          if (held.hash !== tilted.hash || held.pose !== tilted.pose)
+            throw new Error("The ramp reflection continued moving after finite tilt settled");
+          await shot("ramp-held");
+          return `source ramp; finite tilt ${tilted.hash}; held after 1.5 seconds; all cut rows covered`;
+        },
+      );
+    } finally {
+      save();
+      log(`laminate measurements ${dir}/results.json`);
+    }
+  };
+
   await check("a WebDriver session on the iPad's Safari", async () => {
     const created = await wd("POST", "", {
       capabilities: {
@@ -542,6 +911,11 @@ ${LIB}
     return count;
   };
   try {
+    if (laminateOnly) {
+      await laminateChecks();
+      log(`${passes} passed, ${failures} failed; iPad simulator Safari, synthetic input`);
+      return failures;
+    }
     // A first visit, whatever an earlier run left in this Safari, such as the motion card declined.
     await wd("POST", "/url", { url: `${appOrigin}/api/me` });
     await page("localStorage.clear(); sessionStorage.clear();");
@@ -635,6 +1009,14 @@ ${LIB}
       });
     }
   } finally {
+    if (laminateOnly) {
+      cleaningUp = true;
+      await device.orient("portrait").catch((error: unknown) => {
+        failures++;
+        process.exitCode = 1;
+        log(`restoring the diagnostic's portrait orientation failed: ${messageOf(error)}`);
+      });
+    }
     if (probeStarted) {
       await page(`const response = await fetch("/__e2e/session-probe", { method: "DELETE" });
         if (!response.ok) throw new Error("The session probe could not be released");`).catch(
@@ -653,11 +1035,15 @@ let up: Awaited<ReturnType<typeof bringUp>> | undefined;
 try {
   rmSync(`${out}/failures`, { recursive: true, force: true });
   up = await bringUp();
-  process.exitCode = (await test(up)) > 0 ? 1 : 0;
+  const failures = await test(up);
+  process.exitCode = failures > 0 || process.exitCode === 1 ? 1 : 0;
 } catch (error) {
-  log(`FAIL bringing up the iPad and servers: ${messageOf(error)}`);
+  log(
+    `FAIL ${laminateOnly ? "iPad Safari laminate diagnostic" : "bringing up the iPad and servers"}: ${messageOf(error)}`,
+  );
   process.exitCode = 1;
 } finally {
+  cleaningUp = true;
   await stopIpadServers(children).catch((error: unknown) => {
     log(`server cleanup failed: ${describeIpadServerCleanupFailure(error)}`);
     process.exitCode = 1;
@@ -669,4 +1055,8 @@ try {
       process.exitCode = 1;
     });
   }
+  if (laminateOnly)
+    log(
+      `laminate diagnostic and cleanup took ${Date.now() - diagnosticStarted} ms (180-second limit)`,
+    );
 }

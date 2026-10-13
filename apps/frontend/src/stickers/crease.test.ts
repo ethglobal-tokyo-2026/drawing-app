@@ -51,7 +51,40 @@ function tones(crease: Uint8ClampedArray, x0: number, x1: number, y0: number, y1
 }
 
 describe("crease", () => {
-  it("keeps a flat raised sticker's height for its laminate reflection, without inventing a crease", () => {
+  it("keeps a raised plane's normal flat and does not turn cut alpha into curvature", () => {
+    const pixels = creasePixels({
+      width: W,
+      height: H,
+      surface: everywhere,
+      own: field((x) => (x < 90 ? 1 : 0.25)),
+      scale: 1,
+      lights: CREASE_SIDES,
+    });
+    if (!pixels) throw new Error("The raised plane must retain its geometry");
+    const center = ((H / 2) * W + W / 2) * 4;
+    expect([...pixels.normal.slice(center, center + 3)]).toEqual([128, 128, 255]);
+    const edge = ((H / 2) * W + 100) * 4;
+    expect([...pixels.normal.slice(edge, edge + 3)]).toEqual([128, 128, 255]);
+  });
+
+  it("bends the laminate normal only over the draped overlap ramp", () => {
+    const pixels = creasePixels({
+      width: W,
+      height: H,
+      surface: field((x) => (x < W / 2 ? 1 : 0)),
+      own: everywhere,
+      scale: 1,
+      lights: CREASE_SIDES,
+    });
+    if (!pixels) throw new Error("The overlap ramp must retain its geometry");
+    const center = ((H / 2) * W + W / 2) * 4;
+    expect(pixels.normal[center]).toBeGreaterThan(128);
+    expect(pixels.normal[center + 1]).toBe(128);
+    const plateau = ((H / 2) * W + 15) * 4;
+    expect([...pixels.normal.slice(plateau, plateau + 3)]).toEqual([128, 128, 255]);
+  });
+
+  it("keeps a flat raised sticker's geometric normal without an unused height image or invented crease", () => {
     const own = field((x) => (x < 90 ? 1 : 0));
     const pixels = creasePixels({
       width: W,
@@ -62,9 +95,17 @@ describe("crease", () => {
       lights: CREASE_SIDES,
     });
     expect(pixels).not.toBeNull();
-    const center = ((H / 2) * W + W / 2) * 4 + 3;
-    expect(pixels?.height[center]).toBeGreaterThan(0);
-    expect(pixels?.height[((H / 2) * W + 100) * 4 + 3]).toBe(0);
+    if (!pixels) throw new Error("The raised sticker lost its material geometry");
+    const center = ((H / 2) * W + W / 2) * 4;
+    expect(Object.keys(pixels).sort()).toEqual([
+      "base",
+      "bottomLeft",
+      "bottomRight",
+      "normal",
+      "topLeft",
+      "topRight",
+    ]);
+    expect([...pixels.normal.slice(center, center + 4)]).toEqual([128, 128, 255, 255]);
     const twiceAsHigh = creasePixels({
       width: W,
       height: H,
@@ -73,9 +114,10 @@ describe("crease", () => {
       scale: 1,
       lights: CREASE_SIDES,
     });
-    expect(twiceAsHigh?.height[center]).toBeGreaterThan(pixels?.height[center] ?? 0);
+    expect(twiceAsHigh).not.toBeNull();
+    expect(twiceAsHigh?.normal).toEqual(pixels?.normal);
     for (const image of ["base", "topLeft", "bottomRight", "topRight", "bottomLeft"] as const)
-      expect(pixels?.[image][center]).toBe(0);
+      expect(pixels?.[image][center + 3]).toBe(0);
   });
 
   it("bridges a gap narrower than the ramp between stickers beneath, and dips into a wide one", () => {

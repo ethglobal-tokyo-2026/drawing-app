@@ -5,22 +5,46 @@ import {
   timeOurWork,
 } from "../performance/performanceRecorder";
 import { REDUCED_MOTION } from "../ui/useReducedMotion";
-import { sheenIn, sweepSheen } from "./resinSheen";
+import { deviceForLight } from "../ui/deviceForLight";
+import { getMotionPermission, subscribeMotionPermission } from "../ui/motionPermission";
+import {
+  fallbackPose,
+  FALLBACK_PERIOD_MS,
+  lightMode,
+  rotationInputForLight,
+  tiltPose,
+  type LightMode,
+  type RotationInput,
+} from "./lightMode";
+
+export interface LightPose {
+  x: number;
+  y: number;
+}
+let publishedPose: LightPose = { x: -0.6, y: -0.6 };
+const subscribers = new Set<(pose: LightPose) => void>();
+/** The held pose, or the common static pose before the first published input. */
+export const currentLight = (): LightPose => ({ ...publishedPose });
+/** The shared material renderer receives only published writes; new material reads currentLight. */
+export function subscribeLight(listener: (pose: LightPose) => void): () => void {
+  subscribers.add(listener);
+  return () => {
+    subscribers.delete(listener);
+  };
+}
 
 /**
  * The app's one light: `--lx` and `--ly` (-1 to 1) follow only the device's tilt where the browser
- * shares it. Mouse, pen and finger interactions never move it. They're set on each highlight that
- * moves with them rather than the root, so a move restyles only those; without them each rests at its
- * own default. The light listens only while a screen with stickers holds it, so the motion sensor
- * rests everywhere else.
+ * shares it. An eligible no-rotation desktop may use the one shared fallback pose. Mouse, pen and
+ * finger interactions never move it. Set on each moving highlight, the values only restyle those.
+ * The light listens only while a visible screen with stickers holds it.
  */
 
 /**
- * What follows the light as it moves: the resin's reflection and specular, and each foil's bands and glint. Set on them
- * rather than the resin or foil they're in, a move restyles only them, not the masked layers around them.
+ * The Shop preview film and each foil's bands and glint follow the light. Setting it on their
+ * highlights restyles those highlights without changing the masked layers around them.
  */
-const MOVING =
-  ".live-resin__plane > b, .live-resin__height > b, .live-resin__spec > b, .sticker-foil__sheen, .sticker-foil__glint";
+const MOVING = ".laminate-film > i > b, .sticker-foil__sheen, .sticker-foil__glint";
 /** Only these highlights can continue a replay toward each new light position. */
 export const movesWithLight = (target: Element): boolean => target.matches(MOVING);
 /**
@@ -34,50 +58,13 @@ export const CREASE_SETTLE_MS = 250;
 const BEAT_MS = 45;
 /** A move shorter than this, on the -1 to 1 scale, isn't written, so the hand's tremor keeps still. */
 const STEP = 0.02;
-/** Degrees of tilt from the reading position that carry the light from the middle to an edge. */
-const TILT_RANGE = 32;
-/** How far back a phone leans when it's held to read, in degrees. */
-const HELD_BETA = 40;
-/**
- * Tilting this far, in degrees of the light's range, sweeps a sheen across the stickers on screen. Tilt
- * during the pause after a sweep doesn't count toward the next one.
- */
-export const SWEEP_TILT = 9;
-export const SWEEP_PAUSE_MS = 1400;
-/** A resin narrower than this on screen, in CSS px, is too small for its sweep to show. */
-const SWEEP_MIN_WIDTH = 30;
 /** The tilt's light glides toward where the phone points, most of the way in this long, so it never jumps. */
 export const GLIDE_MS = 160;
 
 const clamp11 = (v: number) => (v < -1 ? -1 : v > 1 ? 1 : v);
-/** Eases into the edge rather than stopping at it: slope 0 at ±1, so a tilt past the range lands softly. */
-const easeToEdge = (v: number) => {
-  const c = clamp11(v);
-  return 1.5 * c - 0.5 * c * c * c;
-};
 
 /** A light value as it's written: three places, with no "-0.000" for a rounding error under zero. */
 const written = (v: number) => (Math.abs(v) < 0.0005 ? 0 : v).toFixed(3);
-
-const RAD = Math.PI / 180;
-/** Gravity across the screen of a phone held to read and turned TILT_RANGE degrees to a side. */
-const ACROSS_RANGE = Math.cos(HELD_BETA * RAD) * Math.sin(TILT_RANGE * RAD);
-
-/**
- * The light for a tilt, from gravity's direction in the phone rather than the angles themselves, which
- * jump where a phone held upright leans sideways (gamma flips as beta passes 90°). Gravity is the same
- * however the sensor writes the tilt, so the light never jumps or wraps.
- */
-function lightForTilt(beta: number, gamma: number): { x: number; y: number } {
-  const b = beta * RAD;
-  // Gravity across the screen, and how far the screen leans back from flat, in degrees.
-  const across = Math.cos(b) * Math.sin(gamma * RAD);
-  const lean = Math.asin(Math.sin(b)) / RAD;
-  return {
-    x: easeToEdge(across / ACROSS_RANGE),
-    y: easeToEdge((lean - HELD_BETA) / TILT_RANGE),
-  };
-}
 
 /** The installed light: its listeners, on while any screen with stickers holds the light. */
 let light: { on: () => void; off: () => void } | null = null;
@@ -90,6 +77,17 @@ type Light = { lx: string; ly: string };
 let lightNow: Light | null = null;
 /** Where the light last rested, or null before it first rests: what a newly shown crease starts at. */
 let creaseLightNow: Light | null = null;
+/** Held material state and observed capability survive a controller reinstall in the same document. */
+const documentLights = new WeakMap<
+  Document,
+  {
+    pose: LightPose;
+    light: Light | null;
+    crease: Light | null;
+    seenRotation: boolean;
+    fallbackPhase: number;
+  }
+>();
 
 /** Sets `light` on each of `els`, or clears it with null; returns how many. */
 function setLight(els: NodeListOf<HTMLElement> | HTMLElement[], light: Light | null) {
@@ -170,33 +168,69 @@ function glideOnReplays(win: Window, moving: boolean) {
 export function lightUp(el: HTMLElement) {
   const within = (selector: string) =>
     el.matches(selector) ? [el] : el.querySelectorAll<HTMLElement>(selector);
-  if (lightNow) setLight(within(MOVING), lightNow);
-  if (creaseLightNow) setLight(within(CREASES), creaseLightNow);
+  const held = lightNow ?? { lx: written(publishedPose.x), ly: written(publishedPose.y) };
+  setLight(within(MOVING), held);
+  setLight(within(CREASES), creaseLightNow ?? held);
 }
 
-/** Sweeps a sheen across each live resin big enough to see on screen; returns how many it measured. */
-function sweepVisible(doc: Document, win: Window): number {
-  const resins = doc.querySelectorAll(".live-resin");
-  // Every resin is measured before any sweep starts: a sweep started between two measures makes the
-  // next one recompute the page's style.
-  const due: Element[] = [];
-  for (const resin of resins) {
-    const r = resin.getBoundingClientRect();
-    const sheen = sheenIn(resin);
-    if (sheen && r.width > SWEEP_MIN_WIDTH && r.bottom > 0 && r.top < win.innerHeight)
-      due.push(sheen);
+/** Policy absence is unknown: only explicit accelerometer and gyroscope allowance qualifies. */
+function sensorPolicy(doc: Document): "allowed" | "blocked" | "unknown" {
+  const policy: unknown =
+    Reflect.get(doc, "permissionsPolicy") ?? Reflect.get(doc, "featurePolicy");
+  if (!policy || typeof policy !== "object" || !("allowsFeature" in policy)) return "unknown";
+  const allows = policy.allowsFeature;
+  if (typeof allows !== "function") return "unknown";
+  try {
+    return Reflect.apply(allows, policy, ["accelerometer"]) === true &&
+      Reflect.apply(allows, policy, ["gyroscope"]) === true
+      ? "allowed"
+      : "blocked";
+  } catch (error) {
+    // A failed policy check cannot establish no rotation; retain static material and surface the failure.
+    console.error("Checking sticker rotation policy failed; material light stays static", error);
+    return "unknown";
   }
-  for (const sheen of due) sweepSheen(sheen);
-  return resins.length;
 }
 
 /** Starts the light; returns what stops it. */
 export function installLight(root: HTMLElement, win: typeof window = window): () => void {
+  const doc = root.ownerDocument;
+  const kept = documentLights.get(doc) ?? {
+    pose: { x: -0.6, y: -0.6 },
+    light: null,
+    crease: null,
+    seenRotation: false,
+    fallbackPhase: 0,
+  };
+  documentLights.set(doc, kept);
+  publishedPose = kept.pose;
+  lightNow = kept.light;
+  creaseLightNow = kept.crease;
   const reduced = win.matchMedia(REDUCED_MOTION);
+  const device = deviceForLight(win.navigator);
+  const orientation: unknown = Reflect.get(win, "DeviceOrientationEvent");
+  let rotation: RotationInput = rotationInputForLight({
+    device,
+    secureContext: win.isSecureContext,
+    orientationApi:
+      typeof orientation === "function"
+        ? "present"
+        : orientation === undefined
+          ? "absent"
+          : "unknown",
+    sensorPolicy: sensorPolicy(doc),
+  });
+  let hasUsableReading = kept.seenRotation;
+  let mode: LightMode = "still";
+  let installed = true;
+  let listening = false;
+  let fallbackElapsed = kept.fallbackPhase;
+  let fallbackStarted = 0;
+  let fallbackPublished = kept.fallbackPhase;
   let x = 0;
   let y = 0;
   /** Where the light was last written, or null before it first moves. */
-  let lit: { x: number; y: number } | null = null;
+  let lit: LightPose | null = kept.light ? { ...kept.pose } : null;
   let frame = 0;
   let lastWrite = -Infinity;
   let settle = 0;
@@ -204,25 +238,34 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
   /** Lights every crease from where the light now rests. Made once, not per write. */
   const settleCreases = () => {
     creaseLightNow = lightNow;
+    kept.crease = creaseLightNow;
     const count = timeOurWork("light", () => setLight(root.querySelectorAll(CREASES), lightNow));
     if (isPerformanceRecorderOn()) notePerformance("light", `settle on ${count} creases`);
   };
 
   /**
-   * Sets the light on every highlight, or clears it with null, and on every crease once it rests;
+   * Sets the light on every highlight, and on creases once rotation settles or each fallback write;
    * returns how many highlights.
    */
-  const setLightNow = (light: Light | null) => {
+  const setLightNow = (light: Light) => {
     lightNow = light;
     win.clearTimeout(settle);
-    if (light) settle = win.setTimeout(settleCreases, CREASE_SETTLE_MS);
-    else settleCreases();
-    glideOnReplays(win, light !== null);
+    if (mode === "fallback-wave") settleCreases();
+    else settle = win.setTimeout(settleCreases, CREASE_SETTLE_MS);
+    glideOnReplays(win, true);
     return setLight(root.querySelectorAll<HTMLElement>(MOVING), light);
   };
 
   /** Sets the light from `lit` on every highlight; returns how many. Made once, not per write. */
-  const writeLit = () => (lit ? setLightNow({ lx: written(lit.x), ly: written(lit.y) }) : 0);
+  const writeLit = () => {
+    if (!lit) return 0;
+    publishedPose = { ...lit };
+    const count = setLightNow({ lx: written(lit.x), ly: written(lit.y) });
+    kept.pose = publishedPose;
+    kept.light = lightNow;
+    for (const listener of subscribers) listener(currentLight());
+    return count;
+  };
 
   /** Writes the light from `lit` as our work, and notes how many it lit while recording. */
   const writeLight = () => {
@@ -232,13 +275,18 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
 
   const write = (now: number) => {
     frame = 0;
+    if (mode === "still" || !installed) return;
     if (now - lastWrite < BEAT_MS) {
       frame = win.requestAnimationFrame(write);
       return;
     }
     const since = now - lastWrite;
     lastWrite = now;
-    if (!lit) lit = { x, y };
+    if (mode === "fallback-wave") {
+      fallbackPublished = (fallbackElapsed + now - fallbackStarted) % FALLBACK_PERIOD_MS;
+      kept.fallbackPhase = fallbackPublished;
+      lit = fallbackPose(fallbackPublished / FALLBACK_PERIOD_MS);
+    } else if (!lit) lit = { x, y };
     else {
       // A low-pass on the tilt, by the time since the last write; close enough, it lands.
       const k = 1 - Math.exp(-since / GLIDE_MS);
@@ -247,73 +295,111 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
       lit = near ? { x, y } : next;
     }
     writeLight();
-    if (lit.x !== x || lit.y !== y) frame = win.requestAnimationFrame(write);
+    if (mode === "fallback-wave" || lit.x !== x || lit.y !== y)
+      frame = win.requestAnimationFrame(write);
   };
 
   const aim = (nx: number, ny: number) => {
-    if (reduced.matches) return;
+    if (mode !== "device-tilt") return;
     x = clamp11(nx);
     y = clamp11(ny);
     if (lit && Math.abs(x - lit.x) < STEP && Math.abs(y - lit.y) < STEP) return;
-    if (!frame) frame = win.requestAnimationFrame(write);
+    if (!frame) {
+      // Time spent holding a pose is not interpolation time toward a newly received target.
+      if (lit) lastWrite = Math.max(lastWrite, win.performance.now() - BEAT_MS);
+      frame = win.requestAnimationFrame(write);
+    }
   };
 
-  /** Across the screen, where the tilt last swept a sheen, or stood as the pause after it ended. */
-  let sweptFrom: number | null = null;
-  let lastSweep = -Infinity;
-  // Made once, like writeLit, not per sweep.
-  const sweep = () => sweepVisible(root.ownerDocument, win);
-  const fromTilt = (e: DeviceOrientationEvent) => {
-    if (e.gamma === null || e.beta === null) return;
-    const to = lightForTilt(e.beta, e.gamma);
-    aim(to.x, to.y);
-    const now = win.performance.now();
-    // The first tilt, and any tilt in the pause, only marks where the next sweep is measured from.
-    if (sweptFrom === null || now - lastSweep < SWEEP_PAUSE_MS || reduced.matches) {
-      sweptFrom = to.x;
+  const pause = (cancelReplays = true) => {
+    win.cancelAnimationFrame(frame);
+    win.clearTimeout(settle);
+    frame = 0;
+    settle = 0;
+    if (mode === "fallback-wave") fallbackElapsed = fallbackPublished;
+    // Drop an unfinished target. A resumed rotation source waits for a fresh reading.
+    if (lit) {
+      x = lit.x;
+      y = lit.y;
+    }
+    lastWrite = lit ? win.performance.now() : -Infinity;
+    if (cancelReplays) glideOnReplays(win, false);
+  };
+
+  const refresh = () => {
+    const active = installed && holders > 0 && doc.visibilityState === "visible";
+    if (active && !listening) {
+      win.addEventListener("deviceorientation", fromTilt, { passive: true });
+      listening = true;
+    } else if (!active && listening) {
+      win.removeEventListener("deviceorientation", fromTilt);
+      listening = false;
+    }
+    const next = lightMode({
+      device,
+      rotation,
+      hasUsableReading,
+      permission: getMotionPermission(),
+      reducedMotion: reduced.matches,
+      visible: active,
+      holders,
+    });
+    if (next === mode) {
+      if (next === "still") pause();
       return;
     }
-    if (Math.abs(to.x - sweptFrom) <= SWEEP_TILT / TILT_RANGE) return;
-    lastSweep = now;
-    sweptFrom = to.x;
-    const measured = timeOurWork("light sweep", sweep);
-    if (isPerformanceRecorderOn()) notePerformance("light", `sweep measured ${measured} resins`);
+    pause(next === "still");
+    mode = next;
+    if (mode === "fallback-wave") {
+      fallbackStarted = win.performance.now();
+      lastWrite = -Infinity;
+      frame = win.requestAnimationFrame(write);
+    }
   };
 
-  // Turning reduced motion on sets the light back in the middle.
-  const onMotionSetting = () => {
-    if (!reduced.matches) return;
-    win.cancelAnimationFrame(frame);
-    frame = 0;
-    lit = null;
-    setLightNow(null);
+  const fromTilt = (e: DeviceOrientationEvent) => {
+    if (
+      e.gamma === null ||
+      e.beta === null ||
+      !Number.isFinite(e.gamma) ||
+      !Number.isFinite(e.beta)
+    )
+      return;
+    hasUsableReading = true;
+    kept.seenRotation = true;
+    rotation = "usable";
+    refresh();
+    const angle = win.screen.orientation?.angle ?? Reflect.get(win, "orientation");
+    const to = tiltPose(
+      e.beta,
+      e.gamma,
+      typeof angle === "number" && Number.isFinite(angle) ? angle : 0,
+    );
+    aim(to.x, to.y);
   };
 
   // The light never asks for the tilt: where a browser wants permission first (iOS), no tilt
   // arrives until something else has asked, and on a phone the light rests until then.
-  const passive = { passive: true };
   const own = {
-    on: () => {
-      win.addEventListener("deviceorientation", fromTilt, passive);
-    },
-    off: () => {
-      win.removeEventListener("deviceorientation", fromTilt);
-      // A tilt from before the sensor rested isn't a change to sweep for.
-      sweptFrom = null;
-    },
+    on: refresh,
+    off: refresh,
   };
   light = own;
   if (holders > 0) own.on();
-  reduced.addEventListener("change", onMotionSetting);
+  reduced.addEventListener("change", refresh);
+  doc.addEventListener("visibilitychange", refresh);
+  const unsubscribePermission = subscribeMotionPermission(refresh);
   return () => {
-    own.off();
+    installed = false;
+    refresh();
+    pause();
     if (light === own) {
       light = null;
       glideOnReplays(win, false);
     }
-    reduced.removeEventListener("change", onMotionSetting);
-    win.cancelAnimationFrame(frame);
-    win.clearTimeout(settle);
+    reduced.removeEventListener("change", refresh);
+    doc.removeEventListener("visibilitychange", refresh);
+    unsubscribePermission();
   };
 }
 

@@ -103,36 +103,6 @@
   transform: translateY(-52px);
 }
 
-/* A gloss sweep across it once it's out. */
-.receive-gift.is-out .receive-gift__figure .sticker-figure__sweep {
-  animation: receive-gift-gloss 560ms linear 460ms both;
-}
-
-.receive-gift.is-out .receive-gift__figure .sticker-figure__sweep i {
-  animation: receive-gift-gloss-band 560ms ease-out 460ms both;
-}
-
-@keyframes receive-gift-gloss {
-  0% {
-    opacity: 0;
-  }
-  20% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
-@keyframes receive-gift-gloss-band {
-  from {
-    transform: translateX(-110%);
-  }
-  to {
-    transform: translateX(210%);
-  }
-}
-
 /* Receiving: the sticker lifts a little off the page while the receive is out. Its foil's band is its
    edge, so the shadow falls from there. */
 .receive-gift__figure :is(.sticker-figure__img, .sticker-foil__cast) {
@@ -361,11 +331,6 @@
 
   .receive-gift.is-out .receive-gift__figure {
     animation: receive-gift-fade-in 150ms linear;
-  }
-
-  .receive-gift.is-out .receive-gift__figure .sticker-figure__sweep,
-  .receive-gift.is-out .receive-gift__figure .sticker-figure__sweep i {
-    animation: none;
   }
 
   .receive-gift__sheet.bottom-sheet {

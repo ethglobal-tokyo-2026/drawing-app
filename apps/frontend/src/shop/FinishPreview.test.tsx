@@ -61,11 +61,16 @@ describe("FinishPreview", () => {
     },
   );
 
-  it("keeps the matte haze out until the sticker's mask has loaded", () => {
-    const host = preview("matte");
+  it.each(["gloss", "matte"] as const)("uses the %s coating inside the sticker cut", (finish) => {
+    const host = preview(finish);
+    const coat = host.querySelector("canvas.sticker-laminate");
+    expect(coat?.getAttribute("data-finish")).toBe(finish);
+    const box = coat?.closest<HTMLElement>(".finish-preview__art");
+    expect(box?.style.getPropertyValue("--m")).toBe(`url("${sticker.urls.mask}")`);
     expect(host.querySelector(".laminate-haze")).toBeNull();
     load(sticker.urls.mask);
-    expect(host.querySelector(".laminate-haze")).not.toBeNull();
+    expect(host.querySelector(".laminate-haze")).toBeNull();
+    expect(host.querySelector("canvas.sticker-laminate")).toBe(coat);
   });
 
   it("takes the film away while a newer sticker's mask loads", () => {

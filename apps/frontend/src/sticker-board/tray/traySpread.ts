@@ -69,6 +69,9 @@ export function createTraySpread(
     holdsFocus,
     keepFocus,
     sayFront,
+    releaseMaterials,
+    turnMaterials,
+    animateWithLaminate,
   } = traySheets;
   const { sendHome } = trayPresses;
   /**
@@ -89,7 +92,10 @@ export function createTraySpread(
     spreadLayer.classList.add("is-on");
     const list = ui.order.length ? ui.order : [topF()];
     const cells = spreadCells(list.length, Wb(), Hb(), trayTop(), ui.fit.grow, ui.sheetH);
-    for (const c of spreadLayer.querySelectorAll(".tray__cell")) c.remove();
+    for (const c of spreadLayer.querySelectorAll(".tray__cell")) {
+      releaseMaterials(c);
+      c.remove();
+    }
     // The mat runs under every row, however far the spread scrolls.
     const last = cells.at(-1);
     mat.style.height = px(Math.max(Hb(), last ? last.y + ui.sheetH * last.k + 18 : 0));
@@ -110,6 +116,7 @@ export function createTraySpread(
       // The CSS keeps a spread sheet's dates at the fine-print floor at this scale.
       c.style.setProperty("--k", cell.k.toFixed(4));
       spreadLayer.append(c);
+      turnMaterials(c, cell.rot);
       return c;
     });
     if (reduced()) spreadLayer.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160 });
@@ -121,7 +128,8 @@ export function createTraySpread(
       });
       // Dealt out of the stack, the front sheet first.
       els.forEach((c, d) =>
-        c.animate(
+        animateWithLaminate(
+          c,
           [
             {
               transform: `translate(${px(from.x)},${px(from.y)}) rotate(0deg) scale(${ui.fit.scale})`,
@@ -180,7 +188,8 @@ export function createTraySpread(
       });
       for (const c of cells)
         if (c !== pick)
-          c.animate(
+          animateWithLaminate(
+            c,
             [
               { transform: c.style.transform, opacity: 1 },
               {
@@ -192,7 +201,8 @@ export function createTraySpread(
           );
       if (pick)
         await ended(
-          pick.animate(
+          animateWithLaminate(
+            pick,
             [
               { transform: pick.style.transform },
               {
@@ -218,7 +228,10 @@ export function createTraySpread(
     for (const a of mat.getAnimations()) a.cancel();
     mat.style.opacity = "0";
     ui.spreadOpen = false;
-    for (const c of cells) c.remove();
+    for (const c of cells) {
+      releaseMaterials(c);
+      c.remove();
+    }
     if (focused && zip.isOpen) keepFocus(undefined);
     sayFront();
   }

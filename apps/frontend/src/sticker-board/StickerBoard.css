@@ -85,18 +85,6 @@
   text-overflow: ellipsis;
 }
 
-/* Behind the stat board or a game, nothing on the front needs to move: the resin's sway waits, and goes
-   on from where it was. */
-.board[data-resting] .live-resin__spec > b {
-  animation-play-state: paused;
-}
-
-/* Landed behind the stat board, until it lands back, it stops and starts over: a paused one keeps its
-   own layer, and under the turn back those layers' tiles stall the compositor as the face comes round. */
-.board-front[data-away] .live-resin__spec > b {
-  animation: none;
-}
-
 /* A sticker at its placement. The lift is what rises in your hand and what sticks. */
 .placed-sticker {
   position: absolute;

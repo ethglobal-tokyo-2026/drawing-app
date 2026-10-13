@@ -7,10 +7,10 @@ import {
   type CSSProperties,
 } from "react";
 import { useLight } from "../../stickers/light";
-import { LiveResin } from "../../stickers/LiveResin";
+import { mountLaminate, turnLaminate } from "../../stickers/laminateRenderer";
+import "../../stickers/sticker-laminate.css";
 import { madeFoil } from "../../stickers/madeFoil";
 import { StickerFoil } from "../../stickers/StickerFoil";
-import { sweepSheen } from "../../stickers/resinSheen";
 import type { Sticker } from "@drawing-app/api/client";
 import { releaseCanvas } from "../../ui/releaseCanvas";
 import { useReducedMotion } from "../../ui/useReducedMotion";
@@ -25,7 +25,6 @@ import {
   HOLD,
   sealFrame,
   stopAt,
-  T,
   TOTAL,
   type Flight,
   type SealFrame,
@@ -161,9 +160,7 @@ export function SealCeremony({
       gloss: el<HTMLCanvasElement>(".seal-ceremony__gloss"),
       pour: el<HTMLElement>(".seal-ceremony__pour"),
       front: el<HTMLElement>(".seal-ceremony__pour > b"),
-      spec: el<HTMLElement>(".live-resin__spec"),
-      specFace: el<HTMLElement>(".live-resin__spec > b"),
-      sheen: el<HTMLElement>(".live-resin__sheen > b"),
+      laminate: el<HTMLCanvasElement>("canvas.sticker-laminate"),
     };
 
     const r = Math.min(devicePixelRatio || 1, 2);
@@ -173,6 +170,13 @@ export function SealCeremony({
     paintPass(parts.gloss, sticker.passes.gloss, "gloss");
     paintUsedStickerSilhouette(parts.usedStickerSilhouette, box, sticker.maskImage, r);
     const cutLine = makeCutLine(parts.cut, parts.cutter, box, contour, r);
+    const print = URL.createObjectURL(sticker.png);
+    const releaseLaminate = mountLaminate(parts.laminate, {
+      print,
+      cut: sticker.maskUrl,
+      turn: 0,
+      finish: "gloss",
+    });
 
     // The card comes with the sealed sticker, so its slot is measured once the card is there, and
     // again whenever the card or the ceremony changes size: the card grows upward from its foot, and
@@ -212,7 +216,6 @@ export function SealCeremony({
     let t = 0;
     // How long the cutter has been running round the finished cut.
     let waited = 0;
-    let swept = false;
     let ended = false;
     let firstKeyShown = false;
     let stopKeys = () => {};
@@ -239,13 +242,13 @@ export function SealCeremony({
       parts.front.style.transform = `scale(${f.pour.scale.toFixed(4)}) rotate(${f.pour.turn.toFixed(2)}deg)`;
       opacity(parts.pour, f.pour.opacity);
       opacity(parts.gloss, f.gloss);
-      opacity(parts.spec, f.spec.opacity);
-      parts.specFace.style.scale = String(f.spec.scale);
+      opacity(parts.laminate, f.spec.opacity);
       // A foil that marks how the sticker was made comes with the seal's answer.
       const foil = parts.sticker.querySelector<HTMLElement>(".sticker-foil");
       if (foil) opacity(foil, f.foil);
       const p = f.sticker;
       parts.sticker.style.transform = `perspective(1000px) translate(${p.x}px, ${p.y}px) rotate(${p.rotate}deg) rotateX(${p.rotateX}deg) rotateY(${p.rotateY}deg) scale(${p.scale})`;
+      turnLaminate(parts.laminate, p.rotate, p.rotateX, p.rotateY);
       const s = f.shadow;
       opacity(parts.shadow, s.opacity);
       parts.shadow.style.transform = `translate(${s.x}px, ${s.y}px) rotate(${s.rotate}deg) scale(${s.scale})`;
@@ -261,11 +264,6 @@ export function SealCeremony({
           // A line takes presses, and reaches screen readers, once it has faded all the way up.
           node.toggleAttribute("inert", !line.shown);
         });
-      }
-      // It sticks with a sheen, unless it was skipped past.
-      if (!swept && t >= T.land && t < TOTAL - 1 && !isReduced()) {
-        swept = true;
-        sweepSheen(parts.sheen, 640);
       }
       ended ||= f.done;
       // From its first key on, a press on the card is the key's, not a skip; the rest plays on.
@@ -317,6 +315,8 @@ export function SealCeremony({
       stopKeys();
       slotAt?.stop();
       host.removeAttribute("data-lifted");
+      releaseLaminate();
+      URL.revokeObjectURL(print);
       [
         parts.shadow,
         parts.plain,
@@ -402,7 +402,7 @@ export function SealCeremony({
           <span className="seal-ceremony__pour">
             <b style={boxStyle(pour)} />
           </span>
-          <LiveResin />
+          <canvas className="sticker-laminate" data-state="loading" data-finish="gloss" />
         </div>
       </div>
     </div>

@@ -8,8 +8,7 @@ interface Options {
 }
 
 /**
- * A sticker sticks: `el`, the part that lifts, settles onto the board, and the gloss sweep of the
- * `StickerFigure` inside it crosses it like a thumb pressing it down. Under reduced motion it fades
+ * A sticker sticks: `el`, the part that lifts, settles onto the board. Under reduced motion it fades
  * in. Resolves when it has settled.
  */
 export function playStick(
@@ -35,21 +34,6 @@ export function playStick(
         { transform: "scale(1)" },
       ];
   const played = [el.animate(frames, { duration, delay, easing: EASE_PEEL, fill: "backwards" })];
-  const sweep = el.querySelector(".sticker-figure__sweep");
-  const band = sweep?.firstElementChild;
-  if (sweep && band) {
-    const timing = { duration: 420, delay: delay + duration - 40 };
-    played.push(
-      sweep.animate(
-        [{ opacity: 0 }, { opacity: 1, offset: 0.12 }, { opacity: 1, offset: 0.8 }, { opacity: 0 }],
-        { ...timing, easing: "linear" },
-      ),
-      band.animate([{ transform: "translateX(-110%)" }, { transform: "translateX(210%)" }], {
-        ...timing,
-        easing: "cubic-bezier(0.3, 0.6, 0.2, 1)",
-      }),
-    );
-  }
   return settled(played);
 }
 

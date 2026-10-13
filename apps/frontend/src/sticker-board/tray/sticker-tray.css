@@ -501,19 +501,28 @@
   -webkit-user-drag: none;
 }
 
+.tray__fit:has(> .sticker-laminate[data-state="ready"]) > .tray__img,
+.tray__curl:has(> .sticker-laminate[data-state="ready"]) > img {
+  visibility: hidden;
+}
+
 /* A sticker on a sheet lies flat: its cut and a short contact shadow, from its image, or from its
    foil's band when someone else drew it; so does one in hand until it's drawn free. */
 .tray__img,
+.tray__fit > .sticker-laminate,
 .tray__fit .sticker-foil__cast,
-.tray__flyer.is-flat img {
+.tray__flyer.is-flat img,
+.tray__flyer.is-flat .sticker-laminate {
   filter: var(--sticker-cut) drop-shadow(0.4px 0.8px 0.5px rgba(28, 24, 36, 0.18));
 }
 
 /* A used sticker silhouette shows no sticker. */
 .tray__slot[data-state="peeling"] .tray__img,
+.tray__slot[data-state="peeling"] .sticker-laminate,
 .tray__slot[data-state="peeling"] .sticker-foil,
 .tray__slot[data-state="peeling"] .tray__mark,
-.tray__slot[data-state="used"] .tray__img {
+.tray__slot[data-state="used"] .tray__img,
+.tray__slot[data-state="used"] .sticker-laminate {
   opacity: 0;
 }
 
@@ -801,7 +810,8 @@
   transform-style: preserve-3d;
 }
 
-.tray__flyer img {
+.tray__flyer img,
+.tray__flyer .sticker-laminate {
   position: absolute;
   inset: 0;
   width: 100%;

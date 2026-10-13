@@ -63,8 +63,20 @@ export function createTrayPresses(
   const { reduced, listen, make, icon, words, zip, api, fly, stack, ui } = tray;
   const { Wb, Hb, trayTop, boardView } = tray;
   const { topF } = trayModel;
-  const { restAt, stackHome, sheetEl, renderStack, holdsFocus, keepFocus, catchUp, sheetOf } =
-    traySheets;
+  const {
+    restAt,
+    stackHome,
+    sheetEl,
+    renderStack,
+    holdsFocus,
+    keepFocus,
+    catchUp,
+    sheetOf,
+    releaseMaterials,
+    turnMaterials,
+    animateWithLaminate,
+    refreshMaterials,
+  } = traySheets;
   const { page, bringToFront, settle, topSheet, sheetEls, depthOf } = trayPaging;
   const { startPeel, movePeel, dropPeel, putBack, lieDown, quickAdd, showOnBoard } = trayPeel;
   /** A return keeps its sheet out of the stack until its paper reaches the stack's front. */
@@ -147,7 +159,10 @@ export function createTrayPresses(
       if (g.dy < PAGE_UP.px || g.vy < PAGE_UP.speed) await page(1, { fromY: liftOf(g) });
       else if (g.dy > PAGE_DOWN.px || g.vy > PAGE_DOWN.speed) {
         const el = topSheet();
-        if (el) el.style.transform = restAt(0);
+        if (el) {
+          el.style.transform = restAt(0);
+          turnMaterials(el, 0);
+        }
         await page(-1);
       } else {
         const el = topSheet();
@@ -218,6 +233,7 @@ export function createTrayPresses(
       if (Math.abs(dy) >= Math.abs(dx)) {
         g.mode = "page";
         g.sheet = topSheet();
+        refreshMaterials(stack);
       } else if (dx < 0) g.mode = g.slotEl?.dataset.state === "here" ? "peel" : "pull";
       else g.mode = "none";
       holdPress(g.slotEl);
@@ -233,6 +249,7 @@ export function createTrayPresses(
           liftOf(g),
           clamp(g.dy / PAGE_DRAG.turnPx, -1, 1) * PAGE_DRAG.turn,
         );
+        turnMaterials(el, clamp(g.dy / PAGE_DRAG.turnPx, -1, 1) * PAGE_DRAG.turn);
       }
     } else if (g.mode === "peel") movePeel(g, pt);
     else if (g.mode === "pull") movePull(g, pt);
@@ -335,6 +352,7 @@ export function createTrayPresses(
     wrap.style.setProperty("--scale", String(ui.fit.grow));
     wrap.style.transform = pulledFrom(x0, y0, ui.fit.scale);
     fly.append(wrap);
+    turnMaterials(wrap, 0);
     const pulled: Pulled = {
       f,
       el: wrap,
@@ -369,6 +387,7 @@ export function createTrayPresses(
     const grown = p.out ? full : lerp(ui.fit.scale, full, clamp(-dx / PULL_FREE, 0, 1));
     const bump = 0.02 * full * (p.out ? 1 : k);
     p.el.style.transform = pulledFrom(p.x, p.y, grown + bump, p.out ? -1.5 : -2.5 * k);
+    turnMaterials(p.el, p.out ? -1.5 : -2.5 * k);
   }
   /** The pulled-out sheet hovering at `x`, `y`, lifted a little past its full size. */
   const pulledAt = (x: number, y: number, lift = 1.02) =>
@@ -390,17 +409,22 @@ export function createTrayPresses(
     const x = clamp(p.x, side, Wb() - size.w - right);
     const y = clamp(p.y, trayTop() - overHeader, Hb() - size.h - foot);
     await ended(
-      p.el.animate([{ transform: p.el.style.transform }, { transform: pulledAt(x, y) }], {
-        duration: 240,
-        easing: EASE_OUT,
-        fill: "forwards",
-      }),
+      animateWithLaminate(
+        p.el,
+        [{ transform: p.el.style.transform }, { transform: pulledAt(x, y) }],
+        {
+          duration: 240,
+          easing: EASE_OUT,
+          fill: "forwards",
+        },
+      ),
     );
     if (ui.pulled !== p || returning?.sheet === p) return;
     for (const a of p.el.getAnimations()) a.cancel();
     p.x = x;
     p.y = y;
     p.el.style.transform = pulledAt(x, y);
+    turnMaterials(p.el, -1.5);
     p.el.classList.add("is-out");
   }
   /** The pulled-out sheet's own gestures: its X, moving it by the paper, and peeling from it. */
@@ -442,6 +466,7 @@ export function createTrayPresses(
         p.x = g.at.x + dx;
         p.y = g.at.y + dy;
         wrap.style.transform = pulledAt(p.x, p.y, 1.03);
+        turnMaterials(wrap, -1.5);
       }
     });
     on("pointerup", upOn(p));
@@ -460,7 +485,7 @@ export function createTrayPresses(
     p.y = clamp(p.y, trayTop() - 20, Hb() - size.h * 0.5);
     const to = pulledAt(p.x, p.y);
     void ended(
-      p.el.animate([{ transform: p.el.style.transform }, { transform: to }], {
+      animateWithLaminate(p.el, [{ transform: p.el.style.transform }, { transform: to }], {
         duration: 180,
         easing: EASE_OUT,
         fill: "forwards",
@@ -469,6 +494,7 @@ export function createTrayPresses(
       if (ui.pulled !== p || returning?.sheet === p) return;
       for (const a of p.el.getAnimations()) a.cancel();
       p.el.style.transform = to;
+      turnMaterials(p.el, -1.5);
     });
   }
   /** Home: the sheet slides back into the mouth, in front of the stack, and the tray opens up again. */
@@ -503,6 +529,7 @@ export function createTrayPresses(
     // sagged crack. Land where the open stack will stand, so the paper doesn't jump at the handoff.
     const home = stackHome();
     const finish = () => {
+      releaseMaterials(p.el);
       p.el.remove();
       if (ui.pulled !== p || ui.destroyed) return;
       ui.pulled = null;
@@ -514,7 +541,8 @@ export function createTrayPresses(
       finish();
       return Promise.resolve();
     }
-    const animation = p.el.animate(
+    const animation = animateWithLaminate(
+      p.el,
       [{ transform: from }, { transform: pulledFrom(home.x, home.y, ui.fit.scale) }],
       { duration: quick ? 180 : 320, easing: EASE_PEEL, fill: "forwards" },
     );

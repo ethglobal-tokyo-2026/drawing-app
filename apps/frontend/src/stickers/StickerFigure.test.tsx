@@ -42,7 +42,7 @@ describe("StickerFigure's foil", () => {
 });
 
 describe("StickerFigure's laminate", () => {
-  it("passes a raised surface's height to the live reflection, not the crease's directional images", () => {
+  it("keeps the printed sticker and crease visible if its material renderer is unavailable", () => {
     rendered = renderInHost(
       <StickerFigure
         urls={testStickerUrls("s")}
@@ -50,7 +50,7 @@ describe("StickerFigure's laminate", () => {
         height={100}
         crease={{
           base: "base.png",
-          height: "height.png",
+          normal: "normal.png",
           topLeft: "top-left.png",
           bottomRight: "bottom-right.png",
           topRight: "top-right.png",
@@ -58,11 +58,12 @@ describe("StickerFigure's laminate", () => {
         }}
       />,
     );
-    const height = rendered.host.querySelector<HTMLElement>(".live-resin__height");
-    expect(height).not.toBeNull();
-    expect(
-      height?.closest<HTMLElement>(".live-resin")?.style.getPropertyValue("--height"),
-    ).toContain("height.png");
+    expect(rendered.host.querySelector(".sticker-laminate")?.getAttribute("data-state")).toBe(
+      "failed",
+    );
+    expect(rendered.host.querySelector(".sticker-figure__img")?.getAttribute("src")).toBe(
+      testStickerUrls("s").png,
+    );
     expect(rendered.host.querySelectorAll(".sticker-crease > i")).toHaveLength(5);
   });
 });

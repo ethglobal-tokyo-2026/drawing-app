@@ -9,6 +9,7 @@ import { ReserveTicketsHero } from "./ReserveTicketsHero";
 import { ShopTicketPurchases } from "./ShopTicketPurchases";
 import { useShopSticker, type ShopSticker } from "./shopSticker";
 import "./ShopScreen.css";
+import { useLight } from "../stickers/light";
 
 /** A swatch's side, in CSS px. */
 const SWATCH = 96;
@@ -22,6 +23,7 @@ const BACKING_FOILS: readonly BackingFoil[] = ["holo", "gold", "silver", "roseGo
  * ticket checkout.
  */
 export function ShopScreen({ onBuyReserveTickets }: { onBuyReserveTickets: () => void }) {
+  useLight();
   const { t } = useTranslation();
   const soonId = useId();
   const sticker = useShopSticker();
