@@ -71,10 +71,10 @@ refreshSticker(canvas: HTMLCanvasElement): void;
 whenStickerSettled(canvas: HTMLCanvasElement,
   expected?: { normal?: string }, signal?: AbortSignal): Promise<void>;
 mountStickerCopy(canvas: HTMLCanvasElement, source: HTMLCanvasElement,
-  active: () => boolean): () => void;
+  active: () => boolean, onInvalidated?: () => void): () => void;
 ```
 
-`mountStickerCopy` seeds pixels and retains the material/normal description, has independent geometry, and invalidates/discards its copied pixels if its source is disposed for concealment. It is not a bitmap-only clone. Readiness compares requested and committed material generations internally, including foil assets. Use `.sticker-finish` for the canvas and migrate affected current selectors; do not preserve old class aliases.
+`mountStickerCopy` seeds pixels and retains the material/normal description, has independent geometry, and invalidates/discards its copied pixels if its source is disposed for concealment. It calls `onInvalidated` so a flyer can remove its entire cloned presentation, including fallback images. It is not a bitmap-only clone. Readiness compares requested and committed material generations internally, including foil assets. Use `.sticker-finish` for the canvas and migrate affected current selectors; do not preserve old class aliases.
 
 ---
 
