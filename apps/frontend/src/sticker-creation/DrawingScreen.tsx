@@ -42,7 +42,13 @@ import { releaseCanvas } from "../ui/releaseCanvas";
 import { sizePx } from "./canvas/brush";
 import { DrawingCanvas, type DrawingCanvasHandle } from "./canvas/DrawingCanvas";
 import type { FillWorkState, HistoryState, InputMode } from "./canvas/inkEngine";
-import { penDrew, useDrawingHand, useInputMode, usePenPressure } from "./drawingSettings";
+import {
+  penDrew,
+  useDrawingHand,
+  useInputMode,
+  usePenPressure,
+  usePenMinimumWidth,
+} from "./drawingSettings";
 import { isFirstVisit } from "./drawVisits";
 import { isOp, type FillReference, type Op, type Tool } from "./canvas/ops";
 import type { LayerId } from "./canvas/ops";
@@ -199,6 +205,7 @@ export function DrawingScreen({
   const [sheetInputMode, setSheetInputMode] = useState<InputMode | null>(null);
   const inputMode = defaultInputMode === null ? null : (sheetInputMode ?? defaultInputMode);
   const penPressure = usePenPressure();
+  const penMinimumWidth = usePenMinimumWidth();
 
   const [tool, setTool] = useState<Tool>("brush");
   const [fillReference, setFillReference] = useState<FillReference>("layer");
@@ -1301,6 +1308,7 @@ export function DrawingScreen({
           panelOpen: panel !== null,
           inputMode,
           penPressure,
+          penMinimumWidth,
           sessionMs: () => clock.elapsed,
         }}
         onFillState={setFillWork}

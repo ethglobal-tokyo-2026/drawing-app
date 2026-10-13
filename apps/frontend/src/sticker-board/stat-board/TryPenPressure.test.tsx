@@ -23,6 +23,7 @@ type Sample = [x: number, y: number, pressure: number];
 
 let frames: ((time: number) => void)[] = [];
 let unmount = () => {};
+let changeMinimumWidth = (_percent: number) => {};
 afterEach(() => {
   unmount();
   vi.unstubAllGlobals();
@@ -31,11 +32,22 @@ afterEach(() => {
 });
 
 /** Try it under `response`, measured on screen as it is in Settings. */
-function strip(response: PenPressure, fingersDraw = true): HTMLElement {
+function strip(response: PenPressure, fingersDraw = true, penMinimumWidth = 20): HTMLElement {
+  unmount();
   vi.stubGlobal("requestAnimationFrame", (frame: (time: number) => void) => frames.push(frame));
   vi.stubGlobal("cancelAnimationFrame", () => {});
-  const view = renderInHost(<TryPenPressure response={response} fingersDraw={fingersDraw} />);
+  const view = renderInHost(
+    <TryPenPressure
+      response={response}
+      fingersDraw={fingersDraw}
+      penMinimumWidth={penMinimumWidth}
+    />,
+  );
   unmount = view.unmount;
+  changeMinimumWidth = (percent: number) =>
+    view.rerender(
+      <TryPenPressure response={response} fingersDraw={fingersDraw} penMinimumWidth={percent} />,
+    );
   const paper = view.host.querySelector<HTMLElement>(".try-pen-pressure__ink");
   if (!paper) throw new Error("No Try it strip");
   paper.getBoundingClientRect = () => new DOMRect(0, 0, WIDTH, HEIGHT);
@@ -112,5 +124,33 @@ describe("Try it", () => {
       draw(paper, "touch", pressing());
       expect(painted(paper).length > 0).toBe(fingersDraw);
     }
+  });
+
+  it("uses the chosen minimum width on its first pen stroke", () => {
+    const middle = (percent: number) => {
+      const paper = strip("normal", true, percent);
+      draw(paper, "pen", pressing());
+      const radii = painted(paper)
+        .map(({ r }) => r)
+        .toSorted((a, b) => a - b);
+      return radii[radii.length >> 1];
+    };
+    expect(middle(100)).toBeGreaterThan(middle(0));
+  });
+
+  it("uses an updated minimum for the next stroke without replacing the strip", () => {
+    const paper = strip("normal", true, 0);
+    draw(paper, "pen", pressing());
+    const first = painted(paper)
+      .map(({ r }) => r)
+      .toSorted((a, b) => a - b);
+    for (const canvas of paper.querySelectorAll("canvas")) contextOf(canvas)?.calls.splice(0);
+    changeMinimumWidth(100);
+    draw(paper, "pen", pressing());
+    const next = painted(paper)
+      .map(({ r }) => r)
+      .toSorted((a, b) => a - b);
+    expect(next[next.length >> 1]).toBeGreaterThan(first[first.length >> 1]);
+    expect(Math.max(...next)).toBeLessThanOrEqual(6);
   });
 });

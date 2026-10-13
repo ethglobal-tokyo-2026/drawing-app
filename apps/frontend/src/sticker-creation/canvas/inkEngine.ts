@@ -89,6 +89,8 @@ export interface InkSettings {
   inputMode: InputMode | null;
   /** How a pen's pressure sets its width. */
   penPressure: PenPressure;
+  /** Minimum pressure-sensitive pen width, as a percentage of the selected size. */
+  penMinimumWidth: number;
   /** ms into the session, to stamp each op with. */
   sessionMs: () => number;
 }
@@ -182,6 +184,8 @@ interface LiveStroke {
   queued: number;
   /** Points already on the wet canvas. */
   painted: number;
+  /** The starting dot's width when it was last painted. */
+  paintedFirstWidth: number;
   /** When and where it landed. */
   t0: number;
   x0: number;
@@ -1342,7 +1346,8 @@ export class InkEngine implements LayerControls {
       return;
     }
     const { left, top, scale } = this.place();
-    const share = s.tool === "eraser" ? 1 : previewWidth(s.penPressure, this.pressurePen);
+    const share =
+      s.tool === "eraser" ? 1 : previewWidth(s.penPressure, this.pressurePen, s.penMinimumWidth);
     this.hovering = true;
     this.events.onHover({
       x: e.clientX - left,
@@ -1432,6 +1437,7 @@ export class InkEngine implements LayerControls {
       pointerType: e.pointerType,
       pressureVaries: this.pressurePen,
       response: s.penPressure,
+      penMinimumWidth: s.penMinimumWidth,
     });
     this.pointers.set(e.pointerId, { pointerType: e.pointerType, kind: "stroke" });
     this.live = {
@@ -1453,6 +1459,7 @@ export class InkEngine implements LayerControls {
       queue: [],
       queued: 0,
       painted: 1,
+      paintedFirstWidth: builder.op.pts[2],
       t0: e.timeStamp,
       x0: x,
       y0: y,
@@ -1520,6 +1527,19 @@ export class InkEngine implements LayerControls {
   /** Paints the segments the stroke has added since the last paint on the wet canvas. */
   private paintNew(live: LiveStroke): void {
     const { builder } = live;
+    const firstWidth = builder.op.pts[2];
+    if (firstWidth !== live.paintedFirstWidth) {
+      // Clear the old dot's full bounds before a delayed pressure reading replaces it.
+      builder.op.pts[2] = live.paintedFirstWidth;
+      try {
+        this.display.endStroke();
+      } finally {
+        builder.op.pts[2] = firstWidth;
+      }
+      this.display.beginStroke(builder.op);
+      live.painted = 0;
+      live.paintedFirstWidth = firstWidth;
+    }
     if (builder.count > live.painted) {
       this.display.paintStroke(live.painted, builder.count);
       live.painted = builder.count;
@@ -1540,7 +1560,7 @@ export class InkEngine implements LayerControls {
       this.pointers.set(live.id, swallowed(live.pointerType));
     this.cancelFrame?.();
     this.cancelFrame = null;
-    // A pen whose pressure moved senses it: its next strokes start at their first sample's width.
+    // A pen with sensor readings keeps pressure support for its next strokes.
     if (live.builder.pressured) this.pressurePen = true;
     if (takeBack) {
       this.withRoom("clearing the stroke preview", () => this.display.endStroke());

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PEN_TAPER, PRESSURE_CAP, previewWidth, StrokeBuilder, type PenPressure } from "./brush";
+import { PEN_TAPER, previewWidth, StrokeBuilder, type PenPressure } from "./brush";
 import { STRIDE } from "./ops";
 import { CURVE_FLATNESS } from "./strokeCurve";
 
@@ -20,6 +20,7 @@ const builder = (given: Partial<ConstructorParameters<typeof StrokeBuilder>[0]> 
     pointerType: "mouse",
     pressureVaries: false,
     response: "normal",
+    penMinimumWidth: 20,
     ...given,
   });
 
@@ -38,6 +39,7 @@ interface Drawn {
   /** The pen has shown its pressure moving before this stroke. */
   pressureVaries?: boolean;
   response?: PenPressure;
+  penMinimumWidth?: number;
   /** The pointer lifts after the last point. */
   lift?: boolean;
 }
@@ -52,6 +54,7 @@ function widths(n: number, drawn: Drawn = {}): number[] {
     tool = "brush",
     pressureVaries = true,
     response = "normal",
+    penMinimumWidth = 20,
     lift = false,
   } = drawn;
   const pressed = (i: number) => (typeof pressure === "number" ? pressure : pressure(i));
@@ -61,6 +64,7 @@ function widths(n: number, drawn: Drawn = {}): number[] {
     pointerType: pointer,
     pressureVaries,
     response,
+    penMinimumWidth,
   });
   for (let i = 1; i <= n; i++) stroke.add(i * step, 0, pressed(i), i * ms);
   stroke.settle(n * step, 0);
@@ -72,8 +76,8 @@ const last = (list: number[]) => list[list.length - 1];
 /** A stroke's second half, where any taper in is long done. */
 const settled = (list: number[]) => list.slice(list.length / 2);
 /** How wide a long pen stroke settles at one pressure, as a fraction of the size. */
-const penWidth = (pressure: number, response: PenPressure = "normal") =>
-  last(widths(40, { pointer: "pen", pressure, response }));
+const penWidth = (pressure: number, response: PenPressure = "normal", penMinimumWidth = 20) =>
+  last(widths(40, { pointer: "pen", pressure, response, penMinimumWidth }));
 
 /** A Pencil tap at full pressure: its nib wobbles a unit and back `wobbles` times, then lifts. */
 function tap(wobbles: number): number[] {
@@ -108,14 +112,54 @@ const pointsOf = ({ op: { pts } }: StrokeBuilder) =>
   ]);
 
 describe("StrokeBuilder", () => {
-  it("draws a half press as wide as the hover ring, a full press at most PRESSURE_CAP times that, and a feather-light touch at most half a full press", () => {
+  it("draws a half press as wide as the hover ring and reaches the selected size at full pressure", () => {
     for (const response of ["light", "normal", "firm"] as const) {
-      const ring = previewWidth(response, true);
+      const ring = previewWidth(response, true, 20);
       expect(penWidth(0.5, response)).toBeCloseTo(ring);
       // No jump as a press passes halfway.
       expect(penWidth(0.5001, response)).toBeCloseTo(ring);
-      expect(penWidth(1, response) / ring).toBeLessThanOrEqual(PRESSURE_CAP + 1e-9);
+      expect(penWidth(1, response)).toBe(1);
       expect(penWidth(0.0001, response)).toBeLessThan(penWidth(1, response) / 2);
+    }
+  });
+
+  it("uses the minimum as a lower limit for positive light contact without adding it to every pressure", () => {
+    // A real contact need not report exactly zero to reach the minimum.
+    expect(penWidth(0.05, "normal", 20)).toBeCloseTo(0.2);
+    expect(penWidth(0.1, "normal", 20)).toBeCloseTo(0.2);
+    expect(penWidth(0.2, "normal", 20)).toBeCloseTo(0.2990697562);
+    expect(penWidth(0.05, "normal", 10)).toBeCloseTo(0.1057371263);
+    expect(penWidth(0.05, "normal", 40)).toBeCloseTo(0.4);
+  });
+
+  it("keeps every curve finite, within its chosen minimum and maximum, and monotonic", () => {
+    for (const response of ["light", "normal", "firm"] as const) {
+      for (const minimum of [0, 20, 80, 100]) {
+        let previous = minimum / 100;
+        for (const pressure of [0.0001, 0.01, 0.05, 0.1, 0.2, 0.5, 0.8, 1]) {
+          const width = penWidth(pressure, response, minimum);
+          expect(Number.isFinite(width)).toBe(true);
+          expect(width).toBeGreaterThanOrEqual(previous - 1e-9);
+          expect(width).toBeLessThanOrEqual(1);
+          previous = width;
+        }
+        expect(penWidth(1, response, minimum)).toBe(1);
+        expect(previewWidth(response, true, minimum)).toBeCloseTo(penWidth(0.5, response, minimum));
+      }
+    }
+  });
+
+  it("applies the minimum only to pressure-sensitive brush ink", () => {
+    for (const drawn of [
+      { pointer: "touch" },
+      { pointer: "mouse" },
+      { pointer: "pen", pressure: 0.5, pressureVaries: false },
+      { pointer: "pen", response: "off" as const },
+      { pointer: "pen", tool: "eraser" as const },
+    ]) {
+      expect(widths(40, { ...drawn, penMinimumWidth: 100 })).toEqual(
+        widths(40, { ...drawn, penMinimumWidth: 0 }),
+      );
     }
   });
 
@@ -236,6 +280,42 @@ describe("StrokeBuilder", () => {
     expect(light[0]).toBeLessThan(firm[0]);
     // Nothing heavier than where it settles: no full-width start thinning out.
     expect(Math.max(...light)).toBeCloseTo(last(light));
+  });
+
+  it("recognizes positive nondefault pen pressure on the first light stroke", () => {
+    // Pointer Events uses 0.5 for contact without pressure support; 0.05 is a sensor reading.
+    const first = widths(40, { pointer: "pen", pressure: 0.05, pressureVaries: false });
+    expect(first[0]).toBeCloseTo(0.2 * PEN_TAPER.dot);
+    expect(last(first)).toBeCloseTo(0.2);
+  });
+
+  it("recognizes raw pressure changes while the nib stays at the same position", () => {
+    const stroke = builder({ pointerType: "pen", pressure: 0.5, pressureVaries: false });
+    expect(stroke.add(0, 0, 0.8, 10)).toBe(false);
+    expect(stroke.pressured).toBe(true);
+    expect(stroke.count).toBe(1);
+  });
+
+  it("replaces the speed fallback when the pen first supplies pressure, staying within the selected size", () => {
+    const stroke = builder({ pointerType: "pen", pressure: 0.5, pressureVaries: false });
+    for (let i = 1; i <= 12; i++) stroke.add(i, 0, 0.5, i * 100);
+    stroke.add(13, 0, 1, 1300);
+    stroke.add(14, 0, 1, 1400);
+    stroke.settle(14, 0);
+    const after = stroke.op.pts.filter(
+      (_, index) => index % STRIDE === 2 && stroke.op.pts[index - 2] >= 13,
+    );
+    expect(after.length).toBeGreaterThan(0);
+    expect(Math.max(...after)).toBeLessThanOrEqual(SIZE);
+    expect(last(after)).toBe(SIZE);
+  });
+
+  it("retains the first reported contact width when a known pen lands without a pressure reading", () => {
+    const stroke = builder({ pointerType: "pen", pressure: 0, pressureVaries: true });
+    stroke.add(0, 0, 0.1, 10);
+    stroke.add(20, 0, 0.9, 20);
+    stroke.settle(20, 0);
+    expect(stroke.op.pts[2]).toBeCloseTo(SIZE * 0.2 * PEN_TAPER.dot);
   });
 
   it("draws a pen whose pressure never moves as a finger draws, by speed, under every curve", () => {

@@ -154,6 +154,7 @@ const SETTINGS: InkSettings = {
   panelOpen: false,
   inputMode: null,
   penPressure: "normal",
+  penMinimumWidth: 20,
   sessionMs: () => 0,
 };
 
@@ -1364,7 +1365,7 @@ describe("InkEngine", () => {
       engine.move(at("pen", 1, 20, 0, 10, 0.5));
       engine.move(at("pen", 1, 40, 0, 20, 0.5));
       engine.up(at("pen", 1, 60, 0, 30, 0));
-      engine.down(at("pen", 2, 0, 40, 1000, 0.1));
+      engine.down(at("pen", 2, 0, 40, 1000, 0.5));
       engine.up(at("pen", 2, 0, 40, 1010, 0));
       const next = committed()[1];
       expect(next.tool).toBe("brush");
@@ -1662,7 +1663,7 @@ describe("InkEngine", () => {
     }
   });
 
-  it("starts a pen stroke at its first sample's pressure once the pen has shown it senses pressure", () => {
+  it("starts the first light pen stroke at its reported pressure, just like later strokes", () => {
     const LIGHT = 0.1;
     const dot = (op: Op | undefined) => (op?.tool === "brush" ? op.pts[2] : NaN);
     const fresh = setup();
@@ -1670,8 +1671,62 @@ describe("InkEngine", () => {
     const sensed = setup();
     sensed.stroke("pen", 1, [0, 0], [100, 0], 0, (step) => LIGHT + step / 20);
     sensed.stroke("pen", 2, [0, 50], [100, 50], 1000, () => LIGHT);
-    // Until its pressure moves, a light press can't be told from a pen that senses none.
-    expect(dot(sensed.committed()[1])).toBeLessThan(dot(fresh.committed()[0]));
+    expect(dot(sensed.committed()[1])).toBeCloseTo(SETTINGS.size * 0.2 * 0.35);
+    expect(dot(fresh.committed()[0])).toBeCloseTo(SETTINGS.size * 0.2 * 0.35);
+  });
+
+  it("captures the minimum for each stroke and applies a changed setting to subsequent ink", () => {
+    const run = setup({ penMinimumWidth: 20 });
+    // Establish pressure support with raw readings, independently of smoothing.
+    run.stroke("pen", 1, [0, 0], [100, 0], 0, (step) => 0.1 + step * 0.03);
+    run.engine.down(run.at("pen", 2, 0, 50, 1000, 0.05));
+    for (let i = 1; i <= 20; i++) {
+      if (i === 10) run.engine.settings = { ...run.engine.settings, penMinimumWidth: 80 };
+      run.engine.move(run.at("pen", 2, i * 10, 50, 1000 + i * 16, 0.05));
+      run.runFrame();
+    }
+    run.engine.up(run.at("pen", 2, 200, 50, 1400, 0));
+    run.stroke("pen", 3, [0, 100], [200, 100], 2000, () => 0.05);
+    const widest = (op: Op) => {
+      if (op.tool === "fill") throw new Error("Expected a brush stroke");
+      return Math.max(...op.pts.filter((_, index) => index % STRIDE === 2));
+    };
+    expect(widest(run.committed()[1])).toBeCloseTo(SETTINGS.size * 0.2);
+    expect(widest(run.committed()[2])).toBeCloseTo(SETTINGS.size * 0.8);
+  });
+
+  it("uses the pressure minimum for the hover preview once the pen has shown pressure support", () => {
+    const run = setup({ penMinimumWidth: 80 });
+    const detach = run.engine.attach(paperAt(framed(run.engine), 100, 0, 2));
+    run.stroke("pen", 1, [100, 0], [200, 0], 0, (step) => 0.1 + step * 0.03);
+    run.engine.move({ ...run.at("pen", 2, 140, 40, 1000), buttons: 0, pressure: 0 });
+    expect(run.events.onHover.mock.lastCall?.[0]?.diameter).toBeCloseTo(SETTINGS.size * 0.8 * 2);
+    detach();
+  });
+
+  it("repaints the starting dot when a delayed pressure reading arrives without movement", () => {
+    const run = setup({ penMinimumWidth: 20 });
+    run.engine.down(run.at("pen", 1, 50, 50, 0, 0));
+    const initialWidth = run.display.stroke?.pts[2];
+    if (initialWidth === undefined) throw new Error("The starting dot was not shown");
+    const clearedWidths: number[] = [];
+    vi.spyOn(run.display, "endStroke").mockImplementation(() => {
+      clearedWidths.push(run.display.stroke?.pts[2] ?? -1);
+      run.display.calls.push("endStroke");
+    });
+    run.display.calls.length = 0;
+    run.engine.move(run.at("pen", 1, 50, 50, 16, 0.05));
+    run.runFrame();
+    const cleared = run.display.calls.indexOf("endStroke");
+    const restarted = run.display.calls.indexOf("beginStroke");
+    const painted = run.display.calls.indexOf("paintStroke");
+    expect(cleared).toBeGreaterThanOrEqual(0);
+    expect(restarted).toBeGreaterThan(cleared);
+    expect(painted).toBeGreaterThan(restarted);
+    expect(clearedWidths).toEqual([initialWidth]);
+    expect(run.display.stroke?.pts[2]).toBeLessThan(initialWidth);
+    run.engine.up(run.at("pen", 1, 50, 50, 32, 0));
+    expect(run.committed()[0].tool).toBe("brush");
   });
 
   it("rings where a hovering pen would land, as wide as its stroke on screen, and hides it as the pen lands or leaves", () => {

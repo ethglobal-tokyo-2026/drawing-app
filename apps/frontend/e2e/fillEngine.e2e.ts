@@ -99,6 +99,7 @@ async function openEngine(page: Page) {
       panelOpen: false,
       inputMode: "pencilAndFinger",
       penPressure: "normal",
+      penMinimumWidth: 20,
       sessionMs: () => performance.now(),
     };
     const engine = new InkEngine(ink, display, settings, {

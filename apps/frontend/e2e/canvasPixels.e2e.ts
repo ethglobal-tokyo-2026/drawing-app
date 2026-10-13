@@ -13,11 +13,12 @@ test("minimum brush dots remain within the sealed mask", async ({ page }) => {
   await page.goto(EMPTY_PAGE);
 
   const results = await page.evaluate(async () => {
-    const [{ sizePx, StrokeBuilder }, { paintStroke }, { dieCut }] = await Promise.all([
-      import("../src/sticker-creation/canvas/brush.ts"),
-      import("../src/sticker-creation/canvas/paintStroke.ts"),
-      import("../src/sticker-creation/sealing/dieCut.ts"),
-    ]);
+    const [{ FIRST_PEN_MINIMUM_WIDTH, sizePx, StrokeBuilder }, { paintStroke }, { dieCut }] =
+      await Promise.all([
+        import("../src/sticker-creation/canvas/brush.ts"),
+        import("../src/sticker-creation/canvas/paintStroke.ts"),
+        import("../src/sticker-creation/sealing/dieCut.ts"),
+      ]);
     const outcomes: {
       density: number;
       offset: number;
@@ -48,6 +49,7 @@ test("minimum brush dots remain within the sealed mask", async ({ page }) => {
             pointerType: "pen",
             pressureVaries: true,
             response: "normal",
+            penMinimumWidth: FIRST_PEN_MINIMUM_WIDTH,
           });
           brush.settle(dot, dot);
           paintStroke(g, brush.op);
@@ -65,6 +67,7 @@ test("minimum brush dots remain within the sealed mask", async ({ page }) => {
               pointerType: "pen",
               pressureVaries: true,
               response: "normal",
+              penMinimumWidth: FIRST_PEN_MINIMUM_WIDTH,
             });
             larger.add(240, 320, 0.5, 16);
             larger.settle(240, 320);

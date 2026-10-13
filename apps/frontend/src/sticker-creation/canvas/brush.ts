@@ -12,6 +12,9 @@ export const sizePx = (value: number) => 1.5 + 46.5 * value * value;
 export const PEN_PRESSURES = ["off", "light", "normal", "firm"] as const;
 export type PenPressure = (typeof PEN_PRESSURES)[number];
 
+/** The pressure-sensitive pen's minimum width, as a percentage of its selected size. */
+export const FIRST_PEN_MINIMUM_WIDTH = 20;
+
 /** Points closer than this many sheet units to the last one add cost and nothing else. */
 const MIN_STEP = 0.5;
 /** A stroke widens from a dot `dot` of its width to its full width `travel` sheet units from where it landed. */
@@ -27,11 +30,9 @@ interface Taper {
 export const PEN_TAPER = { dot: 0.35, travel: 8 } as const satisfies Taper;
 /** A finger's or a mouse's taper: a fuller dot, widening over a longer reach. */
 const TOUCH_TAPER = { dot: 0.6, travel: 23 } as const satisfies Taper;
-/** A pen's width at a feather-light touch, as a fraction of the size. */
-const PRESSURE_FLOOR = 0.28;
 /**
- * Each curve's exponent on the pressure up to a half press: under 1 a light touch already draws
- * wide, over 1 the width takes more force; Normal, a little under 1, widens a light touch a little.
+ * Each curve's exponent on normalized contact pressure: under 1 a light touch draws wider, over 1
+ * the width takes more force. Every curve reaches the selected size at full pressure.
  */
 const PRESSURE_EXPONENTS = {
   light: 0.5,
@@ -40,10 +41,8 @@ const PRESSURE_EXPONENTS = {
 } as const satisfies Record<Exclude<PenPressure, "off">, number>;
 /** A pen pressed halfway: the hover ring previews the stroke at this middle pressure. */
 const MID_PRESSURE = 0.5;
-/** A full press draws at most this many times a half press's width, which the hover ring shows. */
-export const PRESSURE_CAP = 1.2;
-/** A pen's pressure moving less than this within a stroke is a pen that senses none. */
-const PRESSURE_STEP = 0.01;
+/** Pointer Events reports 0.5 for active input without pressure support; other positive readings establish it. */
+const reportsPressure = (pressure: number) => pressure > 0 && pressure !== 0.5;
 /** Touch, mouse and a pen with no pressure draw between these fractions of the size: thin when quick. */
 const SPEED_WIDTHS = { fast: 0.68, slow: 1.1 } as const;
 /**
@@ -53,20 +52,13 @@ const SPEED_WIDTHS = { fast: 0.68, slow: 1.1 } as const;
 const SPEED_EASE_MS = 47;
 
 /**
- * How wide a pen draws at this pressure under `response`, as a fraction of the size; Off is the size.
- * Up to a half press it follows the curve's exponent; past it, the width eases out to `PRESSURE_CAP`
- * times a half press's, at first as steeply, so pressing harder adds less and less.
+ * Contact pressure sets the width along the chosen curve, bounded below by the minimum and above
+ * by the selected size. The minimum clamps light contact rather than adding width to every press,
+ * so reaching it does not require an exact zero pressure reading. Off keeps the selected size.
  */
-const pressureWidth = (pressure: number, response: PenPressure) => {
+const pressureWidth = (pressure: number, response: PenPressure, penMinimumWidth: number) => {
   if (response === "off") return 1;
-  const exponent = PRESSURE_EXPONENTS[response];
-  const range = 1 - PRESSURE_FLOOR;
-  if (pressure <= MID_PRESSURE) return PRESSURE_FLOOR + range * pressure ** exponent;
-  const half = PRESSURE_FLOOR + range * MID_PRESSURE ** exponent;
-  const rise = (PRESSURE_CAP - 1) * half;
-  const slope = range * exponent * MID_PRESSURE ** (exponent - 1);
-  const past = clamp01((pressure - MID_PRESSURE) / (1 - MID_PRESSURE));
-  return half + rise * (1 - (1 - past) ** ((slope * (1 - MID_PRESSURE)) / rise));
+  return Math.max(penMinimumWidth / 100, clamp01(pressure) ** PRESSURE_EXPONENTS[response]);
 };
 /** The share of a stroke's width at `reach` units from where it lands or lifts, under its taper. */
 const tapered = ({ dot, travel }: Taper, reach: number) =>
@@ -79,11 +71,15 @@ const speedWidth = (speed: number) =>
  * How wide a pen's mark will be before it lands, as a fraction of the size: a middle pressure under
  * its curve, or the speed model's middle for a pen not known to sense pressure. Off is the size.
  */
-export const previewWidth = (response: PenPressure, pressureVaries: boolean) =>
+export const previewWidth = (
+  response: PenPressure,
+  pressureVaries: boolean,
+  penMinimumWidth: number,
+) =>
   response === "off"
     ? 1
     : pressureVaries
-      ? pressureWidth(MID_PRESSURE, response)
+      ? pressureWidth(MID_PRESSURE, response, penMinimumWidth)
       : (SPEED_WIDTHS.fast + SPEED_WIDTHS.slow) / 2;
 
 /** Where the pointer itself was, in sheet units, and when, in ms. */
@@ -114,11 +110,13 @@ interface StrokeStart {
   pressureVaries: boolean;
   /** How a pen's pressure sets its width; a finger or a mouse goes by speed whatever it is. */
   response: PenPressure;
+  /** Minimum pressure width as a percentage of the selected size, captured for this stroke. */
+  penMinimumWidth: number;
 }
 
 /**
  * Builds a stroke point by point. A brush's width follows a pen's pressure through its curve within
- * a few samples, or the speed for touch, mouse and a pen whose pressure never moves, smoothed so it
+ * a few samples, or the speed for touch, mouse and a pen without pressure readings, smoothed so it
  * never jumps, and tapers in from a dot. It starts from the first sample's width, so a light start
  * stays light; a pen's also tapers out once it lifts (`taperEnd`). The eraser keeps one width, and so
  * does a pen with its pressure Off.
@@ -131,9 +129,8 @@ export class StrokeBuilder {
   private readonly nib: Nib;
   private readonly pen: boolean;
   private readonly response: PenPressure;
-  /** The pen's first reading; null while it has reported none. */
-  private firstPressure: number | null;
-  /** Pressure sets the width: this pen has shown its pressure moving, in this stroke or before. */
+  private readonly penMinimumWidth: number;
+  /** Pressure sets the width: this pen has supplied sensor readings, in this stroke or before. */
   private pressed: boolean;
   /** The pen landed reporting no pressure: its first reading sets the landing's width. */
   private landedUnread: boolean;
@@ -165,18 +162,19 @@ export class StrokeBuilder {
       pointerType,
       pressureVaries,
       response,
+      penMinimumWidth,
     } = start;
     this.size = size;
     this.t0 = t;
     this.nib = { x, y, pressure, t };
     this.pen = pointerType === "pen";
     this.response = response;
-    // A pen landing at no pressure hasn't reported any yet, as Safari can for a Pencil. Its dot
-    // starts at the lightest width, so it never shows wider than the stroke its reading sets.
-    this.firstPressure = pressure > 0 ? pressure : null;
-    this.pressed = this.pen && pressureVaries;
-    this.landedUnread = this.pressed && pressure <= 0;
-    this.smoothed = this.pressed ? pressureWidth(pressure, response) : 1;
+    this.penMinimumWidth = penMinimumWidth;
+    // Contact can precede a force reading. A known pressure pen starts at the minimum until the
+    // first reading sets its dot; other pens retain the fallback until sensor readings arrive.
+    this.pressed = this.pen && (pressureVaries || reportsPressure(pressure));
+    this.landedUnread = this.pen && pressure <= 0;
+    this.smoothed = this.pressed ? pressureWidth(pressure, response, penMinimumWidth) : 1;
     this.taper = this.pen ? PEN_TAPER : TOUCH_TAPER;
     const width = tool === "eraser" ? size : size * this.taper.dot * this.smoothed;
     this.op = { tool, layer, color, pts: [x, y, width, 0], T };
@@ -212,14 +210,16 @@ export class StrokeBuilder {
   ): boolean {
     const { tool } = this.op;
     const dist = Math.hypot(x - this.curve.x, y - this.curve.y);
-    if (dist < MIN_STEP) return false;
     let width = this.size;
     if (tool === "brush") {
       if (this.pen && nib && nib.pressure > 0) {
         // Only the device's contact readings establish pressure capability. Filtered and
         // terminal pressures can vary even when the device reports one constant value.
-        this.firstPressure ??= nib.pressure;
-        if (Math.abs(nib.pressure - this.firstPressure) > PRESSURE_STEP) this.pressed = true;
+        if (!this.pressed && reportsPressure(nib.pressure)) {
+          this.pressed = true;
+          // A speed width may exceed the selected size. Its first pressure reading replaces it.
+          this.smoothed = pressureWidth(pressure, this.response, this.penMinimumWidth);
+        }
       }
       // Off, a pen draws the brush's size, whatever it reports.
       const off = this.pen && this.response === "off";
@@ -232,7 +232,7 @@ export class StrokeBuilder {
       } else if (pressure > 0) {
         // Pressure shows at the nib at once; speed, under a finger, eases in so it never jumps. A
         // pressing pen that reads no pressure, as it can while lifting, keeps its width.
-        const now = pressureWidth(pressure, this.response);
+        const now = pressureWidth(pressure, this.response, this.penMinimumWidth);
         if (this.landedUnread) {
           this.landedUnread = false;
           this.smoothed = now;
@@ -252,6 +252,8 @@ export class StrokeBuilder {
       this.nib.pressure = nib.pressure;
       this.nib.t = nib.t;
     }
+    // Pressure and time still matter while the nib rests, even when no new path point is needed.
+    if (dist < MIN_STEP) return false;
     this.curve.add(x, y, width, Math.round(t - this.t0));
     return true;
   }

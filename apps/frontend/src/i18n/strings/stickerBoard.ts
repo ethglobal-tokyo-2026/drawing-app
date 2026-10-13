@@ -283,6 +283,17 @@ export const stickerBoard = {
         /** Settings note, Drawing group: the small print on the strip of paper under Pen pressure, where the pen tries the chosen curve; hidden from screen readers */
         tryIt: { en: "Try it", ja: "ためしがき" },
       },
+      minimumWidth: {
+        /** Settings note, Drawing group: the Minimum pen width slider's label, directly below Pen pressure */
+        title: { en: "Minimum pen width", ja: "ペンの最小幅" },
+        /** Settings note, Drawing group: the Minimum pen width slider's visible and accessible percentage; {{percent}} is 0 through 100 */
+        value: { en: "{{percent}}%", ja: "{{percent}}%" },
+        /** Settings note, Drawing group: help below Minimum pen width explaining selected size, full pressure, pointed ends, and Off */
+        help: {
+          en: "Minimum as a percentage of your selected size. Full pressure uses 100%; pointed ends may be thinner. Disabled while Pen pressure is Off.",
+          ja: "選んだサイズに対する最小幅の割合です。最大の筆圧では100%になり、線の先端はさらに細くなることがあります。筆圧がオフの間は調整できません。",
+        },
+      },
     },
   },
   /** The developer slip: English only, so the Japanese catalog never translates it. */

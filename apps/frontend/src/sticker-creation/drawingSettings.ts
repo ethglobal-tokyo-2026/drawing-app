@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { deviceSetting } from "../ui/deviceSetting";
-import { PEN_PRESSURES, type PenPressure } from "./canvas/brush";
+import { FIRST_PEN_MINIMUM_WIDTH, PEN_PRESSURES, type PenPressure } from "./canvas/brush";
 import { INPUT_MODES, type InputMode } from "./canvas/inkEngine";
 
 /*
@@ -35,6 +35,16 @@ const penPressure = deviceSetting<PenPressure>("draw.penPressure", {
   name: "The pen pressure",
 });
 
+/** A pen's minimum width as a percentage of its selected size, before the pointed ends taper. */
+const penMinimumWidth = deviceSetting<number>("draw.penMinimumWidth", {
+  parse: (text) => {
+    const value = text === null || text.trim() === "" ? NaN : Number(text);
+    return Number.isInteger(value) && value >= 0 && value <= 100 ? value : FIRST_PEN_MINIMUM_WIDTH;
+  },
+  serialize: (value) => (value === FIRST_PEN_MINIMUM_WIDTH ? null : String(value)),
+  name: "The pen's minimum width",
+});
+
 /** Settings' default input for each sheet; null before a pen has drawn on this device. */
 export const useInputMode = (): InputMode | null =>
   useSyncExternalStore(inputMode.subscribe, inputMode.get);
@@ -49,3 +59,14 @@ export const usePenPressure = (): PenPressure =>
   useSyncExternalStore(penPressure.subscribe, penPressure.get);
 export const readPenPressure = penPressure.get;
 export const keepPenPressure = (value: PenPressure): boolean => penPressure.set(value);
+
+export const usePenMinimumWidth = (): number =>
+  useSyncExternalStore(penMinimumWidth.subscribe, penMinimumWidth.get);
+export const readPenMinimumWidth = penMinimumWidth.get;
+/** Programmatic choices stay finite whole percentages, including a value storage refuses. */
+export const keepPenMinimumWidth = (value: number): boolean =>
+  penMinimumWidth.set(
+    Number.isFinite(value)
+      ? Math.max(0, Math.min(100, Math.round(value)))
+      : FIRST_PEN_MINIMUM_WIDTH,
+  );

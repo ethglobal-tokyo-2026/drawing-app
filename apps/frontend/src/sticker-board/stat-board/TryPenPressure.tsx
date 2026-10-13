@@ -26,8 +26,12 @@ const INK = "#1C1824";
  */
 const BLANK: readonly Step[] = [{ tool: "clear", layer: FIRST_LAYER, T: 0 }];
 
-/** The strip draws as a fresh sheet does, with the brush at its size and the chosen curve. */
-const settingsFor = (response: PenPressure, fingersDraw: boolean): InkSettings => ({
+/** The strip draws as a fresh sheet does, with the brush at its size, chosen curve, and minimum. */
+const settingsFor = (
+  response: PenPressure,
+  fingersDraw: boolean,
+  penMinimumWidth: number,
+): InkSettings => ({
   tool: "brush",
   fillReference: "layer",
   color: INK,
@@ -40,6 +44,7 @@ const settingsFor = (response: PenPressure, fingersDraw: boolean): InkSettings =
   panelOpen: false,
   inputMode: fingersDraw ? "pencilAndFinger" : "pencilOnly",
   penPressure: response,
+  penMinimumWidth,
   sessionMs: () => 0,
 });
 
@@ -59,16 +64,18 @@ const EVENTS: InkEvents = {
 
 /**
  * Try it: a strip of drawing paper where the pen draws through the drawing screen's own ink engine
- * with the chosen pressure curve, so the choice is felt, not guessed. Fingers draw too unless
- * `fingersDraw` is off; a mouse draws by speed. The ink fades a few seconds after the last stroke,
- * or goes at once under reduced motion; nothing is kept. Screen readers skip it.
+ * with the chosen pressure curve and minimum width, so the choice is felt, not guessed. Fingers draw
+ * too unless `fingersDraw` is off; a mouse draws by speed. The ink fades a few seconds after the last
+ * stroke, or goes at once under reduced motion; nothing is kept. Screen readers skip it.
  */
 export function TryPenPressure({
   response,
   fingersDraw,
+  penMinimumWidth,
 }: {
   response: PenPressure;
   fingersDraw: boolean;
+  penMinimumWidth: number;
 }) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
@@ -76,7 +83,7 @@ export function TryPenPressure({
   const engine = useRef<InkEngine | null>(null);
   /** The strip's size and density the ink was framed at; null once it has faded. */
   const framed = useRef<string | null>(null);
-  const initialSettings = useEffectEvent(() => settingsFor(response, fingersDraw));
+  const initialSettings = useEffectEvent(() => settingsFor(response, fingersDraw, penMinimumWidth));
   /** The ink is wiped, its canvas let go, and the next stroke frames the strip afresh. */
   const faded = () => {
     engine.current?.reset();
@@ -138,7 +145,8 @@ export function TryPenPressure({
   }, []);
 
   useLayoutEffect(() => {
-    if (engine.current) engine.current.settings = settingsFor(response, fingersDraw);
+    if (engine.current)
+      engine.current.settings = settingsFor(response, fingersDraw, penMinimumWidth);
   });
 
   return (

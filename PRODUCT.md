@@ -113,6 +113,7 @@ You can hand someone a physical drawing, but nothing makes a digital drawing sca
 ## Accessibility & Inclusion
 
 - Drawing works by finger alone; an Apple Pencil adds pressure.
+- Minimum pen width, under Pen pressure in Settings, is kept on each device and starts at 20% of the selected size. It clamps very light contact to that width before the pointed ends taper; full pressure reaches the selected size. The existing Try it strip uses the chosen minimum, and Pen pressure Off disables the slider while retaining its value.
 - Every screen is in Japanese and English, so layouts take either language's longer strings.
 - Reduced motion is honored, and nothing needs motion: shake is one of three ways to play, and touch always works.
 - Controls are named for screen readers, and gestures have alternatives: the gift bag's pull tab is also a slider, and the Mini-game's heart is a button.

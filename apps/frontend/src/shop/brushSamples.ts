@@ -1,4 +1,4 @@
-import { StrokeBuilder } from "../sticker-creation/canvas/brush";
+import { FIRST_PEN_MINIMUM_WIDTH, StrokeBuilder } from "../sticker-creation/canvas/brush";
 import type { StrokeOp } from "../sticker-creation/canvas/ops";
 import { FIRST_LAYER } from "../sticker-creation/layers/layerState";
 
@@ -58,6 +58,7 @@ export function brushSample(kind: BrushKind, side: number): StrokeOp {
         pointerType: "pen",
         pressureVaries: true,
         response: "normal",
+        penMinimumWidth: FIRST_PEN_MINIMUM_WIDTH,
       });
       path.slice(1).forEach(([px, py], i) => {
         const pressure = Math.sin((Math.PI * (i + 1)) / path.length) ** 0.8;
