@@ -62,6 +62,17 @@ export function grownScale(
 export const liveScale = (width: number, height: number): number =>
   grownScale(width, height, LIVE_STAGE, MAX_LIVE_SCALE);
 
+/** More mini hearts and longer throws fill a large stage's extra room, within fixed limits. */
+export function miniHeartCoverage(width: number, height: number, scale: number) {
+  if (width < LARGE_STAGE_MIN || height < LARGE_STAGE_MIN) return { density: 1, travel: 1 };
+  const across = width / scale / LIVE_STAGE.width;
+  const down = height / scale / LIVE_STAGE.height;
+  return {
+    density: Math.min(3, Math.max(1, across * down)),
+    travel: Math.min(2.5, Math.max(1, across, down)),
+  };
+}
+
 /** The live game's heart at rest, as wide as its scale lets it be. */
 export const liveHeartRest = (width: number, height: number) =>
   heartRest(width, height, LIVE_FRAME, MAX_HEART_WIDTH * liveScale(width, height));

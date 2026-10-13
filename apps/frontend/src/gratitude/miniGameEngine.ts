@@ -43,6 +43,7 @@ import {
   LIVE_FRAME,
   LIVE_STAGE,
   liveScale,
+  miniHeartCoverage,
   MAX_HEART_WIDTH,
   type StageFrame,
 } from "./stageLayout";
@@ -322,6 +323,7 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
   // Per-frame jitter: the HUD's shiver, the heart's tremor and kicks, the physics. Frames draw on it.
   const random = seededRandom(seed);
   const words = seededRandom(seed ^ EFFECT_STREAMS.words);
+  let coverage = { density: 1, travel: 1 };
   const combo = createGratitudeCombo(options.config);
   const { intensity } = options;
   const recorder = liveInput ? createReplayRecorder({ seed, intensity, ...layout.fallback }) : null;
@@ -398,13 +400,14 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
       random: seededRandom(seed ^ EFFECT_STREAMS.particles),
       rate: speed,
       scale,
+      coverage: () => coverage,
     },
   );
   const miniHearts = createMiniHeartLayer({ front, behind }, scale);
   const physics = createMiniHeartPhysics(
     { ...layout.fallback, ceiling: layout.frame.above },
     random,
-    { scale, live: options.miniHearts },
+    { scale, live: options.miniHearts, fillStage: liveInput !== null },
   );
   const readout = options.showFrameTimes ? createFrameTimeReadout(root) : null;
 
@@ -463,6 +466,7 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
       width: root.clientWidth || layout.fallback.width,
       height: root.clientHeight || layout.fallback.height,
     };
+    if (liveInput) coverage = miniHeartCoverage(size.width, size.height, scale);
     recorder?.resize(size.width, size.height);
     const box = root.getBoundingClientRect();
     rect = { left: box.left, top: box.top, scale: box.width / size.width || 1 };
@@ -702,7 +706,8 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
   };
 
   /** Mini hearts a spray, a fling or a knock throws: more as the multiplier climbs. */
-  const throwCount = () => Math.min(3, 1 + Math.floor((combo.view.multiplier - 1) / 3));
+  const throwCount = () =>
+    Math.ceil(Math.min(3, 1 + Math.floor((combo.view.multiplier - 1) / 3)) * coverage.density);
   /**
    * Marks mini hearts thrown for the performance recorder: what threw them, `count` if given, and the
    * pile they join. With the recorder off, it formats nothing.
@@ -735,7 +740,7 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
     if (tier === 2 && hits % 5 === 0) effects.burst(2, heartAt);
     if (tier >= 3 && hits % 2 === 0) effects.steam(Math.max(1, Math.round(intensity * 2)), box);
     if (tier >= 3 && hits % 2 === 1 && method !== "stroke" && !reduced) {
-      physics.rainFromTop();
+      for (let i = 0; i < Math.ceil(coverage.density); i++) physics.rainFromTop();
       markThrow("rain");
     }
     if (tapped && !reduced && physics.hearts.length > 0) physics.shoveAwayFrom(x, y);
@@ -1304,7 +1309,11 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
 
     const tier = view.tier ?? 0;
     if (view.phase === "running" && tier >= 2 && !reduced) {
-      sweat += FEEL_CONFIG.miniHearts.sweatPerSecond[tier] * (0.7 + 0.5 * intensity) * dt;
+      sweat +=
+        FEEL_CONFIG.miniHearts.sweatPerSecond[tier] *
+        (0.7 + 0.5 * intensity) *
+        coverage.density *
+        dt;
       for (; sweat >= 1; sweat -= 1) {
         physics.sweatFromHeart(heartBox());
         markThrow("sweat");

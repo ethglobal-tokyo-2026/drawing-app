@@ -1,6 +1,7 @@
 import { clamp, easeOutCubic, lerp } from "../ui/easing";
 import { FEEL_CONFIG } from "./gameConfig";
 import { HEART_VIEWBOX, heartOutline } from "./heartArt";
+import { miniHeartCoverage } from "./stageLayout";
 
 /** The pile's world, in the stage's own pixels. Hearts bounce off `ceiling`, the HUD's underside. */
 export interface PileBounds {
@@ -48,6 +49,8 @@ export interface PileOptions {
   scale?: number;
   /** Hearts in play at most. */
   live?: number;
+  /** The live game's larger stages hold more hearts and throw them farther. Replays keep their own cap. */
+  fillStage?: boolean;
 }
 
 /**
@@ -148,7 +151,10 @@ export function createMiniHeartPhysics(
   options: PileOptions = {},
 ): MiniHeartPhysics {
   const scale = options.scale ?? 1;
-  const cap = options.live ?? MINI.live;
+  const baseCap = options.live ?? MINI.live;
+  const coverageFor = (b: PileBounds) =>
+    options.fillStage ? miniHeartCoverage(b.width, b.height, scale) : { density: 1, travel: 1 };
+  let coverage = coverageFor(bounds);
   /** A stage's px, in the pile's. */
   const world = (px: number) => px / scale;
   const worldBox = (box: HeartBox): HeartBox => ({
@@ -189,16 +195,7 @@ export function createMiniHeartPhysics(
     hit = MINI_HIT,
     ...launch
   }: Launch): Body {
-    // Past the live cap the oldest fades out fast instead of blinking away.
-    let live = 0;
-    for (const b of bodies) if (!b.fade) live++;
-    while (live >= cap) {
-      const i = oldestIndex(false);
-      if (i < 0) break;
-      bodies[i].fade = { from: now, duration: 0.25 };
-      live--;
-    }
-    while (bodies.length >= cap + HARD_STOP) remove(oldestIndex(true));
+    makeRoom(1);
     const body: Body = {
       ...launch,
       id: nextId++,
@@ -220,6 +217,20 @@ export function createMiniHeartPhysics(
     };
     bodies.push(body);
     return body;
+  }
+
+  function makeRoom(reserve: number) {
+    const cap = Math.ceil(baseCap * coverage.density);
+    // Past the live cap the oldest fades out fast instead of blinking away.
+    let live = 0;
+    for (const b of bodies) if (!b.fade) live++;
+    while (live + reserve > cap) {
+      const i = oldestIndex(false);
+      if (i < 0) break;
+      bodies[i].fade = { from: now, duration: 0.25 };
+      live--;
+    }
+    while (bodies.length + reserve > cap + HARD_STOP) remove(oldestIndex(true));
   }
 
   function sleep(b: Body) {
@@ -417,8 +428,10 @@ export function createMiniHeartPhysics(
       kind: "mini",
       x,
       y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
+      vx: Math.cos(angle) * speed * coverage.travel,
+      vy: Math.sin(angle) * speed * coverage.travel,
+      // Speed and gravity grow together so a longer throw keeps the same flight time.
+      gravity: MINI.gravity * coverage.travel,
       size: lerp(MINI.sizes[0], MINI.sizes[1], random()),
       rotation: (random() - 0.5) * 40,
       spin: (random() - 0.5) * 2 * MINI.spin,
@@ -431,6 +444,8 @@ export function createMiniHeartPhysics(
     hearts: bodies,
     setBounds: (next) => {
       area = worldBounds(next);
+      coverage = coverageFor(next);
+      makeRoom(0);
     },
     // From under the finger, sprayed outward from the heart's middle through the finger, tipped up.
     sprayFromTap: (tapX, tapY, stageHeart, count) => {
@@ -513,7 +528,7 @@ export function createMiniHeartPhysics(
     rainFromTop: () => {
       let rain = 0;
       for (const b of bodies) if (b.kind === "rain") rain++;
-      if (rain >= MINI.rainMax) return;
+      if (rain >= Math.ceil(MINI.rainMax * coverage.density)) return;
       const size = 22 + random() * 12;
       spawn({
         kind: "rain",

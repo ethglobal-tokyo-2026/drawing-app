@@ -77,9 +77,18 @@ const at = (x: number, y: number) => `translate(${x}px,${y}px)`;
  */
 export function createParticleEffects(
   layers: { stamps: HTMLElement; effects: HTMLElement; lines: HTMLElement },
-  options: { reduced: () => boolean; random: () => number; rate?: number; scale?: number },
+  options: {
+    reduced: () => boolean;
+    random: () => number;
+    rate?: number;
+    scale?: number;
+    /** Live large stages give burst rings more hearts and a wider spread. */
+    coverage?: () => { density: number; travel: number };
+  },
 ): ParticleEffects {
   const { reduced, random, rate = 1, scale = 1 } = options;
+  const coverage = () =>
+    reduced() ? { density: 1, travel: 1 } : (options.coverage?.() ?? { density: 1, travel: 1 });
   /** The live game's px, on this stage. */
   const px = (n: number) => n * scale;
   const pools: Record<Kind, Sprite[]> = { rise: [], glint: [], puff: [], bead: [], burst: [] };
@@ -91,7 +100,8 @@ export function createParticleEffects(
 
   /** The kind's oldest sprite once it has its fill, otherwise a new one; sized `size` px square. */
   function particle(kind: Kind, size: number): Sprite {
-    const { url, cap } = SPRITES[kind];
+    const { url } = SPRITES[kind];
+    const cap = Math.ceil(SPRITES[kind].cap * (kind === "burst" ? coverage().density : 1));
     const pool = pools[kind];
     const sprite = (pool.length >= cap ? pool.shift() : undefined) ?? {
       el: layers.effects.appendChild(makeSprite(url)),
@@ -288,11 +298,14 @@ export function createParticleEffects(
     },
 
     burst(count, from) {
-      for (let i = 0; i < count; i++) {
+      const { density, travel } = coverage();
+      const hearts = Math.ceil(count * density);
+      for (let i = 0; i < hearts; i++) {
         const s = px(12 + random() * 10);
-        const a = (i / count) * Math.PI * 2 + random();
+        const a = (i / hearts) * Math.PI * 2 + random();
         const sprite = particle("burst", s);
-        const d = px(50 + random() * 40);
+        // The ring reaches beyond the larger heart instead of growing only with its art.
+        const d = px(50 + random() * 40) * travel ** 2;
         const x = from.x - s / 2;
         const y = from.y - s / 2;
         if (reduced()) {

@@ -83,6 +83,69 @@ describe("createMiniHeartPhysics", () => {
     }
   });
 
+  it("lets a large live stage hold more hearts while keeping a bounded pile", () => {
+    const stage = { width: 1180, height: 820, ceiling: 256 };
+    const physics = createMiniHeartPhysics(stage, seededRandom(6), { fillStage: true });
+    for (let i = 0; i < 120; i++) {
+      physics.sprayFromTap(590, 450, { x: 590, y: 450, width: 232, height: 224 }, 3);
+      run(physics, 1 / 120);
+    }
+    const inPlay = physics.hearts.filter((h) => h.opacity === 1).length;
+    expect(inPlay).toBeGreaterThan(FEEL_CONFIG.miniHearts.live * 2);
+    expect(physics.hearts.length).toBeLessThanOrEqual(FEEL_CONFIG.miniHearts.live * 3 + 40);
+  });
+
+  it("throws hearts farther across a large live stage", () => {
+    const stage = { width: 1180, height: 820, ceiling: 256 };
+    const box = { x: 590, y: 450, width: 232, height: 224 };
+    const phoneThrow = createMiniHeartPhysics(stage, seededRandom(7));
+    const largeThrow = createMiniHeartPhysics(stage, seededRandom(7), { fillStage: true });
+    for (const physics of [phoneThrow, largeThrow]) {
+      physics.sprayFromTap(620, 450, box, 3);
+      run(physics, 0.15);
+    }
+    const distance = (physics: MiniHeartPhysics) =>
+      Math.max(...physics.hearts.map((h) => Math.abs(h.x - 620)));
+    expect(distance(largeThrow)).toBeGreaterThan(distance(phoneThrow) * 2);
+  });
+
+  it("keeps phone-sized throws and caps in a smaller window", () => {
+    const ordinary = createMiniHeartPhysics(bounds, seededRandom(8));
+    const filling = createMiniHeartPhysics(bounds, seededRandom(8), { fillStage: true });
+    for (const physics of [ordinary, filling]) {
+      physics.sprayFromTap(195, 380, heart, 3);
+      run(physics, 0.15);
+    }
+    expect(filling.hearts).toEqual(ordinary.hearts);
+  });
+
+  it("reduces the heart cap when a large stage becomes a smaller window", () => {
+    const physics = createMiniHeartPhysics(
+      { width: 1180, height: 820, ceiling: 256 },
+      seededRandom(9),
+      { fillStage: true },
+    );
+    for (let i = 0; i < 80; i++) physics.sprayFromTap(195, 380, heart, 3);
+    physics.setBounds(bounds);
+    run(physics, 0.3);
+    expect(physics.hearts.length).toBeLessThanOrEqual(FEEL_CONFIG.miniHearts.live);
+  });
+
+  it("keeps longer throws inside the large stage through slow frames", () => {
+    const stage = { width: 1180, height: 820, ceiling: 256 };
+    const physics = createMiniHeartPhysics(stage, seededRandom(10), { fillStage: true });
+    for (let i = 0; i < 80; i++) {
+      physics.flingAlongStroke({ dx: 200, dy: 0, end: { x: 590, y: 450 }, speed: 2 }, 9);
+      physics.step(0.05);
+      for (const h of physics.hearts) {
+        expect(Number.isFinite(h.x) && Number.isFinite(h.y)).toBe(true);
+        expect(h.x).toBeGreaterThanOrEqual(0);
+        expect(h.x).toBeLessThanOrEqual(stage.width);
+        expect(h.y).toBeLessThanOrEqual(stage.height);
+      }
+    }
+  });
+
   it("keeps every heart between the walls", () => {
     const physics = createMiniHeartPhysics(bounds, seededRandom(4));
     for (let i = 0; i < 20; i++) physics.sprayFromTap(20, 380, heart, 3);

@@ -33,7 +33,11 @@ vi.mock("./miniHeartPhysics", async (importOriginal) => {
   return {
     ...actual,
     createMiniHeartPhysics: (...args: Parameters<typeof actual.createMiniHeartPhysics>) =>
-      watch(actual.createMiniHeartPhysics(...args), ["rainFromTop", "flingAlongStroke"]),
+      watch(actual.createMiniHeartPhysics(...args), [
+        "rainFromTop",
+        "flingAlongStroke",
+        "sprayFromTap",
+      ]),
   };
 });
 vi.mock("./particleEffects", async (importOriginal) => {
@@ -686,6 +690,22 @@ describe("on a stage drawn bigger", () => {
     host.remove();
     mountOn(IPAD);
   };
+
+  it("fills the larger stage with more mini hearts per counted tap", async () => {
+    remount();
+    await mash(40);
+    const sprays = callsTo("sprayFromTap");
+    expect(sprays.length).toBeGreaterThan(0);
+    expect(Math.max(...sprays.map((call) => Number(call.args[3])))).toBeGreaterThan(3);
+  });
+
+  it("keeps the larger stage free of flying mini hearts with reduced motion", async () => {
+    remount();
+    engine.setReduced(true);
+    await mash(40);
+    expect(callsTo("sprayFromTap")).toHaveLength(0);
+    expect(callsTo("rainFromTop")).toHaveLength(0);
+  });
 
   it("takes a first tap that slides past a phone's slop but inside the stage's", async () => {
     remount();
