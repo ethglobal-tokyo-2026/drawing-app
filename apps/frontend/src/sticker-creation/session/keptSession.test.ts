@@ -181,16 +181,25 @@ async function abortFirstWrite(keeper: SessionKeeper, live: Step[], edits: (() =
   vi.spyOn(console, "error").mockImplementation(() => {});
   const release = await holdStores();
   const transactions = vi.spyOn(FakeDb.prototype, "transaction");
-  for (const edit of edits) {
-    edit();
-    keeper.save(live, 0, FRAME);
-    await tick();
+  try {
+    for (const edit of edits) {
+      edit();
+      keeper.save(live, 0, FRAME);
+      await tick();
+    }
+    const first = await vi.waitFor(
+      () => {
+        const result = transactions.mock.results[0];
+        if (result?.type !== "return") throw new Error("No write was made");
+        return result.value;
+      },
+      { timeout: WRITE_TIMEOUT_MS },
+    );
+    first.abort();
+  } finally {
+    transactions.mockRestore();
+    release();
   }
-  const first = transactions.mock.results[0];
-  transactions.mockRestore();
-  if (first?.type !== "return") throw new Error("No write was made");
-  first.value.abort();
-  release();
 }
 
 /** Holds the one database's stores in a transaction until the returned release, as a slow disk would. */
@@ -596,6 +605,7 @@ describe("the drawing kept on this device", () => {
     // Three strokes on a new sheet, the first of whose writes fails, then an undo.
     const steps = [s0, s1];
     const again = draw(userId, steps);
+    await untilKept(userId, steps);
     await abortFirstWrite(again, steps, [
       () => steps.push(s2),
       () => steps.push(s3),
