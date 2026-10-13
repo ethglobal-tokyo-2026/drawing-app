@@ -34,7 +34,7 @@ export interface BoardSticker {
   /** Its image's size on the sheet it was drawn on, in sheet units: what sizes it on a board. */
   drawnWidth: number;
   drawnHeight: number;
-  /** The cut line, an SVG path in image pixels. The board kept on this phone carries none. */
+  /** The cut line, an SVG path in image pixels. */
   outline?: string;
   urls: StickerUrls;
   placement: Placement;

@@ -94,6 +94,8 @@
   cursor: grab;
   touch-action: none;
   outline: none;
+  pointer-events: none;
+  container-type: size;
 }
 
 /* A sticker drawn smaller than a fingertip shows at its own size, and still takes a fingertip's touch. */
@@ -105,6 +107,15 @@
   width: max(100%, 44px);
   height: max(100%, 44px);
   transform: translate(-50%, -50%);
+  pointer-events: auto;
+}
+
+/* Only the touch area is clipped: the cast, foil and selected handles extend past the cut. A sticker
+   smaller than a fingertip keeps its full touch area; long, narrow stickers still follow their cut. */
+@container (min-width: 44px) or (min-height: 44px) {
+  .placed-sticker::before {
+    clip-path: var(--sticker-hit-cut);
+  }
 }
 
 /* A layer of its own only while it moves; at rest every sticker's would sit in memory for nothing. */

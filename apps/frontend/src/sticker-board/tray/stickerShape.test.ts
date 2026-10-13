@@ -29,7 +29,7 @@ describe("dotSpot", () => {
 
 describe("a sticker whose mask can't be traced", () => {
   const failure = new Error("the mask didn't decode");
-  /** A sticker without a stored cut line, as the board kept on the device has, whose trace fails. */
+  /** A sticker without a stored cut line, whose trace fails. */
   function untraceable(id: string) {
     vi.mocked(maskPixels).mockRejectedValue(failure);
     const errors = vi.spyOn(console, "error").mockImplementation(() => {});

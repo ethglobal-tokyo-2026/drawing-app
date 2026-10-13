@@ -45,7 +45,7 @@ const nextOpen = () => {
 };
 
 describe("the board kept on this phone", () => {
-  it("gives back the last board shown to the person signed in, without outlines, once the page is idle or as it hides", () => {
+  it("gives back the last board and its cut lines to the person signed in, once the page is idle or as it hides", () => {
     // Without requestIdleCallback, as in Safari, the write waits on a timer.
     vi.stubGlobal("requestIdleCallback", undefined);
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
@@ -53,7 +53,7 @@ describe("the board kept on this phone", () => {
     vi.advanceTimersByTime(KEEP_WRITE_WITHIN_MS);
     const kept = nextOpen();
     expect(kept?.stickers.map((s) => s.id)).toEqual(["s1", "s2"]);
-    expect(kept?.stickers[0]).not.toHaveProperty("outline");
+    expect(kept?.stickers[0].outline).toBe(board.stickers[0].outline);
     expect(kept?.stickers[0].placements).toEqual(board.stickers[0].placements);
     expect(kept?.owner).toEqual(board.owner);
 

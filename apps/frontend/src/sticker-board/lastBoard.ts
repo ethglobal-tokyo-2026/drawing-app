@@ -10,8 +10,8 @@ import { boardLayoutNow } from "./useBoardSize";
  * draws it at once and swaps in the fresh board when that lands. It can be one refresh out of date.
  * One board, for one person: signing in as someone else forgets it.
  *
- * It's kept for one build of the app, since the next may read a board's fields differently, and
- * without the stickers' outlines: they were most of its size, and the board draws without them.
+ * It's kept for one build of the app, since the next may read a board's fields differently. The cut
+ * lines are kept too, so silhouette selection works before the fresh board arrives.
  */
 export interface KeptBoard {
   owner: PersonView;
@@ -135,15 +135,14 @@ export function keptBoardFor(userId: string): KeptBoard | null {
 }
 
 /**
- * Keeps the board as it shows now for `userId`'s next open, without the stickers' outlines, unless it
- * was loaded before the kept board was last forgotten: `loadedAfter` is forgetsSoFar() as its load
+ * Keeps the board as it shows now for `userId`'s next open, unless it was loaded before the kept
+ * board was last forgotten: `loadedAfter` is forgetsSoFar() as its load
  * went out. Storage gets it once the page is idle, or as it's hidden, so a tap or a drop doesn't
  * wait on the write.
  */
 export function keepBoard(userId: string, board: KeptBoard, loadedAfter: number): void {
   if (loadedAfter !== forgets) return;
-  const stickers = board.stickers.map(({ outline: _outline, ...s }) => s);
-  kept = { build: BUILD, userId, board: { owner: board.owner, stickers } };
+  kept = { build: BUILD, userId, board };
   unwritten = true;
   writeWhenIdle();
 }

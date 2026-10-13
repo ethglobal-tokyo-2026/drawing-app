@@ -1,5 +1,5 @@
 import { ArrowClockwise } from "../icons";
-import { memo, useEffectEvent, useLayoutEffect, useRef } from "react";
+import { memo, useEffectEvent, useLayoutEffect, useMemo, useRef } from "react";
 import { useTranslation } from "../i18n/react";
 import { spokenPair } from "../kyoto-seika/spokenSubject";
 import { formatNo, spokenDuration } from "../stickers/format";
@@ -9,6 +9,7 @@ import type { BoardSticker } from "./boardSticker";
 import { stickerBox, type Field } from "./placement";
 import type { InHand } from "./useBoardGestures";
 import { useCrease } from "./useCreases";
+import { outlineShape } from "./tray/sheetPacking";
 
 interface Props {
   sticker: BoardSticker;
@@ -73,6 +74,17 @@ export const PlacedSticker = memo(function PlacedSticker({
   const crease = useCrease(sticker.id);
   const lift = useRef<HTMLDivElement>(null);
   const box = stickerBox(field, unit, sticker.placement, sticker);
+  const hitCut = useMemo(() => {
+    if (sticker.outline === undefined) return "none";
+    const { poly } = outlineShape(sticker.outline, sticker.width, sticker.height);
+    if (poly.length < 3) {
+      console.error(
+        `${formatNo(sticker.no)}'s cut line is unreadable, so board selection uses its box`,
+      );
+      return "none";
+    }
+    return `polygon(${poly.map(([x, y]) => `${x * 100}% ${y * 100}%`).join(",")})`;
+  }, [sticker.outline, sticker.width, sticker.height, sticker.no]);
 
   const land = useEffectEvent((el: HTMLElement) =>
     playStick(el, { from: "land", delay: 380, reduced }),
@@ -128,6 +140,7 @@ export const PlacedSticker = memo(function PlacedSticker({
         height: box.h,
         transform: box.transform,
         zIndex: 10 + stack,
+        "--sticker-hit-cut": hitCut,
       }}
     >
       <div className="placed-sticker__lift" ref={lift}>
