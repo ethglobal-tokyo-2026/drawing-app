@@ -39,7 +39,7 @@
 - Move `laminateRenderer.ts` to `stickerRenderer.ts`, `laminateShader.ts` to `stickerShader.ts`, `StickerLaminate.tsx` to `StickerFinish.tsx`, and `sticker-laminate.css` to `sticker-finish.css`. Migrate their callers/tests together, including renderer/component test filenames. Existing laminate E2E test names remain meaningful for the paper behavior they test.
 - Create `docs/research/sticker-foil/material-reference.ts` and its test/tsconfig for an independent optical reference. Production must not import this reference.
 - Create `apps/frontend/e2e/stickerFoil.html`, `stickerFoil.tsx`, and `stickerFoil.e2e.ts` for controlled material/coverage/pose fixtures.
-- Existing `StickerFigure`, static `StickerFoil`, Shop preview, board/flight/tray/sealing callers adopt the complete output. Preserve `light.ts`, existing crease calculation, and sealed data.
+- Existing `StickerFigure`, static `StickerFoil`, Shop preview, board/flight/tray/sealing callers adopt the complete output. Preserve `light.ts`, the crease calculation, and sealed data; conditionally extend the crease bake's registered bounds for actual foil overflow.
 
 Renderer API after Task 2:
 
@@ -52,6 +52,8 @@ interface StickerFoilMaterial {
 }
 interface StickerSurface {
   print: string; cut: string; normal?: string;
+  // A supplied normal's bounds in the original source frame; omitted means [0, 0, 1, 1].
+  normalBounds?: { x: number; y: number; width: number; height: number };
   turn: number; finish: LaminateFinish;
   foil?: StickerFoilMaterial;
   tiltX?: number; tiltY?: number;
@@ -63,7 +65,7 @@ interface StickerSurface {
 }
 mountSticker(canvas: HTMLCanvasElement, options: StickerSurface): () => void;
 updateSticker(canvas: HTMLCanvasElement,
-  options: Pick<StickerSurface, "print"|"cut"|"normal"|"finish"|"foil">): void;
+  options: Pick<StickerSurface, "print"|"cut"|"normal"|"normalBounds"|"finish"|"foil">): void;
 stickerTurn(canvas: HTMLCanvasElement): number | undefined;
 turnSticker(canvas: HTMLCanvasElement, turn: number, tiltX?: number, tiltY?: number): void;
 setStickerAmounts(canvas: HTMLCanvasElement, paperAmount: number, foilAmount: number): void;
@@ -75,6 +77,8 @@ mountStickerCopy(canvas: HTMLCanvasElement, source: HTMLCanvasElement,
 ```
 
 `mountStickerCopy` seeds pixels and retains the material/normal description, has independent geometry, and invalidates/discards its copied pixels if its source is disposed for concealment. It calls `onInvalidated` so a flyer can remove its entire cloned presentation, including fallback images. It is not a bitmap-only clone. Readiness compares requested and committed material generations internally, including foil assets. Use `.sticker-finish` for the canvas and migrate affected current selectors; do not preserve old class aliases.
+
+Creased overflow requires a supplied normal covering the complete output bounds. A missing extended field retains the prior complete finish and reports a persistent diagnostic. It must never stretch or clamp the source normal to invent geometry. Task 4 supplies conditional extended crease bakes from the actual underlying silhouettes; full-frame flat previews need no normal.
 
 ---
 
@@ -119,13 +123,14 @@ mountStickerCopy(canvas: HTMLCanvasElement, source: HTMLCanvasElement,
 
 ### Task 4: Live board, tray, and detail-flight integration
 
-**Files:** Modify `sticker-board/useBoardGestures.ts`, `boardComplete.ts`, `tray/traySheets.ts`, `tray/trayPeel.ts`, `tray/sticker-tray.css`, `detailLift.ts`, affected board/detail/tray/receiving/Explore selectors and tests, and `stickerLaminateFlight.e2e.ts`, `stickerBoardDrag.e2e.ts`, `stickerLightFrames.e2e.ts`.
+**Files:** Modify `sticker-board/useBoardGestures.ts`, `boardComplete.ts`, `useCreases.ts`, `stickers/creaseWorker.ts`, `tray/traySheets.ts`, `tray/trayPeel.ts`, `tray/sticker-tray.css`, `detailLift.ts`, affected board/detail/tray/receiving/Explore selectors and tests, and `stickerLaminateFlight.e2e.ts`, `stickerBoardDrag.e2e.ts`, `stickerLightFrames.e2e.ts`.
 
 **Interfaces:** Consumes complete surface registration, imperative turn/amount/refresh/settlement operations and live-copy ownership. Temporary flyers sample the existing flight geometry; they do not control shared light. The destination is paused during flight, refreshed before exposure, and retained through reversal.
 
 - [ ] Add failing assertions for live foil through drag, sheet peel, detail forward/reverse lift, concealed active flyer, canceled/paged flight, outgoing frost/fade, used-slot non-admission, and complete board readiness. Record the failing behavioral output before integration.
 - [ ] Replace manual tray live foil with the same material/coverage registration as React. Keep outgoing gift coating omission/frost/fade and empty used slots. Forward existing peel/curl geometry and release all flyer resources on completion/cancellation.
 - [ ] Use live copied owners for detail flights, preserve the owner during reversed playback, and refresh the destination before restoring exposure. Concealment invalidates originals and their copies. Forward board gesture geometry to the complete output and make board readiness wait for committed foil assets without changing its deadline.
+- [ ] For actual creased foil overflow, bake a correspondingly padded field from the existing underlying silhouettes and pass its explicit source-frame normal bounds. Keep painted crease overlays aligned with their original frame, preserve ordinary non-overflow bakes, and do not change the crease drape calculation. Test both registration and conditional admission.
 - [ ] Update affected material/clipping/shadow/exposure selectors; verify inheriting Artist Board, Explore lift, receiving, and tray/detail presentations. Keep the closed GiftBag and decorative ArtistChip behavior separate.
 - [ ] Run focused board/tray/detail unit tests and `pnpm --filter frontend test:e2e stickerLaminateFlight stickerBoardDrag stickerLightFrames stickerLaminateAttribution stickerLaminateSelection --workers=2`. Run frontend typecheck and unit suite once before committing. Expect coherent retained finishes and no active work/resource leak after cancellation or concealment.
 - [ ] Commit explicit task paths with `fix: keep sticker foil live through placement and lifts`.
