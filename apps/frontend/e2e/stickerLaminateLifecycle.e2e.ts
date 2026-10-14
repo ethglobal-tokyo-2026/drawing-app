@@ -1,9 +1,39 @@
 import { expect, test, type Page } from "@playwright/test";
+import { emptyLaminatePage, holdRoute, solidSvg, waitTwoFrames } from "./stickerMaterialFixture.ts";
+
+/** A background settlement observation: settled, or the rejection it reported. */
+type Settlement = boolean | { error: unknown };
+
+declare global {
+  interface Window {
+    laminateSceneContexts?: Set<HTMLCanvasElement>;
+    laminateSceneAllocations?: number[];
+    laminateTerminalSettled?: Settlement;
+    laminateAdmissionObservations?: { urls: string[]; contexts: number; uploads: number };
+    laminateAdmissionOpen?: boolean;
+    laminateMaterialSettled?: Settlement;
+    laminateFlatSettled?: Settlement;
+    laminateBaselineSettled?: Settlement;
+    laminateCurrentSettled?: Settlement;
+    laminateInitialNormalRequested?: boolean;
+    laminateReleaseInitialNormal?: () => void;
+    laminateReplacementResources?: { fetches: number; contexts: number };
+    laminateInitContexts?: WebGLRenderingContext[];
+  }
+}
 
 /** Background settlement observations preserve rejection causes for the next assertion. */
-const settlementFlag = (page: Page, name: string) =>
+const settlementFlag = (
+  page: Page,
+  name:
+    | "laminateTerminalSettled"
+    | "laminateMaterialSettled"
+    | "laminateFlatSettled"
+    | "laminateBaselineSettled"
+    | "laminateCurrentSettled",
+) =>
   page.evaluate((key) => {
-    const value: unknown = Reflect.get(window, key);
+    const value = window[key];
     if (typeof value !== "boolean")
       throw new Error(`The ${key} settlement observation did not report a boolean`, {
         cause: value,
@@ -20,22 +50,23 @@ const snapshotOf = (canvas: HTMLElement | SVGElement) => {
 test("a small redraw replaces old opaque pixels outside its new transparent cut", async ({
   page,
 }) => {
-  await page.route("**/e2e/stickerLaminate.html", (route) =>
-    route.fulfill({
-      contentType: "text/html",
-      body: '<meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div>',
-    }),
-  );
-  await page.route("**/atlas-region-*.svg", (route) =>
-    route.fulfill({
-      contentType: "image/svg+xml",
-      body: `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120">${route.request().url().includes("circle") ? '<circle cx="60" cy="60" r="44" fill="white"/>' : `<rect width="120" height="120" fill="${route.request().url().includes("gray") ? "gray" : "white"}"/>`}</svg>`,
-    }),
-  );
+  await emptyLaminatePage(page);
+  await page.route("**/atlas-region-*.svg", (route) => {
+    const url = route.request().url();
+    return route.fulfill(
+      url.includes("circle")
+        ? {
+            contentType: "image/svg+xml",
+            body: '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><circle cx="60" cy="60" r="44" fill="white"/></svg>',
+          }
+        : solidSvg(url.includes("gray") ? "gray" : "white", 120),
+    );
+  });
   await page.goto("/e2e/stickerLaminate.html");
   const result = await page.evaluate(async () => {
     const { mountSticker, updateSticker, whenStickerSettled } =
       await import("../src/stickers/stickerRenderer.ts");
+    const { twoFrames } = await import("./stickerMaterialFixture.ts");
     let smallOnly = false;
     const releases: (() => void)[] = [];
     const canvases = Array.from({ length: 3 }, (_, index) => {
@@ -55,9 +86,7 @@ test("a small redraw replaces old opaque pixels outside its new transparent cut"
     });
     try {
       await Promise.all(canvases.map((canvas) => whenStickerSettled(canvas)));
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      );
+      await twoFrames();
       const target = canvases[2];
       if (!target) throw new Error("The small sticker is missing");
       smallOnly = true;
@@ -94,17 +123,11 @@ for (const detailSide of [360, 700]) {
       if (typeof DeviceMotionEvent === "function")
         Object.defineProperty(DeviceMotionEvent, "requestPermission", { value: undefined });
     });
-    await page.route("**/e2e/stickerLaminate.html", (route) =>
-      route.fulfill({
-        contentType: "text/html",
-        body: '<meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div>',
-      }),
-    );
+    await emptyLaminatePage(page);
     await page.route("**/scene-capacity-*.svg", (route) =>
-      route.fulfill({
-        contentType: "image/svg+xml",
-        body: `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="${route.request().url().includes("normal") ? "rgb(145,128,252)" : "white"}"/></svg>`,
-      }),
+      route.fulfill(
+        solidSvg(route.request().url().includes("normal") ? "rgb(145,128,252)" : "white", 120),
+      ),
     );
     await page.setViewportSize({ width: 1100, height: 1000 });
     await page.goto("/e2e/stickerLaminate.html");
@@ -299,33 +322,22 @@ for (const detailSide of [360, 700]) {
 test("pending exposed material owners reserve scene capacity before their textures arrive", async ({
   page,
 }) => {
-  await page.route("**/e2e/stickerLaminate.html", (route) =>
-    route.fulfill({
-      contentType: "text/html",
-      body: '<meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div>',
-    }),
-  );
-  const held = new Map<string, () => void>();
-  await page.route("**/scene-loading-*.svg", async (route) => {
-    const url = route.request().url();
-    for (const name of ["slow-a", "slow-b"])
-      if (url.includes(name))
-        await new Promise<void>((resolve) => {
-          held.set(name, resolve);
-        });
-    await route.fulfill({
-      contentType: "image/svg+xml",
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="white"/></svg>',
-    });
-  });
+  await emptyLaminatePage(page);
+  await page.route("**/scene-loading-fast.svg", (route) => route.fulfill(solidSvg("white", 120)));
+  const held = new Map<string, Awaited<ReturnType<typeof holdRoute>>>();
+  for (const name of ["slow-a", "slow-b"])
+    held.set(
+      name,
+      await holdRoute(page, `**/scene-loading-${name}.svg`, () => solidSvg("white", 120)),
+    );
   await page.setViewportSize({ width: 1100, height: 1000 });
   await page.goto("/e2e/stickerLaminate.html");
   await page.evaluate(async () => {
     const { mountSticker } = await import("../src/stickers/stickerRenderer.ts");
     const contexts = new Set<HTMLCanvasElement>();
     const allocations: number[] = [];
-    Reflect.set(window, "laminateSceneContexts", contexts);
-    Reflect.set(window, "laminateSceneAllocations", allocations);
+    window.laminateSceneContexts = contexts;
+    window.laminateSceneAllocations = allocations;
     const getContext: unknown = Reflect.get(HTMLCanvasElement.prototype, "getContext");
     if (typeof getContext !== "function") throw new Error("The native canvas method is missing");
     Object.defineProperty(HTMLCanvasElement.prototype, "getContext", {
@@ -364,12 +376,9 @@ test("pending exposed material owners reserve scene capacity before their textur
   });
   const allocation = () =>
     page.evaluate(() => {
-      const contexts: unknown = Reflect.get(window, "laminateSceneContexts");
-      if (!(contexts instanceof Set) || contexts.size !== 1)
-        throw new Error("The scene did not keep one shared GPU context");
-      const canvas: unknown = [...contexts][0];
-      if (!(canvas instanceof HTMLCanvasElement))
-        throw new Error("The shared GPU canvas is missing");
+      const contexts = window.laminateSceneContexts;
+      if (contexts?.size !== 1) throw new Error("The scene did not keep one shared GPU context");
+      const [canvas] = contexts;
       return { width: canvas.width, height: canvas.height };
     });
   try {
@@ -379,14 +388,15 @@ test("pending exposed material owners reserve scene capacity before their textur
       "Pending exposed owners must reserve their eventual geometry",
     ).toEqual({ width: 2048, height: 1744 });
     await page.evaluate(() => {
-      const allocations: unknown = Reflect.get(window, "laminateSceneAllocations");
-      if (!Array.isArray(allocations))
-        throw new Error("The source allocation observations are missing");
+      const allocations = window.laminateSceneAllocations;
+      if (!allocations) throw new Error("The source allocation observations are missing");
       allocations.length = 0;
     });
     for (const [index, name] of ["slow-a", "slow-b"].entries()) {
-      await expect.poll(() => held.has(name)).toBe(true);
-      held.get(name)?.();
+      const hold = held.get(name);
+      if (!hold) throw new Error(`The ${name} texture is not held`);
+      await expect.poll(() => hold.requests).toBeGreaterThan(0);
+      hold.release();
       await expect(page.locator(`[data-loading-owner="${index + 2}"]`)).toHaveAttribute(
         "data-state",
         "ready",
@@ -394,28 +404,22 @@ test("pending exposed material owners reserve scene capacity before their textur
       expect(await allocation()).toEqual({ width: 2048, height: 1744 });
     }
     const count = await page.evaluate(() => {
-      const allocations: unknown = Reflect.get(window, "laminateSceneAllocations");
-      if (!Array.isArray(allocations))
-        throw new Error("The source allocation observations are missing");
+      const allocations = window.laminateSceneAllocations;
+      if (!allocations) throw new Error("The source allocation observations are missing");
       return allocations.length;
     });
     expect(count, "Texture arrivals must not repeatedly resize the complete scene allocation").toBe(
       0,
     );
   } finally {
-    for (const release of held.values()) release();
+    for (const hold of held.values()) hold.release();
   }
 });
 
 test("shared GL batches crop directly into retained snapshots with identical reference pixels", async ({
   page,
 }) => {
-  await page.route("**/e2e/stickerLaminate.html", (route) =>
-    route.fulfill({
-      contentType: "text/html",
-      body: '<meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div>',
-    }),
-  );
+  await emptyLaminatePage(page);
   await page.route("**/direct-copy-*.svg", (route) => {
     const url = route.request().url();
     const body = url.includes("line")
@@ -439,6 +443,7 @@ test("shared GL batches crop directly into retained snapshots with identical ref
   const result = await page.evaluate(async () => {
     const { mountSticker, turnSticker, refreshSticker, whenStickerSettled } =
       await import("../src/stickers/stickerRenderer.ts");
+    const { twoFrames } = await import("./stickerMaterialFixture.ts");
     const targets = new Set<HTMLCanvasElement>();
     const gpu = new Set<HTMLCanvasElement>();
     const staging = new WeakSet<HTMLCanvasElement>();
@@ -602,9 +607,7 @@ test("shared GL batches crop directly into retained snapshots with identical ref
     });
     try {
       await Promise.all(canvases.map((canvas) => whenStickerSettled(canvas)));
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      );
+      await twoFrames();
       measuring = true;
       for (const [index, canvas] of canvases.entries()) {
         turnSticker(canvas, index * 23, index < 4 ? 0 : 12, index < 4 ? 0 : -17);
@@ -667,18 +670,8 @@ test("shared GL batches crop directly into retained snapshots with identical ref
 test("material batch copy notes appear only while the performance recorder is on", async ({
   page,
 }) => {
-  await page.route("**/e2e/stickerLaminate.html", (route) =>
-    route.fulfill({
-      contentType: "text/html",
-      body: '<meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div>',
-    }),
-  );
-  await page.route("**/recorded-material.svg", (route) =>
-    route.fulfill({
-      contentType: "image/svg+xml",
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="white"/></svg>',
-    }),
-  );
+  await emptyLaminatePage(page);
+  await page.route("**/recorded-material.svg", (route) => route.fulfill(solidSvg("white", 120)));
   await page.goto("/e2e/stickerLaminate.html");
   const details = await page.evaluate(async () => {
     const { mountSticker, refreshSticker, whenStickerSettled } =
@@ -739,22 +732,15 @@ test("material batch copy notes appear only while the performance recorder is on
 test("moving a settled flat sticker without turning it does not redraw its laminate", async ({
   page,
 }) => {
-  await page.route("**/e2e/stickerLaminate.html", (route) =>
-    route.fulfill({
-      contentType: "text/html",
-      body: '<meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div>',
-    }),
-  );
+  await emptyLaminatePage(page);
   await page.route("**/position-only-material.svg", (route) =>
-    route.fulfill({
-      contentType: "image/svg+xml",
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="white"/></svg>',
-    }),
+    route.fulfill(solidSvg("white", 120)),
   );
   await page.goto("/e2e/stickerLaminate.html");
   const result = await page.evaluate(async () => {
     const { mountSticker, turnSticker, whenStickerSettled } =
       await import("../src/stickers/stickerRenderer.ts");
+    const { twoFrames } = await import("./stickerMaterialFixture.ts");
     const canvas = document.createElement("canvas");
     canvas.style.cssText = "position:absolute;left:20px;top:20px;width:120px;height:120px";
     document.body.append(canvas);
@@ -793,9 +779,7 @@ test("moving a settled flat sticker without turning it does not redraw its lamin
         resize.observe(canvas);
         intersection.observe(canvas);
       });
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      );
+      await twoFrames();
       const initial = canvas.toDataURL();
       const observations = { draws: 0, copies: 0 };
       const draw: unknown = Reflect.get(WebGLRenderingContext.prototype, "drawArrays");
@@ -821,9 +805,7 @@ test("moving a settled flat sticker without turning it does not redraw its lamin
       // A board drag changes position while its material turn and flat flight tilts stay unchanged.
       canvas.style.translate = "30px 10px";
       turnSticker(canvas, 27);
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      );
+      await twoFrames();
       return {
         ...observations,
         retained: canvas.toDataURL() === initial,
@@ -839,30 +821,13 @@ test("moving a settled flat sticker without turning it does not redraw its lamin
 test("an initial print failure settles current material while its normal is still loading", async ({
   page,
 }) => {
-  await page.route("**/e2e/stickerLaminate.html", (route) =>
-    route.fulfill({
-      contentType: "text/html",
-      body: '<meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div>',
-    }),
-  );
+  await emptyLaminatePage(page);
   await page.route("**/terminal-print.svg", (route) =>
     route.fulfill({ status: 503, body: "The initial print is unavailable" }),
   );
-  let releaseNormal: () => void = () => {};
-  let requested: () => void = () => {};
-  const started = new Promise<void>((resolve) => {
-    requested = resolve;
-  });
-  await page.route("**/terminal-held-normal.svg", async (route) => {
-    await new Promise<void>((resolve) => {
-      releaseNormal = resolve;
-      requested();
-    });
-    await route.fulfill({
-      contentType: "image/svg+xml",
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="rgb(128,128,255)"/></svg>',
-    });
-  });
+  const normal = await holdRoute(page, "**/terminal-held-normal.svg", () =>
+    solidSvg("rgb(128,128,255)", 120),
+  );
   await page.goto("/e2e/stickerLaminate.html");
   await page.evaluate(async () => {
     const { mountSticker, whenStickerSettled } = await import("../src/stickers/stickerRenderer.ts");
@@ -877,48 +842,43 @@ test("an initial print failure settles current material while its normal is stil
       turn: 0,
       finish: "gloss",
     });
-    Reflect.set(window, "laminateTerminalSettled", false);
+    window.laminateTerminalSettled = false;
     void whenStickerSettled(canvas).then(
-      () => Reflect.set(window, "laminateTerminalSettled", true),
-      (error: unknown) => Reflect.set(window, "laminateTerminalSettled", { error }),
+      () => {
+        window.laminateTerminalSettled = true;
+      },
+      (error: unknown) => {
+        window.laminateTerminalSettled = { error };
+      },
     );
   });
-  await started;
+  await normal.requested;
   try {
     const coat = page.locator("[data-terminal]");
     await expect(coat).toHaveAttribute("data-state", "failed");
     await expect(coat).toHaveAttribute("data-error", /Replacing sticker print and cut.*503/);
-    await page.evaluate(async () => {
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      );
-    });
+    await waitTwoFrames(page);
     expect(await settlementFlag(page, "laminateTerminalSettled")).toBe(true);
   } finally {
-    releaseNormal();
+    normal.release();
   }
 });
 
 test("inactive and offscreen laminate waits for exposure before allocating or loading material", async ({
   page,
 }) => {
-  await page.route("**/e2e/stickerLaminate.html", (route) =>
-    route.fulfill({
-      contentType: "text/html",
-      body: '<meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div>',
-    }),
-  );
+  await emptyLaminatePage(page);
   await page.route("**/admission-*.svg", (route) =>
-    route.fulfill({
-      contentType: "image/svg+xml",
-      body: `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="${route.request().url().includes("normal") ? "rgb(128,128,255)" : "white"}"/></svg>`,
-    }),
+    route.fulfill(
+      solidSvg(route.request().url().includes("normal") ? "rgb(128,128,255)" : "white", 120),
+    ),
   );
   await page.goto("/e2e/stickerLaminate.html");
   await page.evaluate(async () => {
     const material = await import("../src/stickers/stickerRenderer.ts");
+    const { twoFrames } = await import("./stickerMaterialFixture.ts");
     const observations = { urls: [] as string[], contexts: 0, uploads: 0 };
-    Reflect.set(window, "laminateAdmissionObservations", observations);
+    window.laminateAdmissionObservations = observations;
     const fetchSource = window.fetch;
     window.fetch = (...args) => {
       const source = args[0];
@@ -949,7 +909,7 @@ test("inactive and offscreen laminate waits for exposure before allocating or lo
         return context;
       },
     });
-    Reflect.set(window, "laminateAdmissionOpen", false);
+    window.laminateAdmissionOpen = false;
     for (const name of ["inactive", "offscreen", "detached"]) {
       const canvas = document.createElement("canvas");
       canvas.dataset.admission = name;
@@ -961,7 +921,7 @@ test("inactive and offscreen laminate waits for exposure before allocating or lo
         normal: `/admission-${name}-normal.svg`,
         turn: 0,
         finish: "gloss",
-        active: () => name !== "inactive" || Reflect.get(window, "laminateAdmissionOpen") === true,
+        active: () => name !== "inactive" || window.laminateAdmissionOpen === true,
       });
       if (name === "detached") release();
     }
@@ -973,22 +933,15 @@ test("inactive and offscreen laminate waits for exposure before allocating or lo
       normal: "/admission-latest-normal.svg",
       finish: "gloss",
     });
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-    );
+    await twoFrames();
   });
-  expect(
-    await page.evaluate(() => {
-      const observations: unknown = Reflect.get(window, "laminateAdmissionObservations");
-      return observations;
-    }),
-  ).toEqual({
+  expect(await page.evaluate(() => window.laminateAdmissionObservations)).toEqual({
     urls: [],
     contexts: 0,
     uploads: 0,
   });
   await page.evaluate(async () => {
-    Reflect.set(window, "laminateAdmissionOpen", true);
+    window.laminateAdmissionOpen = true;
     const canvas = document.querySelector("[data-admission=inactive]");
     if (!(canvas instanceof HTMLCanvasElement)) throw new Error("The inactive coat is missing");
     (await import("../src/stickers/stickerRenderer.ts")).refreshSticker(canvas);
@@ -996,9 +949,8 @@ test("inactive and offscreen laminate waits for exposure before allocating or lo
   await expect(page.locator("[data-admission=inactive]")).toHaveAttribute("data-state", "ready");
   const urls = () =>
     page.evaluate(() => {
-      const observations: unknown = Reflect.get(window, "laminateAdmissionObservations");
-      if (!observations || typeof observations !== "object" || !("urls" in observations))
-        throw new Error("Material fetch observations are missing");
+      const observations = window.laminateAdmissionObservations;
+      if (!observations) throw new Error("Material fetch observations are missing");
       return observations.urls;
     });
   expect(await urls()).toEqual([
@@ -1032,21 +984,9 @@ test("material settlement waits for the requested normal and its completed snaps
     window.laminateFixture.update({ normal: "/older-settlement-normal.svg" }),
   );
   await expect(coat).toHaveAttribute("data-error", /older-settlement-normal.*503/);
-  let release: () => void = () => {};
-  let requested: () => void = () => {};
-  const started = new Promise<void>((resolve) => {
-    requested = resolve;
-  });
-  await page.route("**/settlement-normal.svg", async (route) => {
-    await new Promise<void>((resolve) => {
-      release = resolve;
-      requested();
-    });
-    await route.fulfill({
-      contentType: "image/svg+xml",
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><rect width="240" height="240" fill="rgb(175,128,245)"/></svg>',
-    });
-  });
+  const normal = await holdRoute(page, "**/settlement-normal.svg", () =>
+    solidSvg("rgb(175,128,245)"),
+  );
   const available = await page.evaluate(async () => {
     const material = await import("../src/stickers/stickerRenderer.ts");
     const settle: unknown = Reflect.get(material, "whenStickerSettled");
@@ -1059,10 +999,14 @@ test("material settlement waits for the requested normal and its completed snaps
     ]);
     if (!(pending instanceof Promise))
       throw new Error("Material settlement did not return a promise");
-    Reflect.set(window, "laminateMaterialSettled", false);
+    window.laminateMaterialSettled = false;
     void pending.then(
-      () => Reflect.set(window, "laminateMaterialSettled", true),
-      (error: unknown) => Reflect.set(window, "laminateMaterialSettled", { error }),
+      () => {
+        window.laminateMaterialSettled = true;
+      },
+      (error: unknown) => {
+        window.laminateMaterialSettled = { error };
+      },
     );
     return true;
   });
@@ -1074,27 +1018,30 @@ test("material settlement waits for the requested normal and its completed snaps
     });
     expect(await settlementFlag(page, "laminateMaterialSettled")).toBe(false);
     await page.evaluate(() => window.laminateFixture.update({ normal: "/settlement-normal.svg" }));
-    await started;
+    await normal.requested;
     await expect.poll(() => coat.evaluate(snapshotOf)).toBe(initial);
     expect(await settlementFlag(page, "laminateMaterialSettled")).toBe(false);
   } finally {
-    release();
+    normal.release();
   }
   await expect.poll(() => settlementFlag(page, "laminateMaterialSettled")).toBe(true);
   const withNormal = await coat.evaluate(snapshotOf);
   expect(withNormal).not.toBe(initial);
   await page.evaluate(async () => {
     const { whenStickerSettled } = await import("../src/stickers/stickerRenderer.ts");
+    const { twoFrames } = await import("./stickerMaterialFixture.ts");
     const canvas = document.querySelector("[data-reload] canvas.sticker-material");
     if (!(canvas instanceof HTMLCanvasElement)) throw new Error("The coating snapshot is missing");
-    Reflect.set(window, "laminateFlatSettled", false);
+    window.laminateFlatSettled = false;
     void whenStickerSettled(canvas, { normal: undefined }).then(
-      () => Reflect.set(window, "laminateFlatSettled", true),
-      (error: unknown) => Reflect.set(window, "laminateFlatSettled", { error }),
+      () => {
+        window.laminateFlatSettled = true;
+      },
+      (error: unknown) => {
+        window.laminateFlatSettled = { error };
+      },
     );
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-    );
+    await twoFrames();
   });
   expect(await settlementFlag(page, "laminateFlatSettled")).toBe(false);
   await page.evaluate(() => window.laminateFixture.update({ normal: undefined }));
@@ -1108,48 +1055,41 @@ test("baseline normal settlement does not wait for a later sharp print upgrade",
   await page.goto("/e2e/stickerLaminate.html?reload=1");
   const coat = page.locator("[data-reload] canvas.sticker-material");
   await expect(coat).toHaveAttribute("data-state", "ready");
-  let release: () => void = () => {};
-  let requested: () => void = () => {};
-  const started = new Promise<void>((resolve) => {
-    requested = resolve;
-  });
-  await page.route("**/future-sharp-print.svg", async (route) => {
-    await new Promise<void>((resolve) => {
-      release = resolve;
-      requested();
-    });
-    await route.fulfill({
-      contentType: "image/svg+xml",
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><rect width="240" height="240" fill="gray"/></svg>',
-    });
-  });
+  const print = await holdRoute(page, "**/future-sharp-print.svg", () => solidSvg("gray"));
   await page.evaluate(() => window.laminateFixture.update({ print: "/future-sharp-print.svg" }));
-  await started;
+  await print.requested;
   try {
     await page.evaluate(async () => {
       const { whenStickerSettled } = await import("../src/stickers/stickerRenderer.ts");
+      const { twoFrames } = await import("./stickerMaterialFixture.ts");
       const canvas = document.querySelector("[data-reload] canvas.sticker-material");
       if (!(canvas instanceof HTMLCanvasElement))
         throw new Error("The coating snapshot is missing");
-      Reflect.set(window, "laminateBaselineSettled", false);
-      Reflect.set(window, "laminateCurrentSettled", false);
+      window.laminateBaselineSettled = false;
+      window.laminateCurrentSettled = false;
       void whenStickerSettled(canvas, { normal: undefined }).then(
-        () => Reflect.set(window, "laminateBaselineSettled", true),
-        (error: unknown) => Reflect.set(window, "laminateBaselineSettled", { error }),
+        () => {
+          window.laminateBaselineSettled = true;
+        },
+        (error: unknown) => {
+          window.laminateBaselineSettled = { error };
+        },
       );
       void whenStickerSettled(canvas).then(
-        () => Reflect.set(window, "laminateCurrentSettled", true),
-        (error: unknown) => Reflect.set(window, "laminateCurrentSettled", { error }),
+        () => {
+          window.laminateCurrentSettled = true;
+        },
+        (error: unknown) => {
+          window.laminateCurrentSettled = { error };
+        },
       );
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      );
+      await twoFrames();
     });
     expect(await settlementFlag(page, "laminateBaselineSettled")).toBe(true);
     expect(await settlementFlag(page, "laminateCurrentSettled")).toBe(false);
     await expect(coat).toHaveAttribute("data-state", "ready");
   } finally {
-    release();
+    print.release();
   }
   await expect.poll(() => settlementFlag(page, "laminateCurrentSettled")).toBe(true);
 });
@@ -1157,18 +1097,14 @@ test("baseline normal settlement does not wait for a later sharp print upgrade",
 test("canceling deferred material settlement and reporting initial failure both release the wait", async ({
   page,
 }) => {
-  await page.route("**/e2e/stickerLaminate.html", (route) =>
-    route.fulfill({
-      contentType: "text/html",
-      body: '<meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div>',
-    }),
-  );
+  await emptyLaminatePage(page);
   await page.route("**/settlement-failed.svg", (route) =>
     route.fulfill({ status: 503, body: "The initial print failed" }),
   );
   await page.goto("/e2e/stickerLaminate.html");
   const result = await page.evaluate(async () => {
     const material = await import("../src/stickers/stickerRenderer.ts");
+    const { twoFrames } = await import("./stickerMaterialFixture.ts");
     const settle: unknown = Reflect.get(material, "whenStickerSettled");
     if (typeof settle !== "function") return { available: false };
     const original = window.fetch;
@@ -1199,9 +1135,7 @@ test("canceling deferred material settlement and reporting initial failure both 
     const canceledObservation = canceled.then(() => {
       canceledFinished = true;
     });
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-    );
+    await twoFrames();
     const deferred = { canceledFinished, fetches };
     controller.abort();
     await canceledObservation;
@@ -1284,37 +1218,16 @@ test("failed or superseded crease normals preserve the last ready material", asy
   await expect(coat).toHaveAttribute("data-state", "ready");
   await expect(image).toHaveCSS("visibility", "hidden");
   expect(await snapshot()).toBe(initial);
-  let releaseOld: () => void = () => {
-    throw new Error("The pending normal has not started");
-  };
-  let requested: () => void = () => {};
-  const oldStarted = new Promise<void>((resolve) => {
-    requested = resolve;
-  });
-  await page.route("**/superseded-normal.svg", async (route) => {
-    await new Promise<void>((resolve) => {
-      releaseOld = resolve;
-      requested();
-    });
-    await route.fulfill({
-      contentType: "image/svg+xml",
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><rect width="240" height="240" fill="rgb(80,128,245)"/></svg>',
-    });
-  });
-  await page.route("**/latest-normal.svg", (route) =>
-    route.fulfill({
-      contentType: "image/svg+xml",
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><rect width="240" height="240" fill="rgb(175,128,245)"/></svg>',
-    }),
-  );
+  const old = await holdRoute(page, "**/superseded-normal.svg", () => solidSvg("rgb(80,128,245)"));
+  await page.route("**/latest-normal.svg", (route) => route.fulfill(solidSvg("rgb(175,128,245)")));
   await page.evaluate(() => window.laminateFixture.update({ normal: "/superseded-normal.svg" }));
-  await oldStarted;
+  await old.requested;
   try {
     await page.evaluate(() => window.laminateFixture.update({ normal: "/latest-normal.svg" }));
     await expect(coat).not.toHaveAttribute("data-error");
     await expect.poll(snapshot).not.toBe(initial);
     const latest = await snapshot();
-    releaseOld();
+    old.release();
     await page.waitForTimeout(100);
     expect(await snapshot(), "A superseded normal must not overwrite the latest material").toBe(
       latest,
@@ -1351,7 +1264,7 @@ test("failed or superseded crease normals preserve the last ready material", asy
       0.001,
     );
   } finally {
-    releaseOld();
+    old.release();
   }
 });
 
@@ -1363,9 +1276,9 @@ test("an initial crease normal is ready before the first laminate snapshot appea
     window.fetch = async (...args) => {
       const response = await original(...args);
       if (typeof args[0] === "string" && args[0].startsWith("data:image/png")) {
-        Reflect.set(window, "laminateInitialNormalRequested", true);
+        window.laminateInitialNormalRequested = true;
         await new Promise<void>((resolve) => {
-          Reflect.set(window, "laminateReleaseInitialNormal", resolve);
+          window.laminateReleaseInitialNormal = resolve;
         });
       }
       return response;
@@ -1374,12 +1287,7 @@ test("an initial crease normal is ready before the first laminate snapshot appea
   await page.goto("/e2e/stickerLaminate.html?ramp=1");
   const coat = page.locator("[data-ramp] canvas.sticker-material");
   await expect
-    .poll(() =>
-      page.evaluate(() => {
-        const requested: unknown = Reflect.get(window, "laminateInitialNormalRequested");
-        return requested === true;
-      }),
-    )
+    .poll(() => page.evaluate(() => window.laminateInitialNormalRequested === true))
     .toBe(true);
   await expect(page.locator("[data-white] canvas.sticker-material")).toHaveAttribute(
     "data-state",
@@ -1389,9 +1297,9 @@ test("an initial crease normal is ready before the first laminate snapshot appea
     await expect(coat).toHaveAttribute("data-state", "loading");
   } finally {
     await page.evaluate(() => {
-      const release: unknown = Reflect.get(window, "laminateReleaseInitialNormal");
-      if (typeof release !== "function") throw new Error("The initial normal request was not held");
-      Reflect.apply(release, undefined, []);
+      const release = window.laminateReleaseInitialNormal;
+      if (!release) throw new Error("The initial normal request was not held");
+      release();
     });
   }
   await expect(coat).toHaveAttribute("data-state", "ready");
@@ -1435,7 +1343,7 @@ test("a crease normal replacement retains the ready laminate and its print and c
   const resources = await page.evaluate(async () => {
     const gpu = new WeakSet<HTMLCanvasElement>();
     const observations = { fetches: 0, contexts: 0 };
-    Reflect.set(window, "laminateReplacementResources", observations);
+    window.laminateReplacementResources = observations;
     const fetchSource = window.fetch;
     window.fetch = (...args) => {
       observations.fetches++;
@@ -1458,49 +1366,26 @@ test("a crease normal replacement retains the ready laminate and its print and c
   });
   expect(resources).toEqual({ fetches: 0, contexts: 0 });
   for (const kind of ["normal", "print"] as const) {
-    let finish: () => void = () => {
-      throw new Error("The replacement request has not started");
-    };
-    let requested: () => void = () => {};
-    const request = new Promise<void>((resolve) => {
-      requested = resolve;
-    });
-    let firstRequest = true;
-    await page.route(`**/replacement-${kind}.svg`, async (route) => {
-      if (firstRequest) {
-        firstRequest = false;
-        await new Promise<void>((resolve) => {
-          finish = resolve;
-          requested();
-        });
-      }
-      await route.fulfill({
-        contentType: "image/svg+xml",
-        body: `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><rect width="240" height="240" fill="${kind === "normal" ? "rgb(128,128,255)" : "white"}"/></svg>`,
-      });
-    });
+    const replacement = await holdRoute(page, `**/replacement-${kind}.svg`, () =>
+      solidSvg(kind === "normal" ? "rgb(128,128,255)" : "white"),
+    );
     await page.evaluate(
       (kind) => window.laminateFixture.update({ [kind]: `/replacement-${kind}.svg` }),
       kind,
     );
-    await request;
+    await replacement.requested;
     try {
       await expect(coat).toHaveAttribute("data-state", "ready");
       await expect(image).toHaveCSS("visibility", "hidden");
       if (kind === "normal") {
-        expect(
-          await page.evaluate(() => {
-            const resources: unknown = Reflect.get(window, "laminateReplacementResources");
-            return resources;
-          }),
-        ).toEqual({
+        expect(await page.evaluate(() => window.laminateReplacementResources)).toEqual({
           fetches: 1,
           contexts: 0,
         });
       }
       expect(await page.evaluate(() => window.laminateFixture.getPose())).toEqual(pose);
     } finally {
-      finish();
+      replacement.release();
     }
     await expect(coat).toHaveAttribute("data-state", "ready");
     await expect(image).toHaveCSS("visibility", "hidden");
@@ -1533,15 +1418,10 @@ test("a sticker entering the viewport samples its held laminate without new ligh
 });
 
 test("laminate initialization failure releases every allocated GPU context", async ({ page }) => {
-  await page.route("**/e2e/stickerLaminate.html", (route) =>
-    route.fulfill({
-      contentType: "text/html",
-      body: '<meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div>',
-    }),
-  );
+  await emptyLaminatePage(page);
   await page.addInitScript(() => {
     const contexts: WebGLRenderingContext[] = [];
-    Reflect.set(window, "laminateInitContexts", contexts);
+    window.laminateInitContexts = contexts;
     const read: unknown = Reflect.get(HTMLCanvasElement.prototype, "getContext");
     if (typeof read !== "function") throw new Error("The browser canvas context method is missing");
     Object.defineProperty(HTMLCanvasElement.prototype, "getContext", {
@@ -1589,13 +1469,9 @@ test("laminate initialization failure releases every allocated GPU context", asy
   await expect
     .poll(() =>
       page.evaluate(() => {
-        const contexts: unknown = Reflect.get(window, "laminateInitContexts");
-        if (!Array.isArray(contexts)) throw new Error("The allocated contexts were not captured");
-        return contexts.map((context: unknown) => {
-          if (!(context instanceof WebGLRenderingContext))
-            throw new Error("An allocated context is missing");
-          return context.isContextLost();
-        });
+        const contexts = window.laminateInitContexts;
+        if (!contexts) throw new Error("The allocated contexts were not captured");
+        return contexts.map((context) => context.isContextLost());
       }),
     )
     .toEqual([true, true, true]);
@@ -1606,7 +1482,7 @@ test("live material copies own their pose and discard all pixels when the source
 }) => {
   await page.goto("/e2e/stickerLaminate.html?board=1");
   const observed = await page.evaluate(async () => {
-    const { required } = await import("./stickerMaterialFixture.ts");
+    const { required, solidPng } = await import("./stickerMaterialFixture.ts");
     const api = await import("../src/stickers/stickerRenderer.ts");
     const source = required(document.querySelector<HTMLCanvasElement>("canvas.sticker-material"));
     await api.whenStickerSettled(source, undefined, AbortSignal.timeout(5000));
@@ -1634,10 +1510,7 @@ test("live material copies own their pose and discard all pixels when the source
     const isolated = document.createElement("canvas");
     isolated.style.cssText = "width:32px;height:32px";
     host.append(isolated);
-    const image = document.createElement("canvas");
-    image.width = image.height = 32;
-    required(image.getContext("2d")).fillRect(0, 0, 32, 32);
-    const url = image.toDataURL();
+    const url = solidPng(32, 32, "black");
     const stopSource = api.mountSticker(isolated, {
       print: url,
       cut: url,
@@ -1673,225 +1546,4 @@ test("live material copies own their pose and discard all pixels when the source
   expect(observed.sourceTurn).toBe(0);
   expect(observed.invalidated).toBe(true);
   expect(observed.width * observed.height).toBe(0);
-});
-
-test("required foil generations delay baseline settlement and reject failed or superseded masks", async ({
-  page,
-}) => {
-  let answer: (() => void) | undefined;
-  await page.route("**/required-outer.svg", async (route) => {
-    await new Promise<void>((resolve) => {
-      answer = resolve;
-    });
-    await route.fulfill({ status: 503, body: "outer coverage unavailable" });
-  });
-  await page.goto("/e2e/stickerLaminate.html?board=1");
-  await page.evaluate(async () => {
-    const { required } = await import("./stickerMaterialFixture.ts");
-    const api = await import("../src/stickers/stickerRenderer.ts");
-    const c = document.createElement("canvas");
-    c.id = "required-finish";
-    c.style.cssText = "position:absolute;left:20px;top:20px;width:80px;height:80px";
-    document.body.append(c);
-    const image = document.createElement("canvas");
-    image.width = image.height = 80;
-    const context = required(image.getContext("2d"));
-    context.fillStyle = "white";
-    context.fillRect(10, 10, 60, 60);
-    const cut = image.toDataURL();
-    c.dataset.cut = cut;
-    const material = { print: cut, cut, turn: 0, finish: "gloss" as const };
-    api.mountSticker(c, material);
-    await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
-    c.dataset.before = c.toDataURL();
-    api.updateSticker(c, {
-      ...material,
-      foil: { style: "pink", size: "board", mask: "/required-outer.svg" },
-    });
-    void api.whenStickerSettled(c, {}, AbortSignal.timeout(5000)).then(() => {
-      c.dataset.settled = "true";
-    });
-  });
-  await expect.poll(() => Boolean(answer)).toBe(true);
-  const c = page.locator("#required-finish");
-  await expect(c).not.toHaveAttribute("data-settled", "true");
-  expect(
-    await c.evaluate(
-      (el) => el instanceof HTMLCanvasElement && el.toDataURL() === el.dataset.before,
-    ),
-  ).toBe(true);
-  answer?.();
-  await expect(c).toHaveAttribute("data-settled", "true");
-  await expect(c).toHaveAttribute("data-error", /outer coverage/);
-  expect(
-    await c.evaluate(
-      (el) => el instanceof HTMLCanvasElement && el.toDataURL() === el.dataset.before,
-    ),
-  ).toBe(true);
-
-  let finishStale: (() => void) | undefined;
-  await page.route("**/superseded-outer.svg", async (route) => {
-    await new Promise<void>((resolve) => {
-      finishStale = resolve;
-    });
-    await route.fulfill({
-      contentType: "image/svg+xml",
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="80" height="80" fill="white"/></svg>',
-    });
-  });
-  await c.evaluate(async (el) => {
-    if (!(el instanceof HTMLCanvasElement) || !el.dataset.cut)
-      throw new Error("Required finish is missing");
-    const api = await import("../src/stickers/stickerRenderer.ts");
-    api.updateSticker(el, {
-      print: el.dataset.cut,
-      cut: el.dataset.cut,
-      finish: "gloss",
-      foil: { style: "pink", size: "board", mask: "/superseded-outer.svg" },
-    });
-    el.dataset.settled = "false";
-    void api.whenStickerSettled(el, {}, AbortSignal.timeout(5000)).then(() => {
-      el.dataset.settled = "true";
-    });
-  });
-  await expect.poll(() => Boolean(finishStale)).toBe(true);
-  await expect(c).toHaveAttribute("data-settled", "false");
-  await c.evaluate(async (el) => {
-    if (!(el instanceof HTMLCanvasElement) || !el.dataset.cut)
-      throw new Error("Required finish is missing");
-    const api = await import("../src/stickers/stickerRenderer.ts");
-    api.updateSticker(el, {
-      print: el.dataset.cut,
-      cut: el.dataset.cut,
-      finish: "gloss",
-      foil: { style: "silver", size: "board", mask: el.dataset.cut },
-    });
-    await api.whenStickerSettled(el, undefined, AbortSignal.timeout(5000));
-    el.dataset.before = el.toDataURL();
-  });
-  finishStale?.();
-  await c.evaluate(async (el) => {
-    if (!(el instanceof HTMLCanvasElement)) throw new Error("Required finish is missing");
-    const api = await import("../src/stickers/stickerRenderer.ts");
-    api.refreshSticker(el);
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-    );
-  });
-  expect(
-    await c.evaluate(
-      (el) => el instanceof HTMLCanvasElement && el.toDataURL() === el.dataset.before,
-    ),
-  ).toBe(true);
-  await expect(c).not.toHaveAttribute("data-error", /.+/);
-});
-
-test("complete foil survives the matching flat and bent reveal and a restored GPU context", async ({
-  page,
-}) => {
-  await page.addInitScript(() => {
-    const native: unknown = Object.getOwnPropertyDescriptor(
-      HTMLCanvasElement.prototype,
-      "getContext",
-    )?.value;
-    if (typeof native !== "function") throw new Error("Canvas context factory is unavailable");
-    const contexts: WebGLRenderingContext[] = [];
-    Reflect.set(window, "finishContexts", contexts);
-    Object.defineProperty(HTMLCanvasElement.prototype, "getContext", {
-      value: function (this: HTMLCanvasElement, ...args: unknown[]) {
-        const result: unknown = Reflect.apply(native, this, args);
-        if (result instanceof WebGLRenderingContext) contexts.push(result);
-        return result;
-      },
-      configurable: true,
-      writable: true,
-    });
-  });
-  await page.goto("/e2e/stickerLaminate.html?board=1");
-  const revealed = await page.evaluate(async () => {
-    const { required } = await import("./stickerMaterialFixture.ts");
-    const api = await import("../src/stickers/stickerRenderer.ts");
-    const host = document.createElement("div");
-    host.id = "reveal-complete";
-    host.className = "sticker-material-surface";
-    host.style.cssText = "position:absolute;left:30px;top:30px;width:80px;height:80px";
-    host.innerHTML =
-      '<span class="crease-reveal-frame sticker-material-bend"><span class="crease-reveal-content"><canvas class="sticker-material"></canvas></span></span>';
-    document.body.append(host);
-    const c = required(host.querySelector("canvas"));
-    const image = document.createElement("canvas");
-    image.width = image.height = 80;
-    const cx = required(image.getContext("2d"));
-    cx.fillStyle = "white";
-    cx.fillRect(20, 20, 40, 40);
-    const cut = image.toDataURL();
-    cx.fillRect(10, 10, 60, 60);
-    const outer = image.toDataURL();
-    cx.fillStyle = "rgb(128,128,255)";
-    cx.fillRect(0, 0, 80, 80);
-    const normal = image.toDataURL();
-    let flatAlpha = 0,
-      bentAlpha = 0;
-    const material = {
-      print: cut,
-      cut,
-      finish: "gloss" as const,
-      foil: { style: "silver" as const, size: "board" as const, mask: outer },
-    };
-    c.dataset.print = cut;
-    c.dataset.outer = outer;
-    c.dataset.normal = normal;
-    api.mountSticker(c, {
-      ...material,
-      turn: 0,
-      canRevealCrease: () => true,
-      startCreaseReveal: () => true,
-      onCreaseProgress: (_normal, progress) => {
-        const flat = host.querySelector<HTMLCanvasElement>(".sticker-material-flat");
-        if (progress !== 0 || !flat) return;
-        flatAlpha = required(flat.getContext("2d")).getImageData(
-          (flat.width * 15) / 80,
-          flat.height / 2,
-          1,
-          1,
-        ).data[3];
-        bentAlpha = required(c.getContext("2d")).getImageData(
-          (c.width * 15) / 80,
-          c.height / 2,
-          1,
-          1,
-        ).data[3];
-      },
-    });
-    await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
-    api.updateSticker(c, { ...material, normal });
-    await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
-    c.dataset.before = c.toDataURL();
-    return { flatAlpha, bentAlpha };
-  });
-  expect(revealed).toEqual({ flatAlpha: 255, bentAlpha: 255 });
-  const host = page.locator("#reveal-complete");
-  await expect(host.locator(".sticker-material-flat")).toHaveCount(0);
-  await page.evaluate(() => {
-    const contexts: unknown = Reflect.get(window, "finishContexts");
-    if (!Array.isArray(contexts) || !(contexts[0] instanceof WebGLRenderingContext))
-      throw new Error("Shared finish context missing");
-    const extension = contexts[0].getExtension("WEBGL_lose_context");
-    if (!extension) throw new Error("Context restoration test extension unavailable");
-    Reflect.set(window, "restoreFinish", () => extension.restoreContext());
-    extension.loseContext();
-  });
-  const output = host.locator("canvas.sticker-material");
-  await expect(output).toHaveAttribute("data-state", "failed");
-  await page.evaluate(() => {
-    const restore: unknown = Reflect.get(window, "restoreFinish");
-    if (typeof restore !== "function") throw new Error("Context restore callback missing");
-    Reflect.apply(restore, undefined, []);
-  });
-  await expect(output).toHaveAttribute("data-state", "ready");
-  expect(
-    await output.evaluate(
-      (el) => el instanceof HTMLCanvasElement && el.toDataURL() === el.dataset.before,
-    ),
-  ).toBe(true);
 });
