@@ -1,6 +1,6 @@
-# Sticker foil research and proposed direction
+# Sticker foil research history
 
-Research date: October 13, 2026. This document records evidence and approaches considered. The selected proposal is in the [sticker foil design](../../superpowers/specs/2026-10-13-sticker-foil-design.md), pending written-spec approval. No product behavior changed during this investigation.
+This document records the evidence and approaches considered before the foil material was built. The baseline and options below are historical; the shipped model is described in `apps/frontend/src/stickers/foilShader.ts` and [the laminate notes](../sticker-laminate/README.md).
 
 ## Intended result
 
@@ -89,9 +89,9 @@ Motion asset: https://stickerapp.com/media/x/086f3dc49d/holo-arcade-clip4-hologr
 
 Same-name JSON files beside these screenshots retain source and playback metadata. White-background sliding demonstrations were treated as product animations, not confirmed physical samples. No controlled handheld tilt reference was obtained. A physical swatch under known illumination would be needed for numerical material calibration.
 
-## Why the current foil looks separate from the material
+## October 13 baseline: why foil looked separate from the material
 
-The current effect follows the shared pose, so it is not an independent timer. Its limitation is the response to that pose:
+The inspected baseline effect followed the shared pose, so it is not an independent timer. Its limitation is the response to that pose:
 
 - `apps/frontend/src/stickers/sticker-foil.css` draws two opaque white linear strips for Kyoto Seika Practice Mode foil. Pose translates them; their shape and intensity remain fixed. A separate radial glare sits above the screentone.
 - Light and dense dot patterns blend through an angle-dependent mask. This changes apparent printed coverage as the light turns. Actual printed dots remain fixed, though glare can reduce their visible contrast.
@@ -99,7 +99,7 @@ The current effect follows the shared pose, so it is not an independent timer. I
 - `StickerFoil.tsx` accepts a turn and tone but receives neither the crease normal nor live lift tilt. `laminateShader.ts` already has both geometric normals and an actual reflected rectangular source.
 - `light.ts` publishes one smoothed orientation to both effects. The needed correction is downstream material rendering, not another sensor listener or animation clock.
 
-An existing fixture was inspected at three device poses. The two white strips moved across the foil while their gradient remained unchanged; laminate reflection changed through its surface calculation. The captured poses and browser inspection reported no page errors. This establishes the current behavior, not validation of a replacement.
+An existing fixture was inspected at three device poses. The two white strips moved across the foil while their gradient remained unchanged; laminate reflection changed through its surface calculation. The captured poses and browser inspection reported no page errors. This establishes the inspected historical baseline, not validation of the replacement.
 
 Several consumers also need attention if the new finish is to remain consistent:
 
@@ -189,7 +189,7 @@ A = Ap + (1 - Ap) * Af
 
 Do not replace this with simple subtraction of cut alpha from foil alpha. Zero output alpha must produce zero RGB. Optical layers are calculated in linear light; this final coverage composition preserves the existing display-space edge representation. The precise combined-output interface belongs in the approved spec; this document does not prescribe implementation identifiers.
 
-Keep the existing cast/mask silhouette authoritative. Remove obsolete animated strips and visible grating when the replacement ships; do not maintain two competing live algorithms. Any failure fallback should retain the last complete finish or show a coherent static material, with the existing surfaced diagnostics.
+Keep the existing cast/mask silhouette authoritative. Remove obsolete animated strips and visible grating when the replacement ships; do not maintain two competing live algorithms. Any failure fallback should retain the last complete material or show a coherent static material, with the existing surfaced diagnostics.
 
 ## Proposed sequence and acceptance
 
@@ -206,13 +206,11 @@ Required checks:
 - Crease ramps bend highlights in the same direction as laminate; raised plateaus stay flat. Foil and paper share registered normals and fractional-edge coverage.
 - Black ink remains legible; Kyoto Seika foil remains manga screentone; pink remains distinct; holo respects the complete allowed hue path. Artist artwork retains its existing color and contrast.
 - Fractional scale, 2×/3× device pixel ratios, and minification do not produce dot moiré, color flicker, white seams, or mask halos. Filter both print coverage and angular diffraction response.
-- Board dragging, sheet peel, detail lift, sealing, and receiving retain live finishes. Covering/re-exposing, failed images/normals, context loss, and canceled work preserve existing diagnostics and ownership rules.
+- Board dragging, sheet peel, detail lift, sealing, and receiving retain live materials. Covering/re-exposing, failed images/normals, context loss, and canceled work preserve existing diagnostics and ownership rules.
 - Reuse the established hardware frame gates, including p95 ≤16.7 ms and maximum ≤50 ms. Record sustained loaded-board and lifted-detail motion on physical iPhone/iPad and LINE. Desktop or simulator success cannot qualify those devices or 120 Hz operation.
 
 ## Assumptions and unresolved measurements
 
 The selected physical foil stock is unspecified. Grating spacing/orientation/profile, roughness, diffraction efficiencies, dye absorption, and laminate index are therefore calibration parameters, not sourced product facts. A clear coat near index 1.5 and aluminum-like reflection are plausible starting references. Detailed coating refraction, internal reflections, polarization, and microscopic ink relief are initially simplified.
 
-The source demonstrations do not supply calibrated angles, lighting, exposure, or manufacturing recipes. The proposed diffraction lookup and sample budget need independent comparison and phone testing. The proposed shared display transform needs a paper-preservation decision based on actual reference frames. A physical swatch can refine these assumptions later; it is not necessary to replace the current translated-strip model with a coherent material response.
-
-The research is complete. The rendering direction, shared interface, calibration tolerances, and execution details remain proposals for Superpowers design review.
+The source demonstrations supplied no calibrated angles, lighting, exposure, or manufacturing recipes, so the shipped foil is an authored look rather than a measured stock. Physical swatch and phone qualification remain open.
