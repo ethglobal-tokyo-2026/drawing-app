@@ -39,6 +39,9 @@ test("the iPad tray enlarges sticker previews by a quarter in both orientations 
   const zipper = page.getByRole("button", {
     name: startsWith(say(stickerBoard.tray.zipper, language)),
   });
+  // Remove opens the shut tray for the sticker's ride and zips it shut once it lands: opened before
+  // that, it would shut under the checks below.
+  await expect(zipper).toHaveAttribute("aria-expanded", "false");
   await zipper.press("ArrowDown");
   await expect(zipper).toHaveAttribute("aria-expanded", "true");
   const front = page.locator(".tray__stack .tray__sheet.is-top");
@@ -52,13 +55,9 @@ test("the iPad tray enlarges sticker previews by a quarter in both orientations 
     ["landscape", { width: ipad.viewport.height, height: ipad.viewport.width }],
   ] as const) {
     await page.setViewportSize(viewport);
-    await expect(slots).toHaveCount(2);
-    await expect
-      .poll(async () => (await previewSize(slots.nth(0))).w)
-      .toBeCloseTo(sizes[0].w * 1.25, 0);
-    // The board can rebuild its tray while the other layout initializes; ArrowDown opens either state.
-    await zipper.press("ArrowDown");
+    // The open tray stays open as the screen turns.
     await expect(zipper).toHaveAttribute("aria-expanded", "true");
+    await expect(slots).toHaveCount(2);
     for (const [i, before] of sizes.entries()) {
       const slot = slots.nth(i);
       await expect.poll(async () => (await previewSize(slot)).w).toBeCloseTo(before.w * 1.25, 0);
@@ -78,7 +77,6 @@ test("the iPad tray enlarges sticker previews by a quarter in both orientations 
   await expect
     .poll(async () => (await previewSize(slots.nth(0))).w)
     .toBeCloseTo(sizes[0].w * 1.25, 0);
-  await zipper.press("ArrowDown");
   await expect(zipper).toHaveAttribute("aria-expanded", "true");
   await slots.nth(0).tap();
   await expect(boardSticker(page, language, nos[0])).toBeVisible();
