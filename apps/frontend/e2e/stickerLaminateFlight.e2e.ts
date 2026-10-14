@@ -24,33 +24,67 @@ import {
 } from "./helpers.ts";
 import { hand, FINGERTIP } from "./pen.ts";
 import { ipad } from "./ipad.ts";
+import {
+  holdFlights,
+  holdFlyers,
+  holdRoute,
+  land,
+  solidSvg,
+  waitTwoFrames,
+  type watchCoverageJobs,
+} from "./stickerMaterialFixture.ts";
+
+declare global {
+  interface Window {
+    /** Holds one of the source's two foil consumers back from a new generation. */
+    flightGenerationHold?: { waiting: number; release: () => void };
+    /** The flyer finish whose committed foil a generation test keeps checking. */
+    flightCopiedFinish?: HTMLCanvasElement;
+    /** The flyer finish a Page or Cancel test released. */
+    flightReleasedFinish?: HTMLCanvasElement;
+    /** The board sticker's pixels in the first frame its return uncovers. */
+    flightFirstVisibleReturn?: string;
+    /** The tray flyer's first committed peel, against its slot's pixels. */
+    flightFirstPeelCommit?: { state?: string; samePixels: boolean; width: number; height: number };
+    flightPeelGpu?: WebGLRenderingContext;
+    flightRestorePeel?: () => void;
+    flightPeelCoverage?: ReturnType<typeof watchCoverageJobs>;
+    /** How many times a cast was pointed at a coverage mask. */
+    flightCastWrites?: number;
+  }
+}
 
 test.use(ipad);
 test.beforeEach(async ({ page }) => observeStickerHardware(page));
 
-/** Holds every flyer with this class 100 ms into its flight, until the test finishes it. */
-function holdFlyers(flyer: string) {
-  const animate: unknown = Reflect.get(Element.prototype, "animate");
-  if (typeof animate !== "function") throw new Error("The native flight animation is missing");
-  Element.prototype.animate = function (frames, timing) {
-    const animation: unknown = Reflect.apply(animate, this, [frames, timing]);
-    if (!(animation instanceof Animation))
-      throw new Error("The native flight animation was not created");
-    if (this.classList.contains(flyer)) {
-      animation.pause();
-      animation.currentTime = 100;
-    }
-    return animation;
-  };
-}
-/** Holds those flyers on every page this test opens. */
-const holdFlights = (page: Page, flyer: "detail-lift__flyer" | "tray__flyer") =>
-  page.addInitScript(holdFlyers, flyer);
-
-/** Lets a held flyer's flight finish. */
-const land = (flyer: Locator) =>
-  flyer.evaluate((el) => {
-    for (const animation of el.getAnimations()) animation.finish();
+/** A figure's foil cast, and what its finish's committed descriptor says the cast should show. */
+const castAndCommitted = (figure: Locator) =>
+  figure.evaluate(async (root) => {
+    const { stickerFoilCoverage } = await import("../src/stickers/stickerRenderer.ts");
+    const finish = root.querySelector<HTMLCanvasElement>("canvas.sticker-material");
+    const cast = root.querySelector<HTMLElement>(".sticker-foil");
+    const committed = finish && stickerFoilCoverage(finish);
+    if (!committed || !cast) throw new Error("The committed foil or its cast is missing");
+    const c = committed.coverage;
+    return {
+      cast: {
+        mask: cast.style.getPropertyValue("--foil-coverage"),
+        box: ["--foil-left", "--foil-top", "--foil-width", "--foil-height"].map((key) =>
+          cast.style.getPropertyValue(key),
+        ),
+        pink: cast.classList.contains("sticker-foil--pink"),
+      },
+      committed: {
+        mask: `url("${c.mask}")`,
+        box: [
+          (100 * c.x) / c.sourceWidth,
+          (100 * c.y) / c.sourceHeight,
+          (100 * c.width) / c.sourceWidth,
+          (100 * c.height) / c.sourceHeight,
+        ].map((value) => `${value}%`),
+        pink: committed.material.style === "pink",
+      },
+    };
   });
 
 test("a sticker tapped on its sheet flies to the board on a copy of its material", async ({
@@ -216,6 +250,8 @@ test("foil outside paper stays live through reversed lifts and source concealmen
 test("a covered board destination has the held pose before its first visible return frame", async ({
   page,
 }) => {
+  await holdFlights(page, "detail-lift__flyer");
+  // The origin's hide ends by canceling its animation: that frame is the first one uncovered.
   await page.addInitScript(() => {
     const animate: unknown = Reflect.get(Element.prototype, "animate");
     if (typeof animate !== "function") throw new Error("The native flight animation is missing");
@@ -223,16 +259,12 @@ test("a covered board destination has the held pose before its first visible ret
       const animation: unknown = Reflect.apply(animate, this, [frames, timing]);
       if (!(animation instanceof Animation))
         throw new Error("The native flight animation was not created");
-      if (this.classList.contains("detail-lift__flyer")) {
-        animation.pause();
-        animation.currentTime = 100;
-      }
       if (this.hasAttribute("data-lift-origin")) {
         const cancel = animation.cancel.bind(animation);
         animation.cancel = () => {
           const canvas = this.querySelector("canvas.sticker-material");
           if (canvas instanceof HTMLCanvasElement)
-            Reflect.set(window, "firstVisibleReturn", canvas.toDataURL());
+            window.flightFirstVisibleReturn = canvas.toDataURL();
           cancel();
         };
       }
@@ -278,18 +310,12 @@ test("a covered board destination has the held pose before its first visible ret
   });
   await expect(page.locator("[data-lift-view], .detail-lift__flyer")).toHaveCount(0);
   const exposed = await page.evaluate(() => {
-    const result: unknown = Reflect.get(window, "firstVisibleReturn");
-    if (typeof result !== "string") throw new Error("The first visible return was not captured");
+    const result = window.flightFirstVisibleReturn;
+    if (result === undefined) throw new Error("The first visible return was not captured");
     return result;
   });
-  expect(exposed).toBeDefined();
   expect(exposed).not.toBe(before);
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      ),
-  );
+  await waitTwoFrames(page);
   expect(
     await board.evaluate((canvas) => {
       if (!(canvas instanceof HTMLCanvasElement))
@@ -303,33 +329,44 @@ for (const action of ["Page fixture", "Cancel fixture"] as const) {
   test(`${action} releases the whole live lift owner and prevents obsolete landing`, async ({
     page,
   }) => {
-    await holdFlights(page, "detail-lift__flyer");
-    await page.goto("/e2e/stickerLaminate.html?lift=1&foil=1");
+    const detailFoil = await holdRoute(page, "**/delayed-detail-foil.svg", () => solidSvg("white"));
+    await page.goto("/e2e/stickerLaminate.html?lift=1&foil=1&delayedDetail=1");
     await expect(page.locator("[data-lift-origin] canvas.sticker-material")).toHaveAttribute(
       "data-state",
       "ready",
     );
     await page.getByRole("button", { name: "Open fixture", exact: true }).click();
-    await expect(page.locator(".detail-lift__flyer")).toHaveCount(1);
-    await page
-      .locator(".detail-lift__flyer canvas.sticker-material")
-      .evaluate((canvas) => Reflect.set(window, "pagedFlyer", canvas));
+    await detailFoil.requested;
+    // Forward movement ends while the detail's material loads: the lift waits there to land.
+    await page.locator(".detail-lift__flyer").evaluate(async (el) => {
+      await Promise.all(el.getAnimations().map((animation) => animation.finished));
+      const canvas = el.querySelector("canvas.sticker-material");
+      if (!(canvas instanceof HTMLCanvasElement)) throw new Error("The pending lift is missing");
+      window.flightReleasedFinish = canvas;
+    });
     await page.getByRole("button", { name: action, exact: true }).click();
     await expect(page.locator(".detail-lift__flyer, .detail-lift__flyer img")).toHaveCount(0);
-    expect(
-      await page.evaluate(() => {
-        const canvas: unknown = Reflect.get(window, "pagedFlyer");
-        if (!(canvas instanceof HTMLCanvasElement))
-          throw new Error("The retained paged flyer is missing");
-        return { connected: canvas.isConnected, pixels: canvas.width * canvas.height };
-      }),
-    ).toEqual({ connected: false, pixels: 0 });
+    // The late settlement the released lift was waiting on must not land it.
+    detailFoil.release();
     if (action === "Page fixture")
       await expect(page.locator("[data-lift-view] canvas.sticker-material")).toHaveAttribute(
         "data-state",
         "ready",
       );
     else await expect(page.locator("[data-lift-view]")).toHaveCount(0);
+    expect(
+      await page.evaluate(async () => {
+        const { stickerFoilCoverage } = await import("../src/stickers/stickerRenderer.ts");
+        const canvas = window.flightReleasedFinish;
+        if (!canvas) throw new Error("The released lift's finish is missing");
+        return {
+          connected: canvas.isConnected,
+          pixels: canvas.width * canvas.height,
+          coverage: stickerFoilCoverage(canvas),
+        };
+      }),
+    ).toEqual({ connected: false, pixels: 0, coverage: undefined });
+    await expect(page.locator(".detail-lift__flyer")).toHaveCount(0);
   });
 }
 
@@ -354,12 +391,12 @@ test("pink foil stays live outside paper while a tray sticker curls, peels, and 
         ".tray__flyer canvas.sticker-material",
       );
       if (!canvas) return;
-      Reflect.set(window, "firstPeelCommit", {
+      window.flightFirstPeelCommit = {
         state: canvas.dataset.state,
         samePixels: canvas.toDataURL() === source.toDataURL(),
         width: canvas.width,
         height: canvas.height,
-      });
+      };
       observer.disconnect();
     });
     observer.observe(document.body, { childList: true, subtree: true });
@@ -368,9 +405,10 @@ test("pink foil stays live outside paper while a tray sticker curls, peels, and 
   await finger.move([{ ...contact, x: contact.x - 14 }]);
   const flyer = page.locator(".tray__flyer");
   await expect(flyer).toHaveCount(1);
-  expect(
-    await page.evaluate(() => Reflect.get(window, "firstPeelCommit") as unknown),
-  ).toMatchObject({ state: "ready", samePixels: true });
+  expect(await page.evaluate(() => window.flightFirstPeelCommit)).toMatchObject({
+    state: "ready",
+    samePixels: true,
+  });
   await expect
     .poll(() =>
       flyer.locator("canvas.sticker-material").evaluate(async (canvas) => {
@@ -445,248 +483,128 @@ test("pink foil stays live outside paper while a tray sticker curls, peels, and 
   await expect(slot.locator("canvas.sticker-material")).toHaveAttribute("data-foil", "true");
 });
 
-for (const change of ["resize", "cut and material"] as const) {
-  for (const first of ["static", "complete"] as const) {
-    test(`a ${change} commits ${first} first while the copied cast keeps the complete generation`, async ({
-      page,
-    }) => {
-      await holdFlights(page, "detail-lift__flyer");
-      await page.goto("/e2e/stickerLaminate.html?lift=1&foil=1");
-      const origin = page.locator("[data-lift-origin]");
-      await expect(origin.locator("canvas.sticker-material")).toHaveAttribute(
-        "data-state",
-        "ready",
+// Each consumer waits while its box is outside the viewport, as an offscreen sticker does: holding
+// one back lets the other commit the new generation first, so the source's cast and finish
+// disagree when the copy is made.
+for (const { first, change } of [
+  { first: "static cast", change: "Replace source fixture" },
+  { first: "finish", change: "Resize source fixture" },
+] as const) {
+  test(`the copied cast follows the committed finish when the source's ${first} commits a change first`, async ({
+    page,
+  }) => {
+    await holdFlights(page, "detail-lift__flyer");
+    await page.goto("/e2e/stickerLaminate.html?lift=1&foil=1");
+    const origin = page.locator("[data-lift-origin]");
+    await expect(origin.locator("canvas.sticker-material")).toHaveAttribute("data-state", "ready");
+    await expect(origin.locator(".sticker-foil")).toHaveAttribute("data-state", "ready");
+    const initial = await castAndCommitted(origin);
+    const [moved, held] =
+      first === "static cast" ? (["cast", "committed"] as const) : (["committed", "cast"] as const);
+    await origin.evaluate((host, held) => {
+      // The renderer measures the finish's surface; the static cast measures its own span.
+      const box = host.querySelector<HTMLElement>(
+        held === "committed" ? ".sticker-material-surface" : ".sticker-foil",
       );
-      await expect(origin.locator(".sticker-foil")).toHaveAttribute("data-state", "ready");
-      const before = await origin.evaluate((host) => {
-        const canvas = host.querySelector("canvas.sticker-material");
-        const foil = host.querySelector(".sticker-foil");
-        if (!(canvas instanceof HTMLCanvasElement) || !(foil instanceof HTMLElement))
-          throw new Error("The original complete generation is missing");
-        return {
-          width: canvas.width,
-          alpha: foil.style.getPropertyValue("--foil-coverage"),
-          left: foil.style.getPropertyValue("--foil-left"),
-        };
-      });
-      await page.evaluate(
-        ({ first }) => {
-          const foil = document.querySelector<HTMLElement>("[data-lift-origin] .sticker-foil");
-          if (!foil) throw new Error("The static generation owner is missing");
-          const frame = window.requestAnimationFrame.bind(window);
-          const delayed: FrameRequestCallback[] = [];
-          let waiting = 0;
-          // Sharing CPU coverage is intentional. Hold each actual consumer after acquisition,
-          // rather than assuming its transport is independent from the other consumer.
-          if (first === "static") {
-            window.requestAnimationFrame = (callback) => {
-              if (!(new Error().stack ?? "").includes("stickerRenderer")) return frame(callback);
-              return frame(() => {
-                waiting++;
-                delayed.push(callback);
-              });
-            };
-          } else {
-            // Only the static span defers preparation; the renderer reads its real parent frame.
-            Object.defineProperty(foil, "clientWidth", {
-              configurable: true,
-              get() {
-                waiting++;
-                return 0;
-              },
-            });
-          }
-          Reflect.set(window, "generationHold", {
-            waiting: () => waiting,
-            release() {
-              window.requestAnimationFrame = frame;
-              Reflect.deleteProperty(foil, "clientWidth");
-              document.dispatchEvent(new Event("visibilitychange"));
-              for (const callback of delayed.splice(0)) frame(callback);
-            },
-          });
+      if (!box) throw new Error("The held foil consumer is missing");
+      const hold = {
+        waiting: 0,
+        release() {
+          Reflect.deleteProperty(box, "getBoundingClientRect");
+          document.dispatchEvent(new Event("visibilitychange"));
         },
-        { first },
-      );
-      await page
-        .getByRole("button", {
-          name: change === "resize" ? "Resize source fixture" : "Replace source fixture",
-          exact: true,
-        })
-        .click();
-      await expect
-        .poll(() =>
-          page.evaluate(() => {
-            const hold: unknown = Reflect.get(window, "generationHold");
-            if (!hold || typeof hold !== "object")
-              throw new Error("The generation hold is missing");
-            const waiting: unknown = Reflect.get(hold, "waiting");
-            if (typeof waiting !== "function")
-              throw new Error("The generation hold count is missing");
-            const count: unknown = Reflect.apply(waiting, hold, []);
-            if (typeof count !== "number") throw new Error("The generation hold count is invalid");
-            return count;
-          }),
-        )
-        .toBeGreaterThan(0);
-      if (first === "static")
-        await expect
-          .poll(() =>
-            origin.locator(".sticker-foil").evaluate((foil) => {
-              if (!(foil instanceof HTMLElement)) throw new Error("The static source is missing");
-              return foil.style.getPropertyValue("--foil-coverage");
-            }),
-          )
-          .not.toBe(before.alpha);
-      else
-        await expect
-          .poll(() =>
-            origin.locator("canvas.sticker-material").evaluate((canvas) => {
-              if (!(canvas instanceof HTMLCanvasElement))
-                throw new Error("The complete source is missing");
-              return canvas.width;
-            }),
-          )
-          .not.toBe(before.width);
-      await page.getByRole("button", { name: "Open fixture", exact: true }).click();
-      const copied = page.locator(".detail-lift__flyer .sticker-foil");
-      await expect(copied).toHaveAttribute("data-state", "ready");
-      const descriptor = await copied.evaluate((foil) => {
-        if (!(foil instanceof HTMLElement)) throw new Error("The copied cast is missing");
-        return {
-          alpha: foil.style.getPropertyValue("--foil-coverage"),
-          left: foil.style.getPropertyValue("--foil-left"),
-          pink: foil.classList.contains("sticker-foil--pink"),
-        };
+      };
+      Object.defineProperty(box, "getBoundingClientRect", {
+        configurable: true,
+        value: () => {
+          hold.waiting++;
+          return new DOMRect(0, innerHeight + 100, 1, 1);
+        },
       });
-      const shape = await copied.evaluate(async (foil) => {
-        if (!(foil instanceof HTMLElement)) throw new Error("The copied alpha shape is missing");
-        const { stickerFoilCoverage } = await import("../src/stickers/stickerRenderer.ts");
-        const finish = foil.closest(".sticker-figure")?.querySelector("canvas.sticker-material");
-        if (!(finish instanceof HTMLCanvasElement)) throw new Error("The copied owner is missing");
-        const committed = stickerFoilCoverage(finish);
-        if (!committed) throw new Error("The committed copied coverage is missing");
-        Reflect.set(window, "retainedCoverage", { committed, finish });
-        // A copied cast must still load its mask after the source has moved on.
-        const source = foil.style.getPropertyValue("--foil-coverage").slice(5, -2);
-        const image = new Image();
-        image.src = source;
-        await image.decode().catch((error: unknown) => {
-          throw new Error(
-            `Decoding the copied cast's mask ${source.slice(0, 60)} failed: ${String(error)}`,
-          );
-        });
-        return {
-          matching:
-            foil.style.getPropertyValue("--foil-coverage") === `url("${committed.coverage.mask}")`,
-          frozen: [
-            committed,
-            committed.material,
-            committed.frame,
-            committed.coverage,
-            committed.coverage.alpha,
-          ].every(Object.isFrozen),
-        };
-      });
-      expect(shape).toEqual({ matching: true, frozen: true });
-      const expectedLeft =
-        first === "static" ? before.left : change === "resize" ? `${(100 * -2) / 240}%` : "0%";
-      expect(descriptor.left).toBe(expectedLeft);
-      expect(descriptor.pink).toBe(first === "complete" && change === "cut and material");
-      if (first === "static") expect(descriptor.alpha).toBe(before.alpha);
-      else expect(descriptor.alpha).not.toBe(before.alpha);
-      await page.evaluate(() => {
-        const hold: unknown = Reflect.get(window, "generationHold");
-        if (!hold || typeof hold !== "object") throw new Error("The generation hold is missing");
-        const release: unknown = Reflect.get(hold, "release");
-        if (typeof release !== "function") throw new Error("The generation release is missing");
-        Reflect.apply(release, hold, []);
-      });
-      await page.getByRole("button", { name: "Resume source fixture", exact: true }).click();
-      await expect(origin.locator("canvas.sticker-material")).toHaveAttribute(
-        "data-state",
-        "ready",
-      );
-      await expect
-        .poll(() =>
-          origin.locator("canvas.sticker-material").evaluate((canvas) => {
-            if (!(canvas instanceof HTMLCanvasElement))
-              throw new Error("The later source commit is missing");
-            return canvas.width;
-          }),
-        )
-        .not.toBe(before.width);
-      // Later source commits must not change the cast retained by the live copied owner.
-      await page.evaluate(
-        () =>
-          new Promise<void>((resolve) =>
-            requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-          ),
-      );
-      expect(
-        await copied.evaluate((foil) => {
-          if (!(foil instanceof HTMLElement)) throw new Error("The retained cast is missing");
-          return foil.style.getPropertyValue("--foil-coverage");
-        }),
-      ).toBe(descriptor.alpha);
-      const retained = await page.evaluate(async () => {
-        const { stickerFoilCoverage } = await import("../src/stickers/stickerRenderer.ts");
-        const value: unknown = Reflect.get(window, "retainedCoverage");
-        if (!value || typeof value !== "object")
-          throw new Error("The retained coverage is missing");
-        const finish: unknown = Reflect.get(value, "finish");
-        if (!(finish instanceof HTMLCanvasElement))
-          throw new Error("The retained owner is missing");
-        const current = stickerFoilCoverage(finish);
-        return (
-          current && { mask: `url("${current.coverage.mask}")`, style: current.material.style }
+      window.flightGenerationHold = hold;
+    }, held);
+    await page.getByRole("button", { name: change, exact: true }).click();
+    await expect
+      .poll(() => page.evaluate(() => window.flightGenerationHold?.waiting ?? 0))
+      .toBeGreaterThan(0);
+    await expect
+      .poll(async () => (await castAndCommitted(origin))[moved].mask)
+      .not.toBe(initial[moved].mask);
+    const source = await castAndCommitted(origin);
+    // React restyles a static cast's class at once; its coverage is what waits.
+    expect(
+      { mask: source[held].mask, box: source[held].box },
+      `The source's held ${held} side keeps its first coverage`,
+    ).toEqual({ mask: initial[held].mask, box: initial[held].box });
+    expect(source.cast.mask, "The copy must be made while the source disagrees").not.toBe(
+      source.committed.mask,
+    );
+
+    await page.getByRole("button", { name: "Open fixture", exact: true }).click();
+    const flyer = page.locator(".detail-lift__flyer");
+    const copiedCast = flyer.locator(".sticker-foil");
+    await expect(copiedCast).toHaveAttribute("data-state", "ready");
+    const copied = await castAndCommitted(flyer);
+    expect(copied.cast).toEqual(copied.committed);
+    expect(copied.committed).toEqual(source.committed);
+    const frozen = await copiedCast.evaluate(async (foil) => {
+      const { stickerFoilCoverage } = await import("../src/stickers/stickerRenderer.ts");
+      const finish = foil.closest(".sticker-figure")?.querySelector("canvas.sticker-material");
+      if (!(finish instanceof HTMLCanvasElement)) throw new Error("The copied finish is missing");
+      const committed = stickerFoilCoverage(finish);
+      if (!committed) throw new Error("The copied finish's committed foil is missing");
+      window.flightCopiedFinish = finish;
+      // A copied cast must still load its mask after the source has moved on.
+      const mask = committed.coverage.mask;
+      const image = new Image();
+      image.src = mask;
+      await image.decode().catch((error: unknown) => {
+        throw new Error(
+          `Decoding the copied cast's mask ${mask.slice(0, 60)} failed: ${String(error)}`,
         );
       });
-      expect(retained).toEqual({
-        mask: descriptor.alpha,
-        style: descriptor.pink ? "pink" : "holo",
-      });
-      await page.getByRole("button", { name: "Conceal fixture", exact: true }).click();
-      await expect(page.locator(".detail-lift__flyer")).toHaveCount(0);
-      expect(
-        await page.evaluate(async () => {
-          const { stickerFoilCoverage } = await import("../src/stickers/stickerRenderer.ts");
-          const value: unknown = Reflect.get(window, "retainedCoverage");
-          if (!value || typeof value !== "object")
-            throw new Error("The retired coverage is missing");
-          const finish: unknown = Reflect.get(value, "finish");
-          if (!(finish instanceof HTMLCanvasElement))
-            throw new Error("The retired owner is missing");
-          return stickerFoilCoverage(finish);
-        }),
-      ).toBeUndefined();
+      return [
+        committed,
+        committed.material,
+        committed.frame,
+        committed.coverage,
+        committed.coverage.alpha,
+      ].every(Object.isFrozen);
     });
-  }
+    expect(frozen, "The committed descriptor a copy keeps must be frozen").toBe(true);
+
+    await page.evaluate(() => window.flightGenerationHold?.release());
+    await page.getByRole("button", { name: "Resume source fixture", exact: true }).click();
+    await expect
+      .poll(async () => (await castAndCommitted(origin))[held].mask)
+      .not.toBe(source[held].mask);
+    // Later source commits must not change the cast retained by the live copied owner.
+    await waitTwoFrames(page);
+    expect(await castAndCommitted(flyer)).toEqual(copied);
+    await page.getByRole("button", { name: "Conceal fixture", exact: true }).click();
+    await expect(flyer).toHaveCount(0);
+    expect(
+      await page.evaluate(async () => {
+        const { stickerFoilCoverage } = await import("../src/stickers/stickerRenderer.ts");
+        const finish = window.flightCopiedFinish;
+        if (!finish) throw new Error("The retired copied finish is missing");
+        return stickerFoilCoverage(finish);
+      }),
+    ).toBeUndefined();
+  });
 }
 
 test("a retained lift restarts reverse geometry after forward movement ends while detail material is pending", async ({
   page,
 }) => {
-  let release = () => {};
-  const held = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  let requested = false;
-  await page.route("**/delayed-detail-foil.svg", async (route) => {
-    requested = true;
-    await held;
-    await route.fulfill({
-      contentType: "image/svg+xml",
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><rect width="240" height="240" fill="white"/></svg>',
-    });
-  });
+  const detailFoil = await holdRoute(page, "**/delayed-detail-foil.svg", () => solidSvg("white"));
   await page.goto("/e2e/stickerLaminate.html?lift=1&foil=1&delayedDetail=1");
   await expect(page.locator("[data-lift-origin] canvas.sticker-material")).toHaveAttribute(
     "data-state",
     "ready",
   );
   await page.getByRole("button", { name: "Open fixture", exact: true }).click();
-  await expect.poll(() => requested).toBe(true);
+  await detailFoil.requested;
   const flyer = page.locator(".detail-lift__flyer");
   await expect(flyer).toHaveCount(1);
   await flyer.evaluate(async (el) => {
@@ -704,7 +622,7 @@ test("a retained lift restarts reverse geometry after forward movement ends whil
     }
   });
   await expect(flyer).toHaveAttribute("data-owner", "retained-after-forward");
-  release();
+  detailFoil.release();
   // A late forward material settlement must leave the reversed owner and its visual hide intact.
   await expect(page.locator("[data-lift-view] canvas.sticker-material")).toHaveAttribute(
     "data-state",
@@ -713,15 +631,14 @@ test("a retained lift restarts reverse geometry after forward movement ends whil
   await expect(flyer).toHaveCount(1);
   const turns = await flyer.evaluate(async (el) => {
     const { stickerTurn } = await import("../src/stickers/stickerRenderer.ts");
+    const { twoFrames } = await import("./stickerMaterialFixture.ts");
     const canvas = el.querySelector("canvas.sticker-material");
     const animation = el.getAnimations()[0];
     if (!(canvas instanceof HTMLCanvasElement) || !animation)
       throw new Error("The retained reverse material is missing");
     const sample = async (time: number) => {
       animation.currentTime = time;
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      );
+      await twoFrames();
       return {
         sampled: stickerTurn(canvas),
         tilt:
@@ -747,72 +664,6 @@ test("a retained lift restarts reverse geometry after forward movement ends whil
   for (const turn of turns) expect(turn.sampled).toBeCloseTo(turn.actual, 1);
   await page.getByRole("button", { name: "Cancel fixture", exact: true }).click();
   await expect(page.locator(".detail-lift__flyer")).toHaveCount(0);
-});
-
-test("paging after forward movement disposes the pending lift before a late material settlement", async ({
-  page,
-}) => {
-  let release = () => {};
-  const held = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  let requested = false;
-  await page.route("**/delayed-detail-foil.svg", async (route) => {
-    requested = true;
-    await held;
-    await route.fulfill({
-      contentType: "image/svg+xml",
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><rect width="240" height="240" fill="white"/></svg>',
-    });
-  });
-  await page.goto("/e2e/stickerLaminate.html?lift=1&foil=1&delayedDetail=1");
-  await expect(page.locator("[data-lift-origin] canvas.sticker-material")).toHaveAttribute(
-    "data-state",
-    "ready",
-  );
-  await page.getByRole("button", { name: "Open fixture", exact: true }).click();
-  await expect.poll(() => requested).toBe(true);
-  await page.locator(".detail-lift__flyer").evaluate(async (el) => {
-    await Promise.all(el.getAnimations().map((animation) => animation.finished));
-    const canvas = el.querySelector("canvas.sticker-material");
-    if (!(canvas instanceof HTMLCanvasElement)) throw new Error("The pending owner is missing");
-    Reflect.set(window, "pendingLiftCanvas", canvas);
-  });
-  await page.getByRole("button", { name: "Page fixture", exact: true }).click();
-  await expect(page.locator(".detail-lift__flyer")).toHaveCount(0);
-  release();
-  await expect(page.locator("[data-lift-view] canvas.sticker-material")).toHaveAttribute(
-    "data-state",
-    "ready",
-  );
-  expect(
-    await page.evaluate(async () => {
-      const { stickerFoilCoverage } = await import("../src/stickers/stickerRenderer.ts");
-      const canvas: unknown = Reflect.get(window, "pendingLiftCanvas");
-      if (!(canvas instanceof HTMLCanvasElement))
-        throw new Error("The retired pending owner is missing");
-      return {
-        connected: canvas.isConnected,
-        pixels: canvas.width * canvas.height,
-        coverage: stickerFoilCoverage(canvas),
-      };
-    }),
-  ).toEqual({ connected: false, pixels: 0, coverage: undefined });
-  await expect(page.locator(".detail-lift__flyer")).toHaveCount(0);
-});
-
-test("a committed finish without foil has no cached foil description", async ({ page }) => {
-  await page.goto("/e2e/stickerLaminate.html?count=1&board=1&side=240");
-  const finish = page.locator('[data-sticker="0"] canvas.sticker-material');
-  await expect(finish).toHaveAttribute("data-state", "ready");
-  expect(
-    await finish.evaluate(async (canvas) => {
-      if (!(canvas instanceof HTMLCanvasElement))
-        throw new Error("The plain complete output is missing");
-      const { stickerFoilCoverage } = await import("../src/stickers/stickerRenderer.ts");
-      return stickerFoilCoverage(canvas);
-    }),
-  ).toBeUndefined();
 });
 
 async function preparedPinkTray(page: Page) {
@@ -910,17 +761,17 @@ test("a pending source-seeded peel recovers its committed cast after shared cont
       configurable: true,
       value: function (this: HTMLCanvasElement, kind: string, ...args: unknown[]) {
         const context: unknown = Reflect.apply(get, this, [kind, ...args]);
-        if (kind === "webgl") Reflect.set(window, "peelGpu", context);
+        if (kind === "webgl" && context instanceof WebGLRenderingContext)
+          window.flightPeelGpu = context;
         return context;
       },
     });
-    // Each time a cast is pointed at a coverage mask.
     const set: unknown = Reflect.get(CSSStyleDeclaration.prototype, "setProperty");
     if (typeof set !== "function") throw new Error("Style method missing");
-    Reflect.set(window, "castWrites", 0);
+    window.flightCastWrites = 0;
     CSSStyleDeclaration.prototype.setProperty = function (...args) {
       if (args[0] === "--foil-coverage")
-        Reflect.set(window, "castWrites", Number(Reflect.get(window, "castWrites")) + 1);
+        window.flightCastWrites = (window.flightCastWrites ?? 0) + 1;
       Reflect.apply(set, this, args);
     };
   });
@@ -947,7 +798,7 @@ test("a pending source-seeded peel recovers its committed cast after shared cont
   await page.evaluate(async (cut) => {
     // The tray runs on the app's own page, so the fixture module is addressed from the root.
     const { watchCoverageJobs } = await import("../e2e/stickerMaterialFixture.ts");
-    Reflect.set(window, "peelCoverage", watchCoverageJobs(cut, true));
+    window.flightPeelCoverage = watchCoverageJobs(cut, true);
   }, cut);
   const box = await slot.boundingBox();
   if (!box) throw new Error("Tray slot missing");
@@ -958,9 +809,7 @@ test("a pending source-seeded peel recovers its committed cast after shared cont
   const flyer = page.locator(".tray__flyer");
   await expect(flyer).toHaveCount(1);
   await expect
-    .poll(() =>
-      page.evaluate(() => Number(Reflect.get(Object(Reflect.get(window, "peelCoverage")), "jobs"))),
-    )
+    .poll(() => page.evaluate(() => window.flightPeelCoverage?.jobs ?? 0))
     .toBeGreaterThan(0);
   const size = () =>
     flyer.locator("canvas.sticker-material").evaluate(async (canvas) => {
@@ -970,25 +819,24 @@ test("a pending source-seeded peel recovers its committed cast after shared cont
     });
   expect(await size()).toBe("sheet");
   await page.evaluate(() => {
-    const gl: unknown = Reflect.get(window, "peelGpu");
-    if (!(gl instanceof WebGLRenderingContext)) throw new Error("Peel GPU missing");
+    const gl = window.flightPeelGpu;
+    if (!gl) throw new Error("Peel GPU missing");
     const extension = gl.getExtension("WEBGL_lose_context");
     if (!extension) throw new Error("Context loss extension missing");
-    Reflect.set(window, "restorePeel", () => extension.restoreContext());
+    window.flightRestorePeel = () => extension.restoreContext();
     extension.loseContext();
   });
   await expect(flyer.locator("canvas.sticker-material")).toHaveAttribute("data-state", "failed");
   expect(await size()).toBe("sheet");
   await page.evaluate(() => {
-    const resume: unknown = Reflect.get(window, "restorePeel");
-    if (typeof resume !== "function") throw new Error("Peel recovery callback missing");
-    Reflect.apply(resume, undefined, []);
+    const resume = window.flightRestorePeel;
+    if (!resume) throw new Error("Peel recovery callback missing");
+    resume();
   });
   await page.evaluate(() => {
-    const coverage: unknown = Reflect.get(window, "peelCoverage");
-    const restore: unknown = Reflect.get(Object(coverage), "restore");
-    if (typeof restore !== "function") throw new Error("Peel coverage hold missing");
-    Reflect.apply(restore, coverage, []);
+    const coverage = window.flightPeelCoverage;
+    if (!coverage) throw new Error("Peel coverage hold missing");
+    coverage.restore();
   });
   await expect.poll(size).toBe("board");
   const compare = () =>
@@ -1026,7 +874,7 @@ test("a pending source-seeded peel recovers its committed cast after shared cont
   expect(result.mask).toBe(cut);
   expect(result.className).toContain("sticker-foil--board");
   expect(result.actual).toEqual(result.expected);
-  const writes = await page.evaluate(() => Number(Reflect.get(window, "castWrites")));
+  const writes = await page.evaluate(() => window.flightCastWrites ?? 0);
   expect(writes).toBeGreaterThan(0);
   await flyer.locator("canvas.sticker-material").evaluate(async (canvas) => {
     if (!(canvas instanceof HTMLCanvasElement)) throw new Error("Peel canvas missing");
@@ -1036,7 +884,7 @@ test("a pending source-seeded peel recovers its committed cast after shared cont
       await new Promise(requestAnimationFrame);
     }
   });
-  expect(await page.evaluate(() => Number(Reflect.get(window, "castWrites")))).toBe(writes);
+  expect(await page.evaluate(() => window.flightCastWrites ?? 0)).toBe(writes);
   const viewport = page.viewportSize();
   if (!viewport) throw new Error("Peel viewport missing");
   await finger.move([{ ...contact, x: viewport.width - 1 }]);
