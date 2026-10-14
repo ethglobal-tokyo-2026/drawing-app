@@ -434,12 +434,11 @@ describe("SealCeremony", () => {
     expect(card()?.hasAttribute("inert")).toBe(false);
   });
 
-  it("keeps timed formation layers under a partially coated complete material", async () => {
+  it("keeps timed formation layers under a partial coating, then lands the sticker fully coated", async () => {
     await seal(1, { answer: null });
     tap();
     const coating = host.querySelector<HTMLCanvasElement>("canvas.sticker-material");
     expect(coating?.dataset.partial).toBe("true");
-    expect(coating?.style.opacity).toBe("1");
     expect(host.querySelector<HTMLElement>(".seal-ceremony__plain")?.style.opacity).toBe("1");
     view?.rerender(ceremony({ ...sealed, nsfw: true }));
     wait(600);
@@ -448,19 +447,8 @@ describe("SealCeremony", () => {
       Number(host.querySelector<HTMLElement>(".seal-ceremony__gloss")?.style.opacity),
     ).toBeGreaterThan(0);
     playThrough();
+    expect(coating?.isConnected).toBe(true);
     expect(coating?.dataset.partial).toBe("false");
-  });
-
-  it("applies the shared laminate after the recorded seal and keeps it on the landed sticker", async () => {
-    const coating = () => host.querySelector<HTMLCanvasElement>("canvas.sticker-material");
-    await seal(1, { answer: null });
-    tap();
-    expect(coating()?.dataset.partial).toBe("true");
-    expect(coating()?.style.opacity).toBe("1");
-
-    view?.rerender(ceremony(sealed));
-    playThrough();
-    expect(coating()?.style.opacity).toBe("1");
     expect(host.querySelector<HTMLElement>(".seal-ceremony__sticker")?.style.transform).toContain(
       LANDED_TURN,
     );

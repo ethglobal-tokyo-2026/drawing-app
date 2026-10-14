@@ -167,10 +167,6 @@ vi.mock("../stickers/foilCoverageImage", () => ({
     }),
 }));
 
-// Evaluate the large tray import graph before placement cases: cleanup's fixed deadline covers UI
-// work, while browser checks exercise loading the tray on demand.
-await import("./tray/StickerTray");
-
 /** Why a request that got no answer failed, as the board's alerts give it. */
 const NETWORK_ERROR = i18next.t(($) => $.errors.network);
 

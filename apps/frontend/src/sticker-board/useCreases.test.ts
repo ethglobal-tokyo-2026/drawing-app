@@ -201,15 +201,16 @@ describe("CreaseStore", () => {
     timings: { decode: 0, draw: 0, shade: 0, encode: 0, total: 0 },
   });
 
-  it("carries accepted normal bounds and releases only six image URLs", () => {
+  it("carries accepted normal bounds and releases only its images' URLs", () => {
     const revoke = vi.spyOn(URL, "revokeObjectURL");
     const store = new CreaseStore();
     const normalBounds = { x: -0.1, y: 0, width: 1.2, height: 1.1 };
+    const baked = bake(job);
     store.want([job]);
-    store.land({ ...bake(job), normalBounds });
+    store.land({ ...baked, normalBounds });
     expect(store.creaseOf(job.id)?.normalBounds).toEqual(normalBounds);
     store.clear();
-    expect(revoke).toHaveBeenCalledTimes(6);
+    expect(revoke).toHaveBeenCalledTimes(Object.keys(baked.crease ?? {}).length);
     expect(revoke.mock.calls.every(([url]) => typeof url === "string")).toBe(true);
   });
 

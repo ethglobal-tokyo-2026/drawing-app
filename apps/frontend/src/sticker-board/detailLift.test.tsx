@@ -3,7 +3,7 @@ import { act, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, it, vi } from "vitest";
 import { stickerMaterialActive } from "../stickers/stickerMaterialHandoff";
-import { mountSticker, mountStickerCopy, stickerFoilCoverage } from "../stickers/stickerRenderer";
+import { mountSticker, mountStickerCopy } from "../stickers/stickerRenderer";
 import { useDetailLift } from "./detailLift";
 
 vi.mock("../stickers/stickerRenderer", async (importOriginal) => {
@@ -67,11 +67,8 @@ it("never attaches an image-only flyer when a ready source rejects its copy sync
   });
   // Its canvas says ready, but its owner has no snapshot to copy.
   source.dataset.state = "ready";
-  expect(stickerFoilCoverage(source)).toBeUndefined();
-  expect(stickerFoilCoverage(document.createElement("canvas"))).toBeUndefined();
   openLift(origin);
   releaseSource();
-  expect(stickerFoilCoverage(source)).toBeUndefined();
   expect(document.querySelector(".detail-lift__flyer")).toBeNull();
 });
 

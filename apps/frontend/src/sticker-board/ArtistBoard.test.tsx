@@ -33,19 +33,23 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// Only board layout boxes need size stand-ins; sizing image/foil spans would admit synthetic assets.
-beforeEach(() => {
-  forgetGreetings();
+/** Sizes only the board's layout boxes: sizing image and foil spans would admit synthetic assets. */
+function sizeBoard(width: number, height: number) {
   vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (
     this: HTMLElement,
   ) {
-    return this.matches(".board, .board-stage") ? 390 : 0;
+    return this.matches(".board, .board-stage") ? width : 0;
   });
   vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (
     this: HTMLElement,
   ) {
-    return this.matches(".board, .board-stage") ? 741 : 0;
+    return this.matches(".board, .board-stage") ? height : 0;
   });
+}
+
+beforeEach(() => {
+  forgetGreetings();
+  sizeBoard(390, 741);
 });
 
 /** Someone's board with three stickers, listed out of reading order: two on a top row, one below. */
@@ -387,17 +391,7 @@ describe("ArtistBoard's layouts", () => {
 
   it("shows a large screen a board with no large layout yet as its phone's arrangement spread across it, a size larger", async () => {
     onLargeScreen();
-    const [W, H] = [1180, 662];
-    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (
-      this: HTMLElement,
-    ) {
-      return this.matches(".board, .board-stage") ? W : 0;
-    });
-    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (
-      this: HTMLElement,
-    ) {
-      return this.matches(".board, .board-stage") ? H : 0;
-    });
+    sizeBoard(1180, 662);
     const centerX = (el: HTMLElement) =>
       Number(/translate\((-?[\d.]+)px/.exec(el.style.transform)?.[1]) +
       parseFloat(el.style.width) / 2;

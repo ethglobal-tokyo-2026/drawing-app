@@ -465,17 +465,17 @@ describe("registered crease support", () => {
     expect(bends(pixels, 45, 75, 10, 50)).toBe(true);
     expect(peakTone(pixels)).toBe(0);
   });
-});
 
-it("keeps real later supports outside the source without changing accepted source levels", () => {
-  const lower = field((x) => (x < 30 || x >= 80 ? 1 : 0));
-  const outside = field((x) => (x >= 80 ? 1 : 0));
-  const accepted = field((x) => (x < 60 ? 1 : 0));
-  const bounds = { x: 0, y: 0, width: 60, height: H };
-  const extended = stackedSurface([lower, outside, accepted], W, H, bounds);
-  expect(extended[100]).toBe(2);
-  expect(extended[10]).toBe(1.5);
-  const withoutOutside = stackedSurface([lower, accepted], W, H, bounds);
-  for (let y = 0; y < H; y++)
-    for (let x = 0; x < 60; x++) expect(extended[y * W + x]).toBe(withoutOutside[y * W + x]);
+  it("keeps real later supports outside the source without changing accepted source levels", () => {
+    const lower = field((x) => (x < 30 || x >= 80 ? 1 : 0));
+    const outside = field((x) => (x >= 80 ? 1 : 0));
+    const accepted = field((x) => (x < 60 ? 1 : 0));
+    const bounds = { x: 0, y: 0, width: 60, height: H };
+    const extended = stackedSurface([lower, outside, accepted], W, H, bounds);
+    expect(extended[100]).toBe(2);
+    expect(extended[10]).toBe(1.5);
+    const withoutOutside = stackedSurface([lower, accepted], W, H, bounds);
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < 60; x++) expect(extended[y * W + x]).toBe(withoutOutside[y * W + x]);
+  });
 });
