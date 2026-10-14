@@ -432,9 +432,8 @@ test("refresh_and_lost_selection_response", async ({ page }) => {
     },
     { times: 1 },
   );
-  await (await selectionButton(page, "Hana")).click();
-  await expectActor(page, E2E_HANA_ID);
-  await expect(drawKey(page, language)).toBeVisible();
+  // A lost response still loads the person the server chose, so this waits for that navigation.
+  await switchTo(page, E2E_HANA_ID, "Hana");
   await page.reload();
   await expect(drawKey(page, language)).toBeVisible();
   await expectActor(page, E2E_HANA_ID);
