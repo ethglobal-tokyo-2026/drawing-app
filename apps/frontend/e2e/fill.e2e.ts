@@ -563,7 +563,8 @@ for (const transition of ["brush", "color", "visible", "layer", "pause"] as cons
   });
 }
 
-test("a Kyoto Seika color panel keeps counting while Fill finishes and while the panel is open", async ({
+// Tool panels hold a begun Kyoto Seika clock while recording (KYOTO_SEIKA_TOOLS_PAUSE_CLOCK).
+test("a Kyoto Seika color panel holds the clock while Fill finishes and while the panel is open", async ({
   page,
 }) => {
   await installFillWorkerProbe(page);
@@ -597,10 +598,12 @@ test("a Kyoto Seika color panel keeps counting while Fill finishes and while the
   await gateNext(page);
   await fillAt(page, centers[0]);
   const before = await seconds();
+  const timer = page.locator(".timer-dot");
   await button(page, creation.tools.color).click();
+  await expect(timer).toHaveClass(/is-held/);
   await page.clock.runFor(700);
   await heldAnswer(page);
-  expect(await seconds()).toBeLessThan(before);
+  expect(await seconds()).toBe(before);
   await releaseFillWorkerGate(page);
   await expect
     .poll(async () => {
@@ -610,8 +613,12 @@ test("a Kyoto Seika color panel keeps counting while Fill finishes and while the
     .toBe(1);
   const opened = await seconds();
   await page.clock.runFor(1100);
-  expect(await seconds()).toBeLessThan(opened);
+  expect(await seconds()).toBe(opened);
   expect(await shownColor(page, centers[0])).toEqual(red);
+  await page.keyboard.press("Escape");
+  await expect(timer).not.toHaveClass(/is-held/);
+  await page.clock.runFor(1100);
+  expect(await seconds()).toBeLessThan(opened);
 });
 
 type WetVariant = "blank" | "opacity" | "lock" | "clipped" | "clipped-above";
