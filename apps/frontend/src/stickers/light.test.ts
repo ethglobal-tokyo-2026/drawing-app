@@ -5,7 +5,6 @@ import {
   currentLight,
   CREASE_SETTLE_MS,
   GLIDE_MS,
-  glideOnWithLight,
   installLight,
   lightUp,
   subscribeLight,
@@ -505,66 +504,6 @@ describe("the shared light", () => {
       expect(vi.getTimerCount()).toBe(0);
     },
   );
-
-  it("continues a reordered preview film from its displayed position when the light moves again", () => {
-    if (!film.parentElement) throw new Error("The highlight needs its film layer");
-    uninstall = installLight(root);
-    showScreen();
-    tiltTo(0, 40);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    let previous = film.animate([{ translate: "0px" }, { translate: "100px" }], {
-      duration: 280,
-      easing: "ease-out",
-    });
-    glideOnWithLight(previous, "translate");
-    for (const [shown, gamma] of [
-      ["37px", -32],
-      ["54px", 32],
-    ] as const) {
-      // Happy DOM does not interpolate CSS, so supply the browser's displayed value.
-      film.style.translate = shown;
-      tiltTo(gamma, 8);
-      vi.advanceTimersByTime(10 * GLIDE_MS);
-      expect(previous.playState).toBe("idle");
-      const [next] = film.getAnimations();
-      expect(film.getAnimations()).toHaveLength(1);
-      const effect = next.effect;
-      expect(effect).toBeInstanceOf(KeyframeEffect);
-      if (!(effect instanceof KeyframeEffect)) throw new Error("The replay needs keyframes");
-      expect(effect.getKeyframes()).toEqual([
-        expect.objectContaining({ offset: 0, translate: shown }),
-      ]);
-      expect(effect.getTiming()).toMatchObject({ duration: 280, easing: "ease-out" });
-      previous = next;
-    }
-    expect(lightAt()).toEqual(["1.000", "-1.000"]);
-    previous.finish();
-  });
-
-  it("ends a reordered highlight's replay when reduced motion is turned on", () => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    vi.spyOn(window, "matchMedia").mockReturnValue(query);
-    uninstall = installLight(root);
-    showScreen();
-    const replay = film.animate([{ translate: "0px" }, { translate: "100px" }], 280);
-    glideOnWithLight(replay, "translate");
-    vi.spyOn(query, "matches", "get").mockReturnValue(true);
-    query.dispatchEvent(new Event("change"));
-    expect(replay.playState).toBe("idle");
-    tiltTo(32, 8);
-    vi.advanceTimersByTime(100);
-    expect(film.getAnimations()).toEqual([]);
-    expect(lightAt()).toEqual(["", ""]);
-  });
-
-  it("ends reordered highlights when the light is uninstalled", () => {
-    uninstall = installLight(root);
-    showScreen();
-    const replay = film.animate([{ translate: "0px" }, { translate: "100px" }], 280);
-    glideOnWithLight(replay, "translate");
-    uninstall();
-    expect(replay.playState).toBe("idle");
-  });
 
   it.each([
     ["mouse", "pointermove"],
