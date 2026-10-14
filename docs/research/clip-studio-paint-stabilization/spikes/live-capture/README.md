@@ -109,6 +109,18 @@ xcrun lldb --batch -o 'script import sys; sys.dont_write_bytecode=True; sys.path
 
 These checks cover emission versus suppression, original-pointer retention despite changed registers, bounded 236-byte queue reads on both outcomes, thread/stack pairing rejection, delayed detached events with stale current state, exclusion of another process's event, and successful acknowledgement with absent or exited debugger state. Host tests do not establish target behavior. Separately, the retained live runs exercised exact hardware-breakpoint installation and the later timeout/detach cleanup; neither recorded a tablet filter input/output pair.
 
+Run the watchdog cleanup regressions without LLDB:
+
+```sh
+python3 -B docs/research/clip-studio-paint-stabilization/spikes/live-capture/check_capture_cleanup.py
+```
+
+These five checks use synthetic process objects and real waiting/active timers.
+They cover synchronization before process cleanup, an unstarted timer, a join
+bounded by the remaining deadline, and persistent timeout/join errors while
+probe removal and detach are still attempted. No native app, attachment, or
+process signal is used.
+
 ## Exact later invocation
 
 Use the LLDB session that already controls the approved research-copy process. The helper neither launches nor attaches; a PID absent from that LLDB is rejected. Verify saved work and the intended process separately as described in the runtime handoff. Replace the three `/absolute/path/...` values below with local paths; `original-arm64` must be the separately retained original thin ARM64 image with SHA256 `6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd`.
@@ -131,5 +143,18 @@ Entry records preserve x0–x7, raw d0–d2 bits, saved queue/phase/output point
 At most 64 calls may be requested; the first check defaults to one. The requested total budget cannot exceed 30 seconds, with three seconds reserved for cleanup and a watchdog interrupt at the earlier capture deadline. Native SB read/detach calls expose no individual timeout: the first run's 32.115-second summary demonstrates that this is **not an unconditional wall-clock guarantee**. Keep console access and an outer debugger guard. The helper records deadline overruns rather than hiding them.
 
 Cleanup always attempts to remove only its own breakpoint IDs and requests `Detach(False)`, then restores the previous LLDB asynchronous mode and selected target. Each run records its own hardware availability and cleanup outcome. The helper records detach acknowledgement separately from observed debugger state and never independently verifies OS execution.
+
+2026-10-13 watchdog safeguard: cleanup now cancels and joins a started timer
+within the remaining hard deadline before inspecting the process or detaching.
+Cancellation alone did not stop an interrupt callback that had already started;
+synthetic checks demonstrated that it could overlap process cleanup. A join
+failure or a still-active watchdog remains a cleanup error, with subsequent
+probe removal and detach treated as attempts. This removes the demonstrated
+race when the bounded join succeeds. It does not establish the cause of the
+stopped process after the failed zero-call
+`fill-gap/evidence/captures/narrow-pocket-large-pair-20261013T160531.815206Z-1e0f0899`
+run, whose original snapshots and results remain unchanged. The independent
+launcher resume check remains required; explicit recovery remains the root
+agent's action after verifying the exact research PID and executable path.
 
 `contract_capture_complete` requires the requested matched pairs plus observed cleanup within the budget. `fixture_complete` is always false: reset, out-of-line history, and complete stroke/terminal coverage are not captured. A midqueue start or bounded pair must not be relabeled a full replay fixture. Breakpoint instrumentation alters event cadence and cannot establish natural latency or pen feel.

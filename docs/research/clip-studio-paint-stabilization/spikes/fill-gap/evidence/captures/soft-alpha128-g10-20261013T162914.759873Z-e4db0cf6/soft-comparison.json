@@ -1,0 +1,705 @@
+{
+  "schema": "native-croquis-soft-fill-comparison/v1",
+  "captureFile": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/captures/soft-alpha128-g10-20261013T162914.759873Z-e4db0cf6/fill.jsonl",
+  "captureSha256": "1f623fc06358111532361dca76ee9eacebed75c26613e4d00d2b50f42fedf670",
+  "fillSourceSha256": "d947273c2157bcdfd7539da1b3c3c87a9f32a80fc3cc36622f5477f3a780fe49",
+  "comparison": "Final native A versus Croquis IN; C positives grouped against exact source RGBA. TUCKED and final rendering are separate.",
+  "requiredNativeSettings": {
+    "reference": "Refer only to editing layer",
+    "multipleReference": false,
+    "colorMargin": 10,
+    "antialiasing": true,
+    "areaScaling": false,
+    "fillNarrowAreas": true,
+    "paint": "#ff0000"
+  },
+  "context": null,
+  "settingEvidence": "The boundary confirms gap/seed/narrow argument. Reference, color margin, antialiasing, and area scaling need retained UI context; required settings alone are not confirmation.",
+  "overlayLegend": {
+    "red": "Native only",
+    "blue": "Croquis only",
+    "green": "Both selected"
+  },
+  "results": [
+    {
+      "callId": "1",
+      "fixtureId": "soft-axis-gap10-alpha128",
+      "sourceRgbaSha256": "5abcc35b3b2c54704ed5f5c0635d12678980c174e9e49e066e8088e17c859223",
+      "gapWidth": 10,
+      "narrowFlag": 1024,
+      "seedMapping": {
+        "bitmapSeed": {
+          "x": 319,
+          "y": 208
+        },
+        "documentOffset": [
+          0,
+          0
+        ],
+        "mappedDocumentSeed": {
+          "x": 319,
+          "y": 208
+        },
+        "fixtureSeed": {
+          "x": 320,
+          "y": 230
+        },
+        "exactFixtureSeed": false,
+        "usedCapturedSeed": true
+      },
+      "sourceSeedRgba": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "nativeBitmapDimensions": [
+        640,
+        480
+      ],
+      "domain": [
+        0,
+        0,
+        640,
+        480
+      ],
+      "sourceTileOffset": [
+        0,
+        0
+      ],
+      "nativeOutputRect": {
+        "address": "0x16d5e4df0",
+        "bytesHex": "a300000067000000de01000068010000",
+        "values": [
+          163,
+          103,
+          478,
+          360
+        ]
+      },
+      "nativeSelectedOutsideDocument": 0,
+      "selectedOutsideOutputRectExclusiveOnDocument": {
+        "selectedPixels": 10,
+        "boundsExclusive": [
+          315,
+          360,
+          325,
+          361
+        ],
+        "touches": [],
+        "probes": {}
+      },
+      "nativeSelection": {
+        "selectedPixels": 80355,
+        "boundsExclusive": [
+          163,
+          103,
+          478,
+          361
+        ],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "croquisSelection": {
+        "selectedPixels": 80345,
+        "boundsExclusive": [
+          163,
+          103,
+          478,
+          360
+        ],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "croquisTuck": {
+        "selectedPixels": 2280,
+        "boundsExclusive": [
+          161,
+          101,
+          480,
+          361
+        ],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": true
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": true
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "bothSelected": 80345,
+      "classificationDifferences": {
+        "nativeOnly": {
+          "selectedPixels": 10,
+          "boundsExclusive": [
+            315,
+            360,
+            325,
+            361
+          ],
+          "touches": [],
+          "probes": {
+            "inside": {
+              "x": 320,
+              "y": 230,
+              "selected": false
+            },
+            "outside": {
+              "x": 320,
+              "y": 420,
+              "selected": false
+            },
+            "opening": {
+              "x": 320,
+              "y": 359,
+              "selected": false
+            },
+            "topCore": {
+              "x": 320,
+              "y": 101,
+              "selected": false
+            },
+            "leftCore": {
+              "x": 161,
+              "y": 230,
+              "selected": false
+            },
+            "outerFringe": {
+              "x": 320,
+              "y": 99,
+              "selected": false
+            },
+            "outerCornerFringe": {
+              "x": 159,
+              "y": 99,
+              "selected": false
+            },
+            "innerPaper": {
+              "x": 320,
+              "y": 103,
+              "selected": false
+            },
+            "outsidePaper": {
+              "x": 320,
+              "y": 98,
+              "selected": false
+            }
+          }
+        },
+        "croquisOnly": {
+          "selectedPixels": 0,
+          "boundsExclusive": null,
+          "touches": [],
+          "probes": {
+            "inside": {
+              "x": 320,
+              "y": 230,
+              "selected": false
+            },
+            "outside": {
+              "x": 320,
+              "y": 420,
+              "selected": false
+            },
+            "opening": {
+              "x": 320,
+              "y": 359,
+              "selected": false
+            },
+            "topCore": {
+              "x": 320,
+              "y": 101,
+              "selected": false
+            },
+            "leftCore": {
+              "x": 161,
+              "y": 230,
+              "selected": false
+            },
+            "outerFringe": {
+              "x": 320,
+              "y": 99,
+              "selected": false
+            },
+            "outerCornerFringe": {
+              "x": 159,
+              "y": 99,
+              "selected": false
+            },
+            "innerPaper": {
+              "x": 320,
+              "y": 103,
+              "selected": false
+            },
+            "outsidePaper": {
+              "x": 320,
+              "y": 98,
+              "selected": false
+            }
+          }
+        },
+        "nativeSelectedOutsideCroquisCandidate": 0,
+        "croquisSelectedOutsideCroquisCandidate": 0
+      },
+      "identicalOnDocument": false,
+      "candidateKnowledge": {
+        "source": "Exact nonbinary RGBA fixture at the mapped document seed",
+        "ruleReference": "Croquis paper candidates: alpha<128, irrespective of RGB",
+        "nativeRuleAssumed": false,
+        "nativeC": {
+          "state": "present",
+          "positiveOutsideDocument": 0,
+          "bitmapDimensions": [
+            640,
+            480
+          ],
+          "zeroMeaning": "C is prepared lazily; a zero does not establish native candidate rejection. Pixels outside C are counted separately."
+        }
+      },
+      "bySourceRgba": {
+        "0,0,0,0": {
+          "sourceRgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "sourcePixels": 303774,
+          "croquisCandidate": 303774,
+          "nativeA": 80355,
+          "croquisIN": 80345,
+          "croquisTUCKED": 0,
+          "nativeOnly": 10,
+          "croquisOnly": 0,
+          "nativeCPositive": 245694,
+          "nativeCZeroInBitmap": 58080,
+          "sourceOutsideCBitmap": 0
+        },
+        "0,0,0,128": {
+          "sourceRgba": [
+            0,
+            0,
+            0,
+            128
+          ],
+          "sourcePixels": 3426,
+          "croquisCandidate": 0,
+          "nativeA": 0,
+          "croquisIN": 0,
+          "croquisTUCKED": 2280,
+          "nativeOnly": 0,
+          "croquisOnly": 0,
+          "nativeCPositive": 0,
+          "nativeCZeroInBitmap": 3426,
+          "sourceOutsideCBitmap": 0
+        }
+      },
+      "bySourceAlpha": {
+        "0": {
+          "sourcePixels": 303774,
+          "nativeA": 80355,
+          "croquisIN": 80345,
+          "croquisTUCKED": 0,
+          "nativeOnly": 10,
+          "croquisOnly": 0,
+          "nativeCPositive": 245694,
+          "nativeCZeroInBitmap": 58080,
+          "sourceOutsideCBitmap": 0
+        },
+        "128": {
+          "sourcePixels": 3426,
+          "nativeA": 0,
+          "croquisIN": 0,
+          "croquisTUCKED": 2280,
+          "nativeOnly": 0,
+          "croquisOnly": 0,
+          "nativeCPositive": 0,
+          "nativeCZeroInBitmap": 3426,
+          "sourceOutsideCBitmap": 0
+        }
+      },
+      "probes": {
+        "inside": {
+          "x": 320,
+          "y": 230,
+          "sourceRgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "croquisCandidate": true,
+          "nativeA": true,
+          "croquisIN": true,
+          "croquisTUCKED": false,
+          "nativeCPositive": true,
+          "croquisFinalRgba": [
+            255,
+            0,
+            0,
+            255
+          ]
+        },
+        "outside": {
+          "x": 320,
+          "y": 420,
+          "sourceRgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "croquisCandidate": true,
+          "nativeA": false,
+          "croquisIN": false,
+          "croquisTUCKED": false,
+          "nativeCPositive": true,
+          "croquisFinalRgba": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "opening": {
+          "x": 320,
+          "y": 359,
+          "sourceRgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "croquisCandidate": true,
+          "nativeA": true,
+          "croquisIN": true,
+          "croquisTUCKED": false,
+          "nativeCPositive": true,
+          "croquisFinalRgba": [
+            255,
+            0,
+            0,
+            255
+          ]
+        },
+        "topCore": {
+          "x": 320,
+          "y": 101,
+          "sourceRgba": [
+            0,
+            0,
+            0,
+            128
+          ],
+          "croquisCandidate": false,
+          "nativeA": false,
+          "croquisIN": false,
+          "croquisTUCKED": true,
+          "nativeCPositive": false,
+          "croquisFinalRgba": [
+            127,
+            0,
+            0,
+            255
+          ]
+        },
+        "leftCore": {
+          "x": 161,
+          "y": 230,
+          "sourceRgba": [
+            0,
+            0,
+            0,
+            128
+          ],
+          "croquisCandidate": false,
+          "nativeA": false,
+          "croquisIN": false,
+          "croquisTUCKED": true,
+          "nativeCPositive": false,
+          "croquisFinalRgba": [
+            127,
+            0,
+            0,
+            255
+          ]
+        },
+        "outerFringe": {
+          "x": 320,
+          "y": 99,
+          "sourceRgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "croquisCandidate": true,
+          "nativeA": false,
+          "croquisIN": false,
+          "croquisTUCKED": false,
+          "nativeCPositive": true,
+          "croquisFinalRgba": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "outerCornerFringe": {
+          "x": 159,
+          "y": 99,
+          "sourceRgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "croquisCandidate": true,
+          "nativeA": false,
+          "croquisIN": false,
+          "croquisTUCKED": false,
+          "nativeCPositive": true,
+          "croquisFinalRgba": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "innerPaper": {
+          "x": 320,
+          "y": 103,
+          "sourceRgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "croquisCandidate": true,
+          "nativeA": true,
+          "croquisIN": true,
+          "croquisTUCKED": false,
+          "nativeCPositive": true,
+          "croquisFinalRgba": [
+            255,
+            0,
+            0,
+            255
+          ]
+        },
+        "outsidePaper": {
+          "x": 320,
+          "y": 98,
+          "sourceRgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "croquisCandidate": true,
+          "nativeA": false,
+          "croquisIN": false,
+          "croquisTUCKED": false,
+          "nativeCPositive": true,
+          "croquisFinalRgba": [
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "finalRgbaComparison": {
+        "state": "not-measured",
+        "nativeFinalRgbaAvailable": false,
+        "croquisFinalRgbaSha256": "ca3fe407ba7d873587ad2ea8bc55c3b70a92d876e8991c8203c283f0b6799807",
+        "reason": "A and C are classification bitmaps. No native final layer RGBA was captured by this observer."
+      },
+      "masks": {
+        "native": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzTENACAQBMFzgn+HFCRggOILCgizAmYTSZIkSZIkSZIkSZKkpM1Sg8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xi8n7zdoudot3uSJEmSJEmSJEmSJEmS9HwLmejTiw=="
+        },
+        "croquisIN": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzaENACAQBMHrhP47RJCAJy8Q75gtYDaRJEmSJEmSJEmSJElKxn5q8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/3k1ctZlrr9iRJkiRJkiRJkiRJkiRJVwfketJ0"
+        },
+        "croquisTUCKED": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrt3LENgDAMRUFLSMmabMKq2SRpU7iwBIKCe7V1hQf4EZIkSZIkSZIkSZIk6Y2uWesr76ydHTwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj/clL9v9Gf3ZP8JaXvaCFJEmSJEmSJEmSJEmSJGlvAReT/jY="
+        },
+        "nativeOnly": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrt0DENAAAIA7A5wb9Dzt1YIK2EJgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMATsw4AAAAAAAAAAACOAktuARg="
+        },
+        "croquisOnly": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtwQENAAAAwqD3T20PBxQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADApwGWAAAB"
+        },
+        "nativeC": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrt3LENwCAQBEE6oVS37QD5iS0RgExgYLaACa6Ai/jWk94Fj8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8XibeKmzaxMv901XeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8c7yWtc/eV77p/gr7yReDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Hm8VrwJxXxrS"
+        }
+      },
+      "overlayPng": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/captures/soft-alpha128-g10-20261013T162914.759873Z-e4db0cf6/soft-comparison-1.png"
+    }
+  ],
+  "failures": []
+}

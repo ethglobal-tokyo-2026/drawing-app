@@ -1,0 +1,43 @@
+{
+  "debugger_exit_code": 0,
+  "outer_timeout": false,
+  "recording_cue_emitted": true,
+  "resumeIndependentlyVerified": true,
+  "captureComplete": false,
+  "preflightVerified": true,
+  "errors": [],
+  "summary": {
+    "allFillsSucceeded": false,
+    "captureComplete": false,
+    "captureErrors": [
+      "CaptureError: capture_deadline_reached"
+    ],
+    "captureWarnings": [],
+    "cleanupErrors": [],
+    "cleanupWarnings": [],
+    "deadlineExceeded": false,
+    "detachObservationSource": "process_get_state",
+    "detachRequestSucceeded": true,
+    "detachStateEvents": [],
+    "detachedStateObserved": true,
+    "elapsed_seconds": 5.116631417000001,
+    "entries": 0,
+    "kind": "summary",
+    "operationObserved": false,
+    "ownedBreakpointIds": [
+      1,
+      2,
+      3
+    ],
+    "pairs": 0,
+    "requestedCalls": 1,
+    "resumeIndependentlyVerified": false,
+    "stopReason": "CaptureError: capture_deadline_reached",
+    "successfulFills": 0,
+    "unmatchedEntries": 0,
+    "watchdogError": null,
+    "wholeAlgorithmEquivalence": "not_evaluated",
+    "workqueueStepRecoveries": []
+  },
+  "recordingSucceeded": true
+}

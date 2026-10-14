@@ -1,0 +1,21 @@
+{
+  "fixtureId": "narrow-pocket",
+  "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/fixtures/narrow-pocket.png",
+  "sourcePngSha256": "7e3f3a70c62c9937460a8c582796f666e53c6c9c2c5f1afcd782cf02c4ae75a4",
+  "sourceRgbaSha256": "23a00b3544a6b495d504fda42a45bf9d3281d5a18803272fc61a1cc0cac8e6fe",
+  "documentPixels": [640, 480],
+  "intendedSeedDocument": { "x": 320, "y": 230 },
+  "plannedCalls": [
+    { "callId": "1", "gapSelectorLevel": 4, "configuredGap": 10 },
+    { "callId": "2", "gapSelectorLevel": 5, "configuredGap": 20 }
+  ],
+  "sourceResetBetweenCalls": "Undo the first fill; confirm the original outline and pocket before the second fill.",
+  "settingStatus": "Planned sequence; confirm each native gap and seed separately from its boundary records.",
+  "requiredNativeSettings": {
+    "reference": "Refer only to editing layer", "multipleReference": false,
+    "areaScaling": false, "colorMargin": 10, "antialiasing": true,
+    "fillNarrowAreas": true, "paint": "#ff0000"
+  },
+  "comparison": "Final A classification only; visible RGBA and the native returned rectangle are separate measurements.",
+  "question": "Test native pocket recovery at the recovered common limits of 800 and 3200 pixels, and compare Croquis's different classifications."
+}

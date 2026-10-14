@@ -1,0 +1,24 @@
+{
+  "fixtureId": "narrow-pocket",
+  "sourcePng": "../../../fixtures/narrow-pocket.png",
+  "documentSize": [640, 480],
+  "nativeSettingsObservedByUiOperator": {
+    "closeGapIndicatorIndex": 2,
+    "referenceOnlyLayer": true,
+    "multipleReferenceEnabled": false,
+    "colorMargin": 10,
+    "antiAliasing": true,
+    "areaScalingEnabled": false,
+    "fillNarrowAreas": true
+  },
+  "sourceStateObservedByUiOperator": "Input visually unchanged before the call; afterward the main interior was red and the pocket remained transparent.",
+  "inputMethodObservedByUiOperator": "Accessibility window click with palettes hidden after coordinate clicks stopped producing native calls.",
+  "capturedDocumentSeed": [322, 176],
+  "fixtureDefaultSeed": [320, 230],
+  "sourcePixelAtCapturedSeed": [0, 0, 0, 0],
+  "capturedSeedInsideIntendedMainRoom": true,
+  "croquisExplicitlyRecomputedAtCapturedSeed": true,
+  "nativeGapWidth": 5,
+  "narrowFlag": 1024,
+  "documentOffset": [0, 0]
+}

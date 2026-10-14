@@ -1,0 +1,46 @@
+{
+  "pid": 57266,
+  "executable": "/Users/adoll/Applications/CSP Research/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT",
+  "original": "/Users/adoll/Applications/CSP Research/original-arm64",
+  "recorderSha256": {
+    "capture_fill.py": "1e1bf675c243b169a0177577e5f804b8eb24fc09d0f7d7bbcebd5421af7d5d07",
+    "record_fill.py": "490b5de20b7a570d893846fcdd31920a0e594aff26827225fa87dc178d9782d4",
+    "capture_live_contract.py": "87c0e6c9d736ed8cc8188c911ba5a2494e5c00af8f68ff77db8f25b4d7dca112",
+    "record_tablet_stroke.py": "8c893aae014ba21597298b3586d40b90b133c7831ccc8aa32f19265ed0f95e93"
+  },
+  "requestedCalls": 1,
+  "captureSeconds": 30.0,
+  "outerGuardSeconds": 45,
+  "preflight": false,
+  "metadata": {
+    "fixtureId": "narrow-pocket",
+    "caseId": "narrow-pocket-level4-larger-gap",
+    "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/fixtures/narrow-pocket.png",
+    "sourcePngSha256": "7e3f3a70c62c9937460a8c582796f666e53c6c9c2c5f1afcd782cf02c4ae75a4",
+    "sourceRgbaSha256": "23a00b3544a6b495d504fda42a45bf9d3281d5a18803272fc61a1cc0cac8e6fe",
+    "documentPixels": [
+      640,
+      480
+    ],
+    "intendedSeedDocument": {
+      "x": 320,
+      "y": 230
+    },
+    "gapSelectorLevel": 4,
+    "configuredGap": 10,
+    "question": "Test whether the existing roughly 500-pixel pocket is recovered at an 800-pixel limit.",
+    "settingStatus": "Intended capture settings; confirm the native gap and actual seed from each boundary record.",
+    "requiredNativeSettings": {
+      "reference": "Refer only to editing layer",
+      "multipleReference": false,
+      "areaScaling": false,
+      "colorMargin": 10,
+      "antialiasing": true,
+      "fillNarrowAreas": true,
+      "paint": "#ff0000"
+    },
+    "seedControl": "The captured seed must be a transparent source pixel in the intended main room. Use the captured seed explicitly when it differs from the fixture seed.",
+    "comparison": "Final A classification only; visible RGBA and the native returned rectangle are separate measurements.",
+    "recoveredOmittedComponentLimit": 800
+  }
+}

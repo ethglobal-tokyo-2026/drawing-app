@@ -1,0 +1,31 @@
+{
+  "fixtureId": "narrow-pocket",
+  "caseId": "narrow-pocket-level5-larger-gap",
+  "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/fixtures/narrow-pocket.png",
+  "sourcePngSha256": "7e3f3a70c62c9937460a8c582796f666e53c6c9c2c5f1afcd782cf02c4ae75a4",
+  "sourceRgbaSha256": "23a00b3544a6b495d504fda42a45bf9d3281d5a18803272fc61a1cc0cac8e6fe",
+  "documentPixels": [
+    640,
+    480
+  ],
+  "intendedSeedDocument": {
+    "x": 320,
+    "y": 230
+  },
+  "gapSelectorLevel": 5,
+  "configuredGap": 20,
+  "question": "Compare pocket recovery with Croquis's changed classification at gap 20.",
+  "settingStatus": "Intended capture settings; confirm the native gap and actual seed from each boundary record.",
+  "requiredNativeSettings": {
+    "reference": "Refer only to editing layer",
+    "multipleReference": false,
+    "areaScaling": false,
+    "colorMargin": 10,
+    "antialiasing": true,
+    "fillNarrowAreas": true,
+    "paint": "#ff0000"
+  },
+  "seedControl": "The captured seed must be a transparent source pixel in the intended main room. Use the captured seed explicitly when it differs from the fixture seed.",
+  "comparison": "Final A classification only; visible RGBA and the native returned rectangle are separate measurements.",
+  "recoveredOmittedComponentLimit": 3200
+}

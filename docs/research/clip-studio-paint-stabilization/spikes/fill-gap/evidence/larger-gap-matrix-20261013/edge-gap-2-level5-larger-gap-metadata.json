@@ -1,0 +1,31 @@
+{
+  "fixtureId": "edge-gap-2",
+  "caseId": "edge-gap-2-level5-larger-gap",
+  "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/fixtures/edge-gap-2.png",
+  "sourcePngSha256": "ffdf58a75884f70cc165b3d2894fae7b378b83f19ca6af631e271904c7b525d3",
+  "sourceRgbaSha256": "9c3af0197ee2ad9d9bef37293e602ba54510d2360b4add91d8f77283193bac76",
+  "documentPixels": [
+    240,
+    200
+  ],
+  "intendedSeedDocument": {
+    "x": 120,
+    "y": 100
+  },
+  "gapSelectorLevel": 5,
+  "configuredGap": 20,
+  "question": "Determine whether native A leaks when Croquis selects the complete exterior at gap 20.",
+  "settingStatus": "Intended capture settings; confirm the native gap and actual seed from each boundary record.",
+  "requiredNativeSettings": {
+    "reference": "Refer only to editing layer",
+    "multipleReference": false,
+    "areaScaling": false,
+    "colorMargin": 10,
+    "antialiasing": true,
+    "fillNarrowAreas": true,
+    "paint": "#ff0000"
+  },
+  "seedControl": "The captured seed must be a transparent source pixel in the intended main room. Use the captured seed explicitly when it differs from the fixture seed.",
+  "comparison": "Final A classification only; visible RGBA and the native returned rectangle are separate measurements.",
+  "recoveredOmittedComponentLimit": 3200
+}

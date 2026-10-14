@@ -1,0 +1,179 @@
+{
+  "source": "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64",
+  "source_sha256": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+  "address_kind": "unslid ARM64 virtual address",
+  "method": "Read-only objdump extraction using existing saved Mach-O function boundaries; enclosing-symbol guesses removed",
+  "constants": {
+    "0x1042e47a0": 0.50000001,
+    "0x1042e47a8": -0.50000001,
+    "0x1042ee820": 254.0,
+    "0x1042f9340": 300.0
+  },
+  "files": [
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/102a9f5cc.asm",
+      "start": "0x102a9f5cc",
+      "end": "0x102a9f8a8",
+      "bytes": 732,
+      "sha256": "fb1373cd812767b01694b9007d9e9fb41494ccf94563c8ddff4f53411646810a",
+      "command": [
+        "objdump",
+        "-d",
+        "--no-show-raw-insn",
+        "--start-address=0x102a9f5cc",
+        "--stop-address=0x102a9f8a8",
+        "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+      ]
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/102856cd4.asm",
+      "start": "0x102856cd4",
+      "end": "0x102856ed8",
+      "bytes": 516,
+      "sha256": "f3375df231fd7a77e3b84f447d3cf06edd985404ad65019f75e7abaef2463ab6",
+      "command": [
+        "objdump",
+        "-d",
+        "--no-show-raw-insn",
+        "--start-address=0x102856cd4",
+        "--stop-address=0x102856ed8",
+        "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+      ]
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/10339dc98.asm",
+      "start": "0x10339dc98",
+      "end": "0x10339dcc8",
+      "bytes": 48,
+      "sha256": "58976e7c919da6e8ab4ac6a0662e05a88d2114b29a866cf81a75fa388423b991",
+      "command": [
+        "objdump",
+        "-d",
+        "--no-show-raw-insn",
+        "--start-address=0x10339dc98",
+        "--stop-address=0x10339dcc8",
+        "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+      ]
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/102218260.asm",
+      "start": "0x102218260",
+      "end": "0x1022182ac",
+      "bytes": 76,
+      "sha256": "ae703695bc77e528c3060b25843592eb49fd14f2f2c4d894b33be867ecc7f716",
+      "command": [
+        "objdump",
+        "-d",
+        "--no-show-raw-insn",
+        "--start-address=0x102218260",
+        "--stop-address=0x1022182ac",
+        "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+      ]
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/1022180a0.asm",
+      "start": "0x1022180a0",
+      "end": "0x102218180",
+      "bytes": 224,
+      "sha256": "32ac2059bb236369120e71176ace08f198212dd5480660ddb900b2fcbf37a1bf",
+      "command": [
+        "objdump",
+        "-d",
+        "--no-show-raw-insn",
+        "--start-address=0x1022180a0",
+        "--stop-address=0x102218180",
+        "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+      ]
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/102a8d124.asm",
+      "start": "0x102a8d124",
+      "end": "0x102a8dbf0",
+      "bytes": 2764,
+      "sha256": "07c1395acf6588820a4899c8e4faf4227c8b17d8b2400221c375a8900bf03a8b",
+      "command": [
+        "objdump",
+        "-d",
+        "--no-show-raw-insn",
+        "--start-address=0x102a8d124",
+        "--stop-address=0x102a8dbf0",
+        "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+      ]
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/10253cbcc.asm",
+      "start": "0x10253cbcc",
+      "end": "0x10253ccbc",
+      "bytes": 240,
+      "sha256": "fb87e54062001cb8f9a8804cfc06d0a9c99d18e2867d1359f51cd037a9d7f83b",
+      "command": [
+        "objdump",
+        "-d",
+        "--no-show-raw-insn",
+        "--start-address=0x10253cbcc",
+        "--stop-address=0x10253ccbc",
+        "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+      ]
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/10253d250.asm",
+      "start": "0x10253d250",
+      "end": "0x10253d3b0",
+      "bytes": 352,
+      "sha256": "a65682f847398bb3a8c86e65b752081d0d840a3df31619b3ecc15d2458bf5c6e",
+      "command": [
+        "objdump",
+        "-d",
+        "--no-show-raw-insn",
+        "--start-address=0x10253d250",
+        "--stop-address=0x10253d3b0",
+        "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+      ]
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/10253f5e4.asm",
+      "start": "0x10253f5e4",
+      "end": "0x10253ff10",
+      "bytes": 2348,
+      "sha256": "b3773cb9e2528b8b6fb4a50baaabe9107358f0f41698035d55034ec0ce5cf7e4",
+      "command": [
+        "objdump",
+        "-d",
+        "--no-show-raw-insn",
+        "--start-address=0x10253f5e4",
+        "--stop-address=0x10253ff10",
+        "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+      ]
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/102915430.asm",
+      "start": "0x102915430",
+      "end": "0x1029154b0",
+      "bytes": 128,
+      "sha256": "9fb0df198d8260d9b5ca87224877161a9488886ea05f30f877e8d72b8e3949d6",
+      "command": [
+        "objdump",
+        "-d",
+        "--no-show-raw-insn",
+        "--start-address=0x102915430",
+        "--stop-address=0x1029154b0",
+        "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+      ]
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/1024e8320.asm",
+      "start": "0x1024e8320",
+      "end": "0x1024e8328",
+      "bytes": 8,
+      "sha256": "944c1b36cbfd568ffb2528a3d3d25e0b1e8e5458dda56aed39ec2e71d0fad08c",
+      "command": [
+        "objdump",
+        "-d",
+        "--no-show-raw-insn",
+        "--start-address=0x1024e8320",
+        "--stop-address=0x1024e8328",
+        "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+      ]
+    }
+  ]
+}

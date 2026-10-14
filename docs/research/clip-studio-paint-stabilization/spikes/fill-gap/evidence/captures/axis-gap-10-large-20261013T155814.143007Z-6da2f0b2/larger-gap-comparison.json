@@ -1,0 +1,233 @@
+{
+  "schema": "native-croquis-fill-comparison/v1",
+  "captureFile": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/captures/axis-gap-10-large-20261013T155814.143007Z-6da2f0b2/fill.jsonl",
+  "captureSha256": "05d77955572faa69bdc758a61a3c5ceebebf8367c15a8ae63cf676c637327bea",
+  "fillSourceSha256": "d947273c2157bcdfd7539da1b3c3c87a9f32a80fc3cc36622f5477f3a780fe49",
+  "comparison": "Final native A selection versus Croquis IN classification; visible RGBA and anti-aliasing are outside this comparison.",
+  "overlayLegend": {
+    "red": "Native only",
+    "blue": "Croquis only",
+    "green": "Both selected"
+  },
+  "results": [
+    {
+      "callId": "1",
+      "fixtureId": "axis-gap-10",
+      "sourceRgbaSha256": "2b64b8fa1751e7a8fca27a3d0cc2dbc0054ef45d8c76f31d201c50c3c9e352e3",
+      "gapWidth": 10,
+      "narrowFlag": 1024,
+      "seedMapping": {
+        "bitmapSeed": {
+          "x": 320,
+          "y": 230
+        },
+        "documentOffset": [
+          0,
+          0
+        ],
+        "mappedDocumentSeed": {
+          "x": 320,
+          "y": 230
+        },
+        "fixtureSeed": {
+          "x": 320,
+          "y": 230
+        },
+        "exactFixtureSeed": true,
+        "usedCapturedSeed": false
+      },
+      "domain": [
+        0,
+        0,
+        640,
+        480
+      ],
+      "sourceTileOffset": [
+        0,
+        0
+      ],
+      "nativeOutputRect": {
+        "address": "0x16d5e4df0",
+        "bytesHex": "a300000067000000de01000068010000",
+        "values": [
+          163,
+          103,
+          478,
+          360
+        ]
+      },
+      "selectedOutsideOutputRectExclusiveOnDocument": {
+        "selectedPixels": 10,
+        "boundsExclusive": [
+          315,
+          360,
+          325,
+          361
+        ],
+        "touches": [],
+        "probes": {}
+      },
+      "nativeBitmapDimensions": [
+        640,
+        480
+      ],
+      "nativeSelectedOutsideDocument": 0,
+      "nativeSelection": {
+        "selectedPixels": 80355,
+        "boundsExclusive": [
+          163,
+          103,
+          478,
+          361
+        ],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          }
+        }
+      },
+      "croquisSelection": {
+        "selectedPixels": 80345,
+        "boundsExclusive": [
+          163,
+          103,
+          478,
+          360
+        ],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          }
+        }
+      },
+      "bothSelected": 80345,
+      "classificationDifferences": {
+        "nativeOnly": {
+          "selectedPixels": 10,
+          "boundsExclusive": [
+            315,
+            360,
+            325,
+            361
+          ],
+          "touches": [],
+          "probes": {
+            "inside": {
+              "x": 320,
+              "y": 230,
+              "selected": false
+            },
+            "outside": {
+              "x": 320,
+              "y": 420,
+              "selected": false
+            },
+            "opening": {
+              "x": 320,
+              "y": 359,
+              "selected": false
+            }
+          }
+        },
+        "croquisOnly": {
+          "selectedPixels": 0,
+          "boundsExclusive": null,
+          "touches": [],
+          "probes": {
+            "inside": {
+              "x": 320,
+              "y": 230,
+              "selected": false
+            },
+            "outside": {
+              "x": 320,
+              "y": 420,
+              "selected": false
+            },
+            "opening": {
+              "x": 320,
+              "y": 359,
+              "selected": false
+            }
+          }
+        },
+        "nativeSelectedIneligible": 0,
+        "croquisSelectedIneligible": 0
+      },
+      "identicalOnDocument": false,
+      "candidateKnowledge": {
+        "source": "Exact binary-alpha fixture RGBA, relative to the captured seed",
+        "nativeC": {
+          "state": "present",
+          "positiveEligible": 245694,
+          "positiveIneligible": 0,
+          "eligibleZeroOrOutsideBitmap": 58080,
+          "positiveOutsideDocument": 0,
+          "zeroMeaning": "C is prepared lazily; an eligible zero can be unprepared and is not a proven rejection."
+        }
+      },
+      "masks": {
+        "native": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzTENACAQBMFzgn+HFCRggOILCgizAmYTSZIkSZIkSZIkSZKkpM1Sg8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xi8n7zdoudot3uSJEmSJEmSJEmSJEmS9HwLmejTiw=="
+        },
+        "croquis": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzaENACAQBMHrhP47RJCAJy8Q75gtYDaRJEmSJEmSJEmSJElKxn5q8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/3k1ctZlrr9iRJkiRJkiRJkiRJkiRJVwfketJ0"
+        },
+        "nativeOnly": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrt0DENAAAIA7A5wb9Dzt1YIK2EJgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMATsw4AAAAAAAAAAACOAktuARg="
+        },
+        "croquisOnly": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtwQENAAAAwqD3T20PBxQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADApwGWAAAB"
+        }
+      },
+      "overlayPng": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/captures/axis-gap-10-large-20261013T155814.143007Z-6da2f0b2/larger-gap-comparison-1.png"
+    }
+  ],
+  "failures": []
+}

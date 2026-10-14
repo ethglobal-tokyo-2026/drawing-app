@@ -1,0 +1,19 @@
+{
+  "fixtureId": "axis-gap-5",
+  "documentWidth": 640,
+  "documentHeight": 480,
+  "documentResolutionDpi": 72,
+  "displayZoomPercent": 100,
+  "selectedIndicatorPosition": 3,
+  "displayedGapPreset": 5,
+  "globalLengthUnit": 0,
+  "selectedSubtool": "Refer only to editing layer",
+  "seedDocument": { "x": 320, "y": 230 },
+  "mouseClickInWindow": { "x": 1214, "y": 1104 },
+  "observedColorMargin": 10,
+  "observedAreaScalingEnabled": false,
+  "observedAntialiasEnabled": true,
+  "observedNarrowAreaEnabled": true,
+  "paint": "#ff0000",
+  "purpose": "Record the native selected-pixel mask for a measured gap at CSP's middle preset; no timing claim."
+}

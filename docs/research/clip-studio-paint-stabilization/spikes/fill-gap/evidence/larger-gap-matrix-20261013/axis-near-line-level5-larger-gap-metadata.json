@@ -1,0 +1,31 @@
+{
+  "fixtureId": "axis-near-line",
+  "caseId": "axis-near-line-level5-larger-gap",
+  "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/fixtures/axis-near-line.png",
+  "sourcePngSha256": "262df5b80b08def01cb9d56dea50fdfaaab2e0477f7f3d3cfd43be9871382db8",
+  "sourceRgbaSha256": "96109ebaba262e62c0f934818c156a814fb05b3c48fc3533e540c8b32b1a460d",
+  "documentPixels": [
+    640,
+    480
+  ],
+  "intendedSeedDocument": {
+    "x": 320,
+    "y": 103
+  },
+  "gapSelectorLevel": 5,
+  "configuredGap": 20,
+  "question": "Test the same near-line seed in the native branch for gaps greater than 10.",
+  "settingStatus": "Intended capture settings; confirm the native gap and actual seed from each boundary record.",
+  "requiredNativeSettings": {
+    "reference": "Refer only to editing layer",
+    "multipleReference": false,
+    "areaScaling": false,
+    "colorMargin": 10,
+    "antialiasing": true,
+    "fillNarrowAreas": true,
+    "paint": "#ff0000"
+  },
+  "seedControl": "The native seed must be adjacent to the upper outline; an ordinary interior seed does not test the near-line condition.",
+  "comparison": "Final A classification only; visible RGBA and the native returned rectangle are separate measurements.",
+  "recoveredOmittedComponentLimit": 3200
+}

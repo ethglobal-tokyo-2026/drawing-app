@@ -1,0 +1,19 @@
+{
+  "action": "SIGCONT to exact identity-verified research PID",
+  "before": {
+    "pid": 57266,
+    "ppid": 1,
+    "state": "T",
+    "flags": "4004",
+    "executable": "/Users/adoll/Applications/CSP Research/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT"
+  },
+  "after": {
+    "pid": 57266,
+    "ppid": 1,
+    "state": "R",
+    "flags": "4084",
+    "executable": "/Users/adoll/Applications/CSP Research/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT"
+  },
+  "resumed": true,
+  "reason": "Debugger detach retained; independent process check found the research process still stopped after a zero-call deadline."
+}

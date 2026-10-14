@@ -1,0 +1,31 @@
+{
+  "fixtureId": "axis-gap-20",
+  "caseId": "axis-gap-20-level4-larger-gap",
+  "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/fixtures/axis-gap-20.png",
+  "sourcePngSha256": "d3a378f3fb7ac9ed6468c7ff6ade808844da835747427900d206440435d9af38",
+  "sourceRgbaSha256": "51529e3a25cf10ac8aefbe84205824a05f507b12ba0a5f36045330b525efc32d",
+  "documentPixels": [
+    640,
+    480
+  ],
+  "intendedSeedDocument": {
+    "x": 320,
+    "y": 230
+  },
+  "gapSelectorLevel": 4,
+  "configuredGap": 10,
+  "question": "Use a twenty-column opening as a wide-opening control at gap 10.",
+  "settingStatus": "Intended capture settings; confirm the native gap and actual seed from each boundary record.",
+  "requiredNativeSettings": {
+    "reference": "Refer only to editing layer",
+    "multipleReference": false,
+    "areaScaling": false,
+    "colorMargin": 10,
+    "antialiasing": true,
+    "fillNarrowAreas": true,
+    "paint": "#ff0000"
+  },
+  "seedControl": "The captured seed must be a transparent source pixel in the intended main room. Use the captured seed explicitly when it differs from the fixture seed.",
+  "comparison": "Final A classification only; visible RGBA and the native returned rectangle are separate measurements.",
+  "recoveredOmittedComponentLimit": 800
+}

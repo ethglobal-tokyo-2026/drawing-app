@@ -1,0 +1,24 @@
+{
+  "fixtureId": "recolor-bridge-4",
+  "sourcePng": "../../../fixtures/recolor-bridge-4.png",
+  "documentSize": [640, 480],
+  "nativeSettingsObservedByUiOperator": {
+    "closeGapIndicatorIndex": 2,
+    "referenceOnlyLayer": true,
+    "multipleReferenceEnabled": false,
+    "colorMargin": 10,
+    "antiAliasing": true,
+    "areaScalingEnabled": false,
+    "fillNarrowAreas": true
+  },
+  "sourceStateObservedByUiOperator": "The original green dumbbell was shown before capture. An incidental merged filter was cancelled, and its layer addition was undone before this call.",
+  "inputMethodObservedByUiOperator": "Accessibility window click after View > Rotate 90; the view rotation placed the captured seed in the left source lobe.",
+  "capturedDocumentSeed": [254, 246],
+  "fixtureDefaultSeed": [230, 230],
+  "sourcePixelAtCapturedSeed": [0, 180, 0, 255],
+  "capturedSeedInsideOriginalLeftGreenLobe": true,
+  "croquisExplicitlyRecomputedAtCapturedSeed": true,
+  "nativeGapWidth": 5,
+  "narrowFlag": 1024,
+  "documentOffset": [0, 0]
+}

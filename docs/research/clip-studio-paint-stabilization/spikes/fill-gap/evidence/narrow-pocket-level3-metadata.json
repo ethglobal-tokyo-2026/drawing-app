@@ -1,0 +1,18 @@
+{
+  "fixtureId": "narrow-pocket",
+  "source": "fixtures/narrow-pocket.png",
+  "documentPixels": [640, 480],
+  "documentDpi": 72,
+  "viewZoomPercent": 100,
+  "gapSelectorLevel": 3,
+  "configuredGap": 5,
+  "reference": "Refer only to editing layer",
+  "multipleReference": false,
+  "areaScaling": false,
+  "colorMargin": 10,
+  "antialiasing": true,
+  "fillNarrowAreas": true,
+  "input": "AX-index click on standard window with palettes hidden; actual seed must be verified from native capture",
+  "observedSourceOrigin": [1406, 874],
+  "intendedSeedRegion": "large interior outside narrow pocket"
+}

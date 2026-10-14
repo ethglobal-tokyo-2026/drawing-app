@@ -1,0 +1,266 @@
+{
+  "schema": "soft-fill-fixtures/v1",
+  "pixelFormat": "RGBA8 straight alpha",
+  "comparisonFillRgb": [255, 0, 0],
+  "comparisonGaps": [10, 20],
+  "coordinates": "Zero-based document pixels; right/bottom exclusive unless named Inclusive.",
+  "requiredNativeSettings": {
+    "reference": "Refer only to editing layer",
+    "multipleReference": false,
+    "colorMargin": 10,
+    "antialiasing": true,
+    "areaScaling": false,
+    "fillNarrowAreas": true,
+    "paint": "#ff0000"
+  },
+  "fixtures": [
+    {
+      "id": "soft-axis-gap10-alpha064",
+      "width": 640,
+      "height": 480,
+      "seed": {
+        "x": 320,
+        "y": 230
+      },
+      "description": "Three-pixel black outline, alpha 64, ten clear bottom columns.",
+      "sourcePng": "soft-axis-gap10-alpha064.png",
+      "sourceRgbaGzip": "soft-axis-gap10-alpha064.rgba.gz",
+      "sourcePngSha256": "1a0479e3367e633ecbc8117c248d973b4746f5fc05f0ac76e688e07b684698ed",
+      "sourceRgbaSha256": "88e1904b887bc27251085069d2adb39a95baeadd266217515e411422e352a268",
+      "alphaHistogram": {
+        "0": 303774,
+        "64": 3426
+      },
+      "geometry": {
+        "coreOutlineInclusive": [160, 100, 480, 360],
+        "coreLineThickness": 3,
+        "openingExclusive": [315, 358, 325, 362],
+        "openingWidth": 10,
+        "uniformOutlineAlpha": 64,
+        "antialiasing": null
+      },
+      "probes": {
+        "inside": [320, 230],
+        "outside": [320, 420],
+        "opening": [320, 359],
+        "topCore": [320, 101],
+        "leftCore": [161, 230],
+        "outerFringe": [320, 99],
+        "outerCornerFringe": [159, 99],
+        "innerPaper": [320, 103],
+        "outsidePaper": [320, 98]
+      },
+      "probeSourceRgba": {
+        "inside": [0, 0, 0, 0],
+        "outside": [0, 0, 0, 0],
+        "opening": [0, 0, 0, 0],
+        "topCore": [0, 0, 0, 64],
+        "leftCore": [0, 0, 0, 64],
+        "outerFringe": [0, 0, 0, 0],
+        "outerCornerFringe": [0, 0, 0, 0],
+        "innerPaper": [0, 0, 0, 0],
+        "outsidePaper": [0, 0, 0, 0]
+      }
+    },
+    {
+      "id": "soft-axis-gap10-alpha128",
+      "width": 640,
+      "height": 480,
+      "seed": {
+        "x": 320,
+        "y": 230
+      },
+      "description": "Three-pixel black outline, alpha 128, ten clear bottom columns.",
+      "sourcePng": "soft-axis-gap10-alpha128.png",
+      "sourceRgbaGzip": "soft-axis-gap10-alpha128.rgba.gz",
+      "sourcePngSha256": "65b8c596b56dcb8cef6a76aec71522182614204dd87b072d6bf4e2dcbb6696b1",
+      "sourceRgbaSha256": "5abcc35b3b2c54704ed5f5c0635d12678980c174e9e49e066e8088e17c859223",
+      "alphaHistogram": {
+        "0": 303774,
+        "128": 3426
+      },
+      "geometry": {
+        "coreOutlineInclusive": [160, 100, 480, 360],
+        "coreLineThickness": 3,
+        "openingExclusive": [315, 358, 325, 362],
+        "openingWidth": 10,
+        "uniformOutlineAlpha": 128,
+        "antialiasing": null
+      },
+      "probes": {
+        "inside": [320, 230],
+        "outside": [320, 420],
+        "opening": [320, 359],
+        "topCore": [320, 101],
+        "leftCore": [161, 230],
+        "outerFringe": [320, 99],
+        "outerCornerFringe": [159, 99],
+        "innerPaper": [320, 103],
+        "outsidePaper": [320, 98]
+      },
+      "probeSourceRgba": {
+        "inside": [0, 0, 0, 0],
+        "outside": [0, 0, 0, 0],
+        "opening": [0, 0, 0, 0],
+        "topCore": [0, 0, 0, 128],
+        "leftCore": [0, 0, 0, 128],
+        "outerFringe": [0, 0, 0, 0],
+        "outerCornerFringe": [0, 0, 0, 0],
+        "innerPaper": [0, 0, 0, 0],
+        "outsidePaper": [0, 0, 0, 0]
+      }
+    },
+    {
+      "id": "soft-axis-gap10-alpha192",
+      "width": 640,
+      "height": 480,
+      "seed": {
+        "x": 320,
+        "y": 230
+      },
+      "description": "Three-pixel black outline, alpha 192, ten clear bottom columns.",
+      "sourcePng": "soft-axis-gap10-alpha192.png",
+      "sourceRgbaGzip": "soft-axis-gap10-alpha192.rgba.gz",
+      "sourcePngSha256": "13a0ad8faee1cc66baacf83536927efcbb6f0c22cf12c6fda287b7db6e18560c",
+      "sourceRgbaSha256": "d9529ac98d1ac048238f606b2746cab7131709472218b0384162cb9aea80764a",
+      "alphaHistogram": {
+        "0": 303774,
+        "192": 3426
+      },
+      "geometry": {
+        "coreOutlineInclusive": [160, 100, 480, 360],
+        "coreLineThickness": 3,
+        "openingExclusive": [315, 358, 325, 362],
+        "openingWidth": 10,
+        "uniformOutlineAlpha": 192,
+        "antialiasing": null
+      },
+      "probes": {
+        "inside": [320, 230],
+        "outside": [320, 420],
+        "opening": [320, 359],
+        "topCore": [320, 101],
+        "leftCore": [161, 230],
+        "outerFringe": [320, 99],
+        "outerCornerFringe": [159, 99],
+        "innerPaper": [320, 103],
+        "outsidePaper": [320, 98]
+      },
+      "probeSourceRgba": {
+        "inside": [0, 0, 0, 0],
+        "outside": [0, 0, 0, 0],
+        "opening": [0, 0, 0, 0],
+        "topCore": [0, 0, 0, 192],
+        "leftCore": [0, 0, 0, 192],
+        "outerFringe": [0, 0, 0, 0],
+        "outerCornerFringe": [0, 0, 0, 0],
+        "innerPaper": [0, 0, 0, 0],
+        "outsidePaper": [0, 0, 0, 0]
+      }
+    },
+    {
+      "id": "soft-axis-gap10-alpha255",
+      "width": 640,
+      "height": 480,
+      "seed": {
+        "x": 320,
+        "y": 230
+      },
+      "description": "Three-pixel black outline, alpha 255, ten clear bottom columns.",
+      "sourcePng": "soft-axis-gap10-alpha255.png",
+      "sourceRgbaGzip": "soft-axis-gap10-alpha255.rgba.gz",
+      "sourcePngSha256": "2a1ee08c141a94c0b4c7839921be71dae4ae1b490f758c67f342cdabb0454a69",
+      "sourceRgbaSha256": "2b64b8fa1751e7a8fca27a3d0cc2dbc0054ef45d8c76f31d201c50c3c9e352e3",
+      "alphaHistogram": {
+        "0": 303774,
+        "255": 3426
+      },
+      "geometry": {
+        "coreOutlineInclusive": [160, 100, 480, 360],
+        "coreLineThickness": 3,
+        "openingExclusive": [315, 358, 325, 362],
+        "openingWidth": 10,
+        "uniformOutlineAlpha": 255,
+        "antialiasing": null
+      },
+      "probes": {
+        "inside": [320, 230],
+        "outside": [320, 420],
+        "opening": [320, 359],
+        "topCore": [320, 101],
+        "leftCore": [161, 230],
+        "outerFringe": [320, 99],
+        "outerCornerFringe": [159, 99],
+        "innerPaper": [320, 103],
+        "outsidePaper": [320, 98]
+      },
+      "probeSourceRgba": {
+        "inside": [0, 0, 0, 0],
+        "outside": [0, 0, 0, 0],
+        "opening": [0, 0, 0, 0],
+        "topCore": [0, 0, 0, 255],
+        "leftCore": [0, 0, 0, 255],
+        "outerFringe": [0, 0, 0, 0],
+        "outerCornerFringe": [0, 0, 0, 0],
+        "innerPaper": [0, 0, 0, 0],
+        "outsidePaper": [0, 0, 0, 0]
+      }
+    },
+    {
+      "id": "soft-axis-gap10-aa-outer",
+      "width": 640,
+      "height": 480,
+      "seed": {
+        "x": 320,
+        "y": 230
+      },
+      "description": "Three-pixel opaque black core with an analytic area-coverage outer fringe and ten clear bottom columns.",
+      "sourcePng": "soft-axis-gap10-aa-outer.png",
+      "sourceRgbaGzip": "soft-axis-gap10-aa-outer.rgba.gz",
+      "sourcePngSha256": "f09ce8e4146207bc61a9806b1397b6d59a28236d7563fe87fe7a08f439aa911f",
+      "sourceRgbaSha256": "940a5149b39081fe50b178fbdba0dfc4f403dac8657f1b10cb91e0063579612f",
+      "alphaHistogram": {
+        "0": 302616,
+        "16": 4,
+        "64": 1154,
+        "255": 3426
+      },
+      "geometry": {
+        "coreOutlineInclusive": [160, 100, 480, 360],
+        "coreLineThickness": 3,
+        "openingExclusive": [315, 358, 325, 362],
+        "openingWidth": 10,
+        "uniformOutlineAlpha": null,
+        "antialiasing": {
+          "method": "Exact pixel-square area overlap; round alpha by floor(coverage * 255 + 0.5).",
+          "outerRectangleContinuousExclusive": [159.75, 99.75, 481.25, 361.25],
+          "clearInteriorContinuousExclusive": [163, 103, 478, 358],
+          "openingClearRectangleExclusive": [315, 358, 325, 362],
+          "coverage": "area(pixel intersection outer rectangle) minus area(pixel intersection clear interior); opening forced clear."
+        }
+      },
+      "probes": {
+        "inside": [320, 230],
+        "outside": [320, 420],
+        "opening": [320, 359],
+        "topCore": [320, 101],
+        "leftCore": [161, 230],
+        "outerFringe": [320, 99],
+        "outerCornerFringe": [159, 99],
+        "innerPaper": [320, 103],
+        "outsidePaper": [320, 98]
+      },
+      "probeSourceRgba": {
+        "inside": [0, 0, 0, 0],
+        "outside": [0, 0, 0, 0],
+        "opening": [0, 0, 0, 0],
+        "topCore": [0, 0, 0, 255],
+        "leftCore": [0, 0, 0, 255],
+        "outerFringe": [0, 0, 0, 64],
+        "outerCornerFringe": [0, 0, 0, 16],
+        "innerPaper": [0, 0, 0, 0],
+        "outsidePaper": [0, 0, 0, 0]
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+Window: "CSP joined capture* (1200 x 900px 600dpi 100.0% : RGB:Cintiq Pro 27) ", App: CLIP STUDIO PAINT.
+0 standard window CSP joined capture* (1200 x 900px 600dpi 100.0% : RGB:Cintiq Pro 27) , Secondary Actions: Raise
+1 menu bar
+	2 CLIP STUDIO PAINT
+	3 ファイル
+	4 編集
+	5 ページ管理
+	6 アニメーション
+	7 レイヤー
+	8 選択範囲
+	9 表示
+	10 フィルター
+	11 ウィンドウ
+	12 ヘルプ
+
+The focused UI element is 0 standard window CSP joined capture* (1200 x 900px 600dpi 100.0% : RGB:Cintiq Pro 27) , Secondary Actions: Raise

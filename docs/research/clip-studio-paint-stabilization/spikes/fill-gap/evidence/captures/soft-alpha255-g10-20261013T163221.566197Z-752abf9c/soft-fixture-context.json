@@ -1,0 +1,51 @@
+{
+  "schema": "observed-soft-fill-context/v1",
+  "fixtureId": "soft-axis-gap10-alpha255",
+  "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/soft-fixtures/soft-axis-gap10-alpha255.png",
+  "documentPixels": [
+    640,
+    480
+  ],
+  "sourceControl": "Capture operator reported freshly opening the exact fixture PNG before this call, under the same visible controls as alpha064.",
+  "observedBy": "Native capture operator; reported directly to the comparison agent.",
+  "view": {
+    "zoomPercent": 100,
+    "dpi": 72,
+    "palettesHiddenForInput": true
+  },
+  "observedNativeSettings": {
+    "reference": "Refer only to editing layer",
+    "multipleReference": false,
+    "colorMargin": 10,
+    "antialiasing": true,
+    "areaScaling": false,
+    "fillNarrowAreas": true,
+    "configuredGap": 10
+  },
+  "input": "AX window click with palettes hidden, after the native input path was verified.",
+  "capturedGap": 10,
+  "capturedNarrowFlag": 1024,
+  "capturedSeedDocument": {
+    "x": 319,
+    "y": 208
+  },
+  "fixtureSeedDocument": {
+    "x": 320,
+    "y": 230
+  },
+  "sourceRgbaAtCapturedSeed": [
+    0,
+    0,
+    0,
+    0
+  ],
+  "seedComparison": "Explicit --use-captured-seed recomputation; actual seed is transparent and inside the intended main room.",
+  "captureOutcomeReported": {
+    "success": true,
+    "cleanDetach": true,
+    "independentResume": true,
+    "errors": []
+  },
+  "scope": "Native A/C classification; no exact native final-layer RGBA export.",
+  "comparisonReport": "soft-comparison.json"
+}

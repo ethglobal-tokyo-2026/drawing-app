@@ -1,0 +1,253 @@
+{
+  "schema": "native-croquis-fill-comparison/v1",
+  "captureFile": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/captures/recolor-bridge-4-level3-20261013T141912.452861Z-d86e43c3/fill.jsonl",
+  "captureSha256": "376aff3386eab3f750b3cc1b15fbc0da29b4e2a1a988504a5db1390f908e84de",
+  "fillSourceSha256": "d947273c2157bcdfd7539da1b3c3c87a9f32a80fc3cc36622f5477f3a780fe49",
+  "comparison": "Final native A selection versus Croquis IN classification; visible RGBA and anti-aliasing are outside this comparison.",
+  "overlayLegend": {
+    "red": "Native only",
+    "blue": "Croquis only",
+    "green": "Both selected"
+  },
+  "results": [
+    {
+      "callId": "1",
+      "fixtureId": "recolor-bridge-4",
+      "sourceRgbaSha256": "9f84df136e03fbd57f76011a48339adfcf09df0be3eeb57d764d78e657311ecc",
+      "gapWidth": 5,
+      "narrowFlag": 1024,
+      "seedMapping": {
+        "bitmapSeed": {
+          "x": 254,
+          "y": 246
+        },
+        "documentOffset": [
+          0,
+          0
+        ],
+        "mappedDocumentSeed": {
+          "x": 254,
+          "y": 246
+        },
+        "fixtureSeed": {
+          "x": 230,
+          "y": 230
+        },
+        "exactFixtureSeed": false,
+        "usedCapturedSeed": true
+      },
+      "domain": [
+        0,
+        0,
+        640,
+        480
+      ],
+      "sourceTileOffset": [
+        0,
+        0
+      ],
+      "nativeOutputRect": {
+        "address": "0x16d5e4df0",
+        "bytesHex": "a00000008c0000005301000040010000",
+        "values": [
+          160,
+          140,
+          339,
+          320
+        ]
+      },
+      "selectedOutsideOutputRectExclusiveOnDocument": {
+        "selectedPixels": 4,
+        "boundsExclusive": [
+          339,
+          228,
+          340,
+          232
+        ],
+        "touches": [],
+        "probes": {}
+      },
+      "nativeBitmapDimensions": [
+        640,
+        480
+      ],
+      "nativeSelectedOutsideDocument": 0,
+      "nativeSelection": {
+        "selectedPixels": 25360,
+        "boundsExclusive": [
+          160,
+          140,
+          340,
+          320
+        ],
+        "touches": [],
+        "probes": {
+          "left": {
+            "x": 230,
+            "y": 230,
+            "selected": true
+          },
+          "right": {
+            "x": 410,
+            "y": 230,
+            "selected": false
+          },
+          "bridge": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          }
+        }
+      },
+      "croquisSelection": {
+        "selectedPixels": 50560,
+        "boundsExclusive": [
+          160,
+          140,
+          480,
+          320
+        ],
+        "touches": [],
+        "probes": {
+          "left": {
+            "x": 230,
+            "y": 230,
+            "selected": true
+          },
+          "right": {
+            "x": 410,
+            "y": 230,
+            "selected": true
+          },
+          "bridge": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          }
+        }
+      },
+      "bothSelected": 25360,
+      "classificationDifferences": {
+        "nativeOnly": {
+          "selectedPixels": 0,
+          "boundsExclusive": null,
+          "touches": [],
+          "probes": {
+            "left": {
+              "x": 230,
+              "y": 230,
+              "selected": false
+            },
+            "right": {
+              "x": 410,
+              "y": 230,
+              "selected": false
+            },
+            "bridge": {
+              "x": 320,
+              "y": 230,
+              "selected": false
+            },
+            "outside": {
+              "x": 320,
+              "y": 420,
+              "selected": false
+            }
+          }
+        },
+        "croquisOnly": {
+          "selectedPixels": 25200,
+          "boundsExclusive": [
+            340,
+            140,
+            480,
+            320
+          ],
+          "touches": [],
+          "probes": {
+            "left": {
+              "x": 230,
+              "y": 230,
+              "selected": false
+            },
+            "right": {
+              "x": 410,
+              "y": 230,
+              "selected": true
+            },
+            "bridge": {
+              "x": 320,
+              "y": 230,
+              "selected": false
+            },
+            "outside": {
+              "x": 320,
+              "y": 420,
+              "selected": false
+            }
+          }
+        },
+        "nativeSelectedIneligible": 0,
+        "croquisSelectedIneligible": 0
+      },
+      "identicalOnDocument": false,
+      "candidateKnowledge": {
+        "source": "Exact binary-alpha fixture RGBA, relative to the captured seed",
+        "nativeC": {
+          "state": "present",
+          "positiveEligible": 50560,
+          "positiveIneligible": 0,
+          "eligibleZeroOrOutsideBitmap": 0,
+          "positiveOutsideDocument": 0,
+          "zeroMeaning": "C is prepared lazily; an eligible zero can be unprepared and is not a proven rejection."
+        }
+      },
+      "masks": {
+        "native": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrt0rENADAIwDD+v7YfwM5aJKTWPiBTIgAAAAAAAAAAAACATdkdPT09PT09PT09PT09PT09PT09PT09PT09PT29sd5l9Pue//T09PT09PT09PT09PT09PT09PT09PT09PT0AAAAAAAAAAAAAAAAeEABBWylbQ=="
+        },
+        "croquis": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrt0qENACAQBMHvgP67pIMnWAjmEwJiRp5YdREAAAAAAAAAAAAAwEu56nNt26ynp6enp6enp6enp6enp6enp6enp6enp6enp1foHej5i56enp6enp6enp6enp6enp6enp6enp6enp7e7R4AAAAAAAAAAAAAAAD/GEd0mLk="
+        },
+        "nativeOnly": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtwQENAAAAwqD3T20PBxQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADApwGWAAAB"
+        },
+        "croquisOnly": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzEERAAAEADAN9E/LXwHcbQEWAQAAAAAAAAAAAADckzX5fD6fz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+f7/gEAAAAAAAAAAAAAALChAdgI8z4="
+        }
+      },
+      "overlayPng": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/captures/recolor-bridge-4-level3-20261013T141912.452861Z-d86e43c3/comparison-1.png"
+    }
+  ],
+  "failures": []
+}

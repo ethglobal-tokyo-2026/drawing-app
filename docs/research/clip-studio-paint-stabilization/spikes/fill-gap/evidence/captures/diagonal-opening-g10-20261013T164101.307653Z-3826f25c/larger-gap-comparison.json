@@ -1,0 +1,228 @@
+{
+  "schema": "native-croquis-fill-comparison/v1",
+  "captureFile": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/captures/diagonal-opening-g10-20261013T164101.307653Z-3826f25c/fill.jsonl",
+  "captureSha256": "70f1acdf5827422d398dffbc5e1dcb496d53e05dc8535e4d3100ea828e6adebb",
+  "fillSourceSha256": "d947273c2157bcdfd7539da1b3c3c87a9f32a80fc3cc36622f5477f3a780fe49",
+  "comparison": "Final native A selection versus Croquis IN classification; visible RGBA and anti-aliasing are outside this comparison.",
+  "overlayLegend": {
+    "red": "Native only",
+    "blue": "Croquis only",
+    "green": "Both selected"
+  },
+  "results": [
+    {
+      "callId": "1",
+      "fixtureId": "diagonal-opening",
+      "sourceRgbaSha256": "16d4327f4569dd5826f4b80281e2d798fe8f52f3787d8d5278ec57e699fc5c56",
+      "gapWidth": 10,
+      "narrowFlag": 1024,
+      "seedMapping": {
+        "bitmapSeed": {
+          "x": 319,
+          "y": 208
+        },
+        "documentOffset": [
+          0,
+          0
+        ],
+        "mappedDocumentSeed": {
+          "x": 319,
+          "y": 208
+        },
+        "fixtureSeed": {
+          "x": 320,
+          "y": 230
+        },
+        "exactFixtureSeed": false,
+        "usedCapturedSeed": true
+      },
+      "domain": [
+        0,
+        0,
+        640,
+        480
+      ],
+      "sourceTileOffset": [
+        0,
+        0
+      ],
+      "nativeOutputRect": {
+        "address": "0x16d5e4df0",
+        "bytesHex": "8f00000053000000f20100008e010000",
+        "values": [
+          143,
+          83,
+          498,
+          398
+        ]
+      },
+      "selectedOutsideOutputRectExclusiveOnDocument": {
+        "selectedPixels": 0,
+        "boundsExclusive": null,
+        "touches": [],
+        "probes": {}
+      },
+      "nativeBitmapDimensions": [
+        640,
+        480
+      ],
+      "nativeSelectedOutsideDocument": 0,
+      "nativeSelection": {
+        "selectedPixels": 55966,
+        "boundsExclusive": [
+          143,
+          83,
+          498,
+          398
+        ],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 540,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 416,
+            "y": 309,
+            "selected": true
+          }
+        }
+      },
+      "croquisSelection": {
+        "selectedPixels": 55919,
+        "boundsExclusive": [
+          143,
+          83,
+          498,
+          398
+        ],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 540,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 416,
+            "y": 309,
+            "selected": true
+          }
+        }
+      },
+      "bothSelected": 55919,
+      "classificationDifferences": {
+        "nativeOnly": {
+          "selectedPixels": 47,
+          "boundsExclusive": [
+            413,
+            307,
+            422,
+            315
+          ],
+          "touches": [],
+          "probes": {
+            "inside": {
+              "x": 320,
+              "y": 230,
+              "selected": false
+            },
+            "outside": {
+              "x": 540,
+              "y": 420,
+              "selected": false
+            },
+            "opening": {
+              "x": 416,
+              "y": 309,
+              "selected": false
+            }
+          }
+        },
+        "croquisOnly": {
+          "selectedPixels": 0,
+          "boundsExclusive": null,
+          "touches": [],
+          "probes": {
+            "inside": {
+              "x": 320,
+              "y": 230,
+              "selected": false
+            },
+            "outside": {
+              "x": 540,
+              "y": 420,
+              "selected": false
+            },
+            "opening": {
+              "x": 416,
+              "y": 309,
+              "selected": false
+            }
+          }
+        },
+        "nativeSelectedIneligible": 0,
+        "croquisSelectedIneligible": 0
+      },
+      "identicalOnDocument": false,
+      "candidateKnowledge": {
+        "source": "Exact binary-alpha fixture RGBA, relative to the captured seed",
+        "nativeC": {
+          "state": "present",
+          "positiveEligible": 245723,
+          "positiveIneligible": 0,
+          "eligibleZeroOrOutsideBitmap": 58080,
+          "positiveOutsideDocument": 0,
+          "zeroMeaning": "C is prepared lazily; an eligible zero can be unprepared and is not a proven rejection."
+        }
+      },
+      "masks": {
+        "native": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrt3U1u4zgQhmELWmjJI/goPFqym2txN9fIEbT0wpB6ujOZOI5+SOkBspj6DvCigXpTLVGs8uUSiUQikUgkEolEIpFIJBKJRCKRSCQS+T/k1eL6YnnDaHnpZnnXu+XlyfLmmeK6eaYF7uf5jeoyz1SYNM9UmDzPVJiX2RZ4/of3SnWhwvS/eW+0vFSY62/eneoyz5PVRQrzB+eE6d95BXYDWuD0zrtRXaAw+Z032fIyYboPXqG6sI4wfPBGqgsTJn/w7rIbuAL/hzMdofvkFaoLEiZ98kbYDViB8ydvsroYYR5wQpj+kVdgN0AFTo+8G9WFCJMfeZMtLxCm+8orVBfQEYavvJHqAoTJX3l32Q1EgZ9wZztC98wrVJfTwqRn3gi7AShwfuZNVpezwnzDnROm/84rsBucLnD6zrtRXU4Kk7/zJlveU8J0S7xCdTnVEYYl3kh1OSVMXuLdZTc4V+BF3PGO0C3zCtXlhDBpmTfCbnCqwHmZN1ldjguzgjsqTL/GK7AbnChwWuPdqC6HhclrvMmW96Aw3TqvUF0OdoRhnTdSXQ4Kk9d5d9kNjhZ4A3ekI3RbvEJ1OSRM2uKNsBscLHDe4k1WlyPCbOLahem3eQV2g0MFTtu8G9XlgDB5mzfZ8jYL0+3xCtWluSMMe7yR6tIsTN7j3WU3aC/wLq6tI3T7vEJ1aRQm7fNG2A2aC5z3eZPVpU2YClyLMH0Nr8Bu0FjgVMO7UV2ahMk1vMmWt0GYro5XqC4NHWGo441UlwZhch3vLrtBS4ErcbUdoavlFapLtTCpljfCbtBQ4FzLm6wutcJU4+qE6et5BXaD6gKnet6N6lIpTK7nTba8VcJ0LbyC/32v9M+j7g9E10P7on3Wf28Nwrz9RL/i/VT3e/3/UaK6NAgz/szzgX5+0c9X/PkvU/2qBax+3tXP4/p9Qb/P6PetSmHqX/j1+6p+n9bv+/o8oqe6VArTcmCHz4f4+ZU+X9Pnf4nqVyVg03mnPo/V58X6PJuft1+pfv57hf6eor/36O9RF6vLvjA//X1Qf7/U31f199+e6rcrYPsFCfw9nt8X0PcZ9H2Lgern76vo+zT6vg+/j5SpLpvCHLp/pe+H6ftr+n6dvv93sfptCXgIx+9j6vui+j6rvm/bYd5F815sPVaFOcq7Yl7CvAHzesxbEfDvwxf6l3l/Hebp+Y8Mu9WqgCfmXfQ8jp4X0vNMet5qUZgzA396Xk3P0+l5Pz2P2FNdFoU5N7BrdfHzq3q+Vs//JqrfgoAn5531PLaeF9fz7Hze/kr18/sK9D4Fve9B76O4WF2ehTmN4/tB9P4SvV9F73/pqX5PAooFSVY/vy9I7zPS+5YGqp/fV6X3ael9X3wfWaa6PAiD9q/p/XB6f53er6f3/12sfp8CIhzfx6j3Rep9lnrfZkf18/tK+T5Vve9V76NNVJd/hYH7d/V+YL2/WO9X5vufM9Xvj4B037Xex633het95nrf+uVltgv/9b56vU9f7/vXv0fQv1leh39/Qf8+RCQSiUQikUgkEolEIpFIJBKJRCKRSATlF2O8Og8="
+        },
+        "croquis": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrt3c1x4zgQhmGxeNARISgUhGaHhsMG4hB41EFF7s54vJZlkgLAp8qH6S+At6amX7b5g26dTpFIJBKJRCKRSCQSiUQikUgkEolEIpG/Ia8WNxbLO0+Wl66Wd7lZXp4tb1koblgWWuBxWd6oLstChUnLQoXJy0KFeVlsgZf/eK9UFyrM+Iv3RstLhbn84t2oLssyW12kML9xTpjxnVdgN6AFTu+8K9UFCpPfebMtLxNm+OAVqgvrCOcP3kR1YcLkD95NdgNX4P9xpiMMn7xCdUHCpE/eBLsBK3D+5M1WFyPMHU4IM97zCuwGqMDpnneluhBh8j1vtuUFwgxfeYXqAjrC+StvoroAYfJX3k12A1HgB9zRjjA88grV5bAw6ZE3wW4ACpwfebPV5agw33DHhBm/8wrsBocLnL7zrlSXg8Lk77zZlveQMMMar1BdDnWE8xpvorocEiav8W6yGxwr8CquvyMM67xCdTkgTFrnTbAbHCpwXufNVpd+YTZwvcKMW7wCu8GBAqct3pXq0i1M3uLNtrydwgzbvEJ16ewI523eRHXpFCZv826yG/QWeAfX0xGGPV6hunQJk/Z4E+wGnQXOe7zZ6tIjzC6uXZhxn1dgN+gqcNrnXakuHcLkfd5sy9sszPCMV6guzR3h/Iw3UV2ahcnPeDfZDdoL/BTX1hGG57xCdWkUJj3nTbAbNBc4P+fNVpc2YSpwLcKMNbwCu0FjgVMN70p1aRIm1/BmW94GYYY6XqG6NHSEcx1voro0CJPreDfZDVoKXImr7QhDLa9QXaqFSbW8CXaDhgLnWt5sdakVphpXJ8xYzyuwG1QXONXzrlSXSmFyPW+25a0SZmjhFfzve6WXR90FouuhfdE+6+utQZi3n+hXvJ/qfq//HiWqS4Mw08/cH+j7F31/xe//MtWvWsDq+119P66fF/TzjH7eqhSm/oFfP6/q52n9vK/fR4xUl0phWl7Y4fdD/P2Vfr+m3/8lql+VgE3vO/X7WP2+WL/P5u/bL1Q//71Cf0/R33v096iT1eW5MD/9fVB/v9TfV/X335Hq91TA9gMS+Hs8Py+gzzPo8xZnqp8/r6LP0+jzPvw8Uqa67ArTdf5Knw/T59f0+Tp9/u9k9dsTsAvHz2Pq86L6PKs+bztg3knzXuz/36YwvQfcL/Ty2BamE7clTPf59pFeHpsC/tPL0/MVfP4j03JsCHhg3kXP4+h5IT3PpOetVoU5MvCn59X0PJ2e99PziCPVZVWYYwO7Vhc/v6rna/X8b6L6rQh4cN5Zz2PreXE9z87n7S9UP7+vQO9T0Pse9D6Kk9XlUZjDOL4fRO8v0ftV9P6Xker3IKBYkGT18/uC9D4jvW/pTPXz+6r0Pi2974vvI8tUlzth0P41vR9O76/T+/X0/r+T1e9TQITj+xj1vki9z1Lv2xyofn5fKd+nqve96n20ieryRxi4f1fvB9b7i/V+Zb7/OVP9fgtI913rfdx6X7jeZ673rZ9eFrvwX++r1/v09b5//XsE45vlDfj3F/TvQ0QikUgkEolEIpFIJBKJRCKRSCQSiURQ/gWZezR5"
+        },
+        "nativeOnly": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrt07EJACAQBEFFwSYs1dI/sIlDDGYK2GxbAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAXpjh3g73TrhX2VwP98bnvVWWAQAAAAAAAAAAAAAAgIgLYEEFlw=="
+        },
+        "croquisOnly": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtwQENAAAAwqD3T20PBxQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADApwGWAAAB"
+        }
+      },
+      "overlayPng": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/captures/diagonal-opening-g10-20261013T164101.307653Z-3826f25c/larger-gap-comparison-1.png"
+    }
+  ],
+  "failures": []
+}

@@ -1,0 +1,391 @@
+{
+  "schema": "fill-fixtures/v1",
+  "pixelFormat": "RGBA8 straight alpha",
+  "nativePresetValues": [1, 3, 5, 10, 20],
+  "comparisonFillRgb": [255, 0, 0],
+  "coordinates": "Zero-based document pixels; rectangle right and bottom are exclusive unless named Inclusive.",
+  "fixtures": [
+    {
+      "id": "axis-gap-1",
+      "description": "Three-pixel black rectangle with 1 clear bottom columns.",
+      "width": 640,
+      "height": 480,
+      "seed": {
+        "x": 320,
+        "y": 230
+      },
+      "sourcePng": "axis-gap-1.png",
+      "sourceRgbaGzip": "axis-gap-1.rgba.gz",
+      "sourceRgbaSha256": "198983905e4585a9ff3a851dca7845ff63ecd9fc4d090319781e858f8fad3e2a",
+      "sourcePngSha256": "4221d8392ff7b0b46d360bdb31761dcd17f5b1c067d9a9f534fd50ac9ab45594",
+      "geometry": {
+        "outlineInclusive": [160, 100, 480, 360],
+        "lineThickness": 3,
+        "openingExclusive": [320, 358, 321, 361],
+        "openingWidth": 1
+      },
+      "withoutGapClosing": {
+        "eligiblePixels": 303747,
+        "seedComponentPixels": 303747,
+        "seedComponentTouches": ["bottom", "left", "right", "top"],
+        "seedRgba": [0, 0, 0, 0],
+        "candidateRule": "alpha<128",
+        "fillKind": "paper"
+      },
+      "probes": {
+        "inside": [320, 230],
+        "outside": [320, 420],
+        "opening": [320, 359]
+      }
+    },
+    {
+      "id": "axis-gap-3",
+      "description": "Three-pixel black rectangle with 3 clear bottom columns.",
+      "width": 640,
+      "height": 480,
+      "seed": {
+        "x": 320,
+        "y": 230
+      },
+      "sourcePng": "axis-gap-3.png",
+      "sourceRgbaGzip": "axis-gap-3.rgba.gz",
+      "sourceRgbaSha256": "4bc2752967fbf94e514a135b9383a9ec97d83b0a9b2c5ee6f231cbbac08c4400",
+      "sourcePngSha256": "d555c1de44e3ac76d7599e102010d8ae9a1d50b217fe7d0630714adeb5bb7948",
+      "geometry": {
+        "outlineInclusive": [160, 100, 480, 360],
+        "lineThickness": 3,
+        "openingExclusive": [319, 358, 322, 361],
+        "openingWidth": 3
+      },
+      "withoutGapClosing": {
+        "eligiblePixels": 303753,
+        "seedComponentPixels": 303753,
+        "seedComponentTouches": ["bottom", "left", "right", "top"],
+        "seedRgba": [0, 0, 0, 0],
+        "candidateRule": "alpha<128",
+        "fillKind": "paper"
+      },
+      "probes": {
+        "inside": [320, 230],
+        "outside": [320, 420],
+        "opening": [320, 359]
+      }
+    },
+    {
+      "id": "axis-gap-5",
+      "description": "Three-pixel black rectangle with 5 clear bottom columns.",
+      "width": 640,
+      "height": 480,
+      "seed": {
+        "x": 320,
+        "y": 230
+      },
+      "sourcePng": "axis-gap-5.png",
+      "sourceRgbaGzip": "axis-gap-5.rgba.gz",
+      "sourceRgbaSha256": "96109ebaba262e62c0f934818c156a814fb05b3c48fc3533e540c8b32b1a460d",
+      "sourcePngSha256": "262df5b80b08def01cb9d56dea50fdfaaab2e0477f7f3d3cfd43be9871382db8",
+      "geometry": {
+        "outlineInclusive": [160, 100, 480, 360],
+        "lineThickness": 3,
+        "openingExclusive": [318, 358, 323, 361],
+        "openingWidth": 5
+      },
+      "withoutGapClosing": {
+        "eligiblePixels": 303759,
+        "seedComponentPixels": 303759,
+        "seedComponentTouches": ["bottom", "left", "right", "top"],
+        "seedRgba": [0, 0, 0, 0],
+        "candidateRule": "alpha<128",
+        "fillKind": "paper"
+      },
+      "probes": {
+        "inside": [320, 230],
+        "outside": [320, 420],
+        "opening": [320, 359]
+      }
+    },
+    {
+      "id": "axis-near-line",
+      "description": "The five-column opening, with the seed one row below the upper outline.",
+      "width": 640,
+      "height": 480,
+      "seed": {
+        "x": 320,
+        "y": 103
+      },
+      "sourcePng": "axis-near-line.png",
+      "sourceRgbaGzip": "axis-near-line.rgba.gz",
+      "sourceRgbaSha256": "96109ebaba262e62c0f934818c156a814fb05b3c48fc3533e540c8b32b1a460d",
+      "sourcePngSha256": "262df5b80b08def01cb9d56dea50fdfaaab2e0477f7f3d3cfd43be9871382db8",
+      "geometry": {
+        "outlineInclusive": [160, 100, 480, 360],
+        "lineThickness": 3,
+        "openingExclusive": [318, 358, 323, 361],
+        "openingWidth": 5
+      },
+      "withoutGapClosing": {
+        "eligiblePixels": 303759,
+        "seedComponentPixels": 303759,
+        "seedComponentTouches": ["bottom", "left", "right", "top"],
+        "seedRgba": [0, 0, 0, 0],
+        "candidateRule": "alpha<128",
+        "fillKind": "paper"
+      },
+      "probes": {
+        "inside": [320, 230],
+        "outside": [320, 420],
+        "seed": [320, 103]
+      }
+    },
+    {
+      "id": "axis-gap-10",
+      "description": "Three-pixel black rectangle with 10 clear bottom columns.",
+      "width": 640,
+      "height": 480,
+      "seed": {
+        "x": 320,
+        "y": 230
+      },
+      "sourcePng": "axis-gap-10.png",
+      "sourceRgbaGzip": "axis-gap-10.rgba.gz",
+      "sourceRgbaSha256": "2b64b8fa1751e7a8fca27a3d0cc2dbc0054ef45d8c76f31d201c50c3c9e352e3",
+      "sourcePngSha256": "2a1ee08c141a94c0b4c7839921be71dae4ae1b490f758c67f342cdabb0454a69",
+      "geometry": {
+        "outlineInclusive": [160, 100, 480, 360],
+        "lineThickness": 3,
+        "openingExclusive": [315, 358, 325, 361],
+        "openingWidth": 10
+      },
+      "withoutGapClosing": {
+        "eligiblePixels": 303774,
+        "seedComponentPixels": 303774,
+        "seedComponentTouches": ["bottom", "left", "right", "top"],
+        "seedRgba": [0, 0, 0, 0],
+        "candidateRule": "alpha<128",
+        "fillKind": "paper"
+      },
+      "probes": {
+        "inside": [320, 230],
+        "outside": [320, 420],
+        "opening": [320, 359]
+      }
+    },
+    {
+      "id": "axis-gap-20",
+      "description": "Three-pixel black rectangle with 20 clear bottom columns.",
+      "width": 640,
+      "height": 480,
+      "seed": {
+        "x": 320,
+        "y": 230
+      },
+      "sourcePng": "axis-gap-20.png",
+      "sourceRgbaGzip": "axis-gap-20.rgba.gz",
+      "sourceRgbaSha256": "51529e3a25cf10ac8aefbe84205824a05f507b12ba0a5f36045330b525efc32d",
+      "sourcePngSha256": "d3a378f3fb7ac9ed6468c7ff6ade808844da835747427900d206440435d9af38",
+      "geometry": {
+        "outlineInclusive": [160, 100, 480, 360],
+        "lineThickness": 3,
+        "openingExclusive": [310, 358, 330, 361],
+        "openingWidth": 20
+      },
+      "withoutGapClosing": {
+        "eligiblePixels": 303804,
+        "seedComponentPixels": 303804,
+        "seedComponentTouches": ["bottom", "left", "right", "top"],
+        "seedRgba": [0, 0, 0, 0],
+        "candidateRule": "alpha<128",
+        "fillKind": "paper"
+      },
+      "probes": {
+        "inside": [320, 230],
+        "outside": [320, 420],
+        "opening": [320, 359]
+      }
+    },
+    {
+      "id": "axis-gap-21",
+      "description": "Three-pixel black rectangle with 21 clear bottom columns.",
+      "width": 640,
+      "height": 480,
+      "seed": {
+        "x": 320,
+        "y": 230
+      },
+      "sourcePng": "axis-gap-21.png",
+      "sourceRgbaGzip": "axis-gap-21.rgba.gz",
+      "sourceRgbaSha256": "3b8e8aef110e4459fd1b31e8eaf449a5fa9843acc605e0c0de84bbff4ac64867",
+      "sourcePngSha256": "941344382a90a8320d028ecdb7fb8da65503fe5e6c1343e673cbf20785b723ca",
+      "geometry": {
+        "outlineInclusive": [160, 100, 480, 360],
+        "lineThickness": 3,
+        "openingExclusive": [310, 358, 331, 361],
+        "openingWidth": 21
+      },
+      "withoutGapClosing": {
+        "eligiblePixels": 303807,
+        "seedComponentPixels": 303807,
+        "seedComponentTouches": ["bottom", "left", "right", "top"],
+        "seedRgba": [0, 0, 0, 0],
+        "candidateRule": "alpha<128",
+        "fillKind": "paper"
+      },
+      "probes": {
+        "inside": [320, 230],
+        "outside": [320, 420],
+        "opening": [320, 359]
+      }
+    },
+    {
+      "id": "edge-gap-2",
+      "description": "Exact 240 by 200 source with its outline twenty pixels from physical sides.",
+      "width": 240,
+      "height": 200,
+      "seed": {
+        "x": 120,
+        "y": 100
+      },
+      "sourcePng": "edge-gap-2.png",
+      "sourceRgbaGzip": "edge-gap-2.rgba.gz",
+      "sourceRgbaSha256": "9c3af0197ee2ad9d9bef37293e602ba54510d2360b4add91d8f77283193bac76",
+      "sourcePngSha256": "ffdf58a75884f70cc165b3d2894fae7b378b83f19ca6af631e271904c7b525d3",
+      "geometry": {
+        "outlineInclusive": [20, 20, 220, 180],
+        "lineThickness": 3,
+        "openingExclusive": [119, 178, 121, 181],
+        "openingWidth": 2
+      },
+      "withoutGapClosing": {
+        "eligiblePixels": 45870,
+        "seedComponentPixels": 45870,
+        "seedComponentTouches": ["bottom", "left", "right", "top"],
+        "seedRgba": [0, 0, 0, 0],
+        "candidateRule": "alpha<128",
+        "fillKind": "paper"
+      },
+      "probes": {
+        "inside": [120, 100],
+        "outside": [120, 190],
+        "opening": [120, 179]
+      }
+    },
+    {
+      "id": "diagonal-opening",
+      "description": "Bresenham diamond, drawn with a three-pixel square pen, omitting nine path centers.",
+      "width": 640,
+      "height": 480,
+      "seed": {
+        "x": 320,
+        "y": 230
+      },
+      "sourcePng": "diagonal-opening.png",
+      "sourceRgbaGzip": "diagonal-opening.rgba.gz",
+      "sourceRgbaSha256": "16d4327f4569dd5826f4b80281e2d798fe8f52f3787d8d5278ec57e699fc5c56",
+      "sourcePngSha256": "e5196185beff88df313a1482ca33a0cba1fadafbc282857be93d1b9adcaa0cd3",
+      "geometry": {
+        "vertices": [
+          [320, 80],
+          [500, 230],
+          [320, 400],
+          [140, 230]
+        ],
+        "lineThickness": 3,
+        "skippedPathCenters": [
+          [420, 306],
+          [419, 307],
+          [418, 307],
+          [417, 308],
+          [416, 309],
+          [415, 310],
+          [414, 311],
+          [413, 312],
+          [412, 313]
+        ]
+      },
+      "withoutGapClosing": {
+        "eligiblePixels": 303803,
+        "seedComponentPixels": 303803,
+        "seedComponentTouches": ["bottom", "left", "right", "top"],
+        "seedRgba": [0, 0, 0, 0],
+        "candidateRule": "alpha<128",
+        "fillKind": "paper"
+      },
+      "probes": {
+        "inside": [320, 230],
+        "outside": [540, 420],
+        "opening": [416, 309]
+      }
+    },
+    {
+      "id": "narrow-pocket",
+      "description": "Closed outer room with a small inner pocket reached through a two-pixel passage.",
+      "width": 640,
+      "height": 480,
+      "seed": {
+        "x": 320,
+        "y": 230
+      },
+      "sourcePng": "narrow-pocket.png",
+      "sourceRgbaGzip": "narrow-pocket.rgba.gz",
+      "sourceRgbaSha256": "23a00b3544a6b495d504fda42a45bf9d3281d5a18803272fc61a1cc0cac8e6fe",
+      "sourcePngSha256": "7e3f3a70c62c9937460a8c582796f666e53c6c9c2c5f1afcd782cf02c4ae75a4",
+      "geometry": {
+        "outerOutlineInclusive": [160, 100, 480, 360],
+        "pocketOutlineInclusive": [380, 250, 410, 275],
+        "lineThickness": 3,
+        "passageExclusive": [380, 261, 383, 263],
+        "passageWidth": 2
+      },
+      "withoutGapClosing": {
+        "eligiblePixels": 303444,
+        "seedComponentPixels": 80025,
+        "seedComponentTouches": [],
+        "seedRgba": [0, 0, 0, 0],
+        "candidateRule": "alpha<128",
+        "fillKind": "paper"
+      },
+      "probes": {
+        "room": [320, 230],
+        "pocket": [395, 262],
+        "outside": [320, 420]
+      }
+    },
+    {
+      "id": "recolor-bridge-4",
+      "description": "Two opaque green regions joined by a four-pixel-high green bridge.",
+      "width": 640,
+      "height": 480,
+      "seed": {
+        "x": 230,
+        "y": 230
+      },
+      "sourcePng": "recolor-bridge-4.png",
+      "sourceRgbaGzip": "recolor-bridge-4.rgba.gz",
+      "sourceRgbaSha256": "9f84df136e03fbd57f76011a48339adfcf09df0be3eeb57d764d78e657311ecc",
+      "sourcePngSha256": "6644ebd2f1e65e61fd2c88269621871e6f47db55a822624aa3a077c7d723d7ea",
+      "geometry": {
+        "lobesExclusive": [
+          [160, 140, 300, 320],
+          [340, 140, 480, 320]
+        ],
+        "bridgeExclusive": [300, 228, 340, 232],
+        "bridgeHeight": 4,
+        "green": [0, 180, 0, 255]
+      },
+      "withoutGapClosing": {
+        "eligiblePixels": 50560,
+        "seedComponentPixels": 50560,
+        "seedComponentTouches": [],
+        "seedRgba": [0, 180, 0, 255],
+        "candidateRule": "alpha>=128 and summed RGB distance<72",
+        "fillKind": "recolor"
+      },
+      "probes": {
+        "left": [230, 230],
+        "right": [410, 230],
+        "bridge": [320, 230],
+        "outside": [320, 420]
+      }
+    }
+  ]
+}

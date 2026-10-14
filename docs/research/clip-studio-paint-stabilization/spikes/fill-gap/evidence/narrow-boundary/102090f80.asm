@@ -1,0 +1,65 @@
+; CSP 5.1.4 ARM64, unslid range 0x102090f80:0x102091078
+; source sha256 6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd
+; Instruction bytes are in little-endian storage order.
+102090f80: 6a00016b  subs	w10, w3, w1
+102090f84: e8079f1a  cset	w8, ne
+102090f88: 08a19f5a  csinv	w8, w8, wzr, ge
+102090f8c: 8900026b  subs	w9, w4, w2
+102090f90: 2955895a  cneg	w9, w9, mi
+102090f94: 5f010071  cmp	w10, #0x0
+102090f98: 4a558a5a  cneg	w10, w10, mi
+102090f9c: 3f010a6b  cmp	w9, w10
+102090fa0: 2c318a1a  csel	w12, w9, w10, lo
+102090fa4: 2d818a1a  csel	w13, w9, w10, hi
+102090fa8: 2b010a2a  orr	w11, w9, w10
+102090fac: 7f010071  cmp	w11, #0x0
+102090fb0: b1159f1a  csinc	w17, w13, wzr, ne
+102090fb4: 1106f837  tbnz	w17, #0x1f, 0x102091074
+102090fb8: f657bea9  stp	x22, x21, [sp, #-0x20]!
+102090fbc: f44f01a9  stp	x20, x19, [sp, #0x10]
+102090fc0: 8b791f53  lsl	w11, w12, #1
+102090fc4: 8c010d4b  sub	w12, w12, w13
+102090fc8: 8c791f53  lsl	w12, w12, #1
+102090fcc: 6d010d4b  sub	w13, w11, w13
+102090fd0: 9f00026b  cmp	w4, w2
+102090fd4: ee079f1a  cset	w14, ne
+102090fd8: cfa19f5a  csinv	w15, w14, wzr, ge
+102090fdc: 3f010a6b  cmp	w9, w10
+102090fe0: ee838f1a  csel	w14, wzr, w15, hi
+102090fe4: ef819f1a  csel	w15, w15, wzr, hi
+102090fe8: f083881a  csel	w16, wzr, w8, hi
+102090fec: 31060011  add	w17, w17, #0x1
+102090ff0: 03108012  mov	w3, #-0x81              ; =-129
+102090ff4: 04108052  mov	w4, #0x80               ; =128
+102090ff8: 267ca10a  bic	w6, w1, w1, asr #31
+102090ffc: 477ca20a  bic	w7, w2, w2, asr #31
+102091000: 131440f9  ldr	x19, [x0, #0x28]
+102091004: 141040b9  ldr	w20, [x0, #0x10]
+102091008: 877e071b  mul	w7, w20, w7
+10209100c: 6702078b  add	x7, x19, x7
+102091010: d3080012  and	w19, w6, #0x7
+102091014: c6fc43d3  lsr	x6, x6, #3
+102091018: f4686638  ldrb	w20, [x7, x6]
+10209101c: 7528d31a  asr	w21, w3, w19
+102091020: 9502150a  and	w21, w20, w21
+102091024: 9324d31a  lsr	w19, w4, w19
+102091028: 9302132a  orr	w19, w20, w19
+10209102c: bf000071  cmp	w5, #0x0
+102091030: b302931a  csel	w19, w21, w19, eq
+102091034: bf010071  cmp	w13, #0x0
+102091038: 94a18b1a  csel	w20, w12, w11, ge
+10209103c: bf050031  cmn	w13, #0x1
+102091040: 20c14a7a  ccmp	w9, w10, #0x0, gt
+102091044: f3682638  strb	w19, [x7, x6]
+102091048: c67dad0a  bic	w6, w14, w13, asr #31
+10209104c: 07819f1a  csel	w7, w8, wzr, hi
+102091050: 8d020d0b  add	w13, w20, w13
+102091054: 42000f0b  add	w2, w2, w15
+102091058: 4200060b  add	w2, w2, w6
+10209105c: 2100100b  add	w1, w1, w16
+102091060: 2100070b  add	w1, w1, w7
+102091064: 31060071  subs	w17, w17, #0x1
+102091068: 81fcff54  b.ne	0x102090ff8
+10209106c: f44f41a9  ldp	x20, x19, [sp, #0x10]
+102091070: f657c2a8  ldp	x22, x21, [sp], #0x20
+102091074: c0035fd6  ret

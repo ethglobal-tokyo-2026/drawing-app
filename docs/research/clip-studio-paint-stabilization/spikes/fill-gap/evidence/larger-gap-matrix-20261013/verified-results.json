@@ -1,0 +1,181 @@
+{
+  "schema": "larger-gap-verified-results/v1",
+  "plannedMatrixCompleted": 7,
+  "plannedMatrixTotal": 10,
+  "additionalControls": 1,
+  "successfulComparisons": 8,
+  "results": [
+    {
+      "fixtureId": "edge-gap-2",
+      "gap": 10,
+      "actualSeed": {
+        "x": 120,
+        "y": 100
+      },
+      "usedCapturedSeed": false,
+      "nativePixels": 30231,
+      "croquisPixels": 30229,
+      "nativeOnly": 2,
+      "croquisOnly": 0,
+      "identical": false,
+      "selectedBeyondReturnedRectangle": 2,
+      "reportPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/captures/edge-gap-2-large-pair-20261013T155604.899989Z-d29399af/larger-gap-comparison.json",
+      "reportSha256": "1f59114ba271e7b6b2b18ddae482bae11cb2f45d6c97781f14d3d6a5ab3d5473",
+      "captureSha256": "da2151b1b66acf452e7a230463fa7e2eed7792b97cb7961b814e0daf50c45492",
+      "sourceRgbaSha256": "9c3af0197ee2ad9d9bef37293e602ba54510d2360b4add91d8f77283193bac76"
+    },
+    {
+      "fixtureId": "edge-gap-2",
+      "gap": 20,
+      "actualSeed": {
+        "x": 120,
+        "y": 100
+      },
+      "usedCapturedSeed": false,
+      "nativePixels": 30231,
+      "croquisPixels": 45870,
+      "nativeOnly": 0,
+      "croquisOnly": 15639,
+      "identical": false,
+      "selectedBeyondReturnedRectangle": 2,
+      "reportPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/captures/edge-gap-2-large-pair-20261013T155604.899989Z-d29399af/larger-gap-comparison.json",
+      "reportSha256": "1f59114ba271e7b6b2b18ddae482bae11cb2f45d6c97781f14d3d6a5ab3d5473",
+      "captureSha256": "da2151b1b66acf452e7a230463fa7e2eed7792b97cb7961b814e0daf50c45492",
+      "sourceRgbaSha256": "9c3af0197ee2ad9d9bef37293e602ba54510d2360b4add91d8f77283193bac76"
+    },
+    {
+      "fixtureId": "axis-gap-10",
+      "gap": 10,
+      "actualSeed": {
+        "x": 320,
+        "y": 230
+      },
+      "usedCapturedSeed": false,
+      "nativePixels": 80355,
+      "croquisPixels": 80345,
+      "nativeOnly": 10,
+      "croquisOnly": 0,
+      "identical": false,
+      "selectedBeyondReturnedRectangle": 10,
+      "reportPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/captures/axis-gap-10-large-20261013T155814.143007Z-6da2f0b2/larger-gap-comparison.json",
+      "reportSha256": "3f866d515696e5717321dd1ce3de44271a1e50c668f3febc63b45c08bb215099",
+      "captureSha256": "05d77955572faa69bdc758a61a3c5ceebebf8367c15a8ae63cf676c637327bea",
+      "sourceRgbaSha256": "2b64b8fa1751e7a8fca27a3d0cc2dbc0054ef45d8c76f31d201c50c3c9e352e3"
+    },
+    {
+      "fixtureId": "axis-gap-20",
+      "gap": 10,
+      "actualSeed": {
+        "x": 320,
+        "y": 230
+      },
+      "usedCapturedSeed": false,
+      "nativePixels": 303804,
+      "croquisPixels": 303804,
+      "nativeOnly": 0,
+      "croquisOnly": 0,
+      "identical": true,
+      "selectedBeyondReturnedRectangle": 0,
+      "reportPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/captures/axis-gap-20-large-pair-20261013T160048.217620Z-d80c6363/larger-gap-comparison.json",
+      "reportSha256": "5c8afef530cd78342d1c1a496d9faba47f0229f8229efac8959ca9c087faa97e",
+      "captureSha256": "cff1243283163a26f2979e57d9a6734b9074cbdeab14800f4f498f5cd514a9e9",
+      "sourceRgbaSha256": "51529e3a25cf10ac8aefbe84205824a05f507b12ba0a5f36045330b525efc32d"
+    },
+    {
+      "fixtureId": "axis-gap-20",
+      "gap": 20,
+      "actualSeed": {
+        "x": 320,
+        "y": 230
+      },
+      "usedCapturedSeed": false,
+      "nativePixels": 80406,
+      "croquisPixels": 80365,
+      "nativeOnly": 41,
+      "croquisOnly": 0,
+      "identical": false,
+      "selectedBeyondReturnedRectangle": 21,
+      "reportPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/captures/axis-gap-20-large-pair-20261013T160048.217620Z-d80c6363/larger-gap-comparison.json",
+      "reportSha256": "5c8afef530cd78342d1c1a496d9faba47f0229f8229efac8959ca9c087faa97e",
+      "captureSha256": "cff1243283163a26f2979e57d9a6734b9074cbdeab14800f4f498f5cd514a9e9",
+      "sourceRgbaSha256": "51529e3a25cf10ac8aefbe84205824a05f507b12ba0a5f36045330b525efc32d"
+    },
+    {
+      "fixtureId": "axis-gap-21",
+      "gap": 20,
+      "actualSeed": {
+        "x": 320,
+        "y": 230
+      },
+      "usedCapturedSeed": false,
+      "nativePixels": 303807,
+      "croquisPixels": 303807,
+      "nativeOnly": 0,
+      "croquisOnly": 0,
+      "identical": true,
+      "selectedBeyondReturnedRectangle": 0,
+      "reportPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/captures/axis-gap-21-largest-20261013T160308.199177Z-e4d6d76d/larger-gap-comparison.json",
+      "reportSha256": "03c20d2a3c31fcbbf585236a91bc1f00f1986ca5778d9ee56404368304135f2e",
+      "captureSha256": "a70123fb9e20b9adc40c0d5db5fd312a1ac415bbecd12aa5013db6d5143bb11f",
+      "sourceRgbaSha256": "3b8e8aef110e4459fd1b31e8eaf449a5fa9843acc605e0c0de84bbff4ac64867"
+    },
+    {
+      "fixtureId": "narrow-pocket",
+      "gap": 10,
+      "actualSeed": {
+        "x": 319,
+        "y": 208
+      },
+      "usedCapturedSeed": true,
+      "nativePixels": 80025,
+      "croquisPixels": 79523,
+      "nativeOnly": 502,
+      "croquisOnly": 0,
+      "identical": false,
+      "selectedBeyondReturnedRectangle": 0,
+      "reportPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/captures/narrow-pocket-large-ax-g10-20261013T162344.627766Z-0bbe8c28/larger-gap-comparison.json",
+      "reportSha256": "4a5b144f4c10e0f260ac5e05898637d7c457bdb157b6e63ab3d9bfcbdf8fddc0",
+      "captureSha256": "ec8ae989492e8c59192e387cc8b8e7ed5974d6b3ce60c8b57595732b2d4819aa",
+      "sourceRgbaSha256": "23a00b3544a6b495d504fda42a45bf9d3281d5a18803272fc61a1cc0cac8e6fe"
+    },
+    {
+      "fixtureId": "diagonal-opening",
+      "gap": 10,
+      "actualSeed": {
+        "x": 319,
+        "y": 208
+      },
+      "usedCapturedSeed": true,
+      "nativePixels": 55966,
+      "croquisPixels": 55919,
+      "nativeOnly": 47,
+      "croquisOnly": 0,
+      "identical": false,
+      "selectedBeyondReturnedRectangle": 0,
+      "reportPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/captures/diagonal-opening-g10-20261013T164101.307653Z-3826f25c/larger-gap-comparison.json",
+      "reportSha256": "69d8459f97ca3516ab2e764929c67c12b72c8f979a1a99a4fbd577f636105085",
+      "captureSha256": "70f1acdf5827422d398dffbc5e1dcb496d53e05dc8535e4d3100ea828e6adebb",
+      "sourceRgbaSha256": "16d4327f4569dd5826f4b80281e2d798fe8f52f3787d8d5278ec57e699fc5c56"
+    }
+  ],
+  "uncaptured": [
+    {
+      "fixtureId": "narrow-pocket",
+      "gap": 20
+    },
+    {
+      "fixtureId": "axis-near-line",
+      "gap": 10
+    },
+    {
+      "fixtureId": "axis-near-line",
+      "gap": 20
+    }
+  ],
+  "uncapturedReason": "Controlled point input failed with noWindowsAvailable; ordinary room-center seeds were not substituted for near-line tests.",
+  "failedZeroCallAttempts": [
+    "narrow-pocket-large-pair-20261013T160531.815206Z-1e0f0899",
+    "narrow-pocket-large-pair-retry-20261013T160950.408112Z-0ae66765"
+  ],
+  "scope": "Complete final native A versus Croquis IN; no final visible RGBA or latency claim."
+}

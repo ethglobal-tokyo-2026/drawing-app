@@ -1,0 +1,25 @@
+{
+  "fixtureId": "edge-gap-2",
+  "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/fixtures/edge-gap-2.png",
+  "sourcePngSha256": "ffdf58a75884f70cc165b3d2894fae7b378b83f19ca6af631e271904c7b525d3",
+  "sourceRgbaSha256": "9c3af0197ee2ad9d9bef37293e602ba54510d2360b4add91d8f77283193bac76",
+  "documentPixels": [240, 200],
+  "intendedSeedDocument": { "x": 120, "y": 100 },
+  "plannedCalls": [
+    { "callId": "1", "gapSelectorLevel": 4, "configuredGap": 10 },
+    { "callId": "2", "gapSelectorLevel": 5, "configuredGap": 20 }
+  ],
+  "sourceResetBetweenCalls": "Undo the first fill; confirm the original outline before the second fill.",
+  "settingStatus": "Planned sequence; confirm each native gap and seed separately from its boundary records.",
+  "requiredNativeSettings": {
+    "reference": "Refer only to editing layer",
+    "multipleReference": false,
+    "areaScaling": false,
+    "colorMargin": 10,
+    "antialiasing": true,
+    "fillNarrowAreas": true,
+    "paint": "#ff0000"
+  },
+  "comparison": "Final A classification only; visible RGBA and the native returned rectangle are separate measurements.",
+  "question": "Determine whether the exact 240 by 200 edge case stays enclosed in native CSP when Croquis reaches all canvas sides at raw gap 20."
+}

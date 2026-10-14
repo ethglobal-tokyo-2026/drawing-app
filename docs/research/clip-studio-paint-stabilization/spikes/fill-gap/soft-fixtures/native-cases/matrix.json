@@ -1,0 +1,128 @@
+{
+  "schema": "native-soft-fill-matrix/v1",
+  "fillSourceSha256": "d947273c2157bcdfd7539da1b3c3c87a9f32a80fc3cc36622f5477f3a780fe49",
+  "manifestSha256": "8540690a2463c7453093848a9789cae693d1b2c760102b9b1231b24e524e61d1",
+  "priority": "First five cases are individual g10 calls. The next five g20 cases are prepared for later verified input controls.",
+  "cases": [
+    {
+      "priority": 1,
+      "caseId": "soft-axis-gap10-alpha064-g10",
+      "fixtureId": "soft-axis-gap10-alpha064",
+      "gap": 10,
+      "metadataPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/soft-fixtures/native-cases/soft-axis-gap10-alpha064-g10-metadata.json",
+      "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/soft-fixtures/soft-axis-gap10-alpha064.png",
+      "intendedSeedDocument": {
+        "x": 320,
+        "y": 230
+      }
+    },
+    {
+      "priority": 2,
+      "caseId": "soft-axis-gap10-alpha128-g10",
+      "fixtureId": "soft-axis-gap10-alpha128",
+      "gap": 10,
+      "metadataPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/soft-fixtures/native-cases/soft-axis-gap10-alpha128-g10-metadata.json",
+      "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/soft-fixtures/soft-axis-gap10-alpha128.png",
+      "intendedSeedDocument": {
+        "x": 320,
+        "y": 230
+      }
+    },
+    {
+      "priority": 3,
+      "caseId": "soft-axis-gap10-alpha192-g10",
+      "fixtureId": "soft-axis-gap10-alpha192",
+      "gap": 10,
+      "metadataPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/soft-fixtures/native-cases/soft-axis-gap10-alpha192-g10-metadata.json",
+      "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/soft-fixtures/soft-axis-gap10-alpha192.png",
+      "intendedSeedDocument": {
+        "x": 320,
+        "y": 230
+      }
+    },
+    {
+      "priority": 4,
+      "caseId": "soft-axis-gap10-alpha255-g10",
+      "fixtureId": "soft-axis-gap10-alpha255",
+      "gap": 10,
+      "metadataPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/soft-fixtures/native-cases/soft-axis-gap10-alpha255-g10-metadata.json",
+      "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/soft-fixtures/soft-axis-gap10-alpha255.png",
+      "intendedSeedDocument": {
+        "x": 320,
+        "y": 230
+      }
+    },
+    {
+      "priority": 5,
+      "caseId": "soft-axis-gap10-aa-outer-g10",
+      "fixtureId": "soft-axis-gap10-aa-outer",
+      "gap": 10,
+      "metadataPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/soft-fixtures/native-cases/soft-axis-gap10-aa-outer-g10-metadata.json",
+      "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/soft-fixtures/soft-axis-gap10-aa-outer.png",
+      "intendedSeedDocument": {
+        "x": 320,
+        "y": 230
+      }
+    },
+    {
+      "priority": 6,
+      "caseId": "soft-axis-gap10-alpha064-g20",
+      "fixtureId": "soft-axis-gap10-alpha064",
+      "gap": 20,
+      "metadataPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/soft-fixtures/native-cases/soft-axis-gap10-alpha064-g20-metadata.json",
+      "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/soft-fixtures/soft-axis-gap10-alpha064.png",
+      "intendedSeedDocument": {
+        "x": 320,
+        "y": 230
+      }
+    },
+    {
+      "priority": 7,
+      "caseId": "soft-axis-gap10-alpha128-g20",
+      "fixtureId": "soft-axis-gap10-alpha128",
+      "gap": 20,
+      "metadataPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/soft-fixtures/native-cases/soft-axis-gap10-alpha128-g20-metadata.json",
+      "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/soft-fixtures/soft-axis-gap10-alpha128.png",
+      "intendedSeedDocument": {
+        "x": 320,
+        "y": 230
+      }
+    },
+    {
+      "priority": 8,
+      "caseId": "soft-axis-gap10-alpha192-g20",
+      "fixtureId": "soft-axis-gap10-alpha192",
+      "gap": 20,
+      "metadataPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/soft-fixtures/native-cases/soft-axis-gap10-alpha192-g20-metadata.json",
+      "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/soft-fixtures/soft-axis-gap10-alpha192.png",
+      "intendedSeedDocument": {
+        "x": 320,
+        "y": 230
+      }
+    },
+    {
+      "priority": 9,
+      "caseId": "soft-axis-gap10-alpha255-g20",
+      "fixtureId": "soft-axis-gap10-alpha255",
+      "gap": 20,
+      "metadataPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/soft-fixtures/native-cases/soft-axis-gap10-alpha255-g20-metadata.json",
+      "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/soft-fixtures/soft-axis-gap10-alpha255.png",
+      "intendedSeedDocument": {
+        "x": 320,
+        "y": 230
+      }
+    },
+    {
+      "priority": 10,
+      "caseId": "soft-axis-gap10-aa-outer-g20",
+      "fixtureId": "soft-axis-gap10-aa-outer",
+      "gap": 20,
+      "metadataPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/soft-fixtures/native-cases/soft-axis-gap10-aa-outer-g20-metadata.json",
+      "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/soft-fixtures/soft-axis-gap10-aa-outer.png",
+      "intendedSeedDocument": {
+        "x": 320,
+        "y": 230
+      }
+    }
+  ]
+}

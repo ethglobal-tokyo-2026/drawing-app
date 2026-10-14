@@ -583,7 +583,19 @@ class Capture:
             time.sleep(0.005)
 
     def cleanup(self):
-        self.timer.cancel()
+        try:
+            self.timer.cancel()
+            # Cancellation cannot stop a callback that has already entered
+            # SendAsyncInterrupt. Wait before any process cleanup or detach.
+            if self.timer.ident is not None:
+                self.timer.join(timeout=max(0.0, self.hard_deadline - time.monotonic()))
+                require(not self.timer.is_alive(),
+                        'Watchdog interrupt did not finish within the cleanup deadline; '
+                        'remaining process cleanup is an unsynchronized attempt')
+        except BaseException as error:
+            # Still attempt probe removal and detach so a failed watchdog wait
+            # cannot prevent releasing the debugger. Resume remains unverified.
+            self.cleanup_errors.append(f'Watchdog before cleanup: {error!r}')
         process = self.process
         try:
             if process is not None and process.IsValid():

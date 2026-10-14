@@ -1,0 +1,19 @@
+{
+  "fixtureId": "recolor-bridge-4",
+  "source": "fixtures/recolor-bridge-4.png",
+  "documentPixels": [640, 480],
+  "documentDpi": 72,
+  "viewZoomPercent": 100,
+  "viewRotationDegrees": 90,
+  "gapSelectorLevel": 3,
+  "configuredGap": 5,
+  "reference": "Refer only to editing layer",
+  "multipleReference": false,
+  "areaScaling": false,
+  "colorMargin": 10,
+  "antialiasing": true,
+  "fillNarrowAreas": true,
+  "input": "AX-index click on standard window with palettes hidden and view rotated; actual seed must be verified from native capture",
+  "intendedSeedRegion": "left green component in source coordinates",
+  "preparationNote": "An incidental merged-layer filter dialog was cancelled and its layer addition undone before this capture; view rotation changes no source pixels. Validate positive candidate and selection bits against source eligibility."
+}

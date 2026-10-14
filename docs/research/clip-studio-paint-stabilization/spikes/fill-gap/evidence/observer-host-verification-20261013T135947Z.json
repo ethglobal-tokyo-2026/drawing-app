@@ -1,0 +1,29 @@
+{
+  "utc": "2026-10-13T13:59:47Z",
+  "scope": "Research-only host verification. No native target, app input, or debugger attachment by the observer implementer.",
+  "commands": [
+    {
+      "command": "python3 -B docs/research/clip-studio-paint-stabilization/spikes/fill-gap/check_capture_fill.py",
+      "exitCode": 0,
+      "result": "Ran 32 tests in 0.011s; OK"
+    },
+    {
+      "command": "python3 -B docs/research/clip-studio-paint-stabilization/spikes/fill-gap/check_record_fill.py",
+      "exitCode": 0,
+      "result": "Ran 6 tests in 0.000s; OK"
+    },
+    {
+      "command": "Parse capture_fill.py, record_fill.py, check_capture_fill.py, and check_record_fill.py with Python ast.parse",
+      "exitCode": 0,
+      "result": "All four fill capture scripts have valid syntax"
+    }
+  ],
+  "sha256": {
+    "capture_fill.py": "1e1bf675c243b169a0177577e5f804b8eb24fc09d0f7d7bbcebd5421af7d5d07",
+    "record_fill.py": "490b5de20b7a570d893846fcdd31920a0e594aff26827225fa87dc178d9782d4",
+    "check_capture_fill.py": "30e2442143a5dbfd64c79f8bc19c5cd27213a7be32a013e1542b1a855ef94d28",
+    "check_record_fill.py": "0fef741361f2155615b94d964a3107a11fc8e036bdb1ec25ab043a6f1ce54d1f"
+  },
+  "independentReview": "The host-check subagent reviewed decoders, allocation fields, pinned prologue/return instructions, and actual callback pairing; no actionable issue was found.",
+  "remainingNativeVerification": "Root-controlled no-input preflight and actual native fill captures are required. Host checks do not establish native runtime success or whole-algorithm equivalence."
+}

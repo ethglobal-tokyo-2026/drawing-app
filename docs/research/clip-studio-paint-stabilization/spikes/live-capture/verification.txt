@@ -82,3 +82,29 @@ Final artifact checks:
 PASS: syntax for 7 Python files; 205 local document links; 34 evidence hashes.
 PASS: formatting for the three edited Markdown overview/instruction files.
 PASS: portable maximum-history probe, all 1,000 records across nine blocks.
+
+2026-10-13 watchdog cleanup synchronization:
+RED: four new synthetic watchdog checks failed against cancel-only cleanup,
+including an active real Timer callback that cleanup did not wait for.
+GREEN: all five check_capture_cleanup.py tests pass after a started watchdog
+is joined within the remaining hard deadline. An unstarted timer is not joined;
+timeout/join failures persist in cleanup_errors, and own-probe removal and
+Detach(False) are still attempted. No errors are absorbed silently.
+
+Fresh host-only regression results after the change:
+PASS: installed-LLDB check_capture_helper.run_checks(), all reported groups.
+PASS: check_capture_cleanup.py, 5 tests.
+PASS: check_record_tablet_stroke.py, 9 tests.
+PASS: fill-gap/check_capture_fill.py, 32 tests.
+PASS: fill-gap/check_record_fill.py, 6 tests.
+PASS: compile() syntax checks for 31 top-level Python files in both spike folders.
+PASS: git diff --check.
+All checks exited 0. None attached, launched, operated, or signaled a native
+target. Only synthetic objects were used by the watchdog regression tests.
+
+This change removes a demonstrated callback/cleanup race when the bounded join
+succeeds. It does not prove the cause of the stopped native process after the
+zero-call narrow-pocket-large-pair-20261013T160531.815206Z-1e0f0899 capture.
+Its original source snapshots, raw failure, and explicit root recovery remain
+unchanged. Independent launcher resume verification is still required, and
+this helper does not add automatic process-signal recovery.

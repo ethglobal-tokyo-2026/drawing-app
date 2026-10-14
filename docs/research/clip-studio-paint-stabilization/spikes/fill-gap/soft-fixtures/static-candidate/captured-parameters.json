@@ -1,0 +1,56 @@
+{
+  "schema": "captured-native-candidate-parameters/v1",
+  "source": "Complete 528-byte fill-object headers in the five actual g10 native captures",
+  "parameters": [
+    {
+      "capture": "soft-alpha064-g10-20261013T162719.835423Z-91f4c404",
+      "captureSha256": "24a8f84e5d1e9204bd4f3af77bf414d7b8fc08b3e8a7c471f8ab16212f865a9f",
+      "flagsAtA0": 1088,
+      "modeAtA4": 0,
+      "valueAt110": 0,
+      "toleranceAt170": 26,
+      "targetComponentsAt178": [0, 0, 0, 0],
+      "sourceFormatGetterResultCaptured": false
+    },
+    {
+      "capture": "soft-alpha128-g10-20261013T162914.759873Z-e4db0cf6",
+      "captureSha256": "1f623fc06358111532361dca76ee9eacebed75c26613e4d00d2b50f42fedf670",
+      "flagsAtA0": 1088,
+      "modeAtA4": 0,
+      "valueAt110": 0,
+      "toleranceAt170": 26,
+      "targetComponentsAt178": [0, 0, 0, 0],
+      "sourceFormatGetterResultCaptured": false
+    },
+    {
+      "capture": "soft-alpha192-g10-20261013T163058.854046Z-d84f8e05",
+      "captureSha256": "af4c67d5cc4b3eedee86d6d8aac0aa663e7e61db5c15fb964517ec81e0822a72",
+      "flagsAtA0": 1088,
+      "modeAtA4": 0,
+      "valueAt110": 0,
+      "toleranceAt170": 26,
+      "targetComponentsAt178": [0, 0, 0, 0],
+      "sourceFormatGetterResultCaptured": false
+    },
+    {
+      "capture": "soft-alpha255-g10-20261013T163221.566197Z-752abf9c",
+      "captureSha256": "804f306b188f82dc9d187391c2f9033e4bf0232d1fc7970bbe3efc0972e58d4f",
+      "flagsAtA0": 1088,
+      "modeAtA4": 0,
+      "valueAt110": 0,
+      "toleranceAt170": 26,
+      "targetComponentsAt178": [0, 0, 0, 0],
+      "sourceFormatGetterResultCaptured": false
+    },
+    {
+      "capture": "soft-aa-outer-g10-20261013T163328.027396Z-9cc73c8e",
+      "captureSha256": "a47e83afc39005f64f870bca9808777b1eb73cf797504dda4925c7726387a63b",
+      "flagsAtA0": 1088,
+      "modeAtA4": 0,
+      "valueAt110": 0,
+      "toleranceAt170": 26,
+      "targetComponentsAt178": [0, 0, 0, 0],
+      "sourceFormatGetterResultCaptured": false
+    }
+  ]
+}

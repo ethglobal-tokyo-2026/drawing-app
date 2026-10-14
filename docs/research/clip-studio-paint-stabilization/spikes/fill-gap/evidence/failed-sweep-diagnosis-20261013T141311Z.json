@@ -1,0 +1,53 @@
+{
+  "utc": "2026-10-13T14:13:11Z",
+  "scope": "Read-only inspection of saved evidence and the documented CUA APIs supplied by the owning root agent. No UI input, debugger attachment, application launch, or process state change.",
+  "rawRunDirectory": "docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/captures/axis-gap-5-preset-sweep-20261013T140715.365842Z-0ff1cadf",
+  "preservation": "Raw run files were read and hashed without modification. This separate diagnosis does not relabel the failed run as a preflight or successful capture.",
+  "observedSavedOutcome": {
+    "pid": 57266,
+    "requestedCalls": 4,
+    "entries": 0,
+    "pairs": 0,
+    "unmatchedEntries": 0,
+    "elapsedSeconds": 27.122378833,
+    "error": "CaptureError: capture_deadline_reached",
+    "fullInstructionVerificationAndThreeProbesRetained": true,
+    "detachRequestSucceeded": true,
+    "detachedStateObserved": true,
+    "detachObservationSource": "matching_process_state_event",
+    "cleanupErrors": [],
+    "deadlineExceeded": false,
+    "outerTimeout": false,
+    "debuggerExitCode": 0,
+    "resumeIndependentlyVerified": true,
+    "resumeRaw": "57266 S    /Users/adoll/Applications/CSP Research/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT\n",
+    "recordingSucceeded": false
+  },
+  "sha256": {
+    "fill.jsonl": "9b172762b3704fe44c71f6a584498d665e26c3106aa766e8282bb3d011a6e3cc",
+    "debugger.log": "94b8d31d46d6313e043bfc78354fecd23599078c587f288d221550061669c8e3",
+    "launcher-result.json": "4950cdb90e4adc10d6e403297a93ecadf38aba2f9075b2eae43b46ea4083519b",
+    "launcher-metadata.json": "4e352060c26e880a0f9fc4ed25df2b2340df842222b6611d95e67285dbf8845b",
+    "process-resume.txt": "2c864730a84d249a5bc6086a0b67e1917713c644872f9f1dca96f421e202c089"
+  },
+  "rootReportedUiObservations": [
+    "Exact research path supports getAXState, getScreenshot, and pressKey.",
+    "Coordinate clicks and dragging immediately fail with noWindowsAvailable, including after fresh screenshots, AX reads, raising, and renewed app/session selection.",
+    "AX-index click(0) on the currently observed standard window succeeds and adds Fill history.",
+    "Generic app-name selection times out; bundle selection is ambiguous between installed and research app registrations. Only the research registration appears running.",
+    "No window ID was returned by the inspected app inventory. The macOS API does not document listWindows as an alternative listing operation."
+  ],
+  "documentedApiSource": "Root agent supplied documentation from the initialized CUA session, including getApp(string or {windowId:number}), App.click(number or [x,y]), drag, performSecondaryAction, pressKey, setValue, getAXState, and getScreenshot.",
+  "supportedWorkaround": [
+    "Use click(0) only after a fresh AX read confirms that index 0 is the intended standard window.",
+    "Place each deterministic fixture so the intended seed region is at that working AX click location. The observer's actual packed seed and document offset determine the accepted seed; the screenshot alone does not certify it.",
+    "Use setValue or keyboard navigation for preset changes only when the current AX control or documented shortcut establishes the intended setting. Confirm the numeric setting and captured native gap width.",
+    "getApp({windowId}) is a supported selector only if a real window ID is observed. The AX element index is not a window ID and must not be substituted."
+  ],
+  "limits": [
+    "The exact cause of coordinate-input failure is not established. The successful AX read/screenshot/key/index routes do not prove that CUA's coordinate window lookup works.",
+    "Duplicate app registration is a possible contributor rather than a demonstrated cause. Both app registrations need not correspond to running processes.",
+    "No verified documented arbitrary-point input alternative remains in the supplied API. Repeating the failed selectors/reset/raise sequence has no supporting evidence of repair.",
+    "A zero-entry timeout does not exercise the fill algorithm and cannot compare presets or geometry."
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "pid": 57266,
+  "executable": "/Users/adoll/Applications/CSP Research/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT",
+  "original": "/Users/adoll/Applications/CSP Research/original-arm64",
+  "recorderSha256": {
+    "capture_fill.py": "1e1bf675c243b169a0177577e5f804b8eb24fc09d0f7d7bbcebd5421af7d5d07",
+    "record_fill.py": "490b5de20b7a570d893846fcdd31920a0e594aff26827225fa87dc178d9782d4",
+    "capture_live_contract.py": "ca93a5daff62c6633385cb38d750e04c13d5077e3fbc9cd4f09e57d4634ae9b8",
+    "record_tablet_stroke.py": "8c893aae014ba21597298b3586d40b90b133c7831ccc8aa32f19265ed0f95e93"
+  },
+  "requestedCalls": 1,
+  "captureSeconds": 8.0,
+  "outerGuardSeconds": 45,
+  "preflight": true,
+  "metadata": {}
+}

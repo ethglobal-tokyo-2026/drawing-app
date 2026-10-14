@@ -1,0 +1,54 @@
+{
+  "schema": "measured-fill-selection-plot/v1",
+  "pngSha256": "6d2974325db854950142c975ed277c4db8cbc07d65c63c5fefe656d30bfff937",
+  "dimensions": [
+    1600,
+    1110
+  ],
+  "reports": [
+    {
+      "reportPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/captures/edge-gap-2-large-pair-20261013T155604.899989Z-d29399af/larger-gap-comparison.json",
+      "reportSha256": "1f59114ba271e7b6b2b18ddae482bae11cb2f45d6c97781f14d3d6a5ab3d5473",
+      "captureSha256": "da2151b1b66acf452e7a230463fa7e2eed7792b97cb7961b814e0daf50c45492",
+      "fixtureId": "edge-gap-2",
+      "gap": 20,
+      "seed": {
+        "x": 120,
+        "y": 100
+      },
+      "sourceRgbaSha256": "9c3af0197ee2ad9d9bef37293e602ba54510d2360b4add91d8f77283193bac76",
+      "nativePixels": 30231,
+      "croquisPixels": 45870,
+      "nativeOnly": 0,
+      "croquisOnly": 15639
+    },
+    {
+      "reportPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/captures/narrow-pocket-large-ax-g10-20261013T162344.627766Z-0bbe8c28/larger-gap-comparison.json",
+      "reportSha256": "4a5b144f4c10e0f260ac5e05898637d7c457bdb157b6e63ab3d9bfcbdf8fddc0",
+      "captureSha256": "ec8ae989492e8c59192e387cc8b8e7ed5974d6b3ce60c8b57595732b2d4819aa",
+      "fixtureId": "narrow-pocket",
+      "gap": 10,
+      "seed": {
+        "x": 319,
+        "y": 208
+      },
+      "sourceRgbaSha256": "23a00b3544a6b495d504fda42a45bf9d3281d5a18803272fc61a1cc0cac8e6fe",
+      "nativePixels": 80025,
+      "croquisPixels": 79523,
+      "nativeOnly": 502,
+      "croquisOnly": 0
+    }
+  ],
+  "legend": {
+    "green": "Both selected",
+    "red": "CSP only",
+    "blue": "Croquis only"
+  },
+  "pocketDetailExclusive": [
+    372,
+    242,
+    418,
+    282
+  ],
+  "scope": "Complete final native A versus Croquis IN; no visible RGBA equivalence claim."
+}

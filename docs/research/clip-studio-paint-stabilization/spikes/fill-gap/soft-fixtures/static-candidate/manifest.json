@@ -1,0 +1,66 @@
+{
+  "schema": "bounded-native-candidate-trace/v1",
+  "source": "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64",
+  "sourceSha256": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+  "tableAddress": "0x104a4b8d0",
+  "tableWords64": ["0x10254a06c", "0x10254a144", "0x10", "0x10453e718"],
+  "method": "Read-only Mach-O data and bounded objdump; enclosing-symbol guesses removed",
+  "files": [
+    {
+      "name": "1025452d4.asm",
+      "start": "0x1025452d4",
+      "endExclusive": "0x1025454ac",
+      "command": [
+        "/usr/bin/objdump",
+        "-d",
+        "--no-show-raw-insn",
+        "--start-address=0x1025452d4",
+        "--stop-address=0x1025454ac",
+        "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+      ],
+      "sha256": "c5491031bcbee35bc8f73cf566b3d7381f69d97674b0e10fc1f6f20ffeea75ab"
+    },
+    {
+      "name": "10254a06c.asm",
+      "start": "0x10254a06c",
+      "endExclusive": "0x10254a3fc",
+      "command": [
+        "/usr/bin/objdump",
+        "-d",
+        "--no-show-raw-insn",
+        "--start-address=0x10254a06c",
+        "--stop-address=0x10254a3fc",
+        "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+      ],
+      "sha256": "53186c7585d4f6f940915e6be60c48fbee3673cdc743e2fc874e743ce67fbce8"
+    },
+    {
+      "name": "1025492d4.asm",
+      "start": "0x1025492d4",
+      "endExclusive": "0x1025493e8",
+      "command": [
+        "/usr/bin/objdump",
+        "-d",
+        "--no-show-raw-insn",
+        "--start-address=0x1025492d4",
+        "--stop-address=0x1025493e8",
+        "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+      ],
+      "sha256": "d8fc2b9b12132f9972622a1ae54d4367d75e430d3a18755f199029f7bec19103"
+    },
+    {
+      "name": "1025484dc.asm",
+      "start": "0x1025484dc",
+      "endExclusive": "0x1025487ac",
+      "command": [
+        "/usr/bin/objdump",
+        "-d",
+        "--no-show-raw-insn",
+        "--start-address=0x1025484dc",
+        "--stop-address=0x1025487ac",
+        "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+      ],
+      "sha256": "5d37a262d3cf923a1d8cf2b418f8ac670011c6328f2749631e4cffab7dac93e9"
+    }
+  ]
+}

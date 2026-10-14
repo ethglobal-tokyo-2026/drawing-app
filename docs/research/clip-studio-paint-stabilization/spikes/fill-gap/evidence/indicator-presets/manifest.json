@@ -1,0 +1,822 @@
+{
+  "binary": "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64",
+  "sha256": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+  "export_name_data": {
+    "file_offset": "0x4c08788",
+    "size": "0x8946a0",
+    "retained_subtree_root": "0x894593",
+    "recovered_symbols": 7
+  },
+  "symbols": [
+    {
+      "address": "0x100f26dbc",
+      "flags": 0,
+      "name": "_ZN12Planeswalker4Urza21URToolOptionInnerView17MakeSliderControlEN5boost10shared_ptrINS_25SOptionalControlAttributeEEEPKNS_22SOptionalIndicatorInfoE",
+      "ancestry": [
+        {
+          "child": "0x3f305c",
+          "parent": "0x3f31ee",
+          "suffix": "MakeSliderControlEN5boost10shared_ptrINS_25SOptionalControlAttributeEEEPKNS_22SOptionalIndicatorInfoE"
+        },
+        {
+          "child": "0x3f31ee",
+          "parent": "0x3f3c05",
+          "suffix": "7"
+        },
+        {
+          "child": "0x3f3c05",
+          "parent": "0x3f624f",
+          "suffix": "1"
+        },
+        {
+          "child": "0x3f624f",
+          "parent": "0x3f6581",
+          "suffix": "OptionInnerView"
+        },
+        {
+          "child": "0x3f6581",
+          "parent": "0x3f65ab",
+          "suffix": "ool"
+        },
+        {
+          "child": "0x3f65ab",
+          "parent": "0x3fba80",
+          "suffix": "T"
+        },
+        {
+          "child": "0x3fba80",
+          "parent": "0x3fbefa",
+          "suffix": "UR"
+        },
+        {
+          "child": "0x3fbefa",
+          "parent": "0x495bbb",
+          "suffix": "1"
+        },
+        {
+          "child": "0x495bbb",
+          "parent": "0x526405",
+          "suffix": "2"
+        },
+        {
+          "child": "0x526405",
+          "parent": "0x52646f",
+          "suffix": "Urza"
+        },
+        {
+          "child": "0x52646f",
+          "parent": "0x5d04f3",
+          "suffix": "4"
+        },
+        {
+          "child": "0x5d04f3",
+          "parent": "0x5d0b23",
+          "suffix": "Planeswalker"
+        },
+        {
+          "child": "0x5d0b23",
+          "parent": "0x5dae6e",
+          "suffix": "2"
+        },
+        {
+          "child": "0x5dae6e",
+          "parent": "0x810e2c",
+          "suffix": "1"
+        },
+        {
+          "child": "0x810e2c",
+          "parent": "0x888c3d",
+          "suffix": "N"
+        },
+        {
+          "child": "0x888c3d",
+          "parent": "0x8890ae",
+          "suffix": "Z"
+        },
+        {
+          "child": "0x8890ae",
+          "parent": "0x894593",
+          "suffix": "_"
+        }
+      ],
+      "demangled": "Planeswalker::Urza::URToolOptionInnerView::MakeSliderControl(boost::shared_ptr<Planeswalker::SOptionalControlAttribute>, Planeswalker::SOptionalIndicatorInfo const*)"
+    },
+    {
+      "address": "0x100f28a78",
+      "flags": 0,
+      "name": "_ZN12Planeswalker4Urza21URToolOptionInnerView22SetIndicatorBlockValueEN5boost10shared_ptrINS_6PWViewEEEijiddRKNS_22SOptionalIndicatorInfoE",
+      "ancestry": [
+        {
+          "child": "0x3f4657",
+          "parent": "0x3f466c",
+          "suffix": "IndicatorBlockValueEN5boost10shared_ptrINS_6PWViewEEEijiddRKNS_22SOptionalIndicatorInfoE"
+        },
+        {
+          "child": "0x3f466c",
+          "parent": "0x3f4741",
+          "suffix": "Set"
+        },
+        {
+          "child": "0x3f4741",
+          "parent": "0x3f5abe",
+          "suffix": "2"
+        },
+        {
+          "child": "0x3f5abe",
+          "parent": "0x3f624f",
+          "suffix": "2"
+        },
+        {
+          "child": "0x3f624f",
+          "parent": "0x3f6581",
+          "suffix": "OptionInnerView"
+        },
+        {
+          "child": "0x3f6581",
+          "parent": "0x3f65ab",
+          "suffix": "ool"
+        },
+        {
+          "child": "0x3f65ab",
+          "parent": "0x3fba80",
+          "suffix": "T"
+        },
+        {
+          "child": "0x3fba80",
+          "parent": "0x3fbefa",
+          "suffix": "UR"
+        },
+        {
+          "child": "0x3fbefa",
+          "parent": "0x495bbb",
+          "suffix": "1"
+        },
+        {
+          "child": "0x495bbb",
+          "parent": "0x526405",
+          "suffix": "2"
+        },
+        {
+          "child": "0x526405",
+          "parent": "0x52646f",
+          "suffix": "Urza"
+        },
+        {
+          "child": "0x52646f",
+          "parent": "0x5d04f3",
+          "suffix": "4"
+        },
+        {
+          "child": "0x5d04f3",
+          "parent": "0x5d0b23",
+          "suffix": "Planeswalker"
+        },
+        {
+          "child": "0x5d0b23",
+          "parent": "0x5dae6e",
+          "suffix": "2"
+        },
+        {
+          "child": "0x5dae6e",
+          "parent": "0x810e2c",
+          "suffix": "1"
+        },
+        {
+          "child": "0x810e2c",
+          "parent": "0x888c3d",
+          "suffix": "N"
+        },
+        {
+          "child": "0x888c3d",
+          "parent": "0x8890ae",
+          "suffix": "Z"
+        },
+        {
+          "child": "0x8890ae",
+          "parent": "0x894593",
+          "suffix": "_"
+        }
+      ],
+      "demangled": "Planeswalker::Urza::URToolOptionInnerView::SetIndicatorBlockValue(boost::shared_ptr<Planeswalker::PWView>, int, unsigned int, int, double, double, Planeswalker::SOptionalIndicatorInfo const&)"
+    },
+    {
+      "address": "0x102a9a7d4",
+      "flags": 0,
+      "name": "_ZNK12Planeswalker17PWFillToolFactory20MakeControlAttributeERNS_25SOptionalControlAttributeE",
+      "ancestry": [
+        {
+          "child": "0x762952",
+          "parent": "0x762960",
+          "suffix": "0MakeControlAttributeERNS_25SOptionalControlAttributeE"
+        },
+        {
+          "child": "0x762960",
+          "parent": "0x762a32",
+          "suffix": "lToolFactory2"
+        },
+        {
+          "child": "0x762a32",
+          "parent": "0x762c19",
+          "suffix": "il"
+        },
+        {
+          "child": "0x762c19",
+          "parent": "0x766b45",
+          "suffix": "F"
+        },
+        {
+          "child": "0x766b45",
+          "parent": "0x766c35",
+          "suffix": "PW"
+        },
+        {
+          "child": "0x766c35",
+          "parent": "0x775551",
+          "suffix": "7"
+        },
+        {
+          "child": "0x775551",
+          "parent": "0x7d843c",
+          "suffix": "1"
+        },
+        {
+          "child": "0x7d843c",
+          "parent": "0x7d84b4",
+          "suffix": "Planeswalker"
+        },
+        {
+          "child": "0x7d84b4",
+          "parent": "0x7dbc55",
+          "suffix": "2"
+        },
+        {
+          "child": "0x7dbc55",
+          "parent": "0x810da6",
+          "suffix": "1"
+        },
+        {
+          "child": "0x810da6",
+          "parent": "0x810e2c",
+          "suffix": "K"
+        },
+        {
+          "child": "0x810e2c",
+          "parent": "0x888c3d",
+          "suffix": "N"
+        },
+        {
+          "child": "0x888c3d",
+          "parent": "0x8890ae",
+          "suffix": "Z"
+        },
+        {
+          "child": "0x8890ae",
+          "parent": "0x894593",
+          "suffix": "_"
+        }
+      ],
+      "demangled": "Planeswalker::PWFillToolFactory::MakeControlAttribute(Planeswalker::SOptionalControlAttribute&) const"
+    },
+    {
+      "address": "0x102a9d450",
+      "flags": 0,
+      "name": "_ZNK12Planeswalker17PWFillToolFactory23InitializeIndicatorInfoEN5boost10shared_ptrINSt3__13mapIiNS_22SOptionalIndicatorInfoENS3_4lessIiEENS3_9allocatorINS3_4pairIKiS5_EEEEEEEE",
+      "ancestry": [
+        {
+          "child": "0x762959",
+          "parent": "0x762960",
+          "suffix": "3InitializeIndicatorInfoEN5boost10shared_ptrINSt3__13mapIiNS_22SOptionalIndicatorInfoENS3_4lessIiEENS3_9allocatorINS3_4pairIKiS5_EEEEEEEE"
+        },
+        {
+          "child": "0x762960",
+          "parent": "0x762a32",
+          "suffix": "lToolFactory2"
+        },
+        {
+          "child": "0x762a32",
+          "parent": "0x762c19",
+          "suffix": "il"
+        },
+        {
+          "child": "0x762c19",
+          "parent": "0x766b45",
+          "suffix": "F"
+        },
+        {
+          "child": "0x766b45",
+          "parent": "0x766c35",
+          "suffix": "PW"
+        },
+        {
+          "child": "0x766c35",
+          "parent": "0x775551",
+          "suffix": "7"
+        },
+        {
+          "child": "0x775551",
+          "parent": "0x7d843c",
+          "suffix": "1"
+        },
+        {
+          "child": "0x7d843c",
+          "parent": "0x7d84b4",
+          "suffix": "Planeswalker"
+        },
+        {
+          "child": "0x7d84b4",
+          "parent": "0x7dbc55",
+          "suffix": "2"
+        },
+        {
+          "child": "0x7dbc55",
+          "parent": "0x810da6",
+          "suffix": "1"
+        },
+        {
+          "child": "0x810da6",
+          "parent": "0x810e2c",
+          "suffix": "K"
+        },
+        {
+          "child": "0x810e2c",
+          "parent": "0x888c3d",
+          "suffix": "N"
+        },
+        {
+          "child": "0x888c3d",
+          "parent": "0x8890ae",
+          "suffix": "Z"
+        },
+        {
+          "child": "0x8890ae",
+          "parent": "0x894593",
+          "suffix": "_"
+        }
+      ],
+      "demangled": "Planeswalker::PWFillToolFactory::InitializeIndicatorInfo(boost::shared_ptr<std::__1::map<int, Planeswalker::SOptionalIndicatorInfo, std::__1::less<int>, std::__1::allocator<std::__1::pair<int const, Planeswalker::SOptionalIndicatorInfo>>>>) const"
+    },
+    {
+      "address": "0x1032cbea8",
+      "flags": 0,
+      "name": "_ZN12Planeswalker16PWOptionalSlider18SetIndicatorValuesEN5boost10shared_ptrINS_6PWViewEEENSt3__16vectorIiNS5_9allocatorIiEEEE",
+      "ancestry": [
+        {
+          "child": "0x13ed6d",
+          "parent": "0x13ed74",
+          "suffix": "SetIndicatorValuesEN5boost10shared_ptrINS_6PWViewEEENSt3__16vectorIiNS5_9allocatorIiEEEE"
+        },
+        {
+          "child": "0x13ed74",
+          "parent": "0x13ee46",
+          "suffix": "8"
+        },
+        {
+          "child": "0x13ee46",
+          "parent": "0x13f0a9",
+          "suffix": "1"
+        },
+        {
+          "child": "0x13f0a9",
+          "parent": "0x13f0f7",
+          "suffix": "ptionalSlider"
+        },
+        {
+          "child": "0x13f0f7",
+          "parent": "0x149622",
+          "suffix": "O"
+        },
+        {
+          "child": "0x149622",
+          "parent": "0x149c0a",
+          "suffix": "PW"
+        },
+        {
+          "child": "0x149c0a",
+          "parent": "0x1d470a",
+          "suffix": "6"
+        },
+        {
+          "child": "0x1d470a",
+          "parent": "0x5d04f3",
+          "suffix": "1"
+        },
+        {
+          "child": "0x5d04f3",
+          "parent": "0x5d0b23",
+          "suffix": "Planeswalker"
+        },
+        {
+          "child": "0x5d0b23",
+          "parent": "0x5dae6e",
+          "suffix": "2"
+        },
+        {
+          "child": "0x5dae6e",
+          "parent": "0x810e2c",
+          "suffix": "1"
+        },
+        {
+          "child": "0x810e2c",
+          "parent": "0x888c3d",
+          "suffix": "N"
+        },
+        {
+          "child": "0x888c3d",
+          "parent": "0x8890ae",
+          "suffix": "Z"
+        },
+        {
+          "child": "0x8890ae",
+          "parent": "0x894593",
+          "suffix": "_"
+        }
+      ],
+      "demangled": "Planeswalker::PWOptionalSlider::SetIndicatorValues(boost::shared_ptr<Planeswalker::PWView>, std::__1::vector<int, std::__1::allocator<int>>)"
+    },
+    {
+      "address": "0x1032cc1ac",
+      "flags": 0,
+      "name": "_ZN12Planeswalker16PWOptionalSlider17GetIndicatorValueEN5boost10shared_ptrINS_6PWViewEEERKiRi",
+      "ancestry": [
+        {
+          "child": "0x13ed58",
+          "parent": "0x13ee46",
+          "suffix": "7GetIndicatorValueEN5boost10shared_ptrINS_6PWViewEEERKiRi"
+        },
+        {
+          "child": "0x13ee46",
+          "parent": "0x13f0a9",
+          "suffix": "1"
+        },
+        {
+          "child": "0x13f0a9",
+          "parent": "0x13f0f7",
+          "suffix": "ptionalSlider"
+        },
+        {
+          "child": "0x13f0f7",
+          "parent": "0x149622",
+          "suffix": "O"
+        },
+        {
+          "child": "0x149622",
+          "parent": "0x149c0a",
+          "suffix": "PW"
+        },
+        {
+          "child": "0x149c0a",
+          "parent": "0x1d470a",
+          "suffix": "6"
+        },
+        {
+          "child": "0x1d470a",
+          "parent": "0x5d04f3",
+          "suffix": "1"
+        },
+        {
+          "child": "0x5d04f3",
+          "parent": "0x5d0b23",
+          "suffix": "Planeswalker"
+        },
+        {
+          "child": "0x5d0b23",
+          "parent": "0x5dae6e",
+          "suffix": "2"
+        },
+        {
+          "child": "0x5dae6e",
+          "parent": "0x810e2c",
+          "suffix": "1"
+        },
+        {
+          "child": "0x810e2c",
+          "parent": "0x888c3d",
+          "suffix": "N"
+        },
+        {
+          "child": "0x888c3d",
+          "parent": "0x8890ae",
+          "suffix": "Z"
+        },
+        {
+          "child": "0x8890ae",
+          "parent": "0x894593",
+          "suffix": "_"
+        }
+      ],
+      "demangled": "Planeswalker::PWOptionalSlider::GetIndicatorValue(boost::shared_ptr<Planeswalker::PWView>, int const&, int&)"
+    },
+    {
+      "address": "0x1032ccbb4",
+      "flags": 0,
+      "name": "_ZN12Planeswalker16PWOptionalSlider21GetIndicatorBlockRectEiRKNS_5SRectE",
+      "ancestry": [
+        {
+          "child": "0x13eebd",
+          "parent": "0x13eed2",
+          "suffix": "GetIndicatorBlockRectEiRKNS_5SRectE"
+        },
+        {
+          "child": "0x13eed2",
+          "parent": "0x13ef8c",
+          "suffix": "1"
+        },
+        {
+          "child": "0x13ef8c",
+          "parent": "0x13f0a9",
+          "suffix": "2"
+        },
+        {
+          "child": "0x13f0a9",
+          "parent": "0x13f0f7",
+          "suffix": "ptionalSlider"
+        },
+        {
+          "child": "0x13f0f7",
+          "parent": "0x149622",
+          "suffix": "O"
+        },
+        {
+          "child": "0x149622",
+          "parent": "0x149c0a",
+          "suffix": "PW"
+        },
+        {
+          "child": "0x149c0a",
+          "parent": "0x1d470a",
+          "suffix": "6"
+        },
+        {
+          "child": "0x1d470a",
+          "parent": "0x5d04f3",
+          "suffix": "1"
+        },
+        {
+          "child": "0x5d04f3",
+          "parent": "0x5d0b23",
+          "suffix": "Planeswalker"
+        },
+        {
+          "child": "0x5d0b23",
+          "parent": "0x5dae6e",
+          "suffix": "2"
+        },
+        {
+          "child": "0x5dae6e",
+          "parent": "0x810e2c",
+          "suffix": "1"
+        },
+        {
+          "child": "0x810e2c",
+          "parent": "0x888c3d",
+          "suffix": "N"
+        },
+        {
+          "child": "0x888c3d",
+          "parent": "0x8890ae",
+          "suffix": "Z"
+        },
+        {
+          "child": "0x8890ae",
+          "parent": "0x894593",
+          "suffix": "_"
+        }
+      ],
+      "demangled": "Planeswalker::PWOptionalSlider::GetIndicatorBlockRect(int, Planeswalker::SRect const&)"
+    }
+  ],
+  "close_gap_parameter_id": 5101,
+  "factory_indicator_values": [
+    1.0,
+    3.0,
+    5.0,
+    10.0,
+    20.0
+  ],
+  "map_node_value_offsets": [
+    "0x28",
+    "0x30",
+    "0x38",
+    "0x40",
+    "0x48"
+  ],
+  "table_sources": [
+    {
+      "address": "0x104314720",
+      "file_offset": "0x4314720",
+      "bytes": "000000000000f03f0000000000000840",
+      "values": [
+        1.0,
+        3.0
+      ]
+    },
+    {
+      "address": "0x104314630",
+      "file_offset": "0x4314630",
+      "bytes": "00000000000014400000000000002440",
+      "values": [
+        5.0,
+        10.0
+      ]
+    }
+  ],
+  "final_value_immediate": "0x4034000000000000",
+  "indicator_setting_flag": {
+    "map_node_offset": "0x50",
+    "value": 1
+  },
+  "close_gap_label_id": "0x002e0019",
+  "label_resource": {
+    "file": "/Users/adoll/Applications/CSP Research/research-files/csp-resource-analysis/english-labels.json",
+    "entries": [
+      {
+        "group": 46,
+        "subgroup": 1,
+        "label": 25,
+        "offset": 189430,
+        "text": "Close gap"
+      },
+      {
+        "group": 46,
+        "subgroup": 1,
+        "label": 26,
+        "offset": 189443,
+        "text": "Set the width of gaps to treat as closed"
+      }
+    ]
+  },
+  "control_constants": [
+    {
+      "address": "0x1042ecb78",
+      "file_offset": "0x42ecb78",
+      "bytes": "9a9999999999b93f",
+      "values": [
+        0.1
+      ]
+    },
+    {
+      "address": "0x1045528e0",
+      "file_offset": "0x45528e0",
+      "bytes": "9a9999999999b93f0000000000004940",
+      "values": [
+        0.1,
+        50.0
+      ]
+    },
+    {
+      "address": "0x104559a50",
+      "file_offset": "0x4559a50",
+      "bytes": "7b14ae47e17a843f0000000000000040",
+      "values": [
+        0.01,
+        2.0
+      ]
+    }
+  ],
+  "extractions": [
+    {
+      "file": "fill-factory-indicators.asm",
+      "command": [
+        "objdump",
+        "-d",
+        "--no-show-raw-insn",
+        "--start-address=0x102a9d450",
+        "--stop-address=0x102a9d5f0",
+        "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+      ],
+      "start": "0x102a9d450",
+      "end": "0x102a9d5f0",
+      "function_start": "0x102a9d450",
+      "function_end": "0x102a9d5f0",
+      "sha256": "b370127ecfdac3c4457194321bb60f0ba8011a7161f3810a259e65cef9bf5b6a"
+    },
+    {
+      "file": "indicator-map-insertion.asm",
+      "command": [
+        "objdump",
+        "-d",
+        "--no-show-raw-insn",
+        "--start-address=0x100b2b518",
+        "--stop-address=0x100b2b5e4",
+        "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+      ],
+      "start": "0x100b2b518",
+      "end": "0x100b2b5e4",
+      "function_start": "0x100b2b518",
+      "function_end": "0x100b2b5e4",
+      "sha256": "79d3fc7978cb7aaa534de4a51e2a34ed12661a5cdb30a79acae9bfc91f4072f8"
+    },
+    {
+      "file": "indicator-block-values.asm",
+      "command": [
+        "objdump",
+        "-d",
+        "--no-show-raw-insn",
+        "--start-address=0x100f28a78",
+        "--stop-address=0x100f28c40",
+        "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+      ],
+      "start": "0x100f28a78",
+      "end": "0x100f28c40",
+      "function_start": "0x100f28a78",
+      "function_end": "0x100f28c40",
+      "sha256": "201f7d2ad5703fe5231a5dcf97c76752b8ac6fcf61c8221be7cda694e8290ca4"
+    },
+    {
+      "file": "indicator-index-value.asm",
+      "command": [
+        "objdump",
+        "-d",
+        "--no-show-raw-insn",
+        "--start-address=0x1032cc1ac",
+        "--stop-address=0x1032cc294",
+        "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+      ],
+      "start": "0x1032cc1ac",
+      "end": "0x1032cc294",
+      "function_start": "0x1032cc1ac",
+      "function_end": "0x1032cc294",
+      "sha256": "a5899b7cc5cd7ba2c8d971d84b3e5b40602a02fa3322ab4c09aaefc460370fb6"
+    },
+    {
+      "file": "indicator-block-rectangle.asm",
+      "command": [
+        "objdump",
+        "-d",
+        "--no-show-raw-insn",
+        "--start-address=0x1032ccbb4",
+        "--stop-address=0x1032ccca0",
+        "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+      ],
+      "start": "0x1032ccbb4",
+      "end": "0x1032ccca0",
+      "function_start": "0x1032ccbb4",
+      "function_end": "0x1032ccca0",
+      "sha256": "bfa6ca803ed2fdc1a54bfb0ac2b99895e324b0270c18381e1e86fbb0fcffe8da"
+    },
+    {
+      "file": "set-indicator-values.asm",
+      "command": [
+        "objdump",
+        "-d",
+        "--no-show-raw-insn",
+        "--start-address=0x1032cbea8",
+        "--stop-address=0x1032cbf20",
+        "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+      ],
+      "start": "0x1032cbea8",
+      "end": "0x1032cbf20",
+      "function_start": "0x1032cbea8",
+      "function_end": "0x1032cbf20",
+      "sha256": "d49dd1b77f4a5d0ad4a4b27eb4afa39d0b6077964ea7013ba7a4ab35532d9c86"
+    },
+    {
+      "file": "close-gap-parameter-branch.asm",
+      "command": [
+        "objdump",
+        "-d",
+        "--no-show-raw-insn",
+        "--start-address=0x102a9ac9c",
+        "--stop-address=0x102a9accc",
+        "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+      ],
+      "start": "0x102a9ac9c",
+      "end": "0x102a9accc",
+      "function_start": "0x102a9a7d4",
+      "function_end": "0x102a9d450",
+      "sha256": "b53265705f15cd6749bf0e47145c18be06f6acf761d0f32609afb5c2dffa412e"
+    },
+    {
+      "file": "close-gap-control-attribute.asm",
+      "command": [
+        "objdump",
+        "-d",
+        "--no-show-raw-insn",
+        "--start-address=0x102a9c014",
+        "--stop-address=0x102a9c0e0",
+        "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+      ],
+      "start": "0x102a9c014",
+      "end": "0x102a9c0e0",
+      "function_start": "0x102a9a7d4",
+      "function_end": "0x102a9d450",
+      "sha256": "ebce2af6c8c2bf30218dcdd2764ffee2bed75c07ef9fb29e7a31a6b5053bc09b"
+    },
+    {
+      "file": "apply-custom-indicator-values.asm",
+      "command": [
+        "objdump",
+        "-d",
+        "--no-show-raw-insn",
+        "--start-address=0x100f2708c",
+        "--stop-address=0x100f270d0",
+        "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+      ],
+      "start": "0x100f2708c",
+      "end": "0x100f270d0",
+      "function_start": "0x100f26dbc",
+      "function_end": "0x100f272f0",
+      "sha256": "394188917acb767841bd0c9cd2908f526a571fbf5ffe9cc92f2915f7b8f5ea09"
+    }
+  ]
+}

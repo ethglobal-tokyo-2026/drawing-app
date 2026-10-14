@@ -1,0 +1,30 @@
+{
+  "fixtureId": "axis-gap-5",
+  "sourcePng": "../../../fixtures/axis-gap-5.png",
+  "documentSize": [640, 480],
+  "documentResolution": 72,
+  "zoomPercent": 100,
+  "nativeSettingsObservedByUiOperator": {
+    "closeGapIndicatorIndex": 2,
+    "referenceOnlyLayer": true,
+    "multipleReferenceEnabled": false,
+    "colorMargin": 10,
+    "antiAliasing": true,
+    "areaScalingEnabled": false,
+    "fillNarrowAreas": true
+  },
+  "coordinateEvidenceFromUiOperator": {
+    "screenSeed": [1214, 1104],
+    "screenSourceTopLeft": [894, 874],
+    "expectedDocumentSeed": [320, 230]
+  },
+  "captureChecks": {
+    "allThreeBoundariesRecorded": true,
+    "nativeGapWidth": 5,
+    "narrowFlag": 1024,
+    "capturedDocumentSeed": [320, 230],
+    "documentOffset": [0, 0],
+    "nativeSuccess": true,
+    "captureComplete": true
+  }
+}

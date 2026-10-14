@@ -1,0 +1,20 @@
+{
+  "fixtureId": "diagonal-opening",
+  "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/fixtures/diagonal-opening.png",
+  "sourcePngSha256": "e5196185beff88df313a1482ca33a0cba1fadafbc282857be93d1b9adcaa0cd3",
+  "sourceRgbaSha256": "16d4327f4569dd5826f4b80281e2d798fe8f52f3787d8d5278ec57e699fc5c56",
+  "documentPixels": [640, 480],
+  "intendedSeedDocument": { "x": 320, "y": 230 },
+  "anticipatedAxSeedDocument": { "x": 319, "y": 208 },
+  "gapSelectorLevel": 4,
+  "configuredGap": 10,
+  "settingStatus": "Planned settings; confirm native gap and actual seed from every boundary.",
+  "requiredNativeSettings": {
+    "reference": "Refer only to editing layer", "multipleReference": false,
+    "areaScaling": false, "colorMargin": 10, "antialiasing": true,
+    "fillNarrowAreas": true, "paint": "#ff0000"
+  },
+  "input": "Accessibility window-center click with palettes hidden; actual seed must be captured and used explicitly.",
+  "comparison": "Final A classification only; visible RGBA and the native returned rectangle are separate measurements.",
+  "question": "Measure the original diagonal opening at raw gap 10 as an additional control, separate from the planned ten-case matrix."
+}

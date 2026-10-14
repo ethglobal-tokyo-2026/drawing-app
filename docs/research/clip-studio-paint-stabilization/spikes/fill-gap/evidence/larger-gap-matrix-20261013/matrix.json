@@ -1,0 +1,560 @@
+{
+  "schema": "larger-gap-matrix/v1",
+  "cases": [
+    {
+      "priority": 1,
+      "caseId": "edge-gap-2-level4-larger-gap",
+      "fixtureId": "edge-gap-2",
+      "gap": 10,
+      "gapSelectorLevel": 4,
+      "metadataPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/larger-gap-matrix-20261013/edge-gap-2-level4-larger-gap-metadata.json",
+      "question": "Compare the physical-canvas edge case before the large-gap branch.",
+      "intendedSeedDocument": {
+        "x": 120,
+        "y": 100
+      },
+      "probes": {
+        "inside": [
+          120,
+          100
+        ],
+        "outside": [
+          120,
+          190
+        ],
+        "opening": [
+          120,
+          179
+        ]
+      },
+      "recordedCroquisAtFixtureSeed": {
+        "selectedPixels": 30229,
+        "boundsExclusive": [
+          23,
+          23,
+          218,
+          180
+        ],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 120,
+            "y": 100,
+            "selected": true
+          },
+          "outside": {
+            "x": 120,
+            "y": 190,
+            "selected": false
+          },
+          "opening": {
+            "x": 120,
+            "y": 179,
+            "selected": true
+          }
+        }
+      }
+    },
+    {
+      "priority": 2,
+      "caseId": "edge-gap-2-level5-larger-gap",
+      "fixtureId": "edge-gap-2",
+      "gap": 20,
+      "gapSelectorLevel": 5,
+      "metadataPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/larger-gap-matrix-20261013/edge-gap-2-level5-larger-gap-metadata.json",
+      "question": "Determine whether native A leaks when Croquis selects the complete exterior at gap 20.",
+      "intendedSeedDocument": {
+        "x": 120,
+        "y": 100
+      },
+      "probes": {
+        "inside": [
+          120,
+          100
+        ],
+        "outside": [
+          120,
+          190
+        ],
+        "opening": [
+          120,
+          179
+        ]
+      },
+      "recordedCroquisAtFixtureSeed": {
+        "selectedPixels": 45870,
+        "boundsExclusive": [
+          0,
+          0,
+          240,
+          200
+        ],
+        "touches": [
+          "bottom",
+          "left",
+          "right",
+          "top"
+        ],
+        "probes": {
+          "inside": {
+            "x": 120,
+            "y": 100,
+            "selected": true
+          },
+          "outside": {
+            "x": 120,
+            "y": 190,
+            "selected": true
+          },
+          "opening": {
+            "x": 120,
+            "y": 179,
+            "selected": true
+          }
+        }
+      }
+    },
+    {
+      "priority": 3,
+      "caseId": "axis-gap-10-level4-larger-gap",
+      "fixtureId": "axis-gap-10",
+      "gap": 10,
+      "gapSelectorLevel": 4,
+      "metadataPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/larger-gap-matrix-20261013/axis-gap-10-level4-larger-gap-metadata.json",
+      "question": "Test an opening equal to the configured ten-pixel gap.",
+      "intendedSeedDocument": {
+        "x": 320,
+        "y": 230
+      },
+      "probes": {
+        "inside": [
+          320,
+          230
+        ],
+        "outside": [
+          320,
+          420
+        ],
+        "opening": [
+          320,
+          359
+        ]
+      },
+      "recordedCroquisAtFixtureSeed": {
+        "selectedPixels": 80345,
+        "boundsExclusive": [
+          163,
+          103,
+          478,
+          360
+        ],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          }
+        }
+      }
+    },
+    {
+      "priority": 4,
+      "caseId": "axis-gap-20-level4-larger-gap",
+      "fixtureId": "axis-gap-20",
+      "gap": 10,
+      "gapSelectorLevel": 4,
+      "metadataPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/larger-gap-matrix-20261013/axis-gap-20-level4-larger-gap-metadata.json",
+      "question": "Use a twenty-column opening as a wide-opening control at gap 10.",
+      "intendedSeedDocument": {
+        "x": 320,
+        "y": 230
+      },
+      "probes": {
+        "inside": [
+          320,
+          230
+        ],
+        "outside": [
+          320,
+          420
+        ],
+        "opening": [
+          320,
+          359
+        ]
+      },
+      "recordedCroquisAtFixtureSeed": {
+        "selectedPixels": 303804,
+        "boundsExclusive": [
+          0,
+          0,
+          640,
+          480
+        ],
+        "touches": [
+          "bottom",
+          "left",
+          "right",
+          "top"
+        ],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": true
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          }
+        }
+      }
+    },
+    {
+      "priority": 5,
+      "caseId": "axis-gap-20-level5-larger-gap",
+      "fixtureId": "axis-gap-20",
+      "gap": 20,
+      "gapSelectorLevel": 5,
+      "metadataPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/larger-gap-matrix-20261013/axis-gap-20-level5-larger-gap-metadata.json",
+      "question": "Test an opening equal to the configured twenty-pixel gap.",
+      "intendedSeedDocument": {
+        "x": 320,
+        "y": 230
+      },
+      "probes": {
+        "inside": [
+          320,
+          230
+        ],
+        "outside": [
+          320,
+          420
+        ],
+        "opening": [
+          320,
+          359
+        ]
+      },
+      "recordedCroquisAtFixtureSeed": {
+        "selectedPixels": 80365,
+        "boundsExclusive": [
+          163,
+          103,
+          478,
+          360
+        ],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          }
+        }
+      }
+    },
+    {
+      "priority": 6,
+      "caseId": "axis-gap-21-level5-larger-gap",
+      "fixtureId": "axis-gap-21",
+      "gap": 20,
+      "gapSelectorLevel": 5,
+      "metadataPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/larger-gap-matrix-20261013/axis-gap-21-level5-larger-gap-metadata.json",
+      "question": "Test the first opening wider than the twenty-pixel gap.",
+      "intendedSeedDocument": {
+        "x": 320,
+        "y": 230
+      },
+      "probes": {
+        "inside": [
+          320,
+          230
+        ],
+        "outside": [
+          320,
+          420
+        ],
+        "opening": [
+          320,
+          359
+        ]
+      },
+      "recordedCroquisAtFixtureSeed": {
+        "selectedPixels": 303807,
+        "boundsExclusive": [
+          0,
+          0,
+          640,
+          480
+        ],
+        "touches": [
+          "bottom",
+          "left",
+          "right",
+          "top"
+        ],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": true
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          }
+        }
+      }
+    },
+    {
+      "priority": 7,
+      "caseId": "narrow-pocket-level4-larger-gap",
+      "fixtureId": "narrow-pocket",
+      "gap": 10,
+      "gapSelectorLevel": 4,
+      "metadataPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/larger-gap-matrix-20261013/narrow-pocket-level4-larger-gap-metadata.json",
+      "question": "Test whether the existing roughly 500-pixel pocket is recovered at an 800-pixel limit.",
+      "intendedSeedDocument": {
+        "x": 320,
+        "y": 230
+      },
+      "probes": {
+        "room": [
+          320,
+          230
+        ],
+        "pocket": [
+          395,
+          262
+        ],
+        "outside": [
+          320,
+          420
+        ]
+      },
+      "recordedCroquisAtFixtureSeed": {
+        "selectedPixels": 79523,
+        "boundsExclusive": [
+          163,
+          103,
+          478,
+          358
+        ],
+        "touches": [],
+        "probes": {
+          "room": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "pocket": {
+            "x": 395,
+            "y": 262,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          }
+        }
+      }
+    },
+    {
+      "priority": 8,
+      "caseId": "narrow-pocket-level5-larger-gap",
+      "fixtureId": "narrow-pocket",
+      "gap": 20,
+      "gapSelectorLevel": 5,
+      "metadataPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/larger-gap-matrix-20261013/narrow-pocket-level5-larger-gap-metadata.json",
+      "question": "Compare pocket recovery with Croquis's changed classification at gap 20.",
+      "intendedSeedDocument": {
+        "x": 320,
+        "y": 230
+      },
+      "probes": {
+        "room": [
+          320,
+          230
+        ],
+        "pocket": [
+          395,
+          262
+        ],
+        "outside": [
+          320,
+          420
+        ]
+      },
+      "recordedCroquisAtFixtureSeed": {
+        "selectedPixels": 80025,
+        "boundsExclusive": [
+          163,
+          103,
+          478,
+          358
+        ],
+        "touches": [],
+        "probes": {
+          "room": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "pocket": {
+            "x": 395,
+            "y": 262,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          }
+        }
+      }
+    },
+    {
+      "priority": 9,
+      "caseId": "axis-near-line-level4-larger-gap",
+      "fixtureId": "axis-near-line",
+      "gap": 10,
+      "gapSelectorLevel": 4,
+      "metadataPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/larger-gap-matrix-20261013/axis-near-line-level4-larger-gap-metadata.json",
+      "question": "Test the seed exemption with the intended seed adjacent to the upper outline.",
+      "intendedSeedDocument": {
+        "x": 320,
+        "y": 103
+      },
+      "probes": {
+        "inside": [
+          320,
+          230
+        ],
+        "outside": [
+          320,
+          420
+        ],
+        "seed": [
+          320,
+          103
+        ]
+      },
+      "recordedCroquisAtFixtureSeed": {
+        "selectedPixels": 80335,
+        "boundsExclusive": [
+          163,
+          103,
+          478,
+          360
+        ],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "seed": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          }
+        }
+      }
+    },
+    {
+      "priority": 10,
+      "caseId": "axis-near-line-level5-larger-gap",
+      "fixtureId": "axis-near-line",
+      "gap": 20,
+      "gapSelectorLevel": 5,
+      "metadataPath": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/larger-gap-matrix-20261013/axis-near-line-level5-larger-gap-metadata.json",
+      "question": "Test the same near-line seed in the native branch for gaps greater than 10.",
+      "intendedSeedDocument": {
+        "x": 320,
+        "y": 103
+      },
+      "probes": {
+        "inside": [
+          320,
+          230
+        ],
+        "outside": [
+          320,
+          420
+        ],
+        "seed": [
+          320,
+          103
+        ]
+      },
+      "recordedCroquisAtFixtureSeed": {
+        "selectedPixels": 80335,
+        "boundsExclusive": [
+          163,
+          103,
+          478,
+          360
+        ],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "seed": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          }
+        }
+      }
+    }
+  ]
+}

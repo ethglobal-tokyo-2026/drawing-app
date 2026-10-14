@@ -1,0 +1,276 @@
+{
+  "source": "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64",
+  "source_sha256": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+  "start": "0x102541c94",
+  "end_exclusive": "0x102542720",
+  "verified_instructions": 675,
+  "bytes_sha256": "e6417b5a16a0167bd0ed155475e1a0e3c023ef0612b81cc645066be89695e843",
+  "assembly_sha256": "57e56cfc750a25964d3c30dbaccfc8d2a1691980f939537bfa06ed35d9ff25b1",
+  "function_start_entry": {
+    "address": "0x102541c94",
+    "file_offset": "0x54d1c02",
+    "delta": 136,
+    "encoded_bytes": "8801"
+  },
+  "next_function_start_entry": {
+    "address": "0x102542720",
+    "file_offset": "0x54d1c04",
+    "delta": 2700,
+    "encoded_bytes": "8c15"
+  },
+  "retained_assembly": "evidence/narrow-boundary/102541c94.asm",
+  "choice_instruction_range": [
+    "0x1025424ac",
+    "0x1025424e8"
+  ],
+  "choice_cases": [
+    {
+      "case": "neither current point flagged",
+      "first_flag": 0,
+      "second_flag": 0,
+      "trial_distances": [
+        20,
+        10
+      ],
+      "remembered_distance": 30,
+      "expected_and_observed": [
+        1,
+        2,
+        30
+      ]
+    },
+    {
+      "case": "only first flagged, closer",
+      "first_flag": 1,
+      "second_flag": 0,
+      "trial_distances": [
+        20,
+        10
+      ],
+      "remembered_distance": 30,
+      "expected_and_observed": [
+        4,
+        3,
+        10
+      ]
+    },
+    {
+      "case": "only first flagged, tie",
+      "first_flag": 1,
+      "second_flag": 0,
+      "trial_distances": [
+        20,
+        30
+      ],
+      "remembered_distance": 30,
+      "expected_and_observed": [
+        4,
+        3,
+        30
+      ]
+    },
+    {
+      "case": "only first flagged, farther",
+      "first_flag": 1,
+      "second_flag": 0,
+      "trial_distances": [
+        20,
+        40
+      ],
+      "remembered_distance": 30,
+      "expected_and_observed": [
+        1,
+        2,
+        30
+      ]
+    },
+    {
+      "case": "only second flagged, closer",
+      "first_flag": 0,
+      "second_flag": 1,
+      "trial_distances": [
+        20,
+        10
+      ],
+      "remembered_distance": 30,
+      "expected_and_observed": [
+        0,
+        5,
+        20
+      ]
+    },
+    {
+      "case": "only second flagged, tie",
+      "first_flag": 0,
+      "second_flag": 1,
+      "trial_distances": [
+        30,
+        10
+      ],
+      "remembered_distance": 30,
+      "expected_and_observed": [
+        0,
+        5,
+        30
+      ]
+    },
+    {
+      "case": "only second flagged, farther",
+      "first_flag": 0,
+      "second_flag": 1,
+      "trial_distances": [
+        40,
+        10
+      ],
+      "remembered_distance": 30,
+      "expected_and_observed": [
+        1,
+        2,
+        30
+      ]
+    },
+    {
+      "case": "both flagged, first trial closer",
+      "first_flag": 1,
+      "second_flag": 1,
+      "trial_distances": [
+        20,
+        25
+      ],
+      "remembered_distance": 30,
+      "expected_and_observed": [
+        0,
+        5,
+        20
+      ]
+    },
+    {
+      "case": "both flagged, second trial closer",
+      "first_flag": 1,
+      "second_flag": 1,
+      "trial_distances": [
+        20,
+        15
+      ],
+      "remembered_distance": 30,
+      "expected_and_observed": [
+        4,
+        3,
+        15
+      ]
+    },
+    {
+      "case": "both flagged, both new trials tie",
+      "first_flag": 1,
+      "second_flag": 1,
+      "trial_distances": [
+        20,
+        20
+      ],
+      "remembered_distance": 30,
+      "expected_and_observed": [
+        4,
+        3,
+        20
+      ]
+    },
+    {
+      "case": "both flagged, first trial ties remembered",
+      "first_flag": 1,
+      "second_flag": 1,
+      "trial_distances": [
+        30,
+        40
+      ],
+      "remembered_distance": 30,
+      "expected_and_observed": [
+        0,
+        5,
+        30
+      ]
+    },
+    {
+      "case": "both flagged, second trial ties remembered",
+      "first_flag": 1,
+      "second_flag": 1,
+      "trial_distances": [
+        40,
+        30
+      ],
+      "remembered_distance": 30,
+      "expected_and_observed": [
+        4,
+        3,
+        30
+      ]
+    },
+    {
+      "case": "both flagged, both farther",
+      "first_flag": 1,
+      "second_flag": 1,
+      "trial_distances": [
+        40,
+        50
+      ],
+      "remembered_distance": 30,
+      "expected_and_observed": [
+        1,
+        2,
+        30
+      ]
+    }
+  ],
+  "nearest_cases": [
+    {
+      "distances": [
+        9,
+        4,
+        4
+      ],
+      "limit": 18,
+      "expected_and_observed": [
+        2,
+        4
+      ],
+      "passes_strict_limit": true
+    },
+    {
+      "distances": [
+        18,
+        18
+      ],
+      "limit": 18,
+      "expected_and_observed": [
+        1,
+        18
+      ],
+      "passes_strict_limit": false
+    },
+    {
+      "distances": [
+        20,
+        19
+      ],
+      "limit": 18,
+      "expected_and_observed": [
+        0,
+        18
+      ],
+      "passes_strict_limit": false
+    },
+    {
+      "distances": [
+        17,
+        18,
+        17
+      ],
+      "limit": 18,
+      "expected_and_observed": [
+        2,
+        17
+      ],
+      "passes_strict_limit": true
+    }
+  ],
+  "scope": "Pinned byte and boundary verification plus a limited scalar instruction interpreter. No native execution, bitmap equivalence, or complete analyzer translation."
+}

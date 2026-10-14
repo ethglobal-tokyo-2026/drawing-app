@@ -1,0 +1,68 @@
+{
+  "inspectionUtc": "2026-10-13T13:38:21Z",
+  "scope": "Read-only process inventory and existing recorder/document review. No debugger attachment, process state change, application launch, input, or application setting change.",
+  "researchExecutable": "/Users/adoll/Applications/CSP Research/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT",
+  "researchPid": 57266,
+  "researchParentPid": 1,
+  "researchStatesObserved": ["S", "R"],
+  "researchFlagsHex": "0x4004",
+  "researchStartTimeLocal": "Sun Oct 11 14:12:53 2026",
+  "processInspectionRaw": "57266     1 S        4004 Sun Oct 11 14:12:53 2026     /Users/adoll/Applications/CSP Research/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT\n",
+  "matchingProcessInventoryRaw": "57266     1 R    /Users/adoll/Applications/CSP Research/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT\n",
+  "debuggerProcessesObserved": [],
+  "debuggerNamesChecked": ["lldb", "debugserver", "gdb"],
+  "installedCspProcessObserved": false,
+  "tracingFlag": {
+    "definition": "P_TRACED 0x00000800",
+    "source": "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/proc.h:169",
+    "present": false,
+    "interpretation": "No native debugger process or ptrace tracing flag was observed. The process was running/sleeping rather than stopped at the inspection times. This does not exclude arbitrary external direct task-port readers."
+  },
+  "referenceSha256": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+  "referencePathsChecked": [
+    "/Users/adoll/Applications/CSP Research/original-arm64",
+    "/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64"
+  ],
+  "referenceHashesMatched": true,
+  "commands": [
+    "ps -p 57266 -o pid=,ppid=,stat=,flags=,lstart=,comm=",
+    "ps -axo pid=,ppid=,stat=,comm= | rg '(CLIP STUDIO PAINT|/lldb$|/debugserver$|/gdb$)'",
+    "rg -n 'P_TRACED|P_STOPPED|P_LP64' /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/proc.h /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/proc.h",
+    "shasum -a 256 '/Users/adoll/Applications/CSP Research/original-arm64' '/Users/adoll/Applications/CSP Research/static-analysis/paint-arm64'"
+  ],
+  "sandboxFailure": {
+    "command": "ps -axo pid,ppid,stat,etime,args | rg 'CLIP STUDIO PAINT|lldb|debugserver|csp-.*(capture|fill)|capture.*csp'",
+    "exitCode": 1,
+    "output": "zsh:4: operation not permitted: ps\n",
+    "resolution": "The same read-only inventory succeeded with reviewed sandbox escalation. No automatic review rejection occurred."
+  },
+  "reviewedRecorderPaths": [
+    "docs/research/clip-studio-paint-stabilization/spikes/live-capture/record_tablet_stroke.py",
+    "docs/research/clip-studio-paint-stabilization/spikes/live-capture/record_joined_post.py",
+    "docs/research/clip-studio-paint-stabilization/spikes/live-capture/capture_live_contract.py"
+  ],
+  "existingRecorderObservations": [
+    "The launcher chooses exactly one executable path and rejects a stopped or exiting process.",
+    "The base Capture implementation requires an already controlled LLDB process, checks its executable path and ARM64 architecture, and resolves addresses through that executable module.",
+    "Hardware breakpoints are created directly; unavailable hardware is an error rather than a fallback to software breakpoints.",
+    "Cleanup removes owned breakpoint IDs, requests Detach(False), and records detach acknowledgment separately from observed detached state.",
+    "The live-contract total budget is 5 to 30 seconds, with three seconds reserved for cleanup. Native debugger calls lack individual timeouts, so a separate outer guard is required.",
+    "The tablet launcher guards LLDB at 45 seconds. The joined-post launcher allows 45 seconds for setup plus 45 seconds after its active cue, up to 90 seconds, despite its 30-second recorder budget.",
+    "Outer guards terminate their debugger child and then inspect the research process independently. This is not an unconditional guarantee of target resume; stopped targets require explicit cleanup by the owning root agent.",
+    "These existing recorders target stabilization and post correction. No existing fill recorder was found in the fill-gap spike during this inventory."
+  ],
+  "suggestedRootProcedure": [
+    "Re-read the exact research executable PID/path and process status immediately before attaching. Do not reuse this snapshot PID without checking.",
+    "Inspect the current disposable research document and preserve the selected fill settings through the root agent's UI control.",
+    "Run an attach-and-immediate-detach access check with a 25-second outer guard before a separate fill experiment.",
+    "Implement or select a fill-specific bounded observer; existing tablet or post recorders do not observe the fill algorithm. Verify loaded instruction ranges against the pinned reference before installing hardware probes.",
+    "Start with an eight-second no-input preflight, reserve three seconds for cleanup, and retain a separate 35-second debugger guard. Save a unique raw evidence directory and full console output.",
+    "For actual fill input, use a separate 30-second recorder budget and 45-second outer debugger guard, save input image/settings and observed native arguments, and signal readiness only after the exact probes are installed.",
+    "Remove only owned probes, detach with keep-stopped false, and independently confirm the same executable is in R/S and lacks P_TRACED after the debugger exits. If cleanup fails or an outer guard fires, retain the error and resolve stopped state before another experiment."
+  ],
+  "unknowns": [
+    "Current canvas, selected sub-tool, numeric gap width, indicator preset values, narrow-area setting, image resolution, zoom, and unsaved document state were not inspected.",
+    "Current debugger access and loaded fill-function bytes were not tested because this inventory was explicitly read-only and did not attach.",
+    "No active debugger session handle exists in this inspection, so there is no debugger PID/parent or LLDB stop reason to report."
+  ]
+}

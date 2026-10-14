@@ -1,0 +1,3492 @@
+{
+  "schema": "croquis-soft-fill-baselines/v1",
+  "fillSourceSha256": "d947273c2157bcdfd7539da1b3c3c87a9f32a80fc3cc36622f5477f3a780fe49",
+  "nodeVersion": "v24.21.0",
+  "classification": "Croquis IN and TUCKED are kept separately; final RGBA is from writeFill on the same source layer.",
+  "results": [
+    {
+      "fixtureId": "soft-axis-gap10-alpha064",
+      "sourceRgbaSha256": "88e1904b887bc27251085069d2adb39a95baeadd266217515e411422e352a268",
+      "gap": 10,
+      "seed": {
+        "x": 320,
+        "y": 230
+      },
+      "changed": true,
+      "paper": true,
+      "foundBox": {
+        "x": 0,
+        "y": 0,
+        "w": 640,
+        "h": 480
+      },
+      "candidateRule": "Croquis paper candidates: alpha<128, irrespective of RGB",
+      "seedRgba": [0, 0, 0, 0],
+      "interior": {
+        "selectedPixels": 307200,
+        "boundsExclusive": [0, 0, 640, 480],
+        "touches": ["bottom", "left", "right", "top"],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": true
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": true
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": true
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": true
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": true
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": true
+          }
+        }
+      },
+      "tucked": {
+        "selectedPixels": 0,
+        "boundsExclusive": null,
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "marked": {
+        "selectedPixels": 307200,
+        "boundsExclusive": [0, 0, 640, 480],
+        "touches": ["bottom", "left", "right", "top"],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": true
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": true
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": true
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": true
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": true
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": true
+          }
+        }
+      },
+      "changedPixels": {
+        "selectedPixels": 307200,
+        "boundsExclusive": [0, 0, 640, 480],
+        "touches": ["bottom", "left", "right", "top"],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": true
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": true
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": true
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": true
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": true
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": true
+          }
+        }
+      },
+      "bySourceAlpha": {
+        "0": {
+          "sourcePixels": 303774,
+          "interior": 303774,
+          "tucked": 0,
+          "changed": 303774
+        },
+        "64": {
+          "sourcePixels": 3426,
+          "interior": 3426,
+          "tucked": 0,
+          "changed": 3426
+        }
+      },
+      "probes": {
+        "inside": {
+          "x": 320,
+          "y": 230,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "outside": {
+          "x": 320,
+          "y": 420,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "opening": {
+          "x": 320,
+          "y": 359,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "topCore": {
+          "x": 320,
+          "y": 101,
+          "sourceRgba": [0, 0, 0, 64],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "leftCore": {
+          "x": 161,
+          "y": 230,
+          "sourceRgba": [0, 0, 0, 64],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "outerFringe": {
+          "x": 320,
+          "y": 99,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "outerCornerFringe": {
+          "x": 159,
+          "y": 99,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "innerPaper": {
+          "x": 320,
+          "y": 103,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "outsidePaper": {
+          "x": 320,
+          "y": 98,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        }
+      },
+      "finalRgbaSha256": "1be6bdd794e85e2fb6d20a0b3a9f2e56c57c9e410fbdc153a38d8a68bd97aad9",
+      "masks": {
+        "interior": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtwQENAAAAwqD+qW8PBxQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADApwEQtnK8"
+        },
+        "tucked": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtwQENAAAAwqD3T20PBxQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADApwGWAAAB"
+        },
+        "marked": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtwQENAAAAwqD+qW8PBxQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADApwEQtnK8"
+        },
+        "changed": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtwQENAAAAwqD+qW8PBxQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADApwEQtnK8"
+        }
+      },
+      "artifacts": {
+        "finalPng": "croquis-results/soft-axis-gap10-alpha064-g10-final.png",
+        "finalRgbaGzip": "croquis-results/soft-axis-gap10-alpha064-g10-final.rgba.gz",
+        "marksGzip": "croquis-results/soft-axis-gap10-alpha064-g10-marks.gz"
+      }
+    },
+    {
+      "fixtureId": "soft-axis-gap10-alpha064",
+      "sourceRgbaSha256": "88e1904b887bc27251085069d2adb39a95baeadd266217515e411422e352a268",
+      "gap": 20,
+      "seed": {
+        "x": 320,
+        "y": 230
+      },
+      "changed": true,
+      "paper": true,
+      "foundBox": {
+        "x": 0,
+        "y": 0,
+        "w": 640,
+        "h": 480
+      },
+      "candidateRule": "Croquis paper candidates: alpha<128, irrespective of RGB",
+      "seedRgba": [0, 0, 0, 0],
+      "interior": {
+        "selectedPixels": 307200,
+        "boundsExclusive": [0, 0, 640, 480],
+        "touches": ["bottom", "left", "right", "top"],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": true
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": true
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": true
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": true
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": true
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": true
+          }
+        }
+      },
+      "tucked": {
+        "selectedPixels": 0,
+        "boundsExclusive": null,
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "marked": {
+        "selectedPixels": 307200,
+        "boundsExclusive": [0, 0, 640, 480],
+        "touches": ["bottom", "left", "right", "top"],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": true
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": true
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": true
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": true
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": true
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": true
+          }
+        }
+      },
+      "changedPixels": {
+        "selectedPixels": 307200,
+        "boundsExclusive": [0, 0, 640, 480],
+        "touches": ["bottom", "left", "right", "top"],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": true
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": true
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": true
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": true
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": true
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": true
+          }
+        }
+      },
+      "bySourceAlpha": {
+        "0": {
+          "sourcePixels": 303774,
+          "interior": 303774,
+          "tucked": 0,
+          "changed": 303774
+        },
+        "64": {
+          "sourcePixels": 3426,
+          "interior": 3426,
+          "tucked": 0,
+          "changed": 3426
+        }
+      },
+      "probes": {
+        "inside": {
+          "x": 320,
+          "y": 230,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "outside": {
+          "x": 320,
+          "y": 420,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "opening": {
+          "x": 320,
+          "y": 359,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "topCore": {
+          "x": 320,
+          "y": 101,
+          "sourceRgba": [0, 0, 0, 64],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "leftCore": {
+          "x": 161,
+          "y": 230,
+          "sourceRgba": [0, 0, 0, 64],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "outerFringe": {
+          "x": 320,
+          "y": 99,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "outerCornerFringe": {
+          "x": 159,
+          "y": 99,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "innerPaper": {
+          "x": 320,
+          "y": 103,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "outsidePaper": {
+          "x": 320,
+          "y": 98,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        }
+      },
+      "finalRgbaSha256": "1be6bdd794e85e2fb6d20a0b3a9f2e56c57c9e410fbdc153a38d8a68bd97aad9",
+      "masks": {
+        "interior": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtwQENAAAAwqD+qW8PBxQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADApwEQtnK8"
+        },
+        "tucked": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtwQENAAAAwqD3T20PBxQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADApwGWAAAB"
+        },
+        "marked": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtwQENAAAAwqD+qW8PBxQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADApwEQtnK8"
+        },
+        "changed": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtwQENAAAAwqD+qW8PBxQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADApwEQtnK8"
+        }
+      },
+      "artifacts": {
+        "finalPng": "croquis-results/soft-axis-gap10-alpha064-g20-final.png",
+        "finalRgbaGzip": "croquis-results/soft-axis-gap10-alpha064-g20-final.rgba.gz",
+        "marksGzip": "croquis-results/soft-axis-gap10-alpha064-g20-marks.gz"
+      }
+    },
+    {
+      "fixtureId": "soft-axis-gap10-alpha128",
+      "sourceRgbaSha256": "5abcc35b3b2c54704ed5f5c0635d12678980c174e9e49e066e8088e17c859223",
+      "gap": 10,
+      "seed": {
+        "x": 320,
+        "y": 230
+      },
+      "changed": true,
+      "paper": true,
+      "foundBox": {
+        "x": 161,
+        "y": 101,
+        "w": 319,
+        "h": 260
+      },
+      "candidateRule": "Croquis paper candidates: alpha<128, irrespective of RGB",
+      "seedRgba": [0, 0, 0, 0],
+      "interior": {
+        "selectedPixels": 80345,
+        "boundsExclusive": [163, 103, 478, 360],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "tucked": {
+        "selectedPixels": 2280,
+        "boundsExclusive": [161, 101, 480, 361],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": true
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": true
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "marked": {
+        "selectedPixels": 82625,
+        "boundsExclusive": [161, 101, 480, 361],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": true
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": true
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "changedPixels": {
+        "selectedPixels": 82625,
+        "boundsExclusive": [161, 101, 480, 361],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": true
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": true
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "bySourceAlpha": {
+        "0": {
+          "sourcePixels": 303774,
+          "interior": 80345,
+          "tucked": 0,
+          "changed": 80345
+        },
+        "128": {
+          "sourcePixels": 3426,
+          "interior": 0,
+          "tucked": 2280,
+          "changed": 2280
+        }
+      },
+      "probes": {
+        "inside": {
+          "x": 320,
+          "y": 230,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "outside": {
+          "x": 320,
+          "y": 420,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        },
+        "opening": {
+          "x": 320,
+          "y": 359,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "topCore": {
+          "x": 320,
+          "y": 101,
+          "sourceRgba": [0, 0, 0, 128],
+          "mark": 7,
+          "outputRgba": [127, 0, 0, 255]
+        },
+        "leftCore": {
+          "x": 161,
+          "y": 230,
+          "sourceRgba": [0, 0, 0, 128],
+          "mark": 7,
+          "outputRgba": [127, 0, 0, 255]
+        },
+        "outerFringe": {
+          "x": 320,
+          "y": 99,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        },
+        "outerCornerFringe": {
+          "x": 159,
+          "y": 99,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        },
+        "innerPaper": {
+          "x": 320,
+          "y": 103,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "outsidePaper": {
+          "x": 320,
+          "y": 98,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        }
+      },
+      "finalRgbaSha256": "ca3fe407ba7d873587ad2ea8bc55c3b70a92d876e8991c8203c283f0b6799807",
+      "masks": {
+        "interior": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzaENACAQBMHrhP47RJCAJy8Q75gtYDaRJEmSJEmSJEmSJElKxn5q8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/3k1ctZlrr9iRJkiRJkiRJkiRJkiRJVwfketJ0"
+        },
+        "tucked": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrt3LENgDAMRUFLSMmabMKq2SRpU7iwBIKCe7V1hQf4EZIkSZIkSZIkSZIk6Y2uWesr76ydHTwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj/clL9v9Gf3ZP8JaXvaCFJEmSJEmSJEmSJEmSJGlvAReT/jY="
+        },
+        "marked": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzKERACAMBLBXnZNNGB0ssleBSgZIAgAAAAAAAAD8sE+Pz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+X+ZWBQAAAAAAAAAAgNcFZg3QuA=="
+        },
+        "changed": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzKERACAMBLBXnZNNGB0ssleBSgZIAgAAAAAAAAD8sE+Pz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+X+ZWBQAAAAAAAAAAgNcFZg3QuA=="
+        }
+      },
+      "artifacts": {
+        "finalPng": "croquis-results/soft-axis-gap10-alpha128-g10-final.png",
+        "finalRgbaGzip": "croquis-results/soft-axis-gap10-alpha128-g10-final.rgba.gz",
+        "marksGzip": "croquis-results/soft-axis-gap10-alpha128-g10-marks.gz"
+      }
+    },
+    {
+      "fixtureId": "soft-axis-gap10-alpha128",
+      "sourceRgbaSha256": "5abcc35b3b2c54704ed5f5c0635d12678980c174e9e49e066e8088e17c859223",
+      "gap": 20,
+      "seed": {
+        "x": 320,
+        "y": 230
+      },
+      "changed": true,
+      "paper": true,
+      "foundBox": {
+        "x": 161,
+        "y": 101,
+        "w": 319,
+        "h": 260
+      },
+      "candidateRule": "Croquis paper candidates: alpha<128, irrespective of RGB",
+      "seedRgba": [0, 0, 0, 0],
+      "interior": {
+        "selectedPixels": 80345,
+        "boundsExclusive": [163, 103, 478, 360],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "tucked": {
+        "selectedPixels": 2280,
+        "boundsExclusive": [161, 101, 480, 361],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": true
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": true
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "marked": {
+        "selectedPixels": 82625,
+        "boundsExclusive": [161, 101, 480, 361],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": true
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": true
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "changedPixels": {
+        "selectedPixels": 82625,
+        "boundsExclusive": [161, 101, 480, 361],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": true
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": true
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "bySourceAlpha": {
+        "0": {
+          "sourcePixels": 303774,
+          "interior": 80345,
+          "tucked": 0,
+          "changed": 80345
+        },
+        "128": {
+          "sourcePixels": 3426,
+          "interior": 0,
+          "tucked": 2280,
+          "changed": 2280
+        }
+      },
+      "probes": {
+        "inside": {
+          "x": 320,
+          "y": 230,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "outside": {
+          "x": 320,
+          "y": 420,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        },
+        "opening": {
+          "x": 320,
+          "y": 359,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "topCore": {
+          "x": 320,
+          "y": 101,
+          "sourceRgba": [0, 0, 0, 128],
+          "mark": 7,
+          "outputRgba": [127, 0, 0, 255]
+        },
+        "leftCore": {
+          "x": 161,
+          "y": 230,
+          "sourceRgba": [0, 0, 0, 128],
+          "mark": 7,
+          "outputRgba": [127, 0, 0, 255]
+        },
+        "outerFringe": {
+          "x": 320,
+          "y": 99,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        },
+        "outerCornerFringe": {
+          "x": 159,
+          "y": 99,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        },
+        "innerPaper": {
+          "x": 320,
+          "y": 103,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "outsidePaper": {
+          "x": 320,
+          "y": 98,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        }
+      },
+      "finalRgbaSha256": "ca3fe407ba7d873587ad2ea8bc55c3b70a92d876e8991c8203c283f0b6799807",
+      "masks": {
+        "interior": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzaENACAQBMHrhP47RJCAJy8Q75gtYDaRJEmSJEmSJEmSJElKxn5q8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/3k1ctZlrr9iRJkiRJkiRJkiRJkiRJVwfketJ0"
+        },
+        "tucked": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrt3LENgDAMRUFLSMmabMKq2SRpU7iwBIKCe7V1hQf4EZIkSZIkSZIkSZIk6Y2uWesr76ydHTwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj/clL9v9Gf3ZP8JaXvaCFJEmSJEmSJEmSJEmSJGlvAReT/jY="
+        },
+        "marked": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzKERACAMBLBXnZNNGB0ssleBSgZIAgAAAAAAAAD8sE+Pz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+X+ZWBQAAAAAAAAAAgNcFZg3QuA=="
+        },
+        "changed": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzKERACAMBLBXnZNNGB0ssleBSgZIAgAAAAAAAAD8sE+Pz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+X+ZWBQAAAAAAAAAAgNcFZg3QuA=="
+        }
+      },
+      "artifacts": {
+        "finalPng": "croquis-results/soft-axis-gap10-alpha128-g20-final.png",
+        "finalRgbaGzip": "croquis-results/soft-axis-gap10-alpha128-g20-final.rgba.gz",
+        "marksGzip": "croquis-results/soft-axis-gap10-alpha128-g20-marks.gz"
+      }
+    },
+    {
+      "fixtureId": "soft-axis-gap10-alpha192",
+      "sourceRgbaSha256": "d9529ac98d1ac048238f606b2746cab7131709472218b0384162cb9aea80764a",
+      "gap": 10,
+      "seed": {
+        "x": 320,
+        "y": 230
+      },
+      "changed": true,
+      "paper": true,
+      "foundBox": {
+        "x": 161,
+        "y": 101,
+        "w": 319,
+        "h": 260
+      },
+      "candidateRule": "Croquis paper candidates: alpha<128, irrespective of RGB",
+      "seedRgba": [0, 0, 0, 0],
+      "interior": {
+        "selectedPixels": 80345,
+        "boundsExclusive": [163, 103, 478, 360],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "tucked": {
+        "selectedPixels": 2280,
+        "boundsExclusive": [161, 101, 480, 361],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": true
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": true
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "marked": {
+        "selectedPixels": 82625,
+        "boundsExclusive": [161, 101, 480, 361],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": true
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": true
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "changedPixels": {
+        "selectedPixels": 82625,
+        "boundsExclusive": [161, 101, 480, 361],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": true
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": true
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "bySourceAlpha": {
+        "0": {
+          "sourcePixels": 303774,
+          "interior": 80345,
+          "tucked": 0,
+          "changed": 80345
+        },
+        "192": {
+          "sourcePixels": 3426,
+          "interior": 0,
+          "tucked": 2280,
+          "changed": 2280
+        }
+      },
+      "probes": {
+        "inside": {
+          "x": 320,
+          "y": 230,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "outside": {
+          "x": 320,
+          "y": 420,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        },
+        "opening": {
+          "x": 320,
+          "y": 359,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "topCore": {
+          "x": 320,
+          "y": 101,
+          "sourceRgba": [0, 0, 0, 192],
+          "mark": 7,
+          "outputRgba": [63, 0, 0, 255]
+        },
+        "leftCore": {
+          "x": 161,
+          "y": 230,
+          "sourceRgba": [0, 0, 0, 192],
+          "mark": 7,
+          "outputRgba": [63, 0, 0, 255]
+        },
+        "outerFringe": {
+          "x": 320,
+          "y": 99,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        },
+        "outerCornerFringe": {
+          "x": 159,
+          "y": 99,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        },
+        "innerPaper": {
+          "x": 320,
+          "y": 103,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "outsidePaper": {
+          "x": 320,
+          "y": 98,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        }
+      },
+      "finalRgbaSha256": "0fb02fbed1242c577686063550754c8f0a5f20de2821d40c2f559c70978d7c92",
+      "masks": {
+        "interior": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzaENACAQBMHrhP47RJCAJy8Q75gtYDaRJEmSJEmSJEmSJElKxn5q8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/3k1ctZlrr9iRJkiRJkiRJkiRJkiRJVwfketJ0"
+        },
+        "tucked": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrt3LENgDAMRUFLSMmabMKq2SRpU7iwBIKCe7V1hQf4EZIkSZIkSZIkSZIk6Y2uWesr76ydHTwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj/clL9v9Gf3ZP8JaXvaCFJEmSJEmSJEmSJEmSJGlvAReT/jY="
+        },
+        "marked": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzKERACAMBLBXnZNNGB0ssleBSgZIAgAAAAAAAAD8sE+Pz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+X+ZWBQAAAAAAAAAAgNcFZg3QuA=="
+        },
+        "changed": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzKERACAMBLBXnZNNGB0ssleBSgZIAgAAAAAAAAD8sE+Pz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+X+ZWBQAAAAAAAAAAgNcFZg3QuA=="
+        }
+      },
+      "artifacts": {
+        "finalPng": "croquis-results/soft-axis-gap10-alpha192-g10-final.png",
+        "finalRgbaGzip": "croquis-results/soft-axis-gap10-alpha192-g10-final.rgba.gz",
+        "marksGzip": "croquis-results/soft-axis-gap10-alpha192-g10-marks.gz"
+      }
+    },
+    {
+      "fixtureId": "soft-axis-gap10-alpha192",
+      "sourceRgbaSha256": "d9529ac98d1ac048238f606b2746cab7131709472218b0384162cb9aea80764a",
+      "gap": 20,
+      "seed": {
+        "x": 320,
+        "y": 230
+      },
+      "changed": true,
+      "paper": true,
+      "foundBox": {
+        "x": 161,
+        "y": 101,
+        "w": 319,
+        "h": 260
+      },
+      "candidateRule": "Croquis paper candidates: alpha<128, irrespective of RGB",
+      "seedRgba": [0, 0, 0, 0],
+      "interior": {
+        "selectedPixels": 80345,
+        "boundsExclusive": [163, 103, 478, 360],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "tucked": {
+        "selectedPixels": 2280,
+        "boundsExclusive": [161, 101, 480, 361],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": true
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": true
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "marked": {
+        "selectedPixels": 82625,
+        "boundsExclusive": [161, 101, 480, 361],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": true
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": true
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "changedPixels": {
+        "selectedPixels": 82625,
+        "boundsExclusive": [161, 101, 480, 361],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": true
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": true
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "bySourceAlpha": {
+        "0": {
+          "sourcePixels": 303774,
+          "interior": 80345,
+          "tucked": 0,
+          "changed": 80345
+        },
+        "192": {
+          "sourcePixels": 3426,
+          "interior": 0,
+          "tucked": 2280,
+          "changed": 2280
+        }
+      },
+      "probes": {
+        "inside": {
+          "x": 320,
+          "y": 230,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "outside": {
+          "x": 320,
+          "y": 420,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        },
+        "opening": {
+          "x": 320,
+          "y": 359,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "topCore": {
+          "x": 320,
+          "y": 101,
+          "sourceRgba": [0, 0, 0, 192],
+          "mark": 7,
+          "outputRgba": [63, 0, 0, 255]
+        },
+        "leftCore": {
+          "x": 161,
+          "y": 230,
+          "sourceRgba": [0, 0, 0, 192],
+          "mark": 7,
+          "outputRgba": [63, 0, 0, 255]
+        },
+        "outerFringe": {
+          "x": 320,
+          "y": 99,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        },
+        "outerCornerFringe": {
+          "x": 159,
+          "y": 99,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        },
+        "innerPaper": {
+          "x": 320,
+          "y": 103,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "outsidePaper": {
+          "x": 320,
+          "y": 98,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        }
+      },
+      "finalRgbaSha256": "0fb02fbed1242c577686063550754c8f0a5f20de2821d40c2f559c70978d7c92",
+      "masks": {
+        "interior": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzaENACAQBMHrhP47RJCAJy8Q75gtYDaRJEmSJEmSJEmSJElKxn5q8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/3k1ctZlrr9iRJkiRJkiRJkiRJkiRJVwfketJ0"
+        },
+        "tucked": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrt3LENgDAMRUFLSMmabMKq2SRpU7iwBIKCe7V1hQf4EZIkSZIkSZIkSZIk6Y2uWesr76ydHTwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj/clL9v9Gf3ZP8JaXvaCFJEmSJEmSJEmSJEmSJGlvAReT/jY="
+        },
+        "marked": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzKERACAMBLBXnZNNGB0ssleBSgZIAgAAAAAAAAD8sE+Pz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+X+ZWBQAAAAAAAAAAgNcFZg3QuA=="
+        },
+        "changed": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzKERACAMBLBXnZNNGB0ssleBSgZIAgAAAAAAAAD8sE+Pz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+n8/n8/l8Pp/P5/P5fD6fz+fz+Xw+X+ZWBQAAAAAAAAAAgNcFZg3QuA=="
+        }
+      },
+      "artifacts": {
+        "finalPng": "croquis-results/soft-axis-gap10-alpha192-g20-final.png",
+        "finalRgbaGzip": "croquis-results/soft-axis-gap10-alpha192-g20-final.rgba.gz",
+        "marksGzip": "croquis-results/soft-axis-gap10-alpha192-g20-marks.gz"
+      }
+    },
+    {
+      "fixtureId": "soft-axis-gap10-alpha255",
+      "sourceRgbaSha256": "2b64b8fa1751e7a8fca27a3d0cc2dbc0054ef45d8c76f31d201c50c3c9e352e3",
+      "gap": 10,
+      "seed": {
+        "x": 320,
+        "y": 230
+      },
+      "changed": true,
+      "paper": true,
+      "foundBox": {
+        "x": 163,
+        "y": 103,
+        "w": 315,
+        "h": 257
+      },
+      "candidateRule": "Croquis paper candidates: alpha<128, irrespective of RGB",
+      "seedRgba": [0, 0, 0, 0],
+      "interior": {
+        "selectedPixels": 80345,
+        "boundsExclusive": [163, 103, 478, 360],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "tucked": {
+        "selectedPixels": 0,
+        "boundsExclusive": null,
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "marked": {
+        "selectedPixels": 80345,
+        "boundsExclusive": [163, 103, 478, 360],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "changedPixels": {
+        "selectedPixels": 80345,
+        "boundsExclusive": [163, 103, 478, 360],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "bySourceAlpha": {
+        "0": {
+          "sourcePixels": 303774,
+          "interior": 80345,
+          "tucked": 0,
+          "changed": 80345
+        },
+        "255": {
+          "sourcePixels": 3426,
+          "interior": 0,
+          "tucked": 0,
+          "changed": 0
+        }
+      },
+      "probes": {
+        "inside": {
+          "x": 320,
+          "y": 230,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "outside": {
+          "x": 320,
+          "y": 420,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        },
+        "opening": {
+          "x": 320,
+          "y": 359,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "topCore": {
+          "x": 320,
+          "y": 101,
+          "sourceRgba": [0, 0, 0, 255],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 255]
+        },
+        "leftCore": {
+          "x": 161,
+          "y": 230,
+          "sourceRgba": [0, 0, 0, 255],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 255]
+        },
+        "outerFringe": {
+          "x": 320,
+          "y": 99,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        },
+        "outerCornerFringe": {
+          "x": 159,
+          "y": 99,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        },
+        "innerPaper": {
+          "x": 320,
+          "y": 103,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "outsidePaper": {
+          "x": 320,
+          "y": 98,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        }
+      },
+      "finalRgbaSha256": "0d9a91487166b32c23eb4b66aab2c5bfa8249d05a7fdad4093ffcb9f9397f8a9",
+      "masks": {
+        "interior": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzaENACAQBMHrhP47RJCAJy8Q75gtYDaRJEmSJEmSJEmSJElKxn5q8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/3k1ctZlrr9iRJkiRJkiRJkiRJkiRJVwfketJ0"
+        },
+        "tucked": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtwQENAAAAwqD3T20PBxQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADApwGWAAAB"
+        },
+        "marked": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzaENACAQBMHrhP47RJCAJy8Q75gtYDaRJEmSJEmSJEmSJElKxn5q8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/3k1ctZlrr9iRJkiRJkiRJkiRJkiRJVwfketJ0"
+        },
+        "changed": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzaENACAQBMHrhP47RJCAJy8Q75gtYDaRJEmSJEmSJEmSJElKxn5q8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/3k1ctZlrr9iRJkiRJkiRJkiRJkiRJVwfketJ0"
+        }
+      },
+      "artifacts": {
+        "finalPng": "croquis-results/soft-axis-gap10-alpha255-g10-final.png",
+        "finalRgbaGzip": "croquis-results/soft-axis-gap10-alpha255-g10-final.rgba.gz",
+        "marksGzip": "croquis-results/soft-axis-gap10-alpha255-g10-marks.gz"
+      }
+    },
+    {
+      "fixtureId": "soft-axis-gap10-alpha255",
+      "sourceRgbaSha256": "2b64b8fa1751e7a8fca27a3d0cc2dbc0054ef45d8c76f31d201c50c3c9e352e3",
+      "gap": 20,
+      "seed": {
+        "x": 320,
+        "y": 230
+      },
+      "changed": true,
+      "paper": true,
+      "foundBox": {
+        "x": 163,
+        "y": 103,
+        "w": 315,
+        "h": 257
+      },
+      "candidateRule": "Croquis paper candidates: alpha<128, irrespective of RGB",
+      "seedRgba": [0, 0, 0, 0],
+      "interior": {
+        "selectedPixels": 80345,
+        "boundsExclusive": [163, 103, 478, 360],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "tucked": {
+        "selectedPixels": 0,
+        "boundsExclusive": null,
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "marked": {
+        "selectedPixels": 80345,
+        "boundsExclusive": [163, 103, 478, 360],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "changedPixels": {
+        "selectedPixels": 80345,
+        "boundsExclusive": [163, 103, 478, 360],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "bySourceAlpha": {
+        "0": {
+          "sourcePixels": 303774,
+          "interior": 80345,
+          "tucked": 0,
+          "changed": 80345
+        },
+        "255": {
+          "sourcePixels": 3426,
+          "interior": 0,
+          "tucked": 0,
+          "changed": 0
+        }
+      },
+      "probes": {
+        "inside": {
+          "x": 320,
+          "y": 230,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "outside": {
+          "x": 320,
+          "y": 420,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        },
+        "opening": {
+          "x": 320,
+          "y": 359,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "topCore": {
+          "x": 320,
+          "y": 101,
+          "sourceRgba": [0, 0, 0, 255],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 255]
+        },
+        "leftCore": {
+          "x": 161,
+          "y": 230,
+          "sourceRgba": [0, 0, 0, 255],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 255]
+        },
+        "outerFringe": {
+          "x": 320,
+          "y": 99,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        },
+        "outerCornerFringe": {
+          "x": 159,
+          "y": 99,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        },
+        "innerPaper": {
+          "x": 320,
+          "y": 103,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "outsidePaper": {
+          "x": 320,
+          "y": 98,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        }
+      },
+      "finalRgbaSha256": "0d9a91487166b32c23eb4b66aab2c5bfa8249d05a7fdad4093ffcb9f9397f8a9",
+      "masks": {
+        "interior": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzaENACAQBMHrhP47RJCAJy8Q75gtYDaRJEmSJEmSJEmSJElKxn5q8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/3k1ctZlrr9iRJkiRJkiRJkiRJkiRJVwfketJ0"
+        },
+        "tucked": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtwQENAAAAwqD3T20PBxQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADApwGWAAAB"
+        },
+        "marked": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzaENACAQBMHrhP47RJCAJy8Q75gtYDaRJEmSJEmSJEmSJElKxn5q8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/3k1ctZlrr9iRJkiRJkiRJkiRJkiRJVwfketJ0"
+        },
+        "changed": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzaENACAQBMHrhP47RJCAJy8Q75gtYDaRJEmSJEmSJEmSJElKxn5q8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/3k1ctZlrr9iRJkiRJkiRJkiRJkiRJVwfketJ0"
+        }
+      },
+      "artifacts": {
+        "finalPng": "croquis-results/soft-axis-gap10-alpha255-g20-final.png",
+        "finalRgbaGzip": "croquis-results/soft-axis-gap10-alpha255-g20-final.rgba.gz",
+        "marksGzip": "croquis-results/soft-axis-gap10-alpha255-g20-marks.gz"
+      }
+    },
+    {
+      "fixtureId": "soft-axis-gap10-aa-outer",
+      "sourceRgbaSha256": "940a5149b39081fe50b178fbdba0dfc4f403dac8657f1b10cb91e0063579612f",
+      "gap": 10,
+      "seed": {
+        "x": 320,
+        "y": 230
+      },
+      "changed": true,
+      "paper": true,
+      "foundBox": {
+        "x": 163,
+        "y": 103,
+        "w": 315,
+        "h": 257
+      },
+      "candidateRule": "Croquis paper candidates: alpha<128, irrespective of RGB",
+      "seedRgba": [0, 0, 0, 0],
+      "interior": {
+        "selectedPixels": 80345,
+        "boundsExclusive": [163, 103, 478, 360],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "tucked": {
+        "selectedPixels": 0,
+        "boundsExclusive": null,
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "marked": {
+        "selectedPixels": 80345,
+        "boundsExclusive": [163, 103, 478, 360],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "changedPixels": {
+        "selectedPixels": 80345,
+        "boundsExclusive": [163, 103, 478, 360],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "bySourceAlpha": {
+        "0": {
+          "sourcePixels": 302616,
+          "interior": 80345,
+          "tucked": 0,
+          "changed": 80345
+        },
+        "16": {
+          "sourcePixels": 4,
+          "interior": 0,
+          "tucked": 0,
+          "changed": 0
+        },
+        "64": {
+          "sourcePixels": 1154,
+          "interior": 0,
+          "tucked": 0,
+          "changed": 0
+        },
+        "255": {
+          "sourcePixels": 3426,
+          "interior": 0,
+          "tucked": 0,
+          "changed": 0
+        }
+      },
+      "probes": {
+        "inside": {
+          "x": 320,
+          "y": 230,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "outside": {
+          "x": 320,
+          "y": 420,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        },
+        "opening": {
+          "x": 320,
+          "y": 359,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "topCore": {
+          "x": 320,
+          "y": 101,
+          "sourceRgba": [0, 0, 0, 255],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 255]
+        },
+        "leftCore": {
+          "x": 161,
+          "y": 230,
+          "sourceRgba": [0, 0, 0, 255],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 255]
+        },
+        "outerFringe": {
+          "x": 320,
+          "y": 99,
+          "sourceRgba": [0, 0, 0, 64],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 64]
+        },
+        "outerCornerFringe": {
+          "x": 159,
+          "y": 99,
+          "sourceRgba": [0, 0, 0, 16],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 16]
+        },
+        "innerPaper": {
+          "x": 320,
+          "y": 103,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "outsidePaper": {
+          "x": 320,
+          "y": 98,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        }
+      },
+      "finalRgbaSha256": "af21b3f25ded45a84f0467d558b5ea933be0f7cac38df49f54f4ca8dafef2c04",
+      "masks": {
+        "interior": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzaENACAQBMHrhP47RJCAJy8Q75gtYDaRJEmSJEmSJEmSJElKxn5q8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/3k1ctZlrr9iRJkiRJkiRJkiRJkiRJVwfketJ0"
+        },
+        "tucked": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtwQENAAAAwqD3T20PBxQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADApwGWAAAB"
+        },
+        "marked": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzaENACAQBMHrhP47RJCAJy8Q75gtYDaRJEmSJEmSJEmSJElKxn5q8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/3k1ctZlrr9iRJkiRJkiRJkiRJkiRJVwfketJ0"
+        },
+        "changed": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzaENACAQBMHrhP47RJCAJy8Q75gtYDaRJEmSJEmSJEmSJElKxn5q8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/3k1ctZlrr9iRJkiRJkiRJkiRJkiRJVwfketJ0"
+        }
+      },
+      "artifacts": {
+        "finalPng": "croquis-results/soft-axis-gap10-aa-outer-g10-final.png",
+        "finalRgbaGzip": "croquis-results/soft-axis-gap10-aa-outer-g10-final.rgba.gz",
+        "marksGzip": "croquis-results/soft-axis-gap10-aa-outer-g10-marks.gz"
+      }
+    },
+    {
+      "fixtureId": "soft-axis-gap10-aa-outer",
+      "sourceRgbaSha256": "940a5149b39081fe50b178fbdba0dfc4f403dac8657f1b10cb91e0063579612f",
+      "gap": 20,
+      "seed": {
+        "x": 320,
+        "y": 230
+      },
+      "changed": true,
+      "paper": true,
+      "foundBox": {
+        "x": 163,
+        "y": 103,
+        "w": 315,
+        "h": 257
+      },
+      "candidateRule": "Croquis paper candidates: alpha<128, irrespective of RGB",
+      "seedRgba": [0, 0, 0, 0],
+      "interior": {
+        "selectedPixels": 80345,
+        "boundsExclusive": [163, 103, 478, 360],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "tucked": {
+        "selectedPixels": 0,
+        "boundsExclusive": null,
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "marked": {
+        "selectedPixels": 80345,
+        "boundsExclusive": [163, 103, 478, 360],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "changedPixels": {
+        "selectedPixels": 80345,
+        "boundsExclusive": [163, 103, 478, 360],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "bySourceAlpha": {
+        "0": {
+          "sourcePixels": 302616,
+          "interior": 80345,
+          "tucked": 0,
+          "changed": 80345
+        },
+        "16": {
+          "sourcePixels": 4,
+          "interior": 0,
+          "tucked": 0,
+          "changed": 0
+        },
+        "64": {
+          "sourcePixels": 1154,
+          "interior": 0,
+          "tucked": 0,
+          "changed": 0
+        },
+        "255": {
+          "sourcePixels": 3426,
+          "interior": 0,
+          "tucked": 0,
+          "changed": 0
+        }
+      },
+      "probes": {
+        "inside": {
+          "x": 320,
+          "y": 230,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "outside": {
+          "x": 320,
+          "y": 420,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        },
+        "opening": {
+          "x": 320,
+          "y": 359,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "topCore": {
+          "x": 320,
+          "y": 101,
+          "sourceRgba": [0, 0, 0, 255],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 255]
+        },
+        "leftCore": {
+          "x": 161,
+          "y": 230,
+          "sourceRgba": [0, 0, 0, 255],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 255]
+        },
+        "outerFringe": {
+          "x": 320,
+          "y": 99,
+          "sourceRgba": [0, 0, 0, 64],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 64]
+        },
+        "outerCornerFringe": {
+          "x": 159,
+          "y": 99,
+          "sourceRgba": [0, 0, 0, 16],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 16]
+        },
+        "innerPaper": {
+          "x": 320,
+          "y": 103,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 1,
+          "outputRgba": [255, 0, 0, 255]
+        },
+        "outsidePaper": {
+          "x": 320,
+          "y": 98,
+          "sourceRgba": [0, 0, 0, 0],
+          "mark": 0,
+          "outputRgba": [0, 0, 0, 0]
+        }
+      },
+      "finalRgbaSha256": "af21b3f25ded45a84f0467d558b5ea933be0f7cac38df49f54f4ca8dafef2c04",
+      "masks": {
+        "interior": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzaENACAQBMHrhP47RJCAJy8Q75gtYDaRJEmSJEmSJEmSJElKxn5q8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/3k1ctZlrr9iRJkiRJkiRJkiRJkiRJVwfketJ0"
+        },
+        "tucked": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtwQENAAAAwqD3T20PBxQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADApwGWAAAB"
+        },
+        "marked": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzaENACAQBMHrhP47RJCAJy8Q75gtYDaRJEmSJEmSJEmSJElKxn5q8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/3k1ctZlrr9iRJkiRJkiRJkiRJkiRJVwfketJ0"
+        },
+        "changed": {
+          "width": 640,
+          "height": 480,
+          "strideBytes": 80,
+          "encoding": "zlib-base64",
+          "msbFirst": true,
+          "data": "eNrtzaENACAQBMHrhP47RJCAJy8Q75gtYDaRJEmSJEmSJEmSJElKxn5q8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/H4/F4PB6Px+PxeDwej8fj8Xg8Ho/3k1ctZlrr9iRJkiRJkiRJkiRJkiRJVwfketJ0"
+        }
+      },
+      "artifacts": {
+        "finalPng": "croquis-results/soft-axis-gap10-aa-outer-g20-final.png",
+        "finalRgbaGzip": "croquis-results/soft-axis-gap10-aa-outer-g20-final.rgba.gz",
+        "marksGzip": "croquis-results/soft-axis-gap10-aa-outer-g20-marks.gz"
+      }
+    }
+  ]
+}

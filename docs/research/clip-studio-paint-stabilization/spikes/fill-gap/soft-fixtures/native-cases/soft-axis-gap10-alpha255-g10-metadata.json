@@ -1,0 +1,52 @@
+{
+  "schema": "native-soft-fill-case/v1",
+  "caseId": "soft-axis-gap10-alpha255-g10",
+  "fixtureId": "soft-axis-gap10-alpha255",
+  "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/soft-fixtures/soft-axis-gap10-alpha255.png",
+  "sourcePngSha256": "2a1ee08c141a94c0b4c7839921be71dae4ae1b490f758c67f342cdabb0454a69",
+  "sourceRgbaSha256": "2b64b8fa1751e7a8fca27a3d0cc2dbc0054ef45d8c76f31d201c50c3c9e352e3",
+  "documentPixels": [640, 480],
+  "intendedSeedDocument": {
+    "x": 320,
+    "y": 230
+  },
+  "configuredGap": 10,
+  "gapSelectorLevel": 4,
+  "requiredNativeSettings": {
+    "reference": "Refer only to editing layer",
+    "multipleReference": false,
+    "colorMargin": 10,
+    "antialiasing": true,
+    "areaScaling": false,
+    "fillNarrowAreas": true,
+    "paint": "#ff0000"
+  },
+  "settingStatus": "Intended controls only; retain observed native UI settings and source identity separately before the fill.",
+  "question": "Use the opaque source as the source-geometry control for the partial-alpha comparison.",
+  "seedControl": "Prefer the fixture seed [320,230]. If AX center input produces a different seed, retain the native seed and compare with --use-captured-seed explicitly; verify its exact source RGBA and intended main-room position. Never substitute the intended seed for the captured seed.",
+  "allowedComparisonSeedPolicy": "Exact fixture seed by default; honest captured-seed recomputation is permitted only through the explicit comparer option and is recorded in the report.",
+  "comparison": "Native A versus Croquis IN classification and native C positives against exact source RGBA. Croquis TUCKED and final RGBA remain separate; no native final RGBA equivalence is assumed.",
+  "sourceReset": "Open this exact source PNG for a fresh call. Do not fill a previous call's modified layer.",
+  "probes": {
+    "inside": [320, 230],
+    "outside": [320, 420],
+    "opening": [320, 359],
+    "topCore": [320, 101],
+    "leftCore": [161, 230],
+    "outerFringe": [320, 99],
+    "outerCornerFringe": [159, 99],
+    "innerPaper": [320, 103],
+    "outsidePaper": [320, 98]
+  },
+  "probeSourceRgba": {
+    "inside": [0, 0, 0, 0],
+    "outside": [0, 0, 0, 0],
+    "opening": [0, 0, 0, 0],
+    "topCore": [0, 0, 0, 255],
+    "leftCore": [0, 0, 0, 255],
+    "outerFringe": [0, 0, 0, 0],
+    "outerCornerFringe": [0, 0, 0, 0],
+    "innerPaper": [0, 0, 0, 0],
+    "outsidePaper": [0, 0, 0, 0]
+  }
+}

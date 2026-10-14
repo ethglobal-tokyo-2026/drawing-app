@@ -1,0 +1,90 @@
+{
+  "source_sha256": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+  "retained_names": [
+    {
+      "address": "0x102090f80",
+      "name": "_ZN12Planeswalker12PWBitmap1Bit11DrawSegmentEiiiij"
+    },
+    {
+      "address": "0x102541b0c",
+      "name": "_ZN12Planeswalker11PWFloodFill18CheckFlagAndRenderEiijjRKNS_5SRectE"
+    },
+    {
+      "address": "0x102541c94",
+      "name": "_ZN12Planeswalker11PWFloodFill28FindNarrowestPointForEachGapERNS_5SRectERNSt3__16vectorINS_6SPointENS_18PWSTLHeapAllocatorIS5_EEEE"
+    },
+    {
+      "address": "0x102542720",
+      "name": "_ZN12Planeswalker11PWFloodFill16RefillToStopLineENS_6SPointENS_5SRectERKNSt3__16vectorIS1_NS_18PWSTLHeapAllocatorIS1_EEEERS2_"
+    },
+    {
+      "address": "0x102543078",
+      "name": "_ZN12Planeswalker11PWFloodFill19TraceOutlineForSoakERiS1_S1_jRj"
+    },
+    {
+      "address": "0x10254343c",
+      "name": "_ZN12Planeswalker11PWFloodFill22RenderBlockForCloseGapEii"
+    }
+  ],
+  "new_extracts": [
+    {
+      "file": "102543078.asm",
+      "instructions": 241,
+      "bytes_sha256": "cf5e7cfc79087104fda486a44ce8775862fb6eb68c2d7441b6adf0cf4966a4ab",
+      "assembly_sha256": "2090a4a4af9bcd4e41255e1b991a88f907fc8e0f62662538f3b9590f2ee8c2fc"
+    },
+    {
+      "file": "102090f80.asm",
+      "instructions": 62,
+      "bytes_sha256": "a2a840bc219262526220696c1a8c326196341415154f0c739aeb1995b4a14c5e",
+      "assembly_sha256": "3d7322b9e10a8b968ff162f7a6051855fb770599865fdf4c4ea35435a870c592"
+    },
+    {
+      "file": "102541b0c.asm",
+      "instructions": 64,
+      "bytes_sha256": "813e32a473f7a11276f5d3f0781cdf73d0441d0f3e2d8ee64d2ec70411c3afcd",
+      "assembly_sha256": "c608da2e6e1cb1b64f7e5d994d031a4c780d5056f61fc4a2c51c639e1d9db23d"
+    },
+    {
+      "file": "102541c94.asm",
+      "instructions": 675,
+      "bytes_sha256": "e6417b5a16a0167bd0ed155475e1a0e3c023ef0612b81cc645066be89695e843",
+      "assembly_sha256": "57e56cfc750a25964d3c30dbaccfc8d2a1691980f939537bfa06ed35d9ff25b1"
+    },
+    {
+      "file": "102542720.asm",
+      "instructions": 332,
+      "bytes_sha256": "786e3247cad67f8e3097639b09377f5b20f7deaad2736459aa936c509d778c7d",
+      "assembly_sha256": "f281f2e62e542478b6390079a3d27cf356e3c7b52c50978e8a7869405e6ebca9"
+    },
+    {
+      "file": "10254343c.asm",
+      "instructions": 79,
+      "bytes_sha256": "b94567ff208c67560b050b109b7ce02dd49bed1698544c34961b29239ff17455",
+      "assembly_sha256": "ae129827713520e6edbdc5493a5f95360c01bba78b5e5b9be930a47c40f7072b"
+    }
+  ],
+  "earlier_assembly_hashes": [
+    {
+      "file": "102541b0c.asm",
+      "assembly_sha256": "45f644c0ced4f59a1edbad30b1e8aa8e9642a39b44ea1b323a40a90c91752ddd"
+    },
+    {
+      "file": "10254343c.asm",
+      "assembly_sha256": "90972a0f7422a1ee5d3bd5fa2c5ffb70f12cb73434edf3dbc42e632078864c6a"
+    },
+    {
+      "file": "102541c94.asm",
+      "assembly_sha256": "3642e592bafe6b74372f07e2f414c60195085910bd78ebd854f16d907ba1c43d"
+    },
+    {
+      "file": "102542720.asm",
+      "assembly_sha256": "6fcb54e04f76ef472fac0f7b8355cbff096fe66514d03b23f8c9cd2775ecf916"
+    },
+    {
+      "file": "102090f80.asm",
+      "assembly_sha256": "8e04ce206161524ecd02ff8fb7b0cf2c7ad314734387341345e8ba9c13ede485"
+    }
+  ],
+  "scope": "Static byte and boundary verification; no native helper execution."
+}

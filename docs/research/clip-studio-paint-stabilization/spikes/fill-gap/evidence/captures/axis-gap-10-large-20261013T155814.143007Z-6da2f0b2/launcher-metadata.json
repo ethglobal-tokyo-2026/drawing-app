@@ -1,0 +1,46 @@
+{
+  "pid": 57266,
+  "executable": "/Users/adoll/Applications/CSP Research/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT",
+  "original": "/Users/adoll/Applications/CSP Research/original-arm64",
+  "recorderSha256": {
+    "capture_fill.py": "1e1bf675c243b169a0177577e5f804b8eb24fc09d0f7d7bbcebd5421af7d5d07",
+    "record_fill.py": "490b5de20b7a570d893846fcdd31920a0e594aff26827225fa87dc178d9782d4",
+    "capture_live_contract.py": "ca93a5daff62c6633385cb38d750e04c13d5077e3fbc9cd4f09e57d4634ae9b8",
+    "record_tablet_stroke.py": "8c893aae014ba21597298b3586d40b90b133c7831ccc8aa32f19265ed0f95e93"
+  },
+  "requestedCalls": 1,
+  "captureSeconds": 30.0,
+  "outerGuardSeconds": 45,
+  "preflight": false,
+  "metadata": {
+    "fixtureId": "axis-gap-10",
+    "caseId": "axis-gap-10-level4-larger-gap",
+    "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/fixtures/axis-gap-10.png",
+    "sourcePngSha256": "2a1ee08c141a94c0b4c7839921be71dae4ae1b490f758c67f342cdabb0454a69",
+    "sourceRgbaSha256": "2b64b8fa1751e7a8fca27a3d0cc2dbc0054ef45d8c76f31d201c50c3c9e352e3",
+    "documentPixels": [
+      640,
+      480
+    ],
+    "intendedSeedDocument": {
+      "x": 320,
+      "y": 230
+    },
+    "gapSelectorLevel": 4,
+    "configuredGap": 10,
+    "question": "Test an opening equal to the configured ten-pixel gap.",
+    "settingStatus": "Intended capture settings; confirm the native gap and actual seed from each boundary record.",
+    "requiredNativeSettings": {
+      "reference": "Refer only to editing layer",
+      "multipleReference": false,
+      "areaScaling": false,
+      "colorMargin": 10,
+      "antialiasing": true,
+      "fillNarrowAreas": true,
+      "paint": "#ff0000"
+    },
+    "seedControl": "The captured seed must be a transparent source pixel in the intended main room. Use the captured seed explicitly when it differs from the fixture seed.",
+    "comparison": "Final A classification only; visible RGBA and the native returned rectangle are separate measurements.",
+    "recoveredOmittedComponentLimit": 800
+  }
+}

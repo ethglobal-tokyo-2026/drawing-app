@@ -1,0 +1,1843 @@
+{
+  "schema": "native-soft-gap10-summary/v1",
+  "fillSourceSha256": "d947273c2157bcdfd7539da1b3c3c87a9f32a80fc3cc36622f5477f3a780fe49",
+  "sourceManifestSha256": "8540690a2463c7453093848a9789cae693d1b2c760102b9b1231b24e524e61d1",
+  "sourceControls": "All five exact PNG/RGBA sources match manifest hashes; intended-source correspondence and native UI controls are operator observations retained in context, not a native raw-source export.",
+  "nativeControls": {
+    "reference": "Refer only to editing layer",
+    "multipleReference": false,
+    "colorMargin": 10,
+    "antialiasing": true,
+    "areaScaling": false,
+    "fillNarrowAreas": true,
+    "paint": "#ff0000",
+    "gap": 10,
+    "narrowArgument": 1024,
+    "actualSeedDocument": {
+      "x": 319,
+      "y": 208
+    }
+  },
+  "completeBoundariesVerified": 15,
+  "successfulCalls": 5,
+  "nativeGap20Captured": false,
+  "nativeFinalRgbaMeasured": false,
+  "decodedMaskLayout": "640*480 row-major bytes, exactly 0 or 1 per pixel; these are complete native mask domains at zero offset.",
+  "fixtureOrder": [
+    "soft-axis-gap10-alpha064",
+    "soft-axis-gap10-alpha128",
+    "soft-axis-gap10-alpha192",
+    "soft-axis-gap10-alpha255",
+    "soft-axis-gap10-aa-outer"
+  ],
+  "nativeAEqualityMatrix": [
+    [true, true, true, true, false],
+    [true, true, true, true, false],
+    [true, true, true, true, false],
+    [true, true, true, true, false],
+    [false, false, false, false, true]
+  ],
+  "nativeCEqualityMatrix": [
+    [true, true, true, true, false],
+    [true, true, true, true, false],
+    [true, true, true, true, false],
+    [true, true, true, true, false],
+    [false, false, false, false, true]
+  ],
+  "uniformFourNativeAIdentical": true,
+  "uniformFourNativeCIdentical": true,
+  "aaVersusOpaque": {
+    "aaOnlyA": {
+      "selectedPixels": 10,
+      "boundsExclusive": [315, 361, 325, 362],
+      "touches": [],
+      "probes": {}
+    },
+    "opaqueOnlyA": {
+      "selectedPixels": 0,
+      "boundsExclusive": null,
+      "touches": [],
+      "probes": {}
+    },
+    "aaOnlyC": {
+      "selectedPixels": 0,
+      "boundsExclusive": null,
+      "touches": [],
+      "probes": {}
+    },
+    "opaqueOnlyC": {
+      "selectedPixels": 1154,
+      "boundsExclusive": [159, 99, 482, 362],
+      "touches": [],
+      "probes": {}
+    },
+    "removedCByAaSourceAlpha": {
+      "64": 1154
+    }
+  },
+  "candidateEvidenceLimit": "All four source alpha16 corner pixels are positively present in native C. Zero C bits remain subject to lazy preparation; no complete native alpha/color-margin predicate is inferred.",
+  "results": [
+    {
+      "fixtureId": "soft-axis-gap10-alpha064",
+      "captureDirectory": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/captures/soft-alpha064-g10-20261013T162719.835423Z-91f4c404/",
+      "comparisonSha256": "0094b9ba30c0e558942bcc59f9b03fa3063515a718de3496ea233a1013e9f095",
+      "captureSha256": "24a8f84e5d1e9204bd4f3af77bf414d7b8fc08b3e8a7c471f8ab16212f865a9f",
+      "observedContextSha256": "446251c5d7e56b106a354f74cde176d8f50e675b7dd7f02fed2dd8a0ce6170bc",
+      "sourcePngSha256": "1a0479e3367e633ecbc8117c248d973b4746f5fc05f0ac76e688e07b684698ed",
+      "sourceRgbaSha256": "88e1904b887bc27251085069d2adb39a95baeadd266217515e411422e352a268",
+      "actualSeedDocument": {
+        "x": 319,
+        "y": 208
+      },
+      "nativeA": {
+        "selectedPixels": 80355,
+        "boundsExclusive": [163, 103, 478, 361],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "croquisIN": {
+        "selectedPixels": 307200,
+        "boundsExclusive": [0, 0, 640, 480],
+        "touches": ["bottom", "left", "right", "top"],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": true
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": true
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": true
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": true
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": true
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": true
+          }
+        }
+      },
+      "croquisTUCKED": {
+        "selectedPixels": 0,
+        "boundsExclusive": null,
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "nativeOnly": {
+        "selectedPixels": 0,
+        "boundsExclusive": null,
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "croquisOnly": {
+        "selectedPixels": 226845,
+        "boundsExclusive": [0, 0, 640, 480],
+        "touches": ["bottom", "left", "right", "top"],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": true
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": true
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": true
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": true
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": true
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": true
+          }
+        }
+      },
+      "bySourceAlpha": {
+        "0": {
+          "sourcePixels": 303774,
+          "nativeA": 80355,
+          "croquisIN": 303774,
+          "croquisTUCKED": 0,
+          "nativeOnly": 0,
+          "croquisOnly": 223419,
+          "nativeCPositive": 245694,
+          "nativeCZeroInBitmap": 58080,
+          "sourceOutsideCBitmap": 0
+        },
+        "64": {
+          "sourcePixels": 3426,
+          "nativeA": 0,
+          "croquisIN": 3426,
+          "croquisTUCKED": 0,
+          "nativeOnly": 0,
+          "croquisOnly": 3426,
+          "nativeCPositive": 0,
+          "nativeCZeroInBitmap": 3426,
+          "sourceOutsideCBitmap": 0
+        }
+      },
+      "nativeOutputRect": {
+        "address": "0x16d5e4df0",
+        "bytesHex": "a300000067000000de01000068010000",
+        "values": [163, 103, 478, 360]
+      },
+      "selectedOutsideOutputRectExclusive": {
+        "selectedPixels": 10,
+        "boundsExclusive": [315, 360, 325, 361],
+        "touches": [],
+        "probes": {}
+      },
+      "decodedNativeASha256": "64f2f449a57385044f8be830dba5dc072b0f593ba79dc309c2e0b2693d87b9a2",
+      "decodedNativeCSha256": "f02eb5a34cc88cf859c1d9eb059d635c5b97bc495ee301cf4c076c394c63ac78",
+      "nativeFinalRgba": "not-measured",
+      "launcherOutcome": {
+        "debugger_exit_code": 0,
+        "outer_timeout": false,
+        "recording_cue_emitted": true,
+        "resumeIndependentlyVerified": true,
+        "captureComplete": true,
+        "preflightVerified": false,
+        "errors": [],
+        "summary": {
+          "allFillsSucceeded": true,
+          "captureComplete": true,
+          "captureErrors": [],
+          "captureWarnings": [],
+          "cleanupErrors": [],
+          "cleanupWarnings": [],
+          "deadlineExceeded": false,
+          "detachObservationSource": "matching_process_state_event",
+          "detachRequestSucceeded": true,
+          "detachStateEvents": [9],
+          "detachedStateObserved": true,
+          "elapsed_seconds": 13.075727125000002,
+          "entries": 1,
+          "kind": "summary",
+          "operationObserved": true,
+          "ownedBreakpointIds": [1, 2, 3],
+          "pairs": 1,
+          "requestedCalls": 1,
+          "resumeIndependentlyVerified": false,
+          "stopReason": "requested_fill_entries_initial_boundaries_and_returns_observed",
+          "successfulFills": 1,
+          "unmatchedEntries": 0,
+          "watchdogError": null,
+          "wholeAlgorithmEquivalence": "not_evaluated",
+          "workqueueStepRecoveries": []
+        },
+        "recordingSucceeded": true
+      }
+    },
+    {
+      "fixtureId": "soft-axis-gap10-alpha128",
+      "captureDirectory": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/captures/soft-alpha128-g10-20261013T162914.759873Z-e4db0cf6/",
+      "comparisonSha256": "bedc6ca17311d7dcdcbe91660f57c2569310b2cd672a918b930069cbba8baa45",
+      "captureSha256": "1f623fc06358111532361dca76ee9eacebed75c26613e4d00d2b50f42fedf670",
+      "observedContextSha256": "7a2a575744e7b3932898df9f71e9e709683c9bbf5cf7a7076dc42e22b9ad6681",
+      "sourcePngSha256": "65b8c596b56dcb8cef6a76aec71522182614204dd87b072d6bf4e2dcbb6696b1",
+      "sourceRgbaSha256": "5abcc35b3b2c54704ed5f5c0635d12678980c174e9e49e066e8088e17c859223",
+      "actualSeedDocument": {
+        "x": 319,
+        "y": 208
+      },
+      "nativeA": {
+        "selectedPixels": 80355,
+        "boundsExclusive": [163, 103, 478, 361],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "croquisIN": {
+        "selectedPixels": 80345,
+        "boundsExclusive": [163, 103, 478, 360],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "croquisTUCKED": {
+        "selectedPixels": 2280,
+        "boundsExclusive": [161, 101, 480, 361],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": true
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": true
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "nativeOnly": {
+        "selectedPixels": 10,
+        "boundsExclusive": [315, 360, 325, 361],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "croquisOnly": {
+        "selectedPixels": 0,
+        "boundsExclusive": null,
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "bySourceAlpha": {
+        "0": {
+          "sourcePixels": 303774,
+          "nativeA": 80355,
+          "croquisIN": 80345,
+          "croquisTUCKED": 0,
+          "nativeOnly": 10,
+          "croquisOnly": 0,
+          "nativeCPositive": 245694,
+          "nativeCZeroInBitmap": 58080,
+          "sourceOutsideCBitmap": 0
+        },
+        "128": {
+          "sourcePixels": 3426,
+          "nativeA": 0,
+          "croquisIN": 0,
+          "croquisTUCKED": 2280,
+          "nativeOnly": 0,
+          "croquisOnly": 0,
+          "nativeCPositive": 0,
+          "nativeCZeroInBitmap": 3426,
+          "sourceOutsideCBitmap": 0
+        }
+      },
+      "nativeOutputRect": {
+        "address": "0x16d5e4df0",
+        "bytesHex": "a300000067000000de01000068010000",
+        "values": [163, 103, 478, 360]
+      },
+      "selectedOutsideOutputRectExclusive": {
+        "selectedPixels": 10,
+        "boundsExclusive": [315, 360, 325, 361],
+        "touches": [],
+        "probes": {}
+      },
+      "decodedNativeASha256": "64f2f449a57385044f8be830dba5dc072b0f593ba79dc309c2e0b2693d87b9a2",
+      "decodedNativeCSha256": "f02eb5a34cc88cf859c1d9eb059d635c5b97bc495ee301cf4c076c394c63ac78",
+      "nativeFinalRgba": "not-measured",
+      "launcherOutcome": {
+        "debugger_exit_code": 0,
+        "outer_timeout": false,
+        "recording_cue_emitted": true,
+        "resumeIndependentlyVerified": true,
+        "captureComplete": true,
+        "preflightVerified": false,
+        "errors": [],
+        "summary": {
+          "allFillsSucceeded": true,
+          "captureComplete": true,
+          "captureErrors": [],
+          "captureWarnings": [],
+          "cleanupErrors": [],
+          "cleanupWarnings": [],
+          "deadlineExceeded": false,
+          "detachObservationSource": "matching_process_state_event",
+          "detachRequestSucceeded": true,
+          "detachStateEvents": [9],
+          "detachedStateObserved": true,
+          "elapsed_seconds": 17.008093832999997,
+          "entries": 1,
+          "kind": "summary",
+          "operationObserved": true,
+          "ownedBreakpointIds": [1, 2, 3],
+          "pairs": 1,
+          "requestedCalls": 1,
+          "resumeIndependentlyVerified": false,
+          "stopReason": "requested_fill_entries_initial_boundaries_and_returns_observed",
+          "successfulFills": 1,
+          "unmatchedEntries": 0,
+          "watchdogError": null,
+          "wholeAlgorithmEquivalence": "not_evaluated",
+          "workqueueStepRecoveries": []
+        },
+        "recordingSucceeded": true
+      }
+    },
+    {
+      "fixtureId": "soft-axis-gap10-alpha192",
+      "captureDirectory": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/captures/soft-alpha192-g10-20261013T163058.854046Z-d84f8e05/",
+      "comparisonSha256": "ffaaa246715cb1f411fc91fd289efe136edac800142675c84ae3b9b34056218c",
+      "captureSha256": "af4c67d5cc4b3eedee86d6d8aac0aa663e7e61db5c15fb964517ec81e0822a72",
+      "observedContextSha256": "d682fd889d6b719e7f21dbebd0816f03589c09fa22fa4ef8eb6644cc99a446fe",
+      "sourcePngSha256": "13a0ad8faee1cc66baacf83536927efcbb6f0c22cf12c6fda287b7db6e18560c",
+      "sourceRgbaSha256": "d9529ac98d1ac048238f606b2746cab7131709472218b0384162cb9aea80764a",
+      "actualSeedDocument": {
+        "x": 319,
+        "y": 208
+      },
+      "nativeA": {
+        "selectedPixels": 80355,
+        "boundsExclusive": [163, 103, 478, 361],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "croquisIN": {
+        "selectedPixels": 80345,
+        "boundsExclusive": [163, 103, 478, 360],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "croquisTUCKED": {
+        "selectedPixels": 2280,
+        "boundsExclusive": [161, 101, 480, 361],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": true
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": true
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "nativeOnly": {
+        "selectedPixels": 10,
+        "boundsExclusive": [315, 360, 325, 361],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "croquisOnly": {
+        "selectedPixels": 0,
+        "boundsExclusive": null,
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "bySourceAlpha": {
+        "0": {
+          "sourcePixels": 303774,
+          "nativeA": 80355,
+          "croquisIN": 80345,
+          "croquisTUCKED": 0,
+          "nativeOnly": 10,
+          "croquisOnly": 0,
+          "nativeCPositive": 245694,
+          "nativeCZeroInBitmap": 58080,
+          "sourceOutsideCBitmap": 0
+        },
+        "192": {
+          "sourcePixels": 3426,
+          "nativeA": 0,
+          "croquisIN": 0,
+          "croquisTUCKED": 2280,
+          "nativeOnly": 0,
+          "croquisOnly": 0,
+          "nativeCPositive": 0,
+          "nativeCZeroInBitmap": 3426,
+          "sourceOutsideCBitmap": 0
+        }
+      },
+      "nativeOutputRect": {
+        "address": "0x16d5e4df0",
+        "bytesHex": "a300000067000000de01000068010000",
+        "values": [163, 103, 478, 360]
+      },
+      "selectedOutsideOutputRectExclusive": {
+        "selectedPixels": 10,
+        "boundsExclusive": [315, 360, 325, 361],
+        "touches": [],
+        "probes": {}
+      },
+      "decodedNativeASha256": "64f2f449a57385044f8be830dba5dc072b0f593ba79dc309c2e0b2693d87b9a2",
+      "decodedNativeCSha256": "f02eb5a34cc88cf859c1d9eb059d635c5b97bc495ee301cf4c076c394c63ac78",
+      "nativeFinalRgba": "not-measured",
+      "launcherOutcome": {
+        "debugger_exit_code": 0,
+        "outer_timeout": false,
+        "recording_cue_emitted": true,
+        "resumeIndependentlyVerified": true,
+        "captureComplete": true,
+        "preflightVerified": false,
+        "errors": [],
+        "summary": {
+          "allFillsSucceeded": true,
+          "captureComplete": true,
+          "captureErrors": [],
+          "captureWarnings": [],
+          "cleanupErrors": [],
+          "cleanupWarnings": [],
+          "deadlineExceeded": false,
+          "detachObservationSource": "matching_process_state_event",
+          "detachRequestSucceeded": true,
+          "detachStateEvents": [9],
+          "detachedStateObserved": true,
+          "elapsed_seconds": 19.495810625,
+          "entries": 1,
+          "kind": "summary",
+          "operationObserved": true,
+          "ownedBreakpointIds": [1, 2, 3],
+          "pairs": 1,
+          "requestedCalls": 1,
+          "resumeIndependentlyVerified": false,
+          "stopReason": "requested_fill_entries_initial_boundaries_and_returns_observed",
+          "successfulFills": 1,
+          "unmatchedEntries": 0,
+          "watchdogError": null,
+          "wholeAlgorithmEquivalence": "not_evaluated",
+          "workqueueStepRecoveries": []
+        },
+        "recordingSucceeded": true
+      }
+    },
+    {
+      "fixtureId": "soft-axis-gap10-alpha255",
+      "captureDirectory": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/captures/soft-alpha255-g10-20261013T163221.566197Z-752abf9c/",
+      "comparisonSha256": "ab70749f9129a681fc9e9cea3748a34b962c0b248ca0a450854c893847735067",
+      "captureSha256": "804f306b188f82dc9d187391c2f9033e4bf0232d1fc7970bbe3efc0972e58d4f",
+      "observedContextSha256": "8cb1b285ecd36a82946191f7d99b171c4a9d01f85dd364384d22bbf959addf08",
+      "sourcePngSha256": "2a1ee08c141a94c0b4c7839921be71dae4ae1b490f758c67f342cdabb0454a69",
+      "sourceRgbaSha256": "2b64b8fa1751e7a8fca27a3d0cc2dbc0054ef45d8c76f31d201c50c3c9e352e3",
+      "actualSeedDocument": {
+        "x": 319,
+        "y": 208
+      },
+      "nativeA": {
+        "selectedPixels": 80355,
+        "boundsExclusive": [163, 103, 478, 361],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "croquisIN": {
+        "selectedPixels": 80345,
+        "boundsExclusive": [163, 103, 478, 360],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "croquisTUCKED": {
+        "selectedPixels": 0,
+        "boundsExclusive": null,
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "nativeOnly": {
+        "selectedPixels": 10,
+        "boundsExclusive": [315, 360, 325, 361],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "croquisOnly": {
+        "selectedPixels": 0,
+        "boundsExclusive": null,
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "bySourceAlpha": {
+        "0": {
+          "sourcePixels": 303774,
+          "nativeA": 80355,
+          "croquisIN": 80345,
+          "croquisTUCKED": 0,
+          "nativeOnly": 10,
+          "croquisOnly": 0,
+          "nativeCPositive": 245694,
+          "nativeCZeroInBitmap": 58080,
+          "sourceOutsideCBitmap": 0
+        },
+        "255": {
+          "sourcePixels": 3426,
+          "nativeA": 0,
+          "croquisIN": 0,
+          "croquisTUCKED": 0,
+          "nativeOnly": 0,
+          "croquisOnly": 0,
+          "nativeCPositive": 0,
+          "nativeCZeroInBitmap": 3426,
+          "sourceOutsideCBitmap": 0
+        }
+      },
+      "nativeOutputRect": {
+        "address": "0x16d5e4df0",
+        "bytesHex": "a300000067000000de01000068010000",
+        "values": [163, 103, 478, 360]
+      },
+      "selectedOutsideOutputRectExclusive": {
+        "selectedPixels": 10,
+        "boundsExclusive": [315, 360, 325, 361],
+        "touches": [],
+        "probes": {}
+      },
+      "decodedNativeASha256": "64f2f449a57385044f8be830dba5dc072b0f593ba79dc309c2e0b2693d87b9a2",
+      "decodedNativeCSha256": "f02eb5a34cc88cf859c1d9eb059d635c5b97bc495ee301cf4c076c394c63ac78",
+      "nativeFinalRgba": "not-measured",
+      "launcherOutcome": {
+        "debugger_exit_code": 0,
+        "outer_timeout": false,
+        "recording_cue_emitted": true,
+        "resumeIndependentlyVerified": true,
+        "captureComplete": true,
+        "preflightVerified": false,
+        "errors": [],
+        "summary": {
+          "allFillsSucceeded": true,
+          "captureComplete": true,
+          "captureErrors": [],
+          "captureWarnings": [],
+          "cleanupErrors": [],
+          "cleanupWarnings": [],
+          "deadlineExceeded": false,
+          "detachObservationSource": "matching_process_state_event",
+          "detachRequestSucceeded": true,
+          "detachStateEvents": [9],
+          "detachedStateObserved": true,
+          "elapsed_seconds": 13.703890792000001,
+          "entries": 1,
+          "kind": "summary",
+          "operationObserved": true,
+          "ownedBreakpointIds": [1, 2, 3],
+          "pairs": 1,
+          "requestedCalls": 1,
+          "resumeIndependentlyVerified": false,
+          "stopReason": "requested_fill_entries_initial_boundaries_and_returns_observed",
+          "successfulFills": 1,
+          "unmatchedEntries": 0,
+          "watchdogError": null,
+          "wholeAlgorithmEquivalence": "not_evaluated",
+          "workqueueStepRecoveries": []
+        },
+        "recordingSucceeded": true
+      }
+    },
+    {
+      "fixtureId": "soft-axis-gap10-aa-outer",
+      "captureDirectory": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/evidence/captures/soft-aa-outer-g10-20261013T163328.027396Z-9cc73c8e/",
+      "comparisonSha256": "f63d7bf5abad269bf99dc881b390ad5695e02c67657880ee534affd1ce133577",
+      "captureSha256": "a47e83afc39005f64f870bca9808777b1eb73cf797504dda4925c7726387a63b",
+      "observedContextSha256": "14bbc7290044ebd12a6efb293d79b39eb7129aa0610c06667b4051ee5339ab72",
+      "sourcePngSha256": "f09ce8e4146207bc61a9806b1397b6d59a28236d7563fe87fe7a08f439aa911f",
+      "sourceRgbaSha256": "940a5149b39081fe50b178fbdba0dfc4f403dac8657f1b10cb91e0063579612f",
+      "actualSeedDocument": {
+        "x": 319,
+        "y": 208
+      },
+      "nativeA": {
+        "selectedPixels": 80365,
+        "boundsExclusive": [163, 103, 478, 362],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "croquisIN": {
+        "selectedPixels": 80345,
+        "boundsExclusive": [163, 103, 478, 360],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": true
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": true
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": true
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "croquisTUCKED": {
+        "selectedPixels": 0,
+        "boundsExclusive": null,
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "nativeOnly": {
+        "selectedPixels": 20,
+        "boundsExclusive": [315, 360, 325, 362],
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "croquisOnly": {
+        "selectedPixels": 0,
+        "boundsExclusive": null,
+        "touches": [],
+        "probes": {
+          "inside": {
+            "x": 320,
+            "y": 230,
+            "selected": false
+          },
+          "outside": {
+            "x": 320,
+            "y": 420,
+            "selected": false
+          },
+          "opening": {
+            "x": 320,
+            "y": 359,
+            "selected": false
+          },
+          "topCore": {
+            "x": 320,
+            "y": 101,
+            "selected": false
+          },
+          "leftCore": {
+            "x": 161,
+            "y": 230,
+            "selected": false
+          },
+          "outerFringe": {
+            "x": 320,
+            "y": 99,
+            "selected": false
+          },
+          "outerCornerFringe": {
+            "x": 159,
+            "y": 99,
+            "selected": false
+          },
+          "innerPaper": {
+            "x": 320,
+            "y": 103,
+            "selected": false
+          },
+          "outsidePaper": {
+            "x": 320,
+            "y": 98,
+            "selected": false
+          }
+        }
+      },
+      "bySourceAlpha": {
+        "0": {
+          "sourcePixels": 302616,
+          "nativeA": 80365,
+          "croquisIN": 80345,
+          "croquisTUCKED": 0,
+          "nativeOnly": 20,
+          "croquisOnly": 0,
+          "nativeCPositive": 244536,
+          "nativeCZeroInBitmap": 58080,
+          "sourceOutsideCBitmap": 0
+        },
+        "16": {
+          "sourcePixels": 4,
+          "nativeA": 0,
+          "croquisIN": 0,
+          "croquisTUCKED": 0,
+          "nativeOnly": 0,
+          "croquisOnly": 0,
+          "nativeCPositive": 4,
+          "nativeCZeroInBitmap": 0,
+          "sourceOutsideCBitmap": 0
+        },
+        "64": {
+          "sourcePixels": 1154,
+          "nativeA": 0,
+          "croquisIN": 0,
+          "croquisTUCKED": 0,
+          "nativeOnly": 0,
+          "croquisOnly": 0,
+          "nativeCPositive": 0,
+          "nativeCZeroInBitmap": 1154,
+          "sourceOutsideCBitmap": 0
+        },
+        "255": {
+          "sourcePixels": 3426,
+          "nativeA": 0,
+          "croquisIN": 0,
+          "croquisTUCKED": 0,
+          "nativeOnly": 0,
+          "croquisOnly": 0,
+          "nativeCPositive": 0,
+          "nativeCZeroInBitmap": 3426,
+          "sourceOutsideCBitmap": 0
+        }
+      },
+      "nativeOutputRect": {
+        "address": "0x16d5e4df0",
+        "bytesHex": "a300000067000000de01000069010000",
+        "values": [163, 103, 478, 361]
+      },
+      "selectedOutsideOutputRectExclusive": {
+        "selectedPixels": 10,
+        "boundsExclusive": [315, 361, 325, 362],
+        "touches": [],
+        "probes": {}
+      },
+      "decodedNativeASha256": "5ea7f35bbb0bbd204970cbf9a94c079270c5992e1c8c6ec62e3796a2bb0a18a4",
+      "decodedNativeCSha256": "45b6687d7643d46981f9cdbbd04427e9dc195713c3e06e80cb7f8d022ea27da4",
+      "nativeFinalRgba": "not-measured",
+      "launcherOutcome": {
+        "debugger_exit_code": 0,
+        "outer_timeout": false,
+        "recording_cue_emitted": true,
+        "resumeIndependentlyVerified": true,
+        "captureComplete": true,
+        "preflightVerified": false,
+        "errors": [],
+        "summary": {
+          "allFillsSucceeded": true,
+          "captureComplete": true,
+          "captureErrors": [],
+          "captureWarnings": [],
+          "cleanupErrors": [],
+          "cleanupWarnings": [],
+          "deadlineExceeded": false,
+          "detachObservationSource": "matching_process_state_event",
+          "detachRequestSucceeded": true,
+          "detachStateEvents": [9],
+          "detachedStateObserved": true,
+          "elapsed_seconds": 17.208310458,
+          "entries": 1,
+          "kind": "summary",
+          "operationObserved": true,
+          "ownedBreakpointIds": [1, 2, 3],
+          "pairs": 1,
+          "requestedCalls": 1,
+          "resumeIndependentlyVerified": false,
+          "stopReason": "requested_fill_entries_initial_boundaries_and_returns_observed",
+          "successfulFills": 1,
+          "unmatchedEntries": 0,
+          "watchdogError": null,
+          "wholeAlgorithmEquivalence": "not_evaluated",
+          "workqueueStepRecoveries": []
+        },
+        "recordingSucceeded": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "pid": 57266,
+  "executable": "/Users/adoll/Applications/CSP Research/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT",
+  "original": "/Users/adoll/Applications/CSP Research/original-arm64",
+  "recorderSha256": {
+    "capture_fill.py": "1e1bf675c243b169a0177577e5f804b8eb24fc09d0f7d7bbcebd5421af7d5d07",
+    "record_fill.py": "490b5de20b7a570d893846fcdd31920a0e594aff26827225fa87dc178d9782d4",
+    "capture_live_contract.py": "ca93a5daff62c6633385cb38d750e04c13d5077e3fbc9cd4f09e57d4634ae9b8",
+    "record_tablet_stroke.py": "8c893aae014ba21597298b3586d40b90b133c7831ccc8aa32f19265ed0f95e93"
+  },
+  "requestedCalls": 2,
+  "captureSeconds": 30.0,
+  "outerGuardSeconds": 45,
+  "preflight": false,
+  "metadata": {
+    "fixtureId": "axis-gap-20",
+    "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/fixtures/axis-gap-20.png",
+    "sourcePngSha256": "d3a378f3fb7ac9ed6468c7ff6ade808844da835747427900d206440435d9af38",
+    "sourceRgbaSha256": "51529e3a25cf10ac8aefbe84205824a05f507b12ba0a5f36045330b525efc32d",
+    "documentPixels": [
+      640,
+      480
+    ],
+    "intendedSeedDocument": {
+      "x": 320,
+      "y": 230
+    },
+    "plannedCalls": [
+      {
+        "callId": "1",
+        "gapSelectorLevel": 4,
+        "configuredGap": 10
+      },
+      {
+        "callId": "2",
+        "gapSelectorLevel": 5,
+        "configuredGap": 20
+      }
+    ],
+    "sourceResetBetweenCalls": "Undo the first fill; confirm the original outline before the second fill.",
+    "settingStatus": "Planned sequence; confirm each native gap and seed separately from its boundary records.",
+    "requiredNativeSettings": {
+      "reference": "Refer only to editing layer",
+      "multipleReference": false,
+      "areaScaling": false,
+      "colorMargin": 10,
+      "antialiasing": true,
+      "fillNarrowAreas": true,
+      "paint": "#ff0000"
+    },
+    "comparison": "Final A classification only; visible RGBA and the native returned rectangle are separate measurements.",
+    "question": "Compare the twenty-column opening below and at its matching raw gap width."
+  }
+}

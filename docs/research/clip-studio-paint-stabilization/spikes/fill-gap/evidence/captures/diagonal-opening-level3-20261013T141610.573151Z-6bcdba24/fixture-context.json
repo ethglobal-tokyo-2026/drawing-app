@@ -1,0 +1,23 @@
+{
+  "fixtureId": "diagonal-opening",
+  "sourcePng": "../../../fixtures/diagonal-opening.png",
+  "documentSize": [640, 480],
+  "nativeSettingsObservedByUiOperator": {
+    "closeGapIndicatorIndex": 2,
+    "referenceOnlyLayer": true,
+    "multipleReferenceEnabled": false,
+    "colorMargin": 10,
+    "antiAliasing": true,
+    "areaScalingEnabled": false,
+    "fillNarrowAreas": true
+  },
+  "inputMethodObservedByUiOperator": "Accessibility window click with palettes hidden after coordinate clicks stopped producing native calls.",
+  "capturedDocumentSeed": [318, 176],
+  "fixtureDefaultSeed": [320, 230],
+  "sourcePixelAtCapturedSeed": [0, 0, 0, 0],
+  "capturedSeedInsideIntendedDiamond": true,
+  "croquisExplicitlyRecomputedAtCapturedSeed": true,
+  "nativeGapWidth": 5,
+  "narrowFlag": 1024,
+  "documentOffset": [0, 0]
+}

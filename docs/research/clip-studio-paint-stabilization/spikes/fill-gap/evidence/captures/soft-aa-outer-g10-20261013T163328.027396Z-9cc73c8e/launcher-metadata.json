@@ -1,0 +1,142 @@
+{
+  "pid": 57266,
+  "executable": "/Users/adoll/Applications/CSP Research/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT",
+  "original": "/Users/adoll/Applications/CSP Research/original-arm64",
+  "recorderSha256": {
+    "capture_fill.py": "1e1bf675c243b169a0177577e5f804b8eb24fc09d0f7d7bbcebd5421af7d5d07",
+    "record_fill.py": "490b5de20b7a570d893846fcdd31920a0e594aff26827225fa87dc178d9782d4",
+    "capture_live_contract.py": "87c0e6c9d736ed8cc8188c911ba5a2494e5c00af8f68ff77db8f25b4d7dca112",
+    "record_tablet_stroke.py": "8c893aae014ba21597298b3586d40b90b133c7831ccc8aa32f19265ed0f95e93"
+  },
+  "requestedCalls": 1,
+  "captureSeconds": 30.0,
+  "outerGuardSeconds": 45,
+  "preflight": false,
+  "metadata": {
+    "schema": "native-soft-fill-case/v1",
+    "caseId": "soft-axis-gap10-aa-outer-g10",
+    "fixtureId": "soft-axis-gap10-aa-outer",
+    "source": "/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/fill-gap/soft-fixtures/soft-axis-gap10-aa-outer.png",
+    "sourcePngSha256": "f09ce8e4146207bc61a9806b1397b6d59a28236d7563fe87fe7a08f439aa911f",
+    "sourceRgbaSha256": "940a5149b39081fe50b178fbdba0dfc4f403dac8657f1b10cb91e0063579612f",
+    "documentPixels": [
+      640,
+      480
+    ],
+    "intendedSeedDocument": {
+      "x": 320,
+      "y": 230
+    },
+    "configuredGap": 10,
+    "gapSelectorLevel": 4,
+    "requiredNativeSettings": {
+      "reference": "Refer only to editing layer",
+      "multipleReference": false,
+      "colorMargin": 10,
+      "antialiasing": true,
+      "areaScaling": false,
+      "fillNarrowAreas": true,
+      "paint": "#ff0000"
+    },
+    "settingStatus": "Intended controls only; retain observed native UI settings and source identity separately before the fill.",
+    "question": "Test native candidate preparation on true area-coverage alpha16/64 outer fringe beside an opaque black core.",
+    "seedControl": "Prefer the fixture seed [320,230]. If AX center input produces a different seed, retain the native seed and compare with --use-captured-seed explicitly; verify its exact source RGBA and intended main-room position. Never substitute the intended seed for the captured seed.",
+    "allowedComparisonSeedPolicy": "Exact fixture seed by default; honest captured-seed recomputation is permitted only through the explicit comparer option and is recorded in the report.",
+    "comparison": "Native A versus Croquis IN classification and native C positives against exact source RGBA. Croquis TUCKED and final RGBA remain separate; no native final RGBA equivalence is assumed.",
+    "sourceReset": "Open this exact source PNG for a fresh call. Do not fill a previous call's modified layer.",
+    "probes": {
+      "inside": [
+        320,
+        230
+      ],
+      "outside": [
+        320,
+        420
+      ],
+      "opening": [
+        320,
+        359
+      ],
+      "topCore": [
+        320,
+        101
+      ],
+      "leftCore": [
+        161,
+        230
+      ],
+      "outerFringe": [
+        320,
+        99
+      ],
+      "outerCornerFringe": [
+        159,
+        99
+      ],
+      "innerPaper": [
+        320,
+        103
+      ],
+      "outsidePaper": [
+        320,
+        98
+      ]
+    },
+    "probeSourceRgba": {
+      "inside": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "outside": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "opening": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "topCore": [
+        0,
+        0,
+        0,
+        255
+      ],
+      "leftCore": [
+        0,
+        0,
+        0,
+        255
+      ],
+      "outerFringe": [
+        0,
+        0,
+        0,
+        64
+      ],
+      "outerCornerFringe": [
+        0,
+        0,
+        0,
+        16
+      ],
+      "innerPaper": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "outsidePaper": [
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  }
+}

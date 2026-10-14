@@ -1,0 +1,9 @@
+{
+  "observedAt": "2026-10-13 16:46:55 UTC",
+  "command": "ps -p 57266 -o pid,stat,flags,comm",
+  "exitCode": 0,
+  "output": "  PID STAT        F COMM\n57266 S        4004 /Users/adoll/Applications/CSP Research/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT\n",
+  "independentlyResumed": true,
+  "lastCapture": "diagonal-opening-g10-20261013T164101.307653Z-3826f25c",
+  "lastCaptureCleanObservedDetach": true
+}
