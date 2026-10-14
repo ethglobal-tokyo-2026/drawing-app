@@ -1,5 +1,5 @@
 import { observeStickerHardware, qualifyStickerScene } from "./stickerPerformance";
-import { expect } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
 import { say, sealFromBoard, signIn, signedInUserId, test } from "./helpers.ts";
 import { ipad } from "./ipad.ts";
@@ -11,6 +11,13 @@ import {
 
 test.use(ipad);
 test.beforeEach(async ({ page }) => observeStickerHardware(page));
+
+/** When the board was marked complete, on the page's clock, or null before it is. */
+const boardCompleteAt = (page: Page) =>
+  page.evaluate(async () => {
+    const { readBootMilestones } = await import("../src/performance/bootMilestones.ts");
+    return readBootMilestones().find((entry) => entry.step === "board complete")?.at ?? null;
+  });
 
 test("initial board material settles before deferred startup work begins", async ({ page }) => {
   await signIn(page, "laminate-startup", "en");
@@ -57,11 +64,6 @@ test("initial board material settles before deferred startup work begins", async
     };
   });
   await page.reload();
-  const readStartup = () =>
-    page.evaluate(async () => {
-      const { readBootMilestones } = await import("../src/performance/bootMilestones.ts");
-      return readBootMilestones().map((milestone) => milestone.step);
-    });
   await expect
     .poll(() =>
       page.evaluate(() => {
@@ -78,17 +80,18 @@ test("initial board material settles before deferred startup work begins", async
   await expect(
     page.locator(".placed-sticker canvas.sticker-material[data-state=ready]"),
   ).toHaveCount(2);
-  // Cross the old image-only quiet period: incomplete material must not release deferred imports or tray images.
-  await page.waitForTimeout(1100);
-  expect(await readStartup()).not.toContain("board complete");
-  await page.evaluate(() => {
+  // Decoded images with incomplete material must not release deferred imports or tray images.
+  const releasedAt = await page.evaluate(() => {
     const held: unknown = Reflect.get(window, "startupNormal");
     if (!held || typeof held !== "object") throw new Error("The normal upload hold is missing");
     const release: unknown = Reflect.get(held, "release");
     if (typeof release !== "function") throw new Error("The normal upload release is missing");
+    const at = performance.now();
     Reflect.apply(release, undefined, []);
+    return at;
   });
-  await expect.poll(readStartup).toContain("board complete");
+  await expect.poll(() => boardCompleteAt(page)).not.toBeNull();
+  expect(await boardCompleteAt(page)).toBeGreaterThan(releasedAt);
   await expect(page.locator(".placed-sticker canvas.sticker-material[data-error]")).toHaveCount(0);
 });
 
@@ -225,14 +228,13 @@ test("decoded board artwork waits for an actual delayed required foil commit", a
     followBoardAssembly([], { fresh: true, materials: { root: host, creases, active: true } });
   });
   await expect.poll(() => requested).toBe(true);
-  const complete = () =>
-    page.evaluate(async () => {
-      const { readBootMilestones } = await import("../src/performance/bootMilestones.ts");
-      return readBootMilestones().some((entry) => entry.step === "board complete");
-    });
-  await page.waitForTimeout(1100);
-  expect(await complete()).toBe(false);
+  // The material wait crosses one frame before it checks the surface; a board complete that
+  // skipped the held foil lands before the next frame starts.
+  const releasedAt = await page.evaluate(
+    () => new Promise<number>((frame) => requestAnimationFrame(() => requestAnimationFrame(frame))),
+  );
   release();
-  await expect.poll(complete).toBe(true);
+  await expect.poll(() => boardCompleteAt(page)).not.toBeNull();
+  expect(await boardCompleteAt(page)).toBeGreaterThan(releasedAt);
   await expect(page.locator("canvas.sticker-material")).toHaveAttribute("data-foil", "true");
 });

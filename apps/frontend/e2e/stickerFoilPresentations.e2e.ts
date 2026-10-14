@@ -97,7 +97,11 @@ test("a sharp print upgrade keeps the foil dots and cut registered", async ({ pa
     "src",
     /960/,
   );
-  await page.waitForTimeout(200);
+  // The sharp print commits with the foil it was registered to before the snapshot is compared.
+  await canvas.evaluate(async (canvas: HTMLCanvasElement) => {
+    const { whenStickerSettled } = await import("../src/stickers/stickerRenderer.ts");
+    await whenStickerSettled(canvas, undefined, AbortSignal.timeout(15000));
+  });
   expect(await border()).toEqual(before);
   expect(
     await page
@@ -211,14 +215,16 @@ test("partial coating retains paper occlusion and independent foil during sealin
 test("fractional static foil registration refreshes without preparing unchanged coverage", async ({
   page,
 }) => {
+  const side = 240,
+    fractional = side + 0.25;
   await page.setViewportSize({ width: 1100, height: 1100 });
-  await page.goto("/e2e/stickerLaminate.html?board=1&foil=1&side=240&failedPrint=1");
+  await page.goto(`/e2e/stickerLaminate.html?board=1&foil=1&side=${side}&failedPrint=1`);
   const figure = page.locator('[data-sticker="0"]');
   const fallback = figure.locator(".sticker-foil");
   await expect(fallback).toHaveAttribute("data-state", "ready");
   const before = await fallback.evaluate((element: HTMLElement) => ({
     width: element.clientWidth,
-    pitch: element.style.getPropertyValue("--foil-print-pitch"),
+    pitch: parseFloat(element.style.getPropertyValue("--foil-print-pitch")),
     origin: parseFloat(element.style.getPropertyValue("--foil-print-x")),
     coverage: element.style.getPropertyValue("--foil-coverage"),
   }));
@@ -239,14 +245,17 @@ test("fractional static foil registration refreshes without preparing unchanged 
       return result;
     };
   });
-  await figure.evaluate((element: HTMLElement) => {
-    element.style.width = element.style.height = "240.25px";
-  });
+  await figure.evaluate((element: HTMLElement, size) => {
+    element.style.width = element.style.height = `${size}px`;
+  }, fractional);
+  // The print's pitch and origin scale with the shown size; the coverage's integer frame stays.
   await expect
     .poll(() =>
-      fallback.evaluate((el: HTMLElement) => el.style.getPropertyValue("--foil-print-pitch")),
+      fallback.evaluate((el: HTMLElement) =>
+        parseFloat(el.style.getPropertyValue("--foil-print-pitch")),
+      ),
     )
-    .toBe("3.003125px 3.003125px");
+    .toBeCloseTo((before.pitch * fractional) / side, 6);
   const after = await fallback.evaluate((el: HTMLElement) => ({
     width: el.clientWidth,
     origin: parseFloat(el.style.getPropertyValue("--foil-print-x")),
@@ -254,7 +263,7 @@ test("fractional static foil registration refreshes without preparing unchanged 
   }));
   expect(after.width).toBe(before.width);
   expect(after.coverage).toBe(before.coverage);
-  expect(after.origin).toBeCloseTo((before.origin * 240.25) / 240, 6);
+  expect(after.origin).toBeCloseTo((before.origin * fractional) / side, 6);
   expect(await page.evaluate((): unknown => Reflect.get(window, "fractionalPreparation"))).toEqual({
     fetches: 0,
     encodes: 0,

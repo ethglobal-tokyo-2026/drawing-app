@@ -10,9 +10,18 @@ const language = "en";
 
 test.use({ ...ipad, viewport: { width: 1180, height: 820 } });
 
-/** How many animations and transitions run on a foil and its parts. */
-const runningOn = (foil: Locator) =>
-  foil.evaluate((el) => el.getAnimations({ subtree: true }).length);
+/** Waits for the light to land: the material draws each pose it publishes, and it stops at its aim. */
+const lightAtRest = (page: Page) =>
+  expect
+    .poll(() =>
+      page.evaluate(async () => {
+        const { currentLight } = await import("../src/stickers/light.ts");
+        const before = JSON.stringify(currentLight());
+        await new Promise((frame) => requestAnimationFrame(() => requestAnimationFrame(frame)));
+        return JSON.stringify(currentLight()) === before;
+      }),
+    )
+    .toBe(true);
 
 /** The screen over a foil's band, as it looks now. */
 async function bandPixels(page: Page, foil: Locator) {
@@ -21,8 +30,8 @@ async function bandPixels(page: Page, foil: Locator) {
   return page.screenshot({ clip: box });
 }
 
-/** Shares a device tilt with the app, and waits for the foil to reach that light and settle. */
-async function tiltLight(page: Page, foil: Locator, gamma: number, lx: string) {
+/** Shares a device tilt with the app, and waits for the light to reach it and land. */
+async function tiltLight(page: Page, gamma: number, lx: string) {
   await tiltScreen(page, 40, gamma);
   await expect
     .poll(async () =>
@@ -31,7 +40,7 @@ async function tiltLight(page: Page, foil: Locator, gamma: number, lx: string) {
       ),
     )
     .toBe(lx);
-  await expect.poll(() => runningOn(foil)).toBe(0);
+  await lightAtRest(page);
 }
 
 /** Mouse and Apple Pencil hover and contact leave the foil's current band pixels unchanged. */
@@ -50,7 +59,7 @@ async function ignorePointers(page: Page, foil: Locator, still: Buffer) {
         });
         // Wait past a pointer-driven write and transition, so a delayed change cannot pass as still.
         await page.waitForTimeout(500);
-        await expect.poll(() => runningOn(foil)).toBe(0);
+        await lightAtRest(page);
         expect((await bandPixels(page, foil)).equals(still)).toBe(true);
         if (type === "pointerdown")
           await foil.dispatchEvent("pointerup", {
@@ -80,7 +89,7 @@ test("a foil follows only device tilt, holding still through mouse and Apple Pen
   await expect(page.locator(".detail-lift__flyer")).toHaveCount(0);
 
   // Before the sensor shares a tilt, the foil holds its default light.
-  await expect.poll(() => runningOn(foil)).toBe(0);
+  await lightAtRest(page);
   const still = await bandPixels(page, foil);
   await page.waitForTimeout(500);
   expect((await bandPixels(page, foil)).equals(still)).toBe(true);
@@ -88,9 +97,9 @@ test("a foil follows only device tilt, holding still through mouse and Apple Pen
 
   // Device tilt swings the light across the screen, and the complete reflection follows it.
   await tiltScreen(page, 40, 0);
-  await tiltLight(page, foil, -32, "-1.000");
+  await tiltLight(page, -32, "-1.000");
   const left = await bandPixels(page, foil);
-  await tiltLight(page, foil, 32, "1.000");
+  await tiltLight(page, 32, "1.000");
   const right = await bandPixels(page, foil);
   expect(right.equals(left)).toBe(false);
   await ignorePointers(page, foil, right);
