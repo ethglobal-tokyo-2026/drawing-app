@@ -9,7 +9,6 @@ declare global {
     reorderGlides: {
       start: () => void;
       reorder: () => { before: number[]; after: number[]; replays: number };
-      moveLight: () => void;
       positions: () => number[];
       transitions: () => number;
       animations: () => number;
@@ -42,11 +41,12 @@ const render = () =>
         <KeepAnimations order={order.join(" ")} root={stage}>
           {order.map((id) => (
             <div key={id} data-sticker={id}>
-              {["spec", "plane", "height"].map((part) => (
-                <i key={part} className={`live-resin__${part}`}>
-                  <b data-part={part} />
+              {/* The Shop preview film's markup: its highlight is what moves with the light. */}
+              <span className="laminate-film">
+                <i>
+                  <b data-part="film" />
                 </i>
-              ))}
+              </span>
               <span className="sticker-crease">
                 <i data-part="crease" data-side="lit" />
               </span>
@@ -92,8 +92,6 @@ window.reorderGlides = {
       replays: animations().filter((a) => !(a instanceof CSSTransition)).length,
     };
   },
-  moveLight: () =>
-    window.dispatchEvent(Object.assign(new Event("deviceorientation"), { gamma: -32, beta: 40 })),
   positions,
   transitions: () => animations().filter((a) => a instanceof CSSTransition).length,
   animations: () => animations().length,

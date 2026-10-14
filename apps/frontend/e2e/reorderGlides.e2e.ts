@@ -1,27 +1,30 @@
 import { expect, test } from "@playwright/test";
 import type {} from "./reorderGlides";
+import { tiltScreen } from "./screenTilt.ts";
 
 test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/e2e/reorderGlides.html");
   await page.waitForFunction(() => Boolean(window.reorderGlides));
   await page.evaluate(() => window.reorderGlides.start());
-  await expect.poll(() => page.evaluate(() => window.reorderGlides.transitions())).toBe(8);
+  await expect.poll(() => page.evaluate(() => window.reorderGlides.transitions())).toBe(4);
 });
 
-test("reordering preserves resin glides through repeated moves", async ({ page }) => {
+test("reordering preserves a laminate film's light glide through repeated moves", async ({
+  page,
+}) => {
   for (let attempt = 0; attempt < 2; attempt++) {
-    const result = await page.evaluate(() => window.reorderGlides.reorder());
-    expect(result.before.slice(0, 3)).toEqual([40, 40, 40]);
-    for (let i = 0; i < 3; i++) {
-      expect(result.after[i]).toBeCloseTo(result.before[i], 2);
-    }
-    expect(result.replays).toBeGreaterThan(0);
+    const { before, after, replays } = await page.evaluate(() => window.reorderGlides.reorder());
+    expect(before[0]).toBe(40);
+    expect(after[0]).toBeCloseTo(before[0], 2);
+    expect(replays).toBeGreaterThan(0);
   }
-  await page.evaluate(() => window.reorderGlides.moveLight());
+  // The first reading sets the light's reference; the second tilts the phone from it.
+  await tiltScreen(page, 40, 0);
+  await tiltScreen(page, 40, -32);
   await expect
-    .poll(async () => (await page.evaluate(() => window.reorderGlides.positions())).slice(0, 3))
-    .toEqual([-100, -100, -100]);
+    .poll(async () => (await page.evaluate(() => window.reorderGlides.positions()))[0])
+    .toBe(-100);
 });
 
 test("a reordered crease follows a newer opacity without an old replay overriding it", async ({
