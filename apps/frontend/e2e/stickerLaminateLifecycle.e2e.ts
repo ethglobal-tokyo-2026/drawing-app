@@ -1464,7 +1464,7 @@ test("laminate initialization failure releases every allocated GPU context", asy
   });
   for (const result of failures) {
     expect(result.state).toBe("failed");
-    expect(result.error).toContain("Compiling the laminate shader failed");
+    expect(result.error).toContain("Compiling the sticker material shader failed");
   }
   await expect
     .poll(() =>

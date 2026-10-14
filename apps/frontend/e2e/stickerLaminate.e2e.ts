@@ -115,7 +115,7 @@ test("GPU loss shows the original print and restoration recovers the held coatin
   page.on("console", (message) => {
     if (
       message.type() === "error" &&
-      !message.text().includes("The shared laminate GPU context was lost")
+      !message.text().includes("The shared sticker material GPU context was lost")
     )
       lifecycleErrors.push(message.text());
     if (message.type() === "warning" && message.text().includes("INVALID_OPERATION"))

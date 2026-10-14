@@ -6,7 +6,8 @@ export type FoilSize = "board" | "detail" | "sheet";
 export const FOIL_STYLES = ["holo", "pink", "kyoto-seika", "gold", "silver", "roseGold"] as const;
 export type FoilStyle = (typeof FOIL_STYLES)[number];
 export type FoilTone = Extract<FoilStyle, "holo" | "pink" | "kyoto-seika">;
-type Rgb = readonly [number, number, number];
+/** A color's red, green and blue channels in [0, 1]. */
+export type Rgb = readonly [number, number, number];
 const luminance = (c: Rgb) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
 /** An sRGB channel in [0, 1] as linear light. */
 export const srgbToLinear = (v: number) =>

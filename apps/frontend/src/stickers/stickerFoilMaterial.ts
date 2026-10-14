@@ -1,13 +1,12 @@
-import { srgbToLinear, type FoilSize, type FoilStyle } from "./foilMaterial";
+import { srgbToLinear, type FoilSize, type FoilStyle, type Rgb } from "./foilMaterial";
 export interface StickerFoilMaterial {
   style: FoilStyle;
   size: FoilSize;
   /** Baked outer mask in the print's source frame; Kyoto Seika always grows the cut. */
   mask?: string;
   /** Optional authored palette in sRGB. Otherwise read the existing design tokens on admission. */
-  palette?: readonly (readonly [number, number, number])[];
+  palette?: readonly Rgb[];
 }
-type Rgb = readonly [number, number, number];
 type FoilColors = { palette: readonly Rgb[]; tint: number[]; ink: number[] };
 // The design tokens are fixed for the page's life, so each style reads them, and recalculates
 // style, once rather than on every foil a board acquires.

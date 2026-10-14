@@ -1,4 +1,10 @@
-import { createFoilLookup, createFoilSourceSamples, FOIL_ROOM, FOIL_STYLES } from "./foilMaterial";
+import {
+  createFoilLookup,
+  createFoilSourceSamples,
+  FOIL_ROOM,
+  FOIL_STYLES,
+  type Rgb,
+} from "./foilMaterial";
 import {
   acquireFoilCoverage,
   FOIL_COVERAGE_TIMEOUT_MS,
@@ -129,8 +135,9 @@ class StickerRenderer {
   readonly contextLost = (event: Event) => {
     event.preventDefault();
     this.lost = true;
-    this.cancelTextureValidations("The shared laminate GPU context was lost");
-    for (const surface of this.surfaces) surface.failed("The shared laminate GPU context was lost");
+    this.cancelTextureValidations("The shared sticker material GPU context was lost");
+    for (const surface of this.surfaces)
+      surface.failed("The shared sticker material GPU context was lost");
   };
   readonly contextRestored = () => {
     // The restored context has invalidated every resource from its previous generation.
@@ -153,31 +160,33 @@ class StickerRenderer {
         throw new Error("Sticker finish derivatives are unavailable");
       const renderLimit: unknown = gl.getParameter(gl.MAX_RENDERBUFFER_SIZE);
       if (typeof renderLimit !== "number" || renderLimit < 1024)
-        throw new Error("The laminate render buffer limit is unavailable or too small");
+        throw new Error("The sticker material render buffer limit is unavailable or too small");
       this.atlasLimit = Math.min(2048, renderLimit);
       const shader = (kind: number, source: string) => {
         const result = gl.createShader(kind);
-        if (!result) throw new Error("Allocating the laminate shader failed");
+        if (!result) throw new Error("Allocating the sticker material shader failed");
         gl.shaderSource(result, source);
         gl.compileShader(result);
         if (!gl.getShaderParameter(result, gl.COMPILE_STATUS)) {
           const message = gl.getShaderInfoLog(result);
           gl.deleteShader(result);
-          throw new Error(`Compiling the laminate shader failed: ${message}`);
+          throw new Error(`Compiling the sticker material shader failed: ${message}`);
         }
         return result;
       };
       const vertex = shader(gl.VERTEX_SHADER, stickerVertex);
       const fragment = shader(gl.FRAGMENT_SHADER, stickerFragment);
       const program = gl.createProgram();
-      if (!program) throw new Error("Allocating the laminate program failed");
+      if (!program) throw new Error("Allocating the sticker material program failed");
       gl.attachShader(program, vertex);
       gl.attachShader(program, fragment);
       gl.linkProgram(program);
       gl.deleteShader(vertex);
       gl.deleteShader(fragment);
       if (!gl.getProgramParameter(program, gl.LINK_STATUS))
-        throw new Error(`Linking the laminate program failed: ${gl.getProgramInfoLog(program)}`);
+        throw new Error(
+          `Linking the sticker material program failed: ${gl.getProgramInfoLog(program)}`,
+        );
       this.program = program;
       for (const name of [
         "printImage",
@@ -203,7 +212,7 @@ class StickerRenderer {
         this.uniforms.set(name, gl.getUniformLocation(program, name));
       gl.useProgram(program);
       const buffer = gl.createBuffer();
-      if (!buffer) throw new Error("Allocating laminate geometry failed");
+      if (!buffer) throw new Error("Allocating the sticker material geometry failed");
       this.buffer = buffer;
       gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
       gl.bufferData(
@@ -218,7 +227,7 @@ class StickerRenderer {
       // The flat normal validates immediately; every later upload validates as a batch.
       const flatError = gl.getError();
       if (flatError !== gl.NO_ERROR || gl.isContextLost())
-        throw new Error(`Uploading the flat laminate texture failed (${flatError})`);
+        throw new Error(`Uploading the sticker material flat normal texture failed (${flatError})`);
       this.stopLight = subscribeLight(() =>
         timeOurWork("laminate", () => {
           this.cancelRefresh();
@@ -249,10 +258,10 @@ class StickerRenderer {
   ): WebGLTexture {
     const gl = this.gl;
     if (this.disposed || this.lost || gl.isContextLost())
-      throw new Error("The laminate GPU context is unavailable during texture upload");
+      throw new Error("The sticker material GPU context is unavailable during texture upload");
     if (this.textureValidationFailure) throw new Error(this.textureValidationFailure);
     const texture = gl.createTexture();
-    if (!texture) throw new Error("Allocating a laminate texture failed");
+    if (!texture) throw new Error("Allocating a sticker material texture failed");
     try {
       gl.bindTexture(gl.TEXTURE_2D, texture);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -292,7 +301,7 @@ class StickerRenderer {
           }
           if (failure) {
             if (!this.lost && !this.gl.isContextLost()) this.gl.deleteTexture(texture);
-            reject(new Error(`Validating laminate texture ${url} failed: ${failure}`));
+            reject(new Error(`Validating sticker material texture ${url} failed: ${failure}`));
           } else resolve(texture);
         },
       };
@@ -301,7 +310,9 @@ class StickerRenderer {
         return;
       }
       if (this.disposed || this.lost || this.gl.isContextLost() || this.textureValidationFailure) {
-        pending.finish(this.textureValidationFailure ?? "The laminate GPU context is unavailable");
+        pending.finish(
+          this.textureValidationFailure ?? "The sticker material GPU context is unavailable",
+        );
         return;
       }
       this.textureValidations.add(pending);
@@ -327,13 +338,13 @@ class StickerRenderer {
     let failure: string | undefined;
     try {
       if (this.disposed || this.lost || this.gl.isContextLost())
-        failure = "The laminate GPU context is unavailable";
+        failure = "The sticker material GPU context is unavailable";
       else {
         for (let checks = 0; checks < MAX_TEXTURE_ERROR_CHECKS; checks++) {
           const error = this.gl.getError();
           if (error !== this.gl.NO_ERROR) errors.push(error);
           if (this.lost || this.gl.isContextLost()) {
-            failure = "The shared laminate GPU context was lost";
+            failure = "The shared sticker material GPU context was lost";
             break;
           }
           if (error === this.gl.NO_ERROR) break;
@@ -344,11 +355,11 @@ class StickerRenderer {
         }
       }
     } catch (error) {
-      failure = `Checking laminate texture uploads threw: ${String(error)}`;
+      failure = `Checking sticker material texture uploads threw: ${String(error)}`;
       this.textureValidationFailure = failure;
     }
     if (errors.length || failure) {
-      failure = `Uploading the laminate texture batch failed (${errors.join(", ") || "no error code"})${failure ? `: ${failure}` : ""}; affected URLs: ${urls}`;
+      failure = `Uploading the sticker material texture batch failed (${errors.join(", ") || "no error code"})${failure ? `: ${failure}` : ""}; affected URLs: ${urls}`;
       if (this.textureValidationFailure) {
         this.textureValidationFailure = failure;
         this.cancelRefresh();
@@ -383,7 +394,7 @@ class StickerRenderer {
     const resources = acquired.coverage.then(async (coverage) => {
       signal.throwIfAborted();
       if (this.disposed || this.lost)
-        throw new Error("Outer coverage belongs to a retired GPU context");
+        throw new Error(`Foil coverage for ${cut} belongs to a retired GPU context`);
       const lookupData = createFoilLookup(material.style, colors.palette);
       const lookup = this.acquireFoilLookup(lookupData);
       let outer: Promise<WebGLTexture>;
@@ -413,9 +424,10 @@ class StickerRenderer {
               palette:
                 material.palette &&
                 Object.freeze(
-                  material.palette.map((color) =>
-                    Object.freeze([...color] as [number, number, number]),
-                  ),
+                  material.palette.map(([red, green, blue]) => {
+                    const color: Rgb = [red, green, blue];
+                    return Object.freeze(color);
+                  }),
                 ),
             }),
             frame: Object.freeze({ width, height }),
@@ -753,7 +765,9 @@ class StickerRenderer {
     const height = Math.max(...tiles.map((tile) => tile.y + tile.h));
     const gl = this.gl;
     if (gl.drawingBufferWidth < width || gl.drawingBufferHeight < height)
-      throw new Error("The laminate GPU drawing buffer is smaller than its requested batch");
+      throw new Error(
+        `The sticker material GPU drawing buffer is smaller than the batch for ${tiles.map((tile) => tile.surface.options.print).join(", ")}`,
+      );
     gl.useProgram(this.program);
     gl.enable(gl.SCISSOR_TEST);
     gl.scissor(0, gl.drawingBufferHeight - height, width, height);
@@ -898,7 +912,10 @@ class StickerRenderer {
         canvas.height = h;
       }
       const context = canvas.getContext("2d");
-      if (!context) throw new Error("The sticker snapshot 2D context is unavailable");
+      if (!context)
+        throw new Error(
+          `The sticker snapshot 2D context for ${surface.options.print} is unavailable`,
+        );
       context.globalCompositeOperation = "copy";
       context.drawImage(this.canvas, x, y, w, h, 0, 0, w, h);
       if (recording) {
@@ -962,7 +979,7 @@ class StickerRenderer {
   destroy() {
     if (this.disposed) return;
     this.disposed = true;
-    this.cancelTextureValidations("The shared laminate renderer was destroyed");
+    this.cancelTextureValidations("The shared sticker material renderer was destroyed");
     this.cancelRefresh();
     cancelAnimationFrame(this.revealFrame);
     this.revealFrame = 0;
@@ -1220,8 +1237,8 @@ class MountedSurface {
     this.finishCreaseReveal();
     this.canvas.dataset.state = "failed";
     this.canvas.dataset.error = why;
-    console.error(`Rendering sticker laminate for ${this.options.print} failed: ${why}`);
-    notePerformance("laminate", why);
+    console.error(`Rendering the sticker material for ${this.options.print} failed: ${why}`);
+    notePerformance("sticker material", why);
     this.settleWaiters();
   }
   loadError(kind: "printCut" | "normal", why: string | null) {
@@ -1244,8 +1261,8 @@ class MountedSurface {
         this.normalUrl === this.options.normal;
       // A retained print can complete the bend next frame; its paint waits for that actual copy.
       this.finishCreaseReveal(!completesReadyReveal);
-      console.error(`Rendering sticker laminate for ${this.options.print} failed: ${why}`);
-      notePerformance("laminate", why);
+      console.error(`Rendering the sticker material for ${this.options.print} failed: ${why}`);
+      notePerformance("sticker material", why);
       // A failed print upgrade can unblock a ready normal over the retained print and cut.
       if (completesReadyReveal) this.draw();
     }
@@ -1430,8 +1447,8 @@ class MountedSurface {
         if (foil && !foilResources) gpu.releaseFoil(foil.key);
         this.foilError = foilFailure;
         if (foilFailure) {
-          console.error(`Rendering sticker laminate for ${print} failed: ${foilFailure}`);
-          notePerformance("laminate", foilFailure);
+          console.error(`Rendering the sticker material for ${print} failed: ${foilFailure}`);
+          notePerformance("sticker material", foilFailure);
         }
         this.textures = [printTexture, cutTexture, this.normalTexture ?? gpu.flat];
         this.snapshotPending = true;
