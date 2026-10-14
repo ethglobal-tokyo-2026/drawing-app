@@ -173,7 +173,7 @@ Avoid hyperspecific tests or writing tests as a knee jerk reaction. Think about 
 
 - Plans are not durable docs. They are written before work starts, updated as it progresses, purged when the work is done.
 - You will likely have to iterate on new plans a few times before they're adopted. In this early planning phase on you don't need to record the process behind your research, just update items with the latest facts.
-- New plans can be committed directly to main unless you're already on a worktree/branch
+- New plans and specs are committed directly to main, even from a session working in a worktree
 - Subagents mark their items complete as their work merges to main and can record major progress and stumbling blocks in plan docs
 - When a plan gets to >3k lines while mid execution, consider running a subagent to summarize/purge/update transient comments, research findings, and other bloat that might accumulate as subagents write to the plan to communicate their progress to parents and others. At 5k+, this becomes mandatory, no plan should be that long
 - When writing plans directly to main stage **and** commit with explicit pathspecs (`git commit -m "..." -- <paths>`) so you don't sweep unrelated work into your commit
