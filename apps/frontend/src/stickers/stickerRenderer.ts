@@ -1,4 +1,4 @@
-import { createFoilLookup, createFoilSourceSamples } from "./foilMaterial";
+import { createFoilLookup, createFoilSourceSamples, FOIL_ROOM } from "./foilMaterial";
 import {
   acquireFoilCoverage,
   FOIL_COVERAGE_TIMEOUT_MS,
@@ -80,7 +80,7 @@ type FoilResources = {
   ink: number[];
   material: StickerFoilMaterial;
 };
-const foilSources = createFoilSourceSamples(0.02, -0.025, 0.1, 0.145, 3);
+const foilSources = createFoilSourceSamples(FOIL_ROOM);
 const materialIdentity = (options: Pick<StickerSurface, "foil" | "finish" | "normalBounds">) =>
   JSON.stringify([options.finish, options.foil, options.normalBounds]);
 
@@ -192,12 +192,9 @@ class StickerRenderer {
         "amounts",
         "hasFoil",
         "foilLookup",
-        "foilSource",
-        "foilIllumination",
         "foilTint",
         "foilInk",
         "foilStyle",
-        "foilSourceGrid",
         "foilSources[0]",
         "opaquePaper",
       ])
@@ -822,13 +819,9 @@ class StickerRenderer {
       );
       gl.uniform1f(this.uniforms.get("hasFoil") ?? null, foil ? 1 : 0);
       if (foil) {
-        gl.uniform4f(this.uniforms.get("foilSource") ?? null, 0.02, -0.025, 0.1, 0.145);
         gl.uniform4fv(this.uniforms.get("foilSources[0]") ?? null, foilSources);
-        // A lit room for the metal; the window keeps the paper's radiance so highlights line up.
-        gl.uniform2f(this.uniforms.get("foilIllumination") ?? null, 1, 3.06);
         gl.uniform3fv(this.uniforms.get("foilTint") ?? null, foil.tint);
         gl.uniform3fv(this.uniforms.get("foilInk") ?? null, foil.ink);
-        gl.uniform1f(this.uniforms.get("foilSourceGrid") ?? null, 3);
         gl.uniform1f(
           this.uniforms.get("foilStyle") ?? null,
           ["holo", "pink", "kyoto-seika", "gold", "silver", "roseGold"].indexOf(

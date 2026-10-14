@@ -1,21 +1,24 @@
+import { FOIL_ROOM, type FoilRoom } from "./foilMaterial";
+import { glslFloat as f } from "./glsl";
+
 /**
  * Lookup RGBA8: RGB is linear chromaticity / max channel; A²×8 is integrated Y.
  * Coordinates: u in [−2,2], sigma in [.035,.22], texel-center mapped to 512×32.
- * Source xy/zw is the overhead window's center/half extent; illumination is room level/window radiance.
- * foilSources[16]: the window's grid² quadrature samples (unit incident xyz, solid angle), then room
- * lamps (unit incident xyz, solid angle × radiance relative to the room level). Unused entries are zero.
+ * The room's window, light level and quadrature grid are compiled in.
+ * foilSources[16]: createFoilSourceSamples for the same room: the window's grid² quadrature samples
+ * (unit incident xyz, solid angle), then room lamps (unit incident xyz, solid angle × radiance
+ * relative to the room level). Unused entries are zero.
  * Style: holo=0, pink=1, Kyoto Seika=2, gold/silver/roseGold=3/4/5. Tint and ink are linear RGB.
  * shadeFoil receives print coordinates in screentone tiles, shared oriented normal/view/groove
  * direction and pixel footprints.
  */
-export const foilFragment = `
+export function createFoilFragment({ window, level, grid }: FoilRoom) {
+  const extent = `vec2(${f(window.halfWidth)},${f(window.halfHeight)})`;
+  return `
 uniform sampler2D foilLookup;
-uniform vec4 foilSource;
-uniform vec2 foilIllumination;
 uniform vec3 foilTint;
 uniform vec3 foilInk;
 uniform float foilStyle;
-uniform float foilSourceGrid;
 uniform vec4 foilSources[16];
 float foilY(vec3 c){return dot(c,vec3(.2126,.7152,.0722));}
 vec3 foilAllowedHue(vec3 c){
@@ -29,7 +32,7 @@ vec3 foilShoulder(vec3 c){
  if(peak<=.75)return c;
  return c*(.75+.25*(1.-exp(-4.*(peak-.75))))/peak;
 }
-vec2 foilWindow(vec2 p){return 1.-smoothstep(foilSource.zw-.015,foilSource.zw+.015,abs(p-foilSource.xy));}
+vec2 foilWindow(vec2 p){return 1.-smoothstep(${extent}-${f(window.feather)},${extent}+${f(window.feather)},abs(p-vec2(${f(window.x)},${f(window.y)})));}
 float foilPanel(vec2 p,vec2 center,vec2 extent){
  vec2 d=abs(p-center)-extent;
  return 1.-smoothstep(-.07,.07,max(d.x,d.y));
@@ -78,7 +81,7 @@ vec3 foilDiffraction(vec3 n,vec3 view,vec3 tangent,float footprint,float shift){
   vec4 lookup=texture2D(foilLookup,(coord*vec2(511.,31.)+.5)/vec2(512.,32.));
   float energy=lookup.a*lookup.a*8.;
   vec3 color=lookup.rgb/max(foilY(lookup.rgb),.000001)*energy;
-  float light=float(i)<foilSourceGrid*foilSourceGrid?foilIllumination.y:foilIllumination.x;
+  float light=float(i)<${f(grid * grid)}?${f(window.radiance)}:${f(level)};
   sum+=color*exp(-.5*v*v/(sigma*sigma))/(2.50662827463*sigma)*source.w*light;
  }
  return sum;
@@ -89,8 +92,8 @@ vec3 shadeFoil(vec2 print,float polar,vec3 n,vec3 view,vec3 tangent,float printF
  float coat=foilCoat(cosine);
  vec3 reflected=normalize(2.*cosine*n-view);
  bool chromatic=foilStyle<1.5;
- float room=foilRoom(reflected)*foilIllumination.x;
- float sources=foilWindowLight(reflected)*foilIllumination.y;
+ float room=foilRoom(reflected)*${f(level)};
+ float sources=foilWindowLight(reflected)*${f(window.radiance)};
  float environment=room+sources;
  vec3 f0=pow((vec3(.91,.92,.92)+.055)/1.055,vec3(2.4));
  vec3 conductor=f0+(1.-f0)*pow(1.-cosine,5.);
@@ -116,7 +119,7 @@ vec3 shadeFoil(vec2 print,float polar,vec3 n,vec3 view,vec3 tangent,float printF
   underlying=conductor*environment*foilTint;
  }
  if(foilStyle>1.5&&foilStyle<2.5){
-  vec3 ink=underlying*.04+foilInk*foilIllumination.x;
+  vec3 ink=underlying*.04+foilInk*${f(level)};
   underlying=mix(underlying,ink,foilDots(print,printFootprint));
  }
  vec3 layered=underlying*(1.-coat)*(1.-coat)+vec3(coat*environment*quiet);
@@ -124,3 +127,6 @@ vec3 shadeFoil(vec2 print,float polar,vec3 n,vec3 view,vec3 tangent,float printF
  return foilShoulder(layered);
 }
 `;
+}
+
+export const foilFragment = createFoilFragment(FOIL_ROOM);

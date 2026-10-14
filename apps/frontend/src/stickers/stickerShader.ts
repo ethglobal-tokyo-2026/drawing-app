@@ -1,4 +1,8 @@
 import { foilFragment } from "./foilShader";
+import { glslFloat as f } from "./glsl";
+import { OVERHEAD_WINDOW as overhead } from "./overheadWindow";
+
+const windowExtent = `vec2(${f(overhead.halfWidth)},${f(overhead.halfHeight)})`;
 /** Shared shader: air/film Fresnel, a finite camera, and a nine-tap neutral environment filter. */
 export const stickerVertex = `
 attribute vec2 position;
@@ -25,7 +29,7 @@ uniform float hasFoil;
 uniform float opaquePaper;
 ${foilFragment}
 vec2 windowAxes(vec2 p) {
-  return 1.-smoothstep(vec2(.10,.145)-.015,vec2(.10,.145)+.015,abs(p-vec2(.02,-.025)));
+  return 1.-smoothstep(${windowExtent}-${f(overhead.feather)},${windowExtent}+${f(overhead.feather)},abs(p-vec2(${f(overhead.x)},${f(overhead.y)})));
 }
 float environment(vec3 r) {
   if(r.z<=0.) return .14;
@@ -33,7 +37,7 @@ float environment(vec3 r) {
   // The rectangular source and 1:2:1 filter are separable: three axis samples
   // give the same nine-tap reflection with fewer fragment calculations.
   vec2 filtered=(windowAxes(p-roughness)+2.*windowAxes(p)+windowAxes(p+roughness))*.25;
-  return .14+3.06*filtered.x*filtered.y;
+  return .14+${f(overhead.radiance)}*filtered.x*filtered.y;
 }
 float linear(float v) { return v<=.04045?v/12.92:pow((v+.055)/1.055,2.4); }
 float display(float v) { return v<=.0031308?v*12.92:1.055*pow(v,1./2.4)-.055; }

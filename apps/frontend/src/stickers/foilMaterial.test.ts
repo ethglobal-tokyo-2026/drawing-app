@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createFoilSourceSamples, createFoilLookup } from "./foilMaterial";
+import { createFoilSourceSamples, createFoilLookup, FOIL_ROOM } from "./foilMaterial";
 const palette = [
   [1, 0.2, 0.5],
   [1, 0.8, 0.2],
@@ -20,7 +20,7 @@ describe("foil material", () => {
 });
 
 it("integrates the source feather and solid angle without adding edge energy", () => {
-  const samples = createFoilSourceSamples(0.02, -0.025, 0.1, 0.145, 4, []);
+  const samples = createFoilSourceSamples({ ...FOIL_ROOM, grid: 4, lamps: [] });
   let actual = 0;
   for (let i = 3; i < samples.length; i += 4) actual += samples[i];
   let dense = 0;
@@ -29,18 +29,21 @@ it("integrates the source feather and solid angle without adding edge energy", (
     const t = Math.max(0, Math.min(1, (v - a) / (b - a)));
     return t * t * (3 - 2 * t);
   };
+  const { x: cx, y: cy, halfWidth, halfHeight, feather } = FOIL_ROOM.window;
+  const hx = halfWidth + feather,
+    hy = halfHeight + feather;
   for (let y = 0; y < n; y++)
     for (let x = 0; x < n; x++) {
-      const px = ((2 * (x + 0.5)) / n - 1) * 0.115,
-        py = ((2 * (y + 0.5)) / n - 1) * 0.16;
+      const px = ((2 * (x + 0.5)) / n - 1) * hx,
+        py = ((2 * (y + 0.5)) / n - 1) * hy;
       dense +=
-        ((1 - smooth(0.085, 0.115, Math.abs(px))) *
-          (1 - smooth(0.13, 0.16, Math.abs(py))) *
+        ((1 - smooth(halfWidth - feather, hx, Math.abs(px))) *
+          (1 - smooth(halfHeight - feather, hy, Math.abs(py))) *
           4 *
-          0.115 *
-          0.16) /
+          hx *
+          hy) /
         n ** 2 /
-        (1 + (px + 0.02) ** 2 + (py - 0.025) ** 2) ** 1.5;
+        (1 + (px + cx) ** 2 + (py + cy) ** 2) ** 1.5;
     }
   expect(actual / dense).toBeCloseTo(1, 5);
 });
