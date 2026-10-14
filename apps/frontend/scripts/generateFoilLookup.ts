@@ -1,6 +1,13 @@
-/** Regenerate after changing grating optics or spectral data: pnpm exec node docs/research/sticker-foil/generate-lookup.mts */
+/**
+ * Writes src/stickers/foilLookupBasis.json, the foil's palette-independent diffraction lookup basis.
+ * Run it after changing the grating optics below or the spectral data: pnpm --filter frontend foil-lookup
+ *
+ * src/stickers/foilSpectrum.json rows are [wavelength nm, CIE D65 relative spectral power, CIE 1931
+ * photopic luminous efficiency], 380–780 nm at 5 nm, taken from colour-science's datasets
+ * (https://github.com/colour-science/colour).
+ */
 import { writeFile } from "node:fs/promises";
-import spectrum from "../../../apps/frontend/src/stickers/foilSpectrum.json" with { type: "json" };
+import spectrum from "../src/stickers/foilSpectrum.json" with { type: "json" };
 const width = 512,
   height = 32;
 const white = spectrum.reduce((sum, row) => sum + row[1] * row[2], 0);
@@ -50,7 +57,7 @@ for (let y = 0; y < height; y++) {
   if (y % 8 === 0) console.log(`Integrated spectral row ${y + 1}/${height}`);
 }
 await writeFile(
-  new URL("../../../apps/frontend/src/stickers/foilLookupBasis.json", import.meta.url),
+  new URL("../src/stickers/foilLookupBasis.json", import.meta.url),
   JSON.stringify(
     {
       width,

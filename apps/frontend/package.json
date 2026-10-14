@@ -13,6 +13,7 @@
     "test:sticker-performance": "env -u NO_COLOR STICKER_FRAME_BUDGET=on playwright test --config playwright.performance.config.ts stickerLaminateFrames.e2e.ts stickerLaminateSelection.e2e.ts stickerBoardDrag.e2e.ts stickerLaminateFlight.e2e.ts --grep 'display frame budget|selecting overlapping|dragging a large overlapping|21 distinct large creased'",
     "chat-menus": "tsx --tsconfig tsconfig.scripts.json scripts/renderChatMenus.tsx",
     "croquis-sans": "uv run --script scripts/buildCroquisSans.py",
+    "foil-lookup": "tsx --tsconfig tsconfig.scripts.json scripts/generateFoilLookup.ts",
     "test:ipad-safari": "tsx --tsconfig tsconfig.scripts.json scripts/ipadSafari.ts",
     "preview": "vite preview",
     "demo:build": "vite build --config vite.demo.config.ts",
