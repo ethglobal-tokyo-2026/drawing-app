@@ -49,11 +49,6 @@ export const explore = {
   },
   /** The sticker pile: each day's stickers heaped on its own perforated floor. */
   pile: {
-    /** Explore tab, above the sticker pile: the tap that opens its Original Artist and the hold that picks it up */
-    invitation: {
-      en: "Tap to meet the artist. Hold to flick a sticker.",
-      ja: "タップで描いた人へ。<wbr/>長押しでシールを投げてみよう。",
-    },
     /** Explore tab, Stickers view: screen readers' heading for today's heap */
     today: { en: "Today", ja: "今日" },
     /** Explore tab, Stickers view: screen readers' heading for yesterday's heap; older days are their date, in the app's language */
@@ -134,13 +129,13 @@ export const explore = {
       },
     },
   },
-  /** The leaderboards' names: their tabs on a phone, and the label over each board on an iPad. */
+  /** The leaderboards' names, on the tabs that pick which one shows. */
   leaderboards: {
-    /** Explore tab, This week view: the first board, ranking people by the gratitude they earned this week; its tab on a phone, the label over its board on an iPad */
+    /** Explore tab, This week: the first leaderboard's tab, under its heart, ranking people by the gratitude they earned this week */
     mostGratitude: { en: "Most gratitude", ja: "感謝の数" },
-    /** Explore tab, This week view: the second board, ranking people by the most hits in one gratitude combo this week; its tab on a phone, the label over its board on an iPad */
+    /** Explore tab, This week: the second leaderboard's tab, under its speed lines, ranking people by the most hits in one gratitude combo this week */
     bestCombo: { en: "Best combo", ja: "最高コンボ" },
-    /** Explore tab, This week view: the third board, ranking people by their current streak of days sealing a sticker; its tab on a phone, the label over its board on an iPad */
+    /** Explore tab, This week: the third leaderboard's tab, under its flame, ranking people by their current streak of days sealing a sticker */
     longestStreak: { en: "Streak", ja: "連続日数" },
   },
   /** A leaderboard row's figure. A unit in <small> is set small beside its number. */

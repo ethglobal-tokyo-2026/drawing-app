@@ -339,7 +339,7 @@ describe("ExploreScreen's This week", () => {
     });
     expect(textsOf(host, ".figure small")).toEqual(["days", "day"]);
     expect(tab(host, "Streak").getAttribute("aria-selected")).toBe("true");
-    // The streak's own mark: its fire before each figure and on its category tab.
+    // The streak's own mark: its fire before each figure and on its leaderboard's tab.
     expect(host.querySelectorAll(".figure--streak svg")).toHaveLength(2);
     expect(host.querySelector(".leaderboard-tabs")?.getAttribute("data-selected")).toBe(
       "longestStreak",
@@ -424,7 +424,7 @@ describe("ExploreScreen's This week", () => {
     expect(host.querySelector(".leaderboard")).not.toBeNull();
   });
 
-  it("moves between ranking categories with the keyboard and shows only the selected ranking", async () => {
+  it("moves between leaderboards with the keyboard and shows only the picked one", async () => {
     const host = await openBoard("Most gratitude", {
       mostGratitude: [{ person: people.mika, value: 1234 }],
       bestCombo: [{ person: people.ken, value: 64 }],
@@ -447,7 +447,7 @@ describe("ExploreScreen's This week", () => {
     await press("Most gratitude", "ArrowLeft", "Streak", "@bob");
   });
 
-  it("remembers the selected ranking after returning from Stickers and searching for an artist", async () => {
+  it("remembers the picked leaderboard after returning from Stickers and searching for an artist", async () => {
     const host = await openBoard("Best combo", {
       mostGratitude: [{ person: people.mika, value: 1234 }],
       bestCombo: [{ person: people.ken, value: 64 }],
@@ -465,7 +465,7 @@ describe("ExploreScreen's This week", () => {
     expect(textsOf(host, ".leaderboard .row-names b")).toEqual(["@ken"]);
   });
 
-  it("can change ranking again after its previous fade finishes while Stickers is open", async () => {
+  it("can change leaderboard again after its previous fade finishes while Stickers is open", async () => {
     const animate = vi.spyOn(Element.prototype, "animate");
     onTestFinished(() => animate.mockRestore());
     const host = await openExplore(
@@ -480,7 +480,7 @@ describe("ExploreScreen's This week", () => {
 
     act(() => tab(host, "Best combo").click());
     const fade = animate.mock.results.at(-1);
-    if (fade?.type !== "return") throw new Error("the ranking's fade did not start");
+    if (fade?.type !== "return") throw new Error("the leaderboard's fade did not start");
     act(() => tab(host, "Stickers").click());
     expect(host.querySelectorAll(".leaderboard")).toHaveLength(0);
     // happy-dom ends animations on real timers; finish the fade while its list is detached.
@@ -773,7 +773,7 @@ describe("ExploreScreen on an iPad", () => {
     longestStreak: [{ person: people.bob, value: 3 }],
   };
 
-  /** Explore on today's sticker and the weekly rankings, with an older page loaded: its pile as laid out. */
+  /** Explore on today's sticker and every leaderboard, with an older page loaded: its pile as laid out. */
   async function withOlderPage() {
     const older = { stickers: unGiven(sticker({ sealedAt: minutesAgo(50 * 60) })), before: null };
     const explorePile = vi.fn<ApiClient["explorePile"]>(() => Promise.resolve(older));
@@ -796,7 +796,7 @@ describe("ExploreScreen on an iPad", () => {
     expect(textsOf(host, ".explore-week .leaderboard .row-names b")).toEqual(["@mika"]);
   });
 
-  it("shows one selected ranking upright and changes it through the category tabs", async () => {
+  it("shows one leaderboard upright and changes it through its tabs", async () => {
     reduceMotion();
     onIpad(UPRIGHT);
     const host = await openExplore(exploreWith([], BOARDS));
@@ -812,7 +812,7 @@ describe("ExploreScreen on an iPad", () => {
     expect(textsOf(host, ".leaderboard .row-names b")).toEqual(["@ken"]);
   });
 
-  it("keeps the selected ranking beside search results and preserves the pile's pages", async () => {
+  it("keeps the picked leaderboard beside search results and preserves the pile's pages", async () => {
     reduceMotion();
     onIpad(SIDEWAYS);
     const { host, explorePile, layers } = await withOlderPage();
@@ -879,7 +879,7 @@ describe("ExploreScreen on an iPad", () => {
     expect(explorePile).toHaveBeenCalledTimes(1);
   });
 
-  it("remembers the selected ranking when turning between the split view and the upright view", async () => {
+  it("remembers the picked leaderboard when turning between the split view and the upright view", async () => {
     reduceMotion();
     const ipad = onIpad(SIDEWAYS);
     const host = await openExplore(exploreWith([], BOARDS));

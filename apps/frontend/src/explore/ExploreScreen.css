@@ -94,7 +94,7 @@
   outline-offset: 3px;
 }
 
-/* The connected view switch carries Explore's aqua; metric tabs carry their own printed marks. */
+/* The view switch's label is Explore's aqua; the leaderboards' tabs carry their own marks instead. */
 .view-switch .sliding-tabs__label {
   background: var(--aqua);
 }
@@ -172,22 +172,6 @@
 }
 
 /* ---------- This week ---------- */
-
-.pile-intro {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 16px;
-  color: var(--graphite);
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.pile-intro > svg {
-  flex: none;
-  color: var(--ink);
-  rotate: -12deg;
-}
 
 .week-title {
   margin: 0;
@@ -516,10 +500,6 @@
     width: 100%;
     max-width: 540px;
     margin-inline: auto;
-  }
-
-  .explore-view > .pile-intro {
-    margin-inline: 0;
   }
 }
 

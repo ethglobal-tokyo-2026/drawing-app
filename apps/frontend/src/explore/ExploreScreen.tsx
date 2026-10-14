@@ -17,7 +17,7 @@ import { toPerson } from "../api/views";
 import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { formatCount, formatTimeOfDay, formatWeekday } from "../i18n/format";
 import { Trans, useTranslation } from "../i18n/react";
-import { ArrowRight, At, GratitudeIcon, HandPointing, StreakIcon, X } from "../icons";
+import { ArrowRight, At, GratitudeIcon, StreakIcon, X } from "../icons";
 import { formatHandle } from "../stickers/format";
 import { useNsfwOptInKey } from "../stickers/nsfw";
 import { PhotoSticker } from "../ui/PhotoSticker";
@@ -263,14 +263,7 @@ function useRowDeal(first: Leaderboard) {
   const fading = useRef<{ to: Leaderboard; fade: Animation } | null>(null);
   const deal = useRef(false);
 
-  useEffect(
-    () => () => {
-      const pending = fading.current;
-      fading.current = null;
-      pending?.fade.cancel();
-    },
-    [],
-  );
+  useEffect(() => () => fading.current?.fade.cancel(), []);
 
   const dealRows = (to: Leaderboard) => {
     deal.current = true;
@@ -296,23 +289,22 @@ function useRowDeal(first: Leaderboard) {
       fill: "forwards",
     });
     fading.current = { to, fade };
-    const settleFade = () => {
-      const pending = fading.current;
-      if (pending?.fade !== fade) return;
-      // The list may have left the screen. Release its fade before updating the selected rows,
-      // so a later metric starts a new transition even when no list is currently attached.
-      fading.current = null;
-      fade.cancel();
-      dealRows(pending.to);
+    const dealFaded = () => {
+      if (fading.current?.fade === fade) dealRows(fading.current.to);
     };
-    // Cancellation is an interrupted transition: show the latest selection just as on completion.
-    fade.finished.then(settleFade, settleFade);
+    // Cancelled, the rows it was heading for go in all the same.
+    fade.finished.then(dealFaded, dealFaded);
   };
 
   useLayoutEffect(() => {
     const rows = list.current;
     if (!deal.current) return;
     deal.current = false;
+    // The new rows are in, so the faded list can show again under them. The list may have left the
+    // screen mid-fade, and the fade is released then too, or the next tap would only wait on it.
+    const faded = fading.current;
+    fading.current = null;
+    faded?.fade.cancel();
     if (!rows) return;
     if (reduced) {
       rows.animate([{ opacity: 0 }, { opacity: 1 }], { duration: ROWS_FADE_MS });
@@ -407,7 +399,7 @@ interface WeekProps {
   showTitle: boolean;
 }
 
-/** The metric's own mark: a heart, the hit counter's speed lines, or the streak's flame. */
+/** A leaderboard's own mark on its tab: a heart, the hit counter's speed lines, or the streak's flame. */
 function LeaderboardMark({ board }: { board: Leaderboard }) {
   if (board === "mostGratitude")
     return <GratitudeIcon className="leaderboard-mark" size={18} aria-hidden />;
@@ -424,7 +416,7 @@ function LeaderboardMark({ board }: { board: Leaderboard }) {
   );
 }
 
-/** Metric index tabs and their ranking share one paper, on a phone or beside the pile on an iPad. */
+/** The leaderboards' index tabs and the picked one's rows share one paper, in every layout. */
 function ThisWeek({
   leaderboards,
   meId,
@@ -493,7 +485,7 @@ function LoadingStatus() {
   );
 }
 
-/** This week in outline while it loads, with the same selected metric and paper in every layout. */
+/** This week in outline while it loads, on the leaderboard already picked. */
 function ThisWeekLoading({ board, showTitle }: { board: Leaderboard; showTitle: boolean }) {
   const { t } = useTranslation();
   return (
@@ -542,17 +534,6 @@ function PileLoading() {
       </div>
       <LoadingHeap />
     </div>
-  );
-}
-
-/** A quiet invitation to lift a sticker and find its Original Artist. */
-function PileIntro() {
-  const { t } = useTranslation();
-  return (
-    <p className="pile-intro">
-      <HandPointing size={18} weight="bold" aria-hidden />
-      <span className="keep-phrases">{t(($) => $.explore.pile.invitation)}</span>
-    </p>
   );
 }
 
@@ -733,7 +714,7 @@ export function ExploreScreen({ onOpenArtist, onOpenMyBoard, covered }: Props) {
     return () => clearTimeout(id);
   }, [q]);
   const [view, setView] = useState<View>("stickers");
-  // The metric belongs to Explore, so switching views, searching, or turning an iPad keeps it.
+  // The picked leaderboard is Explore's, so switching views, searching or turning an iPad keeps it.
   const { board, shown, select, list } = useRowDeal("mostGratitude");
   // The pile's images are picked by your NSFW opt-in: a change loads it from its first page again,
   // and the old pages go with <Stickers>, which the loading state unmounts.
@@ -848,7 +829,6 @@ export function ExploreScreen({ onOpenArtist, onOpenMyBoard, covered }: Props) {
         ) : (
           <>
             {columns === 1 && week}
-            {showsPile && <PileIntro />}
             {pile}
           </>
         )}

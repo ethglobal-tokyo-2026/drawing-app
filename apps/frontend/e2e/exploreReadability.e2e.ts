@@ -60,16 +60,6 @@ for (const size of sizes) {
         expect(measures.fontSize).toBeGreaterThanOrEqual(11);
         expect(measures.overflow, "The complete Gratitude amount should fit the row").toBe(false);
         expect(measures.rowHeight).toBeLessThan(140);
-        if (process.env.EXPLORE_CAPTURE_DIR) {
-          await page.evaluate(() => {
-            const explore = document.querySelector<HTMLElement>(".explore");
-            if (!explore) throw new Error("Explore is missing from the capture");
-            explore.scrollTop = 0;
-          });
-          await page.screenshot({
-            path: `${process.env.EXPLORE_CAPTURE_DIR}/${size.name.replaceAll(" ", "-")}-${total}.png`,
-          });
-        }
       }
     });
   });
