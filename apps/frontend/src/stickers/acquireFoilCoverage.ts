@@ -123,7 +123,10 @@ export function acquireFoilCoverage(
     const timeout = setTimeout(
       () =>
         owned.abort.abort(
-          new DOMException("Preparing shared foil coverage exceeded 20 seconds", "TimeoutError"),
+          new DOMException(
+            `Preparing shared ${material.style} foil coverage for ${cut} exceeded ${FOIL_COVERAGE_TIMEOUT_MS / 1000} seconds`,
+            "TimeoutError",
+          ),
         ),
       FOIL_COVERAGE_TIMEOUT_MS,
     );

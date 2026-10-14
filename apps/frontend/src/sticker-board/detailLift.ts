@@ -2,7 +2,7 @@ import { useEffectEvent, useLayoutEffect, useRef, type RefObject } from "react";
 import { applyStickerFoilCoverage } from "../stickers/prepareStickerFoil";
 import { holdFoilCoverageMask } from "../stickers/acquireFoilCoverage";
 import { mountStickerCopy, stickerFoilCoverage, turnSticker } from "../stickers/stickerRenderer";
-import { pauseStickerMaterial, refreshStickerMaterial } from "../stickers/stickerMaterialHandoff";
+import { pauseStickerMaterial, refreshHiddenMaterials } from "../stickers/stickerMaterialHandoff";
 import { playStick } from "../stickers/stick";
 import { EASE_OUT, EASE_PEEL_POINTS, splitEasing, T_PEEL_MS, T_STICK_MS } from "../ui/easing";
 import "./detail-lift.css";
@@ -85,21 +85,11 @@ const finishCanvas = (host: Element | null) =>
 async function refreshDestination(flight: Flight, host: HTMLElement | null) {
   const canvas = finishCanvas(host);
   if (!canvas || !host?.isConnected) return;
-  const admission = pauseStickerMaterial(canvas);
-  admission.resume();
-  const signal = AbortSignal.any([
+  await refreshHiddenMaterials(
+    [canvas],
     flight.abort?.signal ?? new AbortController().signal,
-    AbortSignal.timeout(8000),
-  ]);
-  try {
-    await refreshStickerMaterial(canvas, signal);
-    if (signal.aborted && !flight.abort?.signal.aborted)
-      console.error(
-        `Refreshing sticker ${host.closest<HTMLElement>("[data-sticker-id]")?.dataset.stickerId ?? "(unknown)"}'s flight destination exceeded its material deadline`,
-      );
-  } finally {
-    admission.release();
-  }
+    `sticker ${host.closest<HTMLElement>("[data-sticker-id]")?.dataset.stickerId ?? "(unknown)"}'s flight destination`,
+  );
 }
 
 const LIFT_EASING = splitEasing(EASE_PEEL_POINTS, LIFT.at);

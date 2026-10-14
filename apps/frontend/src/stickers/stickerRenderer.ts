@@ -24,6 +24,8 @@ const CREASE_REVEAL_MS = 220;
 /** Image uploads share one later task; no individual upload immediately queries GPU errors. */
 const TEXTURE_VALIDATION_DELAY_MS = 16;
 const TEXTURE_VALIDATION_TIMEOUT_MS = 20_000;
+/** How long fetching and decoding one image may take. */
+const TEXTURE_LOAD_TIMEOUT_MS = 20_000;
 /** A failed check drains the finite WebGL error flags before another upload batch can proceed. */
 const MAX_TEXTURE_ERROR_CHECKS = 8;
 
@@ -305,7 +307,7 @@ class StickerRenderer {
       this.textureValidations.add(pending);
       signal.addEventListener("abort", cancel, { once: true });
       deadline = window.setTimeout(
-        () => pending.finish("Validation exceeded 20 seconds"),
+        () => pending.finish(`Validation exceeded ${TEXTURE_VALIDATION_TIMEOUT_MS / 1000} seconds`),
         TEXTURE_VALIDATION_TIMEOUT_MS,
       );
       if (!this.textureValidationTimer)
@@ -495,7 +497,7 @@ class StickerRenderer {
         : old.texture;
     }
     const abort = new AbortController();
-    const signal = AbortSignal.any([abort.signal, AbortSignal.timeout(20_000)]);
+    const signal = AbortSignal.any([abort.signal, AbortSignal.timeout(TEXTURE_LOAD_TIMEOUT_MS)]);
     const texture = (async () => {
       if (this.textureValidationFailure) throw new Error(this.textureValidationFailure);
       const response = await fetch(url, { signal });
@@ -507,8 +509,8 @@ class StickerRenderer {
         await new Promise<void>((resolve, reject) => {
           const timer = window.setTimeout(() => {
             image.src = "";
-            reject(new Error(`Decoding ${url} exceeded 20 seconds`));
-          }, 20_000);
+            reject(new Error(`Decoding ${url} exceeded ${TEXTURE_LOAD_TIMEOUT_MS / 1000} seconds`));
+          }, TEXTURE_LOAD_TIMEOUT_MS);
           const cancel = () => {
             window.clearTimeout(timer);
             image.src = "";

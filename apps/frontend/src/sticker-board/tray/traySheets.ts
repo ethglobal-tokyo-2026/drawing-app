@@ -9,8 +9,7 @@ import { holdFoilCoverageMask } from "../../stickers/acquireFoilCoverage";
 import type { FoilSize } from "../../stickers/foilMaterial";
 import type { StickerFoilMaterial } from "../../stickers/stickerFoilMaterial";
 import {
-  pauseStickerMaterial,
-  refreshStickerMaterial,
+  refreshHiddenMaterials,
   stickerMaterialActive,
 } from "../../stickers/stickerMaterialHandoff";
 import {
@@ -228,22 +227,14 @@ export function createTraySheets(
     restoring.get(host)?.abort();
     const controller = new AbortController();
     restoring.set(host, controller);
-    const admissions = canvases.map(pauseStickerMaterial);
-    admissions.forEach((admission) => admission.resume());
-    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(8000)]);
     try {
-      await Promise.all(canvases.map((canvas) => refreshStickerMaterial(canvas, signal)));
-      if (signal.aborted && !controller.signal.aborted)
-        console.error(
-          `Refreshing sticker ${host.dataset.id ?? host.dataset.stickerId ?? "(unknown)"}'s tray destination exceeded its material deadline`,
-        );
-      return (
-        !controller.signal.aborted &&
-        host.isConnected &&
-        canvases.every((canvas) => host.contains(canvas))
+      const held = await refreshHiddenMaterials(
+        canvases,
+        controller.signal,
+        `sticker ${host.dataset.id ?? host.dataset.stickerId ?? "(unknown)"}'s tray destination`,
       );
+      return held && host.isConnected && canvases.every((canvas) => host.contains(canvas));
     } finally {
-      admissions.forEach((admission) => admission.release());
       if (restoring.get(host) === controller) restoring.delete(host);
     }
   }

@@ -6,6 +6,8 @@ import "./sticker-crease.css";
 import "./crease-reveal.css";
 
 const creaseStyle = (url: string) => ({ "--crease": `url("${url}")` });
+/** How long decoding a painted crease's images may take. */
+const CREASE_DECODE_TIMEOUT_MS = 20_000;
 
 /**
  * A sticker's crease where it lies over other stickers' edges: its base, the shoulder and foot that show
@@ -47,8 +49,13 @@ export function StickerCrease({
     let timer = 0;
     const timeout = new Promise<never>((_, reject) => {
       timer = window.setTimeout(
-        () => reject(new Error("Decoding the painted crease exceeded 20 seconds")),
-        20_000,
+        () =>
+          reject(
+            new Error(
+              `Decoding the painted crease exceeded ${CREASE_DECODE_TIMEOUT_MS / 1000} seconds`,
+            ),
+          ),
+        CREASE_DECODE_TIMEOUT_MS,
       );
     });
     void Promise.race([Promise.all(images.map((image) => image.decode())), timeout])
