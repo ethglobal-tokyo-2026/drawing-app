@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { emptyLaminatePage } from "./stickerMaterialFixture";
 
 // The qualified straight-alpha shader is kept only as an independent test reference.
 // It predates premultiplied output; do not import the production shader into this reference.
@@ -62,12 +63,7 @@ test.use({ viewport: { width: 1032, height: 768 }, deviceScaleFactor: 2 });
 test("premultiplied laminate preserves the qualified color and fractional cut over light and dark backgrounds", async ({
   page,
 }, info) => {
-  await page.route("**/e2e/stickerLaminate.html", (route) =>
-    route.fulfill({
-      contentType: "text/html",
-      body: '<meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div>',
-    }),
-  );
+  await emptyLaminatePage(page);
   await page.goto("/e2e/stickerLaminate.html");
   const observed = await page.evaluate(
     async ({ vertex, fragment, samples, cases }) => {
@@ -466,16 +462,9 @@ test("complete material covers fractional paper edges and independent sealing am
 }) => {
   await page.goto("/e2e/stickerLaminate.html?board=1");
   const result = await page.evaluate(async () => {
-    const { required } = await import("./stickerMaterialFixture.ts");
+    const { required, solidPng } = await import("./stickerMaterialFixture.ts");
     const api = await import("../src/stickers/stickerRenderer.ts");
-    const png = (alpha: number) => {
-      const c = document.createElement("canvas");
-      c.width = c.height = 32;
-      const cx = required(c.getContext("2d"));
-      cx.fillStyle = `rgba(255,255,255,${alpha / 255})`;
-      cx.fillRect(0, 0, 32, 32);
-      return c.toDataURL();
-    };
+    const png = (alpha: number) => solidPng(32, 32, `rgba(255,255,255,${alpha / 255})`);
     const c = document.createElement("canvas");
     c.style.cssText = "position:absolute;left:20px;top:20px;width:32px;height:32px";
     document.body.append(c);
