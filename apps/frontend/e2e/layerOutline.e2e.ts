@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { pauseClock } from "./clock.ts";
 import { decodeScreenshot, screenshotPixel } from "./screenshotPixels.ts";
 
 test("cropped outlines follow the rounded sheet boundary at fractional sizes", async ({
@@ -19,9 +20,7 @@ test("cropped outlines follow the rounded sheet boundary at fractional sizes", a
     }),
   );
   await page.goto("/e2e-layer-outline");
-  const clockStart = new Date();
-  await page.clock.install({ time: clockStart });
-  await page.clock.pauseAt(new Date(clockStart.getTime() + 10_000));
+  await pauseClock(page);
   await page.evaluate(async () => {
     const { flashLayer } = await import("../src/sticker-creation/layers/layerFlash.ts");
     await import("../src/sticker-creation/layers/layerDisplay.css");

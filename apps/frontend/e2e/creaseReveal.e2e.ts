@@ -2,6 +2,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 import sharp from "sharp";
 import type { Crease } from "../src/stickers/StickerFigure";
 import type { CreaseImage } from "../src/stickers/crease";
+import { pauseClock } from "./clock.ts";
 
 test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
 
@@ -258,9 +259,7 @@ async function routeImages(page: Page, images: Crease, delay?: CreaseImage) {
 }
 
 async function freezeFrames(page: Page) {
-  const now = new Date();
-  await page.clock.install({ time: now });
-  await page.clock.pauseAt(new Date(now.getTime() + 100));
+  await pauseClock(page);
 }
 
 async function observeDiagonal(

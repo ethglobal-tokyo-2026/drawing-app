@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
 import { PALM_CONTACT_PX } from "../src/sticker-creation/canvas/gestures.ts";
 import { strokeFrame } from "../src/sticker-board/timelapse/timelapseFrame.ts";
+import { pauseClock } from "./clock.ts";
 import { readKeptHistory } from "./emptySeal.ts";
 import { openDetail, openSealSheet, sealOnSheet, signedInUserId } from "./helpers.ts";
 import { at, FINGERTIP, hand, pencil, type At } from "./pen.ts";
@@ -502,8 +503,7 @@ for (const transition of ["brush", "color", "visible", "layer", "pause"] as cons
     const { centers } = await outlinedCells(page);
     await color(page, "red");
     await selectFillReference(page, "layer");
-    await page.clock.install();
-    await page.clock.pauseAt(new Date());
+    await pauseClock(page);
     await gateNext(page);
     await fillAt(page, centers[0]);
     const key =
@@ -572,8 +572,7 @@ test("a Kyoto Seika color panel holds the clock while Fill finishes and while th
   const { centers } = await outlinedCells(page);
   await color(page, "red");
   await selectFillReference(page, "layer");
-  await page.clock.install();
-  await page.clock.pauseAt(new Date());
+  await pauseClock(page);
   const seconds = async () => {
     const text = await page.locator(".timer-time").textContent();
     const match = text?.match(/(\d+):(\d\d)/);
@@ -687,8 +686,7 @@ for (const variant of ["blank", "opacity", "lock", "clipped", "clipped-above"] a
     const before = await readKeptHistory(page);
     const raw = await rawFillDigest(page);
     const shown = await shownColor(page, center);
-    await page.clock.install();
-    await page.clock.pauseAt(new Date());
+    await pauseClock(page);
     await controlTouchTime(page);
     const fingers = await hand(page);
     await fingers.down([contact(center)]);
@@ -736,8 +734,7 @@ for (const variant of ["blank", "opacity", "lock", "clipped", "clipped-above"] a
 for (const acceptance of ["movement", "age"] as const) {
   test(`accepted touch Fill by ${acceptance} survives a later second finger`, async ({ page }) => {
     const { center } = await wetFixture(page, "blank");
-    await page.clock.install();
-    await page.clock.pauseAt(new Date());
+    await pauseClock(page);
     await controlTouchTime(page);
     const fingers = await hand(page);
     await fingers.down([contact(center)]);
@@ -773,8 +770,7 @@ for (const fingertips of [2, 3] as const) {
     await captureFillCanvases(page);
     const before = await readKeptHistory(page);
     const raw = await rawFillDigest(page);
-    await page.clock.install();
-    await page.clock.pauseAt(new Date());
+    await pauseClock(page);
     await controlTouchTime(page);
     await gateNext(page);
     const fingers = await hand(page);
@@ -811,8 +807,7 @@ for (const cancellation of ["pointercancel", "lostpointercapture", "pagehide"] a
     const { center } = await wetFixture(page, "blank");
     const before = await readKeptHistory(page);
     const raw = await rawFillDigest(page);
-    await page.clock.install();
-    await page.clock.pauseAt(new Date());
+    await pauseClock(page);
     await controlTouchTime(page);
     await page.evaluate(() => {
       document.addEventListener(
@@ -863,8 +858,7 @@ test("a released Fill drains before a later young two-finger Undo and three fing
   await gateNext(page);
   await fillAt(page, center);
   await heldAnswer(page);
-  await page.clock.install();
-  await page.clock.pauseAt(new Date());
+  await pauseClock(page);
   await controlTouchTime(page);
   const fingers = await hand(page);
   const tap = [contact(centers[2]), contact(centers[3], 2)];
@@ -1007,8 +1001,7 @@ test("time-up wins over a pending tool transition and rejects later sheet input"
   await color(page, "red");
   await selectFillReference(page, "layer");
   await expect.poll(async () => (await readKeptHistory(page)).count).toBeGreaterThan(0);
-  await page.clock.install();
-  await page.clock.pauseAt(new Date());
+  await pauseClock(page);
   await nearTimeUp(page, 600);
   await color(page, "red");
   await selectFillReference(page, "layer");
@@ -1043,8 +1036,7 @@ test("pagehide resolves a blank cutoff without reviving a late Fill or opening a
   await openSheet(page, "fill-blank-cutoff-hide");
   await color(page, "red");
   await selectFillReference(page, "layer");
-  await page.clock.install();
-  await page.clock.pauseAt(new Date());
+  await pauseClock(page);
   await nearTimeUp(page, 600);
   await color(page, "red");
   await selectFillReference(page, "layer");

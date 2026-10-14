@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
+import { pauseClock } from "./clock.ts";
 import { decodeScreenshot, screenshotPixel } from "./screenshotPixels.ts";
 
 const evidence = fileURLToPath(
@@ -38,9 +39,7 @@ for (const device of ["phone", "tablet"] as const) {
           }),
         );
         await page.goto("/e2e-layer-feedback");
-        const clockStart = new Date();
-        await page.clock.install({ time: clockStart });
-        await page.clock.pauseAt(new Date(clockStart.getTime() + 10_000));
+        await pauseClock(page);
         const initial = await page.evaluate(async (dark) => {
           const { flashLayer } = await import("../src/sticker-creation/layers/layerFlash.ts");
           document.body.style.cssText = `margin:0;padding:16px;background:${dark ? "#1c1824" : "#f2f1f6"}`;
@@ -696,8 +695,7 @@ test("changing reduced motion cancels browser playback immediately", async ({ pa
   );
   await page.goto("/e2e-layer-feedback");
   await page.emulateMedia({ reducedMotion: "no-preference" });
-  await page.clock.install();
-  await page.clock.pauseAt(new Date());
+  await pauseClock(page);
   await page.evaluate(async () => {
     const { flashLayer } = await import("../src/sticker-creation/layers/layerFlash.ts");
     const layer = document.createElement("canvas");

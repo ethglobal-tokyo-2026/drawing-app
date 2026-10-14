@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import type { InkSettings } from "../src/sticker-creation/canvas/inkEngine.ts";
 import type { Step } from "../src/sticker-creation/canvas/ops.ts";
+import { pauseClock } from "./clock.ts";
 import {
   installFillWorkerProbe,
   readFillWorkerProbe,
@@ -436,8 +437,7 @@ for (const action of ["reset", "load", "dispose"] as const) {
 test("cancelled unaccepted touch rejects its retained native answer", async ({ page }) => {
   await openEngine(page);
   const clockTime = new Date("2026-10-11T12:00:00Z");
-  await page.clock.install({ time: clockTime });
-  await page.clock.pauseAt(clockTime);
+  await pauseClock(page, clockTime);
   await armFillWorkerGate(page, 1);
   await page.evaluate(() => window.fillEngineFixture?.down(0, true));
   await page.clock.runFor(16);
@@ -467,8 +467,7 @@ test("computed unaccepted native touch preview clears without committing or clea
   const before = await snapshot(page);
   expect(before.canRedo).toBe(true);
   const clockTime = new Date("2026-10-11T12:00:00Z");
-  await page.clock.install({ time: clockTime });
-  await page.clock.pauseAt(clockTime);
+  await pauseClock(page, clockTime);
   await armFillWorkerGate(page, (await readFillWorkerProbe(page)).requests.length + 1);
   await page.evaluate(() => window.fillEngineFixture?.down(0, true));
   await page.clock.runFor(16);

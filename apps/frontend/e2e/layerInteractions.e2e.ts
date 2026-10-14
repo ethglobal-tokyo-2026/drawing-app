@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import type { Language } from "../src/i18n/language.ts";
 import { strings } from "../src/i18n/strings/index.ts";
+import { pauseClock } from "./clock.ts";
 import { add, button, chip, createLayer, openSheet, options, undo } from "./fillHelpers.ts";
 import {
   canvas,
@@ -44,9 +45,7 @@ async function center(page: Page, id: number): Promise<At> {
 
 /** Freezes hold timers so activation can only come from movement. */
 async function freeze(page: Page) {
-  const now = new Date();
-  await page.clock.install({ time: now });
-  await page.clock.pauseAt(new Date(now.getTime() + 100));
+  await pauseClock(page);
 }
 
 /** Removes the first-use explanation before testing the chip underneath it. */

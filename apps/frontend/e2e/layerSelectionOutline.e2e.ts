@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
+import { pauseClock } from "./clock.ts";
 import { button, chip, color, createLayer, openSheet, sheetBox, undo } from "./fillHelpers.ts";
 import { ipad } from "./ipad.ts";
 import { at, pencil, penStroke } from "./pen.ts";
@@ -70,9 +71,7 @@ test("selecting an inked layer shows a sharp contour around real pen marks", asy
   await expect(page.locator(".nib-ring")).toBeHidden();
 
   // Freeze only after the real sheet and its controls settle; reduced motion keeps the cue still.
-  const now = new Date();
-  await page.clock.install({ time: now });
-  await page.clock.pauseAt(new Date(now.getTime() + 100));
+  await pauseClock(page);
   await chip(page, 1).click();
   await expect(chip(page, 1)).toHaveAttribute("aria-selected", "true");
   await expect(page.locator(".layer-flash__outline")).toBeVisible();
