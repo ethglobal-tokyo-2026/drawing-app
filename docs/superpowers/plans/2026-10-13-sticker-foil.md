@@ -78,6 +78,8 @@ mountStickerCopy(canvas: HTMLCanvasElement, source: HTMLCanvasElement,
 
 `mountStickerCopy` seeds pixels and retains the material/normal description, has independent geometry, and invalidates/discards its copied pixels if its source is disposed for concealment. It calls `onInvalidated` so a flyer can remove its entire cloned presentation, including fallback images. It is not a bitmap-only clone. Readiness compares requested and committed material generations internally, including foil assets. Use `.sticker-finish` for the canvas and migrate affected current selectors; do not preserve old class aliases.
 
+The renderer also provides a read-only committed foil coverage/material description, captured with each retained output and seeded copy. A copied cast uses that exact cached alpha and source-frame coverage, rather than whichever static source descriptor is independently ready. This operation exposes no artwork or GPU readback and starts no asset request. Missing, disposed, and foil-free snapshots have no description. Task 5 adds this metadata boundary after review exposed asynchronous static/renderer generation mismatches.
+
 Creased overflow requires a supplied normal covering the complete output bounds. A missing extended field retains the prior complete finish and reports a persistent diagnostic. It must never stretch or clamp the source normal to invent geometry. Task 4 supplies conditional extended crease bakes from the actual underlying silhouettes; full-frame flat previews need no normal.
 
 ---
@@ -136,13 +138,14 @@ Creased overflow requires a supplied normal covering the complete output bounds.
 
 ### Task 5: Live board, tray, and detail-flight integration
 
-**Files:** Modify `sticker-board/useBoardGestures.ts`, `boardComplete.ts`, `tray/traySheets.ts`, `tray/trayPeel.ts`, `tray/sticker-tray.css`, `detailLift.ts`, affected board/detail/tray/receiving/Explore selectors and tests, and `stickerLaminateFlight.e2e.ts`, `stickerBoardDrag.e2e.ts`, `stickerLightFrames.e2e.ts`.
+**Files:** Modify `sticker-board/useBoardGestures.ts`, `boardComplete.ts`, `tray/traySheets.ts`, `tray/trayPeel.ts`, `tray/sticker-tray.css`, `detailLift.ts`, affected board/detail/tray/receiving/Explore selectors and tests, and `stickerLaminateFlight.e2e.ts`, `stickerBoardDrag.e2e.ts`, `stickerLightFrames.e2e.ts`. The reviewed correction also modifies `stickerRenderer.ts` and focused snapshot-generation fixtures to supply committed foil coverage to copied casts.
 
 **Interfaces:** Consumes complete surface registration, imperative turn/amount/refresh/settlement operations and live-copy ownership. Temporary flyers sample the existing flight geometry; they do not control shared light. The destination is paused during flight, refreshed before exposure, and retained through reversal.
 
 - [ ] Add failing assertions for live foil through drag, sheet peel, detail forward/reverse lift, concealed active flyer, canceled/paged flight, outgoing frost/fade, used-slot non-admission, and complete board readiness. Record the failing behavioral output before integration.
 - [ ] Replace manual tray live foil with the same material/coverage registration as React. Keep outgoing gift coating omission/frost/fade and empty used slots. Forward existing peel/curl geometry and release all flyer resources on completion/cancellation.
 - [ ] Use live copied owners for detail flights, preserve the owner during reversed playback, and refresh the destination before restoring exposure. Concealment invalidates originals and their copies. Forward board gesture geometry to the complete output and make board readiness wait for committed foil assets without changing its deadline.
+- [ ] Bind copied static casts to the renderer's retained foil coverage/material generation. Cover both static-before-renderer and renderer-before-static replacement orders. Keep geometry tracking restartable when closing reverses an opening whose movement already finished while destination material remained pending; a late forward completion must not expose the reversed flight.
 - [ ] Update affected material/clipping/shadow/exposure selectors; verify inheriting Artist Board, Explore lift, receiving, and tray/detail presentations. Keep the closed GiftBag and decorative ArtistChip behavior separate.
 - [ ] Run focused board/tray/detail unit tests and `pnpm --filter frontend test:e2e stickerLaminateFlight stickerBoardDrag stickerLightFrames stickerLaminateAttribution stickerLaminateSelection --workers=2`. Run frontend typecheck and unit suite once before committing. Expect coherent retained finishes and no active work/resource leak after cancellation or concealment.
 - [ ] Commit explicit task paths with `fix: keep sticker foil live through placement and lifts`.
