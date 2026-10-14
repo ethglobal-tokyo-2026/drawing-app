@@ -3,11 +3,11 @@ import {
   createFoilSourceSamples,
   FOIL_ROOM,
   FOIL_STYLES,
-  srgbToLinear,
   type FoilRoom,
   type FoilStyle,
 } from "../src/stickers/foilMaterial";
 import { createFoilFragment } from "../src/stickers/foilShader";
+import { stickerFoilColors } from "../src/stickers/stickerFoilMaterial";
 import { glslFloat } from "../src/stickers/glsl";
 import { SCREENTONE } from "../src/stickers/screentone";
 import { stickerVertex } from "../src/stickers/stickerShader";
@@ -106,20 +106,7 @@ for (const parameter of [gpu.TEXTURE_MIN_FILTER, gpu.TEXTURE_MAG_FILTER])
   gpu.texParameteri(gpu.TEXTURE_2D, parameter, gpu.LINEAR);
 for (const parameter of [gpu.TEXTURE_WRAP_S, gpu.TEXTURE_WRAP_T])
   gpu.texParameteri(gpu.TEXTURE_2D, parameter, gpu.CLAMP_TO_EDGE);
-const readColor = (name: string): readonly [number, number, number] => {
-  const probe = document.createElement("span");
-  probe.style.color = `var(--${name})`;
-  document.body.append(probe);
-  const matches = present(getComputedStyle(probe).color.match(/[\d.]+/g));
-  probe.remove();
-  return [Number(matches[0]) / 255, Number(matches[1]) / 255, Number(matches[2]) / 255];
-};
-const palettes = {
-  holo: ["pink", "peach", "lemon", "aqua", "sky", "lilac"],
-  pink: ["rose", "blush", "pearl", "candy", "orchid", "magenta"],
-};
 let lastStyle: FoilStyle | undefined;
-let tint: number[] = [];
 function render(options: FoilFixtureOptions = {}) {
   const start = performance.now();
   const {
@@ -138,10 +125,10 @@ function render(options: FoilFixtureOptions = {}) {
   const room = { ...rooms[roomName], grid, lamps: diagnostic ? [] : FOIL_ROOM.lamps };
   const program = programForRoom(room);
   const uniform = (name: string) => gpu.getUniformLocation(program, name);
+  // The renderer's palette, tint and ink for this style, read from the same design tokens.
+  const colors = stickerFoilColors(document.body, { style, size: "board" });
   if (lastStyle !== style) {
-    const names = style === "pink" ? palettes.pink : palettes.holo;
-    const palette = names.map((name) => readColor(`foil-${name}`));
-    const lookup = createFoilLookup(style, palette);
+    const lookup = createFoilLookup(style, colors.palette);
     gpu.texImage2D(
       gpu.TEXTURE_2D,
       0,
@@ -153,10 +140,9 @@ function render(options: FoilFixtureOptions = {}) {
       gpu.UNSIGNED_BYTE,
       lookup.pixels,
     );
-    tint = style === "pink" ? readColor("foil-rose").map(srgbToLinear) : [1, 1, 1];
     lastStyle = style;
   }
-  gpu.uniform3fv(uniform("foilTint"), tint);
+  gpu.uniform3fv(uniform("foilTint"), colors.tint);
   const prepared = performance.now();
   canvas.width = side;
   canvas.height = side;
@@ -184,7 +170,7 @@ function render(options: FoilFixtureOptions = {}) {
   );
   gpu.uniform1f(uniform("foilStyle"), FOIL_STYLES.indexOf(style));
   gpu.uniform4fv(uniform("foilSources"), createFoilSourceSamples(room));
-  gpu.uniform3fv(uniform("foilInk"), readColor("ink").map(srgbToLinear));
+  gpu.uniform3fv(uniform("foilInk"), colors.ink);
   gpu.uniform1f(uniform("diagnostic"), diagnostic ? 1 : 0);
   gpu.uniform1f(uniform("geometry"), ["flat", "ramp", "plateau"].indexOf(geometry));
   gpu.uniform1f(uniform("side"), side);
