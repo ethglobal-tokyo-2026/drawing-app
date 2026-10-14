@@ -288,9 +288,37 @@ export const blurredMark = (language: Language) => ({
   name: say(stickers.nsfw.veiled, language),
 });
 
+/**
+ * Clicks a sticker on your board on its cut, as near the middle of its box as the cut reaches. It
+ * takes a tap on its cut only, and its box's middle can be the board, such as between two strokes.
+ */
+export async function clickOnCut(sticker: Locator) {
+  const onCut = () =>
+    sticker.evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      const steps = 16;
+      let nearest: { x: number; y: number; off: number } | null = null;
+      for (let i = 0; i < steps; i++)
+        for (let j = 0; j < steps; j++) {
+          const x = ((i + 0.5) / steps) * box.width;
+          const y = ((j + 0.5) / steps) * box.height;
+          const off = Math.hypot(x - box.width / 2, y - box.height / 2);
+          if (nearest && nearest.off <= off) continue;
+          const hit = document.elementFromPoint(box.x + x, box.y + y);
+          if (hit?.closest(".placed-sticker") === el) nearest = { x, y, off };
+        }
+      return nearest && { x: nearest.x, y: nearest.y };
+    });
+  // Nothing found while something, such as the sealed card on its way out, still covers it.
+  let at = await onCut();
+  await expect.poll(async () => (at = await onCut())).not.toBeNull();
+  if (!at) throw new Error("No part of the sticker takes a tap");
+  await sticker.click({ position: at });
+}
+
 /** Opens a sticker on your own board in its sticker detail: a tap selects it, View opens it. */
 export async function openDetail(page: Page, language: Language, no: string) {
-  await boardSticker(page, language, no).click();
+  await clickOnCut(boardSticker(page, language, no));
   await page
     .getByRole("button", { name: say(stickerBoard.toolbar.view, language), exact: true })
     .click();
@@ -363,7 +391,7 @@ export async function yenShown(price: Locator) {
  * packs it at once.
  */
 export async function giveFromBoard(page: Page, language: Language, no: string) {
-  await boardSticker(page, language, no).click();
+  await clickOnCut(boardSticker(page, language, no));
   await page
     .getByRole("toolbar", { name: no })
     .getByRole("button", { name: say(stickerBoard.toolbar.give, language) })
