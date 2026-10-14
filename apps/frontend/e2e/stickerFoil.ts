@@ -2,6 +2,7 @@ import {
   createFoilLookup,
   createFoilSourceSamples,
   FOIL_ROOM,
+  FOIL_STYLES,
   srgbToLinear,
   type FoilRoom,
   type FoilStyle,
@@ -181,10 +182,7 @@ function render(options: FoilFixtureOptions = {}) {
     Math.cos((grating * Math.PI) / 180),
     Math.sin((grating * Math.PI) / 180),
   );
-  gpu.uniform1f(
-    uniform("foilStyle"),
-    ["holo", "pink", "kyoto-seika", "gold", "silver", "roseGold"].indexOf(style),
-  );
+  gpu.uniform1f(uniform("foilStyle"), FOIL_STYLES.indexOf(style));
   gpu.uniform4fv(uniform("foilSources"), createFoilSourceSamples(room));
   gpu.uniform3fv(uniform("foilInk"), readColor("ink").map(srgbToLinear));
   gpu.uniform1f(uniform("diagnostic"), diagnostic ? 1 : 0);

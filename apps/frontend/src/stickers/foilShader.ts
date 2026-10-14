@@ -9,7 +9,8 @@ import { SCREENTONE } from "./screentone";
  * foilSources[16]: createFoilSourceSamples for the same room: the window's grid² quadrature samples
  * (unit incident xyz, solid angle), then room lamps (unit incident xyz, solid angle × radiance
  * relative to the room level). Unused entries are zero.
- * Style: holo=0, pink=1, Kyoto Seika=2, gold/silver/roseGold=3/4/5. Tint and ink are linear RGB.
+ * foilStyle is the style's index in FOIL_STYLES: holo and pink, the chromatic styles, come first, then
+ * Kyoto Seika, whose screentone the shader prints. Tint and ink are linear RGB.
  * shadeFoil receives print coordinates in screentone tiles, shared oriented normal/view/groove
  * direction and pixel footprints.
  */

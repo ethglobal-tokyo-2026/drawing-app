@@ -1,4 +1,4 @@
-import { createFoilLookup, createFoilSourceSamples, FOIL_ROOM } from "./foilMaterial";
+import { createFoilLookup, createFoilSourceSamples, FOIL_ROOM, FOIL_STYLES } from "./foilMaterial";
 import {
   acquireFoilCoverage,
   FOIL_COVERAGE_TIMEOUT_MS,
@@ -824,9 +824,7 @@ class StickerRenderer {
         gl.uniform3fv(this.uniforms.get("foilInk") ?? null, foil.ink);
         gl.uniform1f(
           this.uniforms.get("foilStyle") ?? null,
-          ["holo", "pink", "kyoto-seika", "gold", "silver", "roseGold"].indexOf(
-            foil.material.style,
-          ),
+          FOIL_STYLES.indexOf(foil.material.style),
         );
       }
       gl.uniform2f(this.uniforms.get("size") ?? null, tile.width, tile.height);
