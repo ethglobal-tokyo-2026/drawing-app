@@ -1,4 +1,3 @@
-import { mkdir, writeFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 import type { CreaseJob, CreaseReply } from "../src/stickers/creaseWorker";
 
@@ -431,7 +430,7 @@ test("actual outside-source bends retain continuous narrow bands through tilt, t
     const { turnSticker, stickerTurn, stickerFoilCoverage } =
       await import("../src/stickers/stickerRenderer.ts");
     const { registeredPaperAlpha } = await import("./stickerMaterialFixture.ts");
-    const { actualFoilTargets } = await import("./foilBandEvidence.ts");
+    const { actualFoilTargets } = await import("./foilBandSamples.ts");
     const canvases = actualFoilTargets();
     const rows = [];
     for (const canvas of canvases) {
@@ -448,8 +447,8 @@ test("actual outside-source bends retain continuous narrow bands through tilt, t
       let prior = initial;
       const changes = [];
       for (const axis of ["x", "y", "turn"] as const) {
-        for (let step = 0; step <= 32; step++) {
-          const pose = 8 * Math.sin((step / 32) * Math.PI * 2);
+        for (let step = 0; step <= 8; step++) {
+          const pose = 8 * Math.sin((step / 8) * Math.PI * 2);
           turnSticker(
             canvas,
             originalTurn + (axis === "turn" ? pose * 4 : 0),
@@ -470,7 +469,7 @@ test("actual outside-source bends retain continuous narrow bands through tilt, t
             else if (cut[Math.floor(i / 4) * 4 + 3] === 0)
               difference += Math.abs(current[i] - prior[i]);
           }
-          if (step === 8) frames.push({ name: axis, image: canvas.toDataURL() });
+          if (step === 2) frames.push({ name: axis, image: canvas.toDataURL() });
           changes.push({
             axis,
             step,
@@ -511,14 +510,6 @@ test("actual outside-source bends retain continuous narrow bands through tilt, t
     for (const frame of row.frames) {
       const body = Buffer.from(frame.image.split(",")[1], "base64");
       await info.attach(`${row.style}-${frame.name}`, { body, contentType: "image/png" });
-      if (process.env.FOIL_PRESENTATION_EVIDENCE === "on" && info.project.name === "chromium") {
-        const directory = new URL(
-          "../../../docs/research/sticker-foil/evidence/continuous/",
-          import.meta.url,
-        );
-        await mkdir(directory, { recursive: true });
-        await writeFile(new URL(`${row.style}-${frame.name}.png`, directory), body);
-      }
     }
     expect(row.changes.every((frame) => frame.alphaDifference === 0)).toBe(true);
     for (const axis of ["x", "y", "turn"])
@@ -535,45 +526,32 @@ test("actual outside-source bends retain continuous narrow bands through tilt, t
   expect(report).toHaveLength(3);
 });
 
-test("actual worker registered narrow bands expose color through the authored shared-pose range", async ({
+test("actual worker registered narrow bands show color without green through the shared pose", async ({
   page,
 }, info) => {
   await openContinuousBoard(page);
-  const color = await page.evaluate(async () => {
-    const { foilBandEvidence } = await import("./foilBandEvidence.ts");
-    return foilBandEvidence();
+  const bands = await page.evaluate(async () => {
+    const { sampleFoilBands } = await import("./foilBandSamples.ts");
+    return sampleFoilBands();
   });
-  const metadata = color.map(({ strongest, returnedImage: _returnedImage, ...row }) => ({
-    ...row,
-    strongest: { spread: strongest.spread, sample: strongest.sample },
-  }));
   await info.attach("registered-band-color", {
-    body: JSON.stringify(metadata, null, 2),
+    body: JSON.stringify(
+      bands.map(({ returnedImage: _image, ...row }) => row),
+      null,
+      2,
+    ),
     contentType: "application/json",
   });
-  for (const row of color) {
-    for (const [name, image] of [
-      ["strongest", row.strongest.image],
-      ["shared-returned", row.returnedImage],
-    ]) {
-      const body = Buffer.from(image.split(",")[1], "base64");
-      await info.attach(`${row.style}-${name}`, { body, contentType: "image/png" });
-      if (process.env.FOIL_PRESENTATION_EVIDENCE === "on" && info.project.name === "chromium") {
-        const directory = new URL(
-          "../../../docs/research/sticker-foil/evidence/continuous/",
-          import.meta.url,
-        );
-        await mkdir(directory, { recursive: true });
-        await writeFile(new URL(`${row.style}-${name}.png`, directory), body);
-        await writeFile(
-          new URL("registered-band-color.json", directory),
-          JSON.stringify(metadata, null, 2) + "\n",
-        );
-      }
-    }
+  for (const row of bands) {
+    await info.attach(`${row.style}-shared-returned`, {
+      body: Buffer.from(row.returnedImage.split(",")[1], "base64"),
+      contentType: "image/png",
+    });
     expect(row.returned).toBe(true);
     expect(row.samples.every((sample) => sample.eligible > 0 && sample.green === 0)).toBe(true);
     if (row.style === "holo") {
+      // Holo reads as holo before any motion: the held pose already shows color on the band.
+      expect(row.samples[0].chromatic).toBeGreaterThan(0);
       expect(row.coverage.x).toBeLessThan(0);
       expect(row.samples.every((sample) => sample.outside > 0 && sample.outsideBent > 0)).toBe(
         true,

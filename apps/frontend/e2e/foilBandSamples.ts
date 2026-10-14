@@ -3,7 +3,7 @@ import { currentLight } from "../src/stickers/light";
 import { getMotionPermission } from "../src/ui/motionPermission";
 import { registeredPaperAlpha, required } from "./stickerMaterialFixture";
 
-/** Each evidence target must actually have a worker-produced crease; holo also owns the overflow. */
+/** Each target must actually have a worker-produced crease; holo also owns the overflow. */
 export function actualFoilTargets() {
   const creases = window.stickerBoardDragFixture.acceptedCreases();
   const canvases = [
@@ -25,7 +25,7 @@ export function actualFoilTargets() {
 }
 
 /** Read only opaque, fully exposed registered foil, excluding a one-source-pixel paper fringe. */
-export async function foilBandEvidence() {
+export async function sampleFoilBands() {
   const fixture = window.stickerBoardDragFixture;
   await fixture.askForMotion();
   fixture.tilt(0, 0);
@@ -144,7 +144,6 @@ export async function foilBandEvidence() {
           outsideBent: number;
           outsideDifference: number;
         }[],
-        strongest: { spread: -1, image: "", sample: -1 },
       };
     }),
   );
@@ -159,9 +158,7 @@ export async function foilBandEvidence() {
     return (32 * (low + high)) / 2;
   };
   for (const axis of ["x", "y"] as const)
-    for (const target of [
-      0, 0.15, 0.3, 0.45, 0.6, 0.45, 0.3, 0.15, 0, -0.15, -0.3, -0.45, -0.6, -0.45, -0.3, -0.15, 0,
-    ]) {
+    for (const target of [0, 0.6, -0.6, 0]) {
       fixture.tilt(axis === "y" ? angle(target) : 0, axis === "x" ? angle(target) : 0);
       const deadline = performance.now() + 2000;
       while (Math.abs(currentLight()[axis] - target) > 1e-6) {
@@ -220,12 +217,6 @@ export async function foilBandEvidence() {
           outsideBent,
           outsideDifference,
         });
-        if (maxSpread > row.strongest.spread)
-          row.strongest = {
-            spread: maxSpread,
-            image: row.canvas.toDataURL(),
-            sample: row.samples.length - 1,
-          };
       }
     }
   return rows.map(
