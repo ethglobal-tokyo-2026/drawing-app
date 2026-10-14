@@ -1,5 +1,6 @@
 import { foilFragment } from "./foilShader";
 import { glslFloat as f } from "./glsl";
+import { laminateFragment } from "./laminateShader";
 import { OVERHEAD_WINDOW as overhead } from "./overheadWindow";
 import { SCREENTONE } from "./screentone";
 
@@ -42,6 +43,7 @@ float environment(vec3 r) {
 }
 float linear(float v) { return v<=.04045?v/12.92:pow((v+.055)/1.055,2.4); }
 float display(float v) { return v<=.0031308?v*12.92:1.055*pow(v,1./2.4)-.055; }
+${laminateFragment}
 void main() {
   vec2 sourceUv=sourceBounds.xy+uv*sourceBounds.zw;
   vec4 art=texture2D(printImage,sourceUv);
@@ -49,27 +51,31 @@ void main() {
   // Frame-constant rotations are composed on the CPU, rather than at every covered fragment.
   vec3 bakedNormal=(texture2D(normalImage,(sourceUv-normalBounds.xy)/normalBounds.zw).rgb*255.-128.)/127.;
   // Flat and bent snapshots share the print and light; their diagonal reveal is composited afterward.
-  vec3 n=normalize(normalTransform*mix(vec3(0.,0.,1.),bakedNormal,creaseReveal));
+  vec3 surfaceNormal=mix(vec3(0.,0.,1.),bakedNormal,creaseReveal);
+  vec3 n=normalize(normalTransform*surfaceNormal);
   vec2 localPoint=(sourceUv-.5)*size/min(size.x,size.y);
   vec2 point=vec2(pointTurn.x*localPoint.x-pointTurn.y*localPoint.y,
     pointTurn.y*localPoint.x+pointTurn.x*localPoint.y);
   vec3 view=normalize(vec3(-point,2.4));
+  // Derivatives are evaluated before material branches, including opaque paper fragments.
+  float tile=max(${f(SCREENTONE.minPitch)},min(size.x,size.y)/${f(SCREENTONE.tilesAcross)});
+  vec2 printCoordinate=sourceUv*size/tile;
+  float printFootprint=max(length(dFdx(printCoordinate)),length(dFdy(printCoordinate)));
+  vec3 angular=n+view;
+  float angularFootprint=max(length(dFdx(angular)),length(dFdy(angular)));
   float cosine=clamp(dot(n,view),0.,1.);
   float transmitted=sqrt(1.-(1.-cosine*cosine)/2.25);
   float perpendicular=(cosine-1.5*transmitted)/(cosine+1.5*transmitted);
   float parallel=(1.5*cosine-transmitted)/(1.5*cosine+transmitted);
   float fresnel=(perpendicular*perpendicular+parallel*parallel)*.5;
   vec3 reflected=normalize(2.*dot(view,n)*n-view);
-  vec3 result=clamp(vec3(linear(base.r),linear(base.g),linear(base.b))*.9*(1.-fresnel)+fresnel*environment(reflected),0.,1.);
+  vec3 coat=laminateCoat(vec3(linear(base.r),linear(base.g),linear(base.b))*.9*(1.-fresnel)+fresnel*environment(reflected),
+    sourceUv*size,printFootprint*tile,surfaceNormal,view);
+  vec3 result=clamp(coat,0.,1.);
   // Native canvas snapshots use premultiplied display colors; the optical math above stays linear.
   float inSource=step(0.,sourceUv.x)*step(sourceUv.x,1.)*step(0.,sourceUv.y)*step(sourceUv.y,1.);
   float cutAlpha=texture2D(cutImage,sourceUv).a*inSource;
-  vec3 paper=vec3(display(result.r),display(result.g),display(result.b));
-  // Derivatives are evaluated before material branches, including opaque paper fragments.
-  vec2 printCoordinate=sourceUv*size/max(${f(SCREENTONE.minPitch)},min(size.x,size.y)/${f(SCREENTONE.tilesAcross)});
-  float printFootprint=max(length(dFdx(printCoordinate)),length(dFdy(printCoordinate)));
-  vec3 angular=n+view;
-  float angularFootprint=max(length(dFdx(angular)),length(dFdy(angular)));
+  vec3 paper=laminatePaper(vec3(display(result.r),display(result.g),display(result.b)),localPoint,reflected);
   if(opaquePaper>.5&&cutAlpha<1.)discard;
   float paperAlpha=cutAlpha*amounts.y;
   float foilAlpha=(1.-opaquePaper)*(1.-cutAlpha)*texture2D(outerImage,uv).a*hasFoil*amounts.x;

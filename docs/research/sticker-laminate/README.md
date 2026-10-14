@@ -1,8 +1,8 @@
 # Sticker laminate
 
-The live laminate covers the sticker's full cut, including blank line-art interiors. Transparent artwork has white paper underneath. Ink affects composite color, never coating coverage or roughness. Sealed stickers use gloss; matte is a coming-soon Shop preview. Backing foil shares the complete output and registered geometry; sealed image data is unchanged.
+The live laminate covers the sticker's full cut, including blank line-art interiors. Transparent artwork has white paper underneath. Ink affects composite color, never coating coverage or roughness. Sealed stickers use gloss; matte, glitter and prism are coming-soon Shop previews. Backing foil shares the complete output and registered geometry; sealed image data is unchanged.
 
-`apps/frontend/src/stickers/stickerShader.ts` composes paper, ink, and neutral dielectric reflection in linear light using exact Fresnel. A finite rectangular reflected source makes the highlight's boundary visible against near-white paper. Gloss and matte use different angular filter widths. The separable filter matches nine positive tent-weighted samples. Raw crease slopes supply geometric normals; raised plateaus stay flat. Scene and appearance constants are declared assumptions, not measured laminate parameters.
+`apps/frontend/src/stickers/stickerShader.ts` composes paper, ink, and neutral dielectric reflection in linear light using exact Fresnel. A finite rectangular reflected source makes the highlight's boundary visible against near-white paper. Gloss and matte use different angular filter widths. The separable filter matches nine positive tent-weighted samples. Raw crease slopes supply geometric normals; raised plateaus stay flat. Glitter and prism (`laminateShader.ts`) build on the same coat: glitter adds flakes that mirror the foil's room and flash where they meet the overhead window; prism lays palette facets over the print that slide and turn with the coat's normal. Scene and appearance constants are declared assumptions, not measured laminate parameters.
 
 ## Runtime
 

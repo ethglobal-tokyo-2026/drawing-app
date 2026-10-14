@@ -1,4 +1,5 @@
 import { useContext, useLayoutEffect, useRef } from "react";
+import type { LaminateFinish } from "./laminate";
 import { LaminateActiveContext } from "./laminateActiveContext";
 import {
   stickerTurn,
@@ -6,7 +7,6 @@ import {
   refreshSticker,
   turnSticker,
   updateSticker,
-  type LaminateFinish,
   type StickerFoilMaterial,
   type StickerSurface,
 } from "./stickerRenderer";

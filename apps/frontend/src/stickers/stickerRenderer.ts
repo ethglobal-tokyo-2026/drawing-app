@@ -14,6 +14,7 @@ import {
 import { type FoilCoverage } from "./foilCoverage";
 import { stickerFoilColors, type StickerFoilMaterial } from "./stickerFoilMaterial";
 export type { StickerFoilMaterial } from "./stickerFoilMaterial";
+import { LAMINATE_FINISHES, type LaminateFinish } from "./laminate";
 import { currentLight, subscribeLight } from "./light";
 import {
   isPerformanceRecorderOn,
@@ -40,7 +41,6 @@ interface TextureValidation {
   finish: (failure?: string) => void;
 }
 
-export type LaminateFinish = "gloss" | "matte";
 export interface StickerSurface {
   print: string;
   cut: string;
@@ -123,6 +123,8 @@ class StickerRenderer {
   refreshFrame = 0;
   revealFrame = 0;
   readonly flat: WebGLTexture;
+  /** The holo foil's palette in sRGB, read once, for the glitter and prism laminates. */
+  laminatePalette: Float32Array | null = null;
   readonly buffer: WebGLBuffer;
   readonly atlasLimit: number;
   readonly stopLight: () => void = () => {};
@@ -208,6 +210,8 @@ class StickerRenderer {
         "foilStyle",
         "foilSources[0]",
         "opaquePaper",
+        "laminateStyle",
+        "laminatePalette[0]",
       ])
         this.uniforms.set(name, gl.getUniformLocation(program, name));
       gl.useProgram(program);
@@ -873,6 +877,17 @@ class StickerRenderer {
         this.uniforms.get("roughness") ?? null,
         material?.finish === "matte" ? 0.16 : 0.016,
       );
+      const laminate = material?.finish ?? "gloss";
+      gl.uniform1f(this.uniforms.get("laminateStyle") ?? null, LAMINATE_FINISHES.indexOf(laminate));
+      if (laminate === "glitter" || laminate === "prism") {
+        this.laminatePalette ??= Float32Array.from(
+          stickerFoilColors(tile.surface.container, {
+            style: "holo",
+            size: "detail",
+          }).palette.flat(),
+        );
+        gl.uniform3fv(this.uniforms.get("laminatePalette[0]") ?? null, this.laminatePalette);
+      }
       gl.uniform1f(this.uniforms.get("creaseReveal") ?? null, tile.creaseProgress);
       gl.uniform1f(this.uniforms.get("opaquePaper") ?? null, 0);
       gl.drawArrays(gl.TRIANGLES, 0, 6);

@@ -4,16 +4,16 @@ import { Skeleton } from "../ui/Skeleton";
 import { BrushStrokeSample } from "./BrushStrokeSample";
 import type { BrushKind } from "./brushSamples";
 import { ComingSoonShelf } from "./ComingSoonShelf";
-import { FinishPreview, type BackingFoil, type Laminate } from "./FinishPreview";
+import { FinishPreview, type BackingFoil } from "./FinishPreview";
 import { ReserveTicketsHero } from "./ReserveTicketsHero";
 import { ShopTicketPurchases } from "./ShopTicketPurchases";
 import { useShopSticker, type ShopSticker } from "./shopSticker";
 import "./ShopScreen.css";
 import { useLight } from "../stickers/light";
+import { LAMINATE_FINISHES } from "../stickers/laminate";
 
 /** A swatch's side, in CSS px. */
 const SWATCH = 96;
-const LAMINATES: readonly Laminate[] = ["gloss", "matte", "glitter", "prism"];
 const BRUSHES: readonly BrushKind[] = ["brush", "marker", "fineliner", "pixelPen"];
 const BACKING_FOILS: readonly BackingFoil[] = ["holo", "gold", "silver", "roseGold"];
 
@@ -44,7 +44,7 @@ export function ShopScreen({ onBuyReserveTickets }: { onBuyReserveTickets: () =>
         </h2>
         <ComingSoonShelf
           title={t(($) => $.shop.shelves.laminates.title)}
-          items={LAMINATES.map((laminate) => ({
+          items={LAMINATE_FINISHES.map((laminate) => ({
             id: laminate,
             name: t(($) => $.shop.shelves.laminates.items[laminate]),
             preview: onSticker((s) => (

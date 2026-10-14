@@ -3,7 +3,7 @@ import { useTranslation } from "../i18n/react";
 import type { CreaseImage, CreaseBounds } from "./crease";
 import { setCreaseRevealSize } from "./creaseRevealSize";
 import { StickerMaterial } from "./StickerMaterial";
-import type { LaminateFinish } from "./stickerRenderer";
+import type { LaminateFinish } from "./laminate";
 import { madeFoil } from "./madeFoil";
 import { useSharpSrc } from "./sharpImage";
 import { StickerCrease } from "./StickerCrease";
@@ -54,7 +54,7 @@ interface Props {
   canRevealCrease?: (normal: string) => boolean;
   /** Consumes that placement once its real laminate snapshot is ready. */
   startCreaseReveal?: (normal: string) => boolean;
-  /** Coming-soon Shop previews compare roughness; sealed stickers default to gloss. */
+  /** The Laminate: gloss for every sealed sticker; the Shop previews the coming ones. */
   laminate?: LaminateFinish;
   /** Whether this surface is exposed; covering it pauses its laminate snapshots. */
   laminateActive?: boolean;
