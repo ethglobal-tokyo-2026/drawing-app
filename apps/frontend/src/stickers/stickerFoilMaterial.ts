@@ -1,4 +1,4 @@
-import { type FoilSize, type FoilStyle } from "./foilMaterial";
+import { srgbToLinear, type FoilSize, type FoilStyle } from "./foilMaterial";
 export interface StickerFoilMaterial {
   style: FoilStyle;
   size: FoilSize;
@@ -24,7 +24,6 @@ export function stickerFoilColors(element: HTMLElement, material: StickerFoilMat
     if (!rgb || rgb.length < 3) throw new Error(`Sticker foil color ${name} is unavailable`);
     return [Number(rgb[0]) / 255, Number(rgb[1]) / 255, Number(rgb[2]) / 255];
   };
-  const linear = (v: number) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
   try {
     const names =
       material.style === "pink"
@@ -40,7 +39,11 @@ export function stickerFoilColors(element: HTMLElement, material: StickerFoilMat
           : material.style === "roseGold"
             ? read("foil-rose-gold")
             : [1, 1, 1];
-    const colors = { palette, tint: tint.map(linear), ink: read("ink").map(linear) };
+    const colors = {
+      palette,
+      tint: tint.map(srgbToLinear),
+      ink: read("ink").map(srgbToLinear),
+    };
     colorsByStyle.set(key, colors);
     return colors;
   } finally {

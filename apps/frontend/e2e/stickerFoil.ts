@@ -2,6 +2,7 @@ import {
   createFoilLookup,
   createFoilSourceSamples,
   FOIL_ROOM,
+  srgbToLinear,
   type FoilRoom,
   type FoilStyle,
 } from "../src/stickers/foilMaterial";
@@ -116,7 +117,6 @@ const palettes = {
   holo: ["pink", "peach", "lemon", "aqua", "sky", "lilac"],
   pink: ["rose", "blush", "pearl", "candy", "orchid", "magenta"],
 };
-const linear = (v: number) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
 let lastStyle: FoilStyle | undefined;
 let tint: number[] = [];
 function render(options: FoilFixtureOptions = {}) {
@@ -152,7 +152,7 @@ function render(options: FoilFixtureOptions = {}) {
       gpu.UNSIGNED_BYTE,
       lookup.pixels,
     );
-    tint = style === "pink" ? readColor("foil-rose").map(linear) : [1, 1, 1];
+    tint = style === "pink" ? readColor("foil-rose").map(srgbToLinear) : [1, 1, 1];
     lastStyle = style;
   }
   gpu.uniform3fv(uniform("foilTint"), tint);
@@ -186,7 +186,7 @@ function render(options: FoilFixtureOptions = {}) {
     ["holo", "pink", "kyoto-seika", "gold", "silver", "roseGold"].indexOf(style),
   );
   gpu.uniform4fv(uniform("foilSources"), createFoilSourceSamples(room));
-  gpu.uniform3fv(uniform("foilInk"), readColor("ink").map(linear));
+  gpu.uniform3fv(uniform("foilInk"), readColor("ink").map(srgbToLinear));
   gpu.uniform1f(uniform("diagnostic"), diagnostic ? 1 : 0);
   gpu.uniform1f(uniform("geometry"), ["flat", "ramp", "plateau"].indexOf(geometry));
   gpu.uniform1f(uniform("side"), side);

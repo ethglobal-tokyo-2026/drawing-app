@@ -6,7 +6,9 @@ export type FoilTone = "holo" | "pink" | "kyoto-seika";
 export type FoilStyle = FoilTone | "gold" | "silver" | "roseGold";
 type Rgb = readonly [number, number, number];
 const luminance = (c: Rgb) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
-const linear = (v: number) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+/** An sRGB channel in [0, 1] as linear light. */
+export const srgbToLinear = (v: number) =>
+  v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
 const directBasis = Uint8Array.from(atob(basis.direct), (c) => c.charCodeAt(0));
 const bridgeBasis = Uint8Array.from(atob(basis.bridge), (c) => c.charCodeAt(0));
 type Lookup = { width: number; height: number; pixels: Uint8Array };
@@ -21,7 +23,7 @@ export function createFoilLookup(style: FoilStyle, palette: readonly Rgb[]): Loo
     pixels = new Uint8Array(width * height * 4);
   const chromatic = style === "holo" || style === "pink";
   const colors = palette.map((rgb) => {
-    const c: Rgb = [linear(rgb[0]), linear(rgb[1]), linear(rgb[2])],
+    const c: Rgb = [srgbToLinear(rgb[0]), srgbToLinear(rgb[1]), srgbToLinear(rgb[2])],
       y = luminance(c);
     if (y <= 0) throw new Error("Foil palette colors must reflect light");
     return [c[0] / y, c[1] / y, c[2] / y];
