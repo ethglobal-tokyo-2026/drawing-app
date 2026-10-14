@@ -175,15 +175,20 @@ test("a sent gift's detail says it's on its way, and Take it out asks before it 
   const other = await sealFromBoard(page, language);
   await giveFromBoard(page, language, no);
   await backToBoardOnceSent(page, language);
+  const onItsWay = say(stickerBoard.detail.onItsWay, language);
+  // The rail names the sent sticker with its gift's state.
   await (
     await openDetail(page, language, other)
   )
     .getByRole("navigation", { name: say(stickerBoard.detail.yourStickers, language) })
-    .getByRole("button", { name: no, exact: true })
+    .getByRole("button", {
+      name: say(stickerBoard.detail.thumbnailGiftLabel, language, { no, status: onItsWay }),
+      exact: true,
+    })
     .click();
   // The detail is named for the sticker it shows.
   const detail = page.getByRole("dialog", { name: no });
-  await expect(detail.getByText(say(stickerBoard.detail.onItsWay, language))).toBeVisible();
+  await expect(detail.getByText(onItsWay)).toBeVisible();
   await detail.getByRole("button", { name: say(giving.inTheBag.takeOut, language) }).click();
   const ask = detail.getByRole("group", {
     name: say(stickerBoard.detail.takeOut.title, language, { no }),
