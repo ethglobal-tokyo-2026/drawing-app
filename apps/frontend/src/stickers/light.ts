@@ -33,17 +33,12 @@ export function subscribeLight(listener: (pose: LightPose) => void): () => void 
 }
 
 /**
- * The app's one light: `--lx` and `--ly` (-1 to 1) follow only the device's tilt where the browser
- * shares it. An eligible no-rotation desktop may use the one shared fallback pose. Mouse, pen and
- * finger interactions never move it. Set on each moving highlight, the values only restyle those.
- * The light listens only while a visible screen with stickers holds it.
+ * The app's one light: a pose (-1 to 1 across and up) that follows only the device's tilt where the
+ * browser shares it. An eligible no-rotation desktop may use the one shared fallback pose. Mouse, pen
+ * and finger interactions never move it. The sticker material reads the published pose; creases read
+ * it as `--lx` and `--ly`. The light listens only while a visible screen with stickers holds it.
  */
 
-/**
- * The Shop preview film's highlights follow the light; setting it on them restyles only those
- * highlights, not the masked layers around them.
- */
-const MOVING = ".laminate-film > i > b";
 /**
  * Each crease, which takes the light only once it rests: restyling every crease's layers on each write
  * drops frames while the light moves, and its fade glides it there after.
@@ -67,10 +62,10 @@ const written = (v: number) => (Math.abs(v) < 0.0005 ? 0 : v).toFixed(3);
 let light: { on: () => void; off: () => void } | null = null;
 let holders = 0;
 
-/** The light as it's written onto what reads it. */
-type Light = { lx: string; ly: string; rotation: string };
+/** The light as it's written onto the creases. */
+type Light = { lx: string; ly: string };
 
-/** Where the light last was, or null before it first moves: what a newly shown highlight starts at. */
+/** Where the light last was, or null before it first moves: what the creases take once it rests. */
 let lightNow: Light | null = null;
 /** Where the light last rested, or null before it first rests: what a newly shown crease starts at. */
 let creaseLightNow: Light | null = null;
@@ -94,27 +89,21 @@ function setLight(els: NodeListOf<HTMLElement> | HTMLElement[], light: Light | n
     if (light) {
       el.style.setProperty("--lx", light.lx);
       el.style.setProperty("--ly", light.ly);
-      el.style.setProperty("--light-rotation", light.rotation);
     } else {
       el.style.removeProperty("--lx");
       el.style.removeProperty("--ly");
-      el.style.removeProperty("--light-rotation");
     }
   }
   return els.length;
 }
 
-/** Sets the light on what reads it in `el`, newly shown, so it matches the rest at once. */
+/** Sets the light on the creases in `el`, newly shown, so they match the rest at once. */
 export function lightUp(el: HTMLElement) {
-  const within = (selector: string) =>
-    el.matches(selector) ? [el] : el.querySelectorAll<HTMLElement>(selector);
-  const held = lightNow ?? {
-    lx: written(publishedPose.x),
-    ly: written(publishedPose.y),
-    rotation: written(publishedPose.rotationDegrees),
-  };
-  setLight(within(MOVING), held);
-  setLight(within(CREASES), creaseLightNow ?? held);
+  const creases = el.matches(CREASES) ? [el] : el.querySelectorAll<HTMLElement>(CREASES);
+  setLight(
+    creases,
+    creaseLightNow ?? lightNow ?? { lx: written(publishedPose.x), ly: written(publishedPose.y) },
+  );
 }
 
 /** Policy absence is unknown: only explicit accelerometer and gyroscope allowance qualifies. */
@@ -188,33 +177,13 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     if (isPerformanceRecorderOn()) notePerformance("light", `settle on ${count} creases`);
   };
 
-  /**
-   * Sets the light on every highlight, and on creases once rotation settles or each fallback write;
-   * returns how many highlights.
-   */
-  const setLightNow = (light: Light) => {
-    lightNow = light;
+  /** Holds the light at `lit` for the creases: they take it once rotation rests, or each fallback write. */
+  const writeLight = () => {
+    lightNow = { lx: written(lit.x), ly: written(lit.y) };
+    kept.light = lightNow;
     win.clearTimeout(settle);
     if (mode === "fallback-wave") settleCreases();
     else settle = win.setTimeout(settleCreases, CREASE_SETTLE_MS);
-    return setLight(root.querySelectorAll<HTMLElement>(MOVING), light);
-  };
-
-  /** Sets the light from `lit` on every highlight; returns how many. Made once, not per write. */
-  const writeLit = () => {
-    const count = setLightNow({
-      lx: written(lit.x),
-      ly: written(lit.y),
-      rotation: written(lit.rotationDegrees),
-    });
-    kept.light = lightNow;
-    return count;
-  };
-
-  /** Writes the light from `lit` as our work, and notes how many it lit while recording. */
-  const writeLight = () => {
-    const count = timeOurWork("light", writeLit);
-    if (isPerformanceRecorderOn()) notePerformance("light", `write to ${count} highlights`);
   };
 
   const write = (now: number) => {

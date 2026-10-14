@@ -8,6 +8,7 @@ import {
   installLight,
   lightUp,
   subscribeLight,
+  type LightPose,
 } from "./light";
 import * as motionPermission from "../ui/motionPermission";
 
@@ -19,20 +20,16 @@ let uninstall = () => {};
 const tiltListeners = new Set<EventListenerOrEventListenerObject>();
 /** The light's holds a test hasn't released, released after it. */
 const held = new Set<() => void>();
-/** A Shop preview film highlight, which reads the light. */
-let film: HTMLElement;
+/** The poses the light published to the sticker material during the test. */
+let published: LightPose[] = [];
+let stopRecording = () => {};
 
-/** A Shop preview film; returns its highlight. */
-const addFilm = () => {
-  const el = document.createElement("span");
-  el.className = "laminate-film";
-  const band = document.createElement("i");
-
-  const spec = document.createElement("b");
-  band.append(spec);
-  el.append(band);
-  document.body.append(el);
-  return spec;
+/** A crease shown on the page, which reads the light once it rests. */
+const addCrease = () => {
+  const crease = document.createElement("span");
+  crease.className = "sticker-crease";
+  document.body.append(crease);
+  return crease;
 };
 /** A sensor's frame. */
 const FRAME_MS = 16;
@@ -43,22 +40,16 @@ const tiltAcross = (from: number, to: number) => {
     vi.advanceTimersByTime(FRAME_MS);
   }
 };
-/** A Shop preview film whose two highlights consume the same displayed light. */
-const makePreviewFilm = () => {
-  const element = document.createElement("span");
-  element.className = "laminate-film";
-  const band = document.createElement("i");
-  const highlights = [document.createElement("b"), document.createElement("b")];
-  band.append(...highlights);
-  element.append(band);
-  return { element, highlights };
-};
-
 const lightOn = (el: HTMLElement) => [
   el.style.getPropertyValue("--lx"),
   el.style.getPropertyValue("--ly"),
 ];
-const lightAt = () => lightOn(film);
+/** The last published pose, written as a crease takes it; blank before any. */
+const lightAt = () => {
+  const pose = published.at(-1);
+  const written = (v: number) => (Math.abs(v) < 0.0005 ? 0 : v).toFixed(3);
+  return pose ? [written(pose.x), written(pose.y)] : ["", ""];
+};
 /** A pointer moved to (x, y): a mouse unless it says it's a pen or a finger. */
 const pointAt = (x: number, y: number, pointerType = "mouse", type = "pointermove") =>
   window.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, pointerType }));
@@ -131,7 +122,8 @@ beforeEach(() => {
   });
   document = browserDocument.implementation.createHTMLDocument();
   root = document.documentElement;
-  film = addFilm();
+  published = [];
+  stopRecording = subscribeLight((pose) => published.push(pose));
   usePermission(permissionStore());
   vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
   const add = window.addEventListener.bind(window);
@@ -147,6 +139,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  stopRecording();
   held.forEach((release) => release());
   held.clear();
   uninstall();
@@ -246,7 +239,6 @@ describe("the shared light", () => {
       expect(frames.length).toBeGreaterThanOrEqual(12);
       vi.advanceTimersByTime(2000);
       expect(currentLight()).toEqual({ x: 0, y: 0, rotationDegrees: -10 });
-      expect(film.style.getPropertyValue("--light-rotation")).toBe("-10.000");
       const count = frames.length;
       vi.advanceTimersByTime(22000);
       expect(frames).toHaveLength(count);
@@ -312,12 +304,6 @@ describe("the shared light", () => {
     tiltTo(0, 40);
     vi.advanceTimersByTime(1000);
     const frames: { at: number; x: number; y: number }[] = [];
-    const cssWrites: number[] = [];
-    const setProperty = film.style.setProperty.bind(film.style);
-    vi.spyOn(film.style, "setProperty").mockImplementation((name, value, priority) => {
-      if (name === "--lx") cssWrites.push(performance.now());
-      setProperty(name, value, priority);
-    });
     const stop = subscribeLight((pose) => frames.push({ at: performance.now(), ...pose }));
     try {
       tiltTo(8, 40);
@@ -327,9 +313,6 @@ describe("the shared light", () => {
         expect(frames[i].at - frames[i - 1].at).toBeLessThanOrEqual(20);
         expect(frames[i].x).toBeGreaterThan(frames[i - 1].x);
       }
-      expect(cssWrites.length).toBe(frames.length);
-      for (let i = 1; i < cssWrites.length; i++)
-        expect(cssWrites[i] - cssWrites[i - 1]).toBeLessThanOrEqual(20);
       expect(Number(lightAt()[0])).toBeGreaterThan(-0.6);
       vi.advanceTimersByTime(2000);
       const held = currentLight();
@@ -513,44 +496,31 @@ describe("the shared light", () => {
     ["touch", "pointermove"],
     ["touch", "pointerdown"],
   ])("ignores %s %s before and after device tilt lights the stickers", (pointerType, type) => {
-    const { element, highlights } = makePreviewFilm();
-    document.body.append(element);
+    const crease = addCrease();
     uninstall = installLight(root);
     showScreen();
     pointAt(window.innerWidth, 0, pointerType, type);
     vi.advanceTimersByTime(100);
     expect(lightAt()).toEqual(["", ""]);
-    expect(highlights.map(lightOn)).toEqual([
-      ["", ""],
-      ["", ""],
-    ]);
+    expect(lightOn(crease)).toEqual(["", ""]);
 
     tiltTo(0, 40);
     vi.advanceTimersByTime(10 * GLIDE_MS);
     tiltTo(32, 40);
     vi.advanceTimersByTime(10 * GLIDE_MS);
     expect(lightAt()).toEqual(["1.000", "0.000"]);
-    expect(highlights.map(lightOn)).toEqual([
-      ["1.000", "0.000"],
-      ["1.000", "0.000"],
-    ]);
+    expect(lightOn(crease)).toEqual(["1.000", "0.000"]);
 
     pointAt(0, window.innerHeight, pointerType, type);
     vi.advanceTimersByTime(100);
     expect(lightAt()).toEqual(["1.000", "0.000"]);
-    expect(highlights.map(lightOn)).toEqual([
-      ["1.000", "0.000"],
-      ["1.000", "0.000"],
-    ]);
+    expect(lightOn(crease)).toEqual(["1.000", "0.000"]);
     expect(lightOn(root)).toEqual(["", ""]);
 
     tiltTo(-32, 40);
     vi.advanceTimersByTime(10 * GLIDE_MS);
     expect(lightAt()).toEqual(["-1.000", "0.000"]);
-    expect(highlights.map(lightOn)).toEqual([
-      ["-1.000", "0.000"],
-      ["-1.000", "0.000"],
-    ]);
+    expect(lightOn(crease)).toEqual(["-1.000", "0.000"]);
   });
 
   it("combines sensor readings within one display frame toward the latest position", () => {
@@ -558,12 +528,12 @@ describe("the shared light", () => {
     showScreen();
     tiltTo(0, 40);
     vi.advanceTimersByTime(16);
-    const writes = vi.spyOn(film.style, "setProperty");
+    const before = published.length;
     tiltTo(32, 40);
     tiltTo(-32, 40);
-    expect(writes.mock.calls.filter(([name]) => name === "--lx")).toHaveLength(0);
+    expect(published).toHaveLength(before);
     vi.advanceTimersByTime(16);
-    expect(writes.mock.calls.filter(([name]) => name === "--lx")).toHaveLength(1);
+    expect(published).toHaveLength(before + 1);
     expect(Number(lightAt()[0])).toBeLessThan(0);
     vi.advanceTimersByTime(10 * GLIDE_MS);
     expect(lightAt()).toEqual(["-1.000", "0.000"]);
@@ -620,23 +590,23 @@ describe("the shared light", () => {
     vi.advanceTimersByTime(10 * GLIDE_MS);
     tiltTo(16, 40);
     vi.advanceTimersByTime(10 * GLIDE_MS);
-    const writes = vi.spyOn(film.style, "setProperty");
+    const before = published.length;
     tiltTo(16.2, 40.2);
     vi.advanceTimersByTime(100);
-    expect(writes).not.toHaveBeenCalled();
+    expect(published).toHaveLength(before);
   });
 
-  it("starts a film shown after the light moved where the light already is", () => {
+  it("starts a crease shown after the light moved where the light already is", () => {
     uninstall = installLight(root);
     showScreen();
     tiltTo(0, 40);
     vi.advanceTimersByTime(10 * GLIDE_MS);
     tiltTo(32, 40);
     vi.advanceTimersByTime(10 * GLIDE_MS);
-    // As preview film does when it mounts.
-    const detail = addFilm();
-    lightUp(detail);
-    expect(lightOn(detail)).toEqual(["1.000", "0.000"]);
+    // As a crease does when it mounts.
+    const later = addCrease();
+    lightUp(later);
+    expect(lightOn(later)).toEqual(["1.000", "0.000"]);
   });
 
   it("moves persistent light without launching a detached sweep after a large or slow tilt", () => {
@@ -653,7 +623,6 @@ describe("the shared light", () => {
     const held = lightAt();
     vi.advanceTimersByTime(22000);
     expect(lightAt()).toEqual(held);
-    expect(film.getAnimations()).toEqual([]);
     expect(vi.getTimerCount()).toBe(0);
   });
 
@@ -701,25 +670,6 @@ describe("the shared light", () => {
     expect(lightAt()).toEqual(["1.000", "0.000"]);
   });
 
-  it("lights Shop preview highlights and a late preview from the held pose", () => {
-    const { element, highlights } = makePreviewFilm();
-    document.body.append(element);
-    uninstall = installLight(root);
-    showScreen();
-    tiltTo(0, 40);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    tiltTo(32, 40);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    expect(lightAt()).toEqual(["1.000", "0.000"]);
-    expect(highlights.map(lightOn)).toEqual([lightAt(), lightAt()]);
-    expect(lightOn(element)).toEqual(["", ""]);
-
-    // Shown while the phone is still: no move comes to light it, so it starts from the light.
-    const later = makePreviewFilm();
-    lightUp(later.element);
-    expect(later.highlights.map(lightOn)).toEqual([lightAt(), lightAt()]);
-  });
-
   it("keeps static sticker foil out of CSS light updates while the shared material pose advances", () => {
     const element = document.createElement("span");
     element.className = "sticker-foil";
@@ -739,9 +689,7 @@ describe("the shared light", () => {
   });
 
   it("lights a crease only once the light rests, where it rests", () => {
-    const crease = document.createElement("span");
-    crease.className = "sticker-crease";
-    document.body.append(crease);
+    const crease = addCrease();
     uninstall = installLight(root);
     showScreen();
     tiltTo(0, 40);
@@ -786,7 +734,7 @@ describe("the shared light", () => {
     showScreen();
     tiltTo(angle === 90 ? -40 : 40, 0);
     vi.advanceTimersByTime(100);
-    expect(lightAt()).toEqual(["0.000", "0.000"]);
+    expect(currentLight()).toMatchObject({ x: 0, y: 0 });
   });
 
   it.each(["release", "hide", "reduce", "deny"])(
@@ -796,9 +744,7 @@ describe("the shared light", () => {
       vi.spyOn(window, "matchMedia").mockReturnValue(reduced);
       const permission = permissionStore();
       usePermission(permission);
-      const crease = document.createElement("i");
-      crease.className = "sticker-crease";
-      document.body.append(crease);
+      const crease = addCrease();
       uninstall = installLight(root);
       const close = showScreen();
       tiltTo(0, 40);
@@ -835,7 +781,7 @@ describe("the shared light", () => {
     vi.advanceTimersByTime(1000);
     showScreen();
     vi.advanceTimersByTime(1000);
-    const later = addFilm();
+    const later = addCrease();
     lightUp(later);
     expect(lightOn(later)).toEqual(["1.000", "0.000"]);
     expect(lightAt()).toEqual(["1.000", "0.000"]);
@@ -880,10 +826,9 @@ describe("the shared light", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("publishes one shared fallback pose to subscribed material, Shop film and late mounts", () => {
+  it("publishes one shared fallback pose to subscribed material, creases and late mounts", () => {
     noRotationDesktop();
-    const { element, highlights } = makePreviewFilm();
-    document.body.append(element);
+    const crease = addCrease();
     const poses: { x: number; y: number }[] = [];
     const stop = subscribeLight((pose) => poses.push(pose));
     uninstall = installLight(root);
@@ -891,8 +836,8 @@ describe("the shared light", () => {
     vi.advanceTimersByTime(3500);
     expect(poses.length).toBeGreaterThan(2);
     expect(currentLight().x).toBeGreaterThan(0.3);
-    expect(highlights.map(lightOn)).toEqual([lightAt(), lightAt()]);
-    const later = addFilm();
+    expect(lightOn(crease)).toEqual(lightAt());
+    const later = addCrease();
     lightUp(later);
     expect(lightOn(later)).toEqual(lightAt());
     stop();
