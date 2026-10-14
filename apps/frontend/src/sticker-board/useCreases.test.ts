@@ -2,11 +2,11 @@ import { MAX_SCALE } from "@drawing-app/api/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CREASE_SIDES } from "../stickers/crease";
 import type { Affine, CreaseJob, CreaseReply } from "../stickers/creaseWorker";
-import { kyotoSeikaBandWidth } from "../stickers/kyotoSeikaFoil";
+import { FOIL_BAND_WIDTH, kyotoSeikaBandWidth } from "../stickers/foilBand";
 import type { FoilTone } from "../stickers/foilMaterial";
 import { testStickerUrls } from "../stickers/testStickerUrls";
 import { fieldOf, PHONE_BOARD, stickerBox, unitOf, type Placement } from "./placement";
-import { CreaseStore, creaseJobs, FOIL_REACH } from "./useCreases";
+import { CreaseStore, creaseJobs } from "./useCreases";
 
 const field = fieldOf(PHONE_BOARD.W, PHONE_BOARD.H);
 const unit = unitOf("phone", PHONE_BOARD.W);
@@ -118,17 +118,17 @@ describe("creaseJobs", () => {
       const next = boxOf(left).w + gap;
       return [left, sticker("right", { x: 0.3 + next / field.w, s })];
     };
-    expect(jobsFor(beside(FOIL_REACH)).map((j) => j.id)).toEqual(["right"]);
-    expect(jobsFor(beside(FOIL_REACH * 3))).toEqual([]);
+    expect(jobsFor(beside(FOIL_BAND_WIDTH.board)).map((j) => j.id)).toEqual(["right"]);
+    expect(jobsFor(beside(FOIL_BAND_WIDTH.board * 3))).toEqual([]);
 
     // On a large sticker the Kyoto Seika Practice Mode foil's band, grown from the cut, reaches further.
     const [large] = beside(0, MAX_SCALE);
     const band = kyotoSeikaBandWidth(boxOf(large).w, boxOf(large).h);
-    expect(band).toBeGreaterThan(FOIL_REACH);
+    expect(band).toBeGreaterThan(FOIL_BAND_WIDTH.board);
     const kyotoSeika = (): FoilTone => "kyoto-seika";
-    expect(jobsFor(beside(FOIL_REACH + band, MAX_SCALE), kyotoSeika).map((j) => j.id)).toEqual([
-      "right",
-    ]);
+    expect(
+      jobsFor(beside(FOIL_BAND_WIDTH.board + band, MAX_SCALE), kyotoSeika).map((j) => j.id),
+    ).toEqual(["right"]);
   });
 
   it("draws each sticker by its outline as the board shows it: its cut, its foil band's mask, or its cut grown by the Kyoto Seika Practice Mode foil's band", () => {

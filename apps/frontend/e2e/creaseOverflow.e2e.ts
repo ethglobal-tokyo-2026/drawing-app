@@ -326,7 +326,7 @@ test("board figures accept real asymmetric overflow bounds with ordinary control
   const result = await page.evaluate(async () => {
     const { required } = await import("./stickerMaterialFixture.ts");
     const { foilCoverage } = await import("../src/stickers/foilCoverage.ts");
-    const { kyotoSeikaBandWidth } = await import("../src/stickers/kyotoSeikaFoil.ts");
+    const { kyotoSeikaBandWidth } = await import("../src/stickers/foilBand.ts");
     const fixture = window.stickerBoardDragFixture;
     const crease = fixture.acceptedCreases()["large-drag-1"];
     if (!crease?.normalBounds) throw new Error("The board did not accept expanded normal bounds");

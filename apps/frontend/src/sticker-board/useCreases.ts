@@ -19,7 +19,7 @@ import type {
   Silhouette,
 } from "../stickers/creaseWorker";
 import type { Crease } from "../stickers/StickerFigure";
-import { kyotoSeikaBandWidth } from "../stickers/kyotoSeikaFoil";
+import { FOIL_BAND_WIDTH, kyotoSeikaBandWidth } from "../stickers/foilBand";
 import type { FoilTone } from "../stickers/foilMaterial";
 import type { StickerUrls } from "../stickers/stickerUrls";
 import { workerCanPaint } from "../ui/workerCanPaint";
@@ -40,13 +40,6 @@ interface CreaseSticker {
 const MAX_SCALE = 1;
 /** How long the board holds still before its creases are baked again. */
 const SETTLE_MS = 90;
-/**
- * How far apart two stickers' boxes can lie and one still count as over the other, in CSS px, since a
- * holo or pink band's mask from the server fills the box; a band grown from the cut widens it to its
- * own width. Also the width a holo or pink band is grown by where there's no such mask (the Shop's
- * sample, never on a board).
- */
-export const FOIL_REACH = 5;
 
 type Box = { x: number; y: number; w: number; h: number; r: number };
 
@@ -142,7 +135,8 @@ function silhouetteOf(
     return { url: urls.mask, grow: r2(kyotoSeikaBandWidth(box.w, box.h)) };
   }
   if (!tone) return { url: urls.mask, grow: 0 };
-  return urls.foil ? { url: urls.foil, grow: 0 } : { url: urls.mask, grow: FOIL_REACH };
+  // Without the server's mask (the Shop's sample, never on a board), the band grows from the cut.
+  return urls.foil ? { url: urls.foil, grow: 0 } : { url: urls.mask, grow: FOIL_BAND_WIDTH.board };
 }
 
 /** Each sticker's crease job, from the stickers under it; `stickers` go bottom to top. */
@@ -163,7 +157,8 @@ export function creaseJobs<S extends CreaseSticker>(
     const b = boxes[i];
     const under = stickers.slice(0, i).flatMap((_, j) => {
       const a = boxes[j];
-      const reach = Math.max(FOIL_REACH, outlines[i].grow, outlines[j].grow);
+      // A holo or pink band's mask from the server fills the box; one grown from the cut reaches past it.
+      const reach = Math.max(FOIL_BAND_WIDTH.board, outlines[i].grow, outlines[j].grow);
       if (!overlaps(a, b, reach)) return [];
       // The one underneath's box, from its middle, into this one's frame, then into pixels.
       const steps: Affine[] = [

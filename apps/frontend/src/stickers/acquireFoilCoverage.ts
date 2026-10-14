@@ -1,6 +1,6 @@
 import { foilCoverageImage } from "./foilCoverageImage";
 import type { FoilCoverage } from "./foilCoverage";
-import { kyotoSeikaBandWidth } from "./kyotoSeikaFoil";
+import { foilBandWidth } from "./foilBand";
 import type { StickerFoilMaterial } from "./stickerFoilMaterial";
 
 /** One coverage for every presentation of it, and its static band's mask: baked, or encoded with it. */
@@ -60,12 +60,6 @@ function tileSide(width: number, height: number) {
   return Math.ceil(2 ** (Math.ceil(2 * Math.log2(Math.max(1, shown))) / 2));
 }
 
-/** CSS px a band grows past its cut in this frame; a baked mask is the band already. */
-function bandWidth(material: StickerFoilMaterial, width: number, height: number) {
-  if (material.style === "kyoto-seika") return kyotoSeikaBandWidth(width, height);
-  return material.mask ? 0 : { board: 5, detail: 6, sheet: 3 }[material.size];
-}
-
 /**
  * Presentations whose pixels match share one coverage, whatever size shows them, while any holds it.
  * Its alpha is shared and never written; the last release revokes its encoded mask.
@@ -81,7 +75,7 @@ export function acquireFoilCoverage(
     return { coverage: Promise.reject<SharedFoilCoverage>(signal.reason), release: () => {} };
   const baked = material.style === "kyoto-seika" ? undefined : material.mask;
   const side = tileSide(width, height);
-  const band = bandWidth(material, width, height);
+  const band = foilBandWidth(material, width, height);
   const grow = [band / width, band / height] as const;
   const key = JSON.stringify([cut, material.style, baked ?? null, side, grow]);
   let entry = entries.get(key);
