@@ -4,7 +4,7 @@
 
 **Goal:** Make a sealed sticker's timelapse replay its fills from stored pixels instead of re-running the fill algorithm, so changing the fill algorithm later does not change how already-sealed stickers replay.
 
-**Why now / ordering:** This must ship **before** the Fill gap-closing algorithm change in `docs/superpowers/plans/2026-10-13-fill-gap-levels.md`. It is independent of that algorithm and of whatever the new algorithm becomes — a timelapse format/playback change only. It does **not** touch `canvas/fill.ts`'s algorithm, the Fill worker, or any CSP research. A fresh agent can execute this without the gap-levels context.
+**Why now / ordering:** This must ship **before** the Fill gap-closing algorithm change in `docs/superpowers/plans/2026-10-13-fill-gap-levels.md`. It is independent of that algorithm and of whatever the new algorithm becomes — a timelapse format/playback change only. It does **not** touch `canvas/fill.ts`'s algorithm, the Fill worker, or anything under `docs/research/`. A fresh agent can execute this without the gap-levels context.
 
 ## Background: how the timelapse replays fills today
 
@@ -32,7 +32,7 @@ The pixels already exist in the engine but aren't persisted:
 
 - **Sealed timelapse only.** The kept-session store (`session/keptSession.ts`, IndexedDB v3, steps only) is **unchanged**: a recovered in-progress drawing re-floods with the installed algorithm. Accepted.
 - **Pre-v5 sealed stickers re-flood.** Their stored timelapses hold no pixels and can't be recovered without the old algorithm. Accepted.
-- Does not touch the fill algorithm, the Fill worker, or CSP research.
+- Does not touch the fill algorithm, the Fill worker, or anything under `docs/research/`.
 
 ## Migration / compatibility
 
