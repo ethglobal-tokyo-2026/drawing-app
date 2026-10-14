@@ -29,19 +29,10 @@ import "../src/styles/tokens.css";
 import "../src/sticker-board/StickerBoard.css";
 
 const variant = new URLSearchParams(location.search).get("variant");
-if (
-  variant !== null &&
-  variant !== "ipad-21" &&
-  variant !== "crease-overflow" &&
-  variant !== "mixed-21"
-)
+if (variant !== null && variant !== "crease-overflow" && variant !== "mixed-21")
   throw new Error(`Unknown large sticker board fixture variant: ${variant}`);
-const stickerCount =
-  variant === "crease-overflow" ? 3 : variant === "ipad-21" || variant === "mixed-21" ? 21 : 15;
-const size =
-  variant === "ipad-21" || variant === "mixed-21"
-    ? { W: 1200, H: 1454, U: 1200 }
-    : { W: 1032, H: 1376, U: 1032 };
+const stickerCount = variant === "crease-overflow" ? 3 : variant === "mixed-21" ? 21 : 15;
+const size = variant === "mixed-21" ? { W: 1200, H: 1454, U: 1200 } : { W: 1032, H: 1376, U: 1032 };
 const field = fieldOf(size.W, size.H);
 const svg = (body: string) =>
   `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600">${body}</svg>`)}`;
@@ -61,7 +52,7 @@ const sources = Array.from({ length: stickerCount }, (_, index) => {
         on: true,
         x: index % 2 ? 0.16 : 0.84,
         y:
-          variant === "ipad-21" || variant === "mixed-21"
+          variant === "mixed-21"
             ? 0.12 + Math.floor((index - 5) / 2) * 0.105
             : 0.14 + Math.floor((index - 5) / 2) * 0.16,
         s: 0.16 + (index % 3) * 0.02,

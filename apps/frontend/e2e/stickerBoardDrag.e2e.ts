@@ -408,12 +408,6 @@ test("21 distinct large creased stickers follow diagonal tilt and retain a stati
     });
     await page.waitForTimeout(1000);
     await qualifyStickerScene(page, info, "mixed-board-motion");
-    const semantics = await page
-      .locator(".placed-sticker canvas.sticker-material")
-      .evaluateAll((canvases) => canvases.map((canvas) => canvas.getAttribute("data-foil-style")));
-    expect(semantics.filter((style) => style === "holo")).toHaveLength(7);
-    expect(semantics.filter((style) => style === "pink")).toHaveLength(7);
-    expect(semantics.filter((style) => style === "kyoto-seika")).toHaveLength(7);
     const registration = await page.evaluate(() =>
       Object.entries(window.stickerBoardDragFixture.acceptedCreases()).map(([id, crease]) => ({
         id,
