@@ -18,6 +18,7 @@ import {
   handleOf,
   openDetail,
   openTheirBoard,
+  overlayEntry,
   receivedRow,
   say,
   sealFromBoard,
@@ -516,6 +517,8 @@ test("A known-unsent gift with a lost token is replaced automatically after relo
   await page.keyboard.press("Escape");
   expect((await cancelledUnused).status()).toBe(200);
   await expect(unsent).toBeHidden();
+  // The closed sheet's entry comes off by a history.back() of the app's, which would cancel a reload.
+  await expect.poll(() => overlayEntry(page)).toBeNull();
   await page.reload();
   const other = await sealFromBoard(page, language);
   const detail = await openDetail(page, language, other);

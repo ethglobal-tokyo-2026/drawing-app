@@ -17,6 +17,7 @@ import {
   handleOf,
   openDetail,
   openCheckoutFromShop,
+  overlayEntry,
   say,
   sayCount,
   sealFromBoard,
@@ -28,17 +29,6 @@ import {
 
 const { gratitude, receiving, stickerBoard, tickets, ui } = strings;
 const language = "en";
-
-/** The live TicketCard entry, if one owns the browser's current history entry. */
-const cardEntry = (page: Page) =>
-  page.evaluate(() => {
-    const state: unknown = history.state;
-    const marker =
-      state !== null && typeof state === "object" && "drawingAppOverlay" in state
-        ? state.drawingAppOverlay
-        : null;
-    return typeof marker === "string" ? marker : null;
-  });
 
 /** Press the browser's Back button; the app must handle the resulting popstate. */
 const back = (page: Page) => page.evaluate(() => history.back());
@@ -62,12 +52,12 @@ test("Back closes a ready Mini-game, then records a played combo before closing 
   const game = bob.getByRole("dialog", { name: say(gratitude.title, language) });
   await expect(game).toBeVisible();
   const url = bob.url();
-  expect(await cardEntry(bob)).not.toBeNull();
+  expect(await overlayEntry(bob)).not.toBeNull();
 
   await back(bob);
   await expect(game).toBeHidden();
   await expect(boardSticker(bob, language, no)).toBeVisible();
-  await expect.poll(() => cardEntry(bob)).toBeNull();
+  await expect.poll(() => overlayEntry(bob)).toBeNull();
   expect(bob.url()).toBe(url);
 
   const detail = await openDetail(bob, language, no);
@@ -75,7 +65,7 @@ test("Back closes a ready Mini-game, then records a played combo before closing 
     .getByRole("button", { name: say(stickerBoard.detail.sendGratitude, language) })
     .click();
   await expect(game).toBeVisible();
-  const playingEntry = await cardEntry(bob);
+  const playingEntry = await overlayEntry(bob);
   expect(playingEntry).not.toBeNull();
   const heart = game.getByRole("button", {
     name: say(gratitude.heart, language, { handle: aliceHandle }),
@@ -94,8 +84,8 @@ test("Back closes a ready Mini-game, then records a played combo before closing 
   await back(bob);
   expect((await recorded).postData()).toContain('"endReason":"closed"');
   await expect(game).toBeVisible();
-  await expect.poll(() => cardEntry(bob)).not.toBe(playingEntry);
-  expect(await cardEntry(bob)).not.toBeNull();
+  await expect.poll(() => overlayEntry(bob)).not.toBe(playingEntry);
+  expect(await overlayEntry(bob)).not.toBeNull();
   const receipt = game.getByRole("region", { name: say(gratitude.receipt.label, language) });
   await expect(receipt).toBeVisible();
   await expect(receipt).toContainText(say(ui.hitCounter.spoken_one, language, { hits: 1 }));
@@ -103,7 +93,7 @@ test("Back closes a ready Mini-game, then records a played combo before closing 
   await back(bob);
   await expect(game).toBeHidden();
   await expect(boardSticker(bob, language, no)).toBeVisible();
-  await expect.poll(() => cardEntry(bob)).toBeNull();
+  await expect.poll(() => overlayEntry(bob)).toBeNull();
   expect(bob.url()).toBe(url);
 });
 /** A gRPC-Web GetBalance answer with enough JPYC for the simulated paid pack. */
@@ -136,21 +126,21 @@ test("Back closes the checkout to out of tickets, then the out-of-tickets card t
   await drawKey(page, language).click();
   const out = page.getByRole("dialog", { name: say(tickets.outOfTickets.title, language) });
   await expect(out).toBeVisible();
-  const outEntry = await cardEntry(page);
+  const outEntry = await overlayEntry(page);
   expect(outEntry).not.toBeNull();
 
   await out.getByRole("button", { name: say(tickets.buyReserveTickets, language) }).click();
   const packs = checkout(page, language);
   await expect(packs).toBeVisible();
-  await expect.poll(() => cardEntry(page)).not.toBe(outEntry);
-  expect(await cardEntry(page)).not.toBeNull();
+  await expect.poll(() => overlayEntry(page)).not.toBe(outEntry);
+  expect(await overlayEntry(page)).not.toBeNull();
 
-  const packsEntry = await cardEntry(page);
+  const packsEntry = await overlayEntry(page);
   await back(page);
   await expect(packs).toBeHidden();
   await expect(out).toBeVisible();
-  await expect.poll(() => cardEntry(page)).not.toBe(packsEntry);
-  expect(await cardEntry(page)).not.toBeNull();
+  await expect.poll(() => overlayEntry(page)).not.toBe(packsEntry);
+  expect(await overlayEntry(page)).not.toBeNull();
   expect(page.url()).toBe(url);
 
   await back(page);
@@ -158,7 +148,7 @@ test("Back closes the checkout to out of tickets, then the out-of-tickets card t
   await expect(
     page.getByRole("region", { name: say(stickerBoard.board.label, language) }),
   ).toBeVisible();
-  await expect.poll(() => cardEntry(page)).toBeNull();
+  await expect.poll(() => overlayEntry(page)).toBeNull();
   expect(page.url()).toBe(url);
 });
 
@@ -173,14 +163,14 @@ test("Back closes StartDrawing's reserve-ticket ask to the board", async ({ page
   await page.getByRole("button", { name: drawKeyName(language, pack.tickets, "reserve") }).click();
   const ask = page.getByRole("dialog", { name: say(tickets.startDrawing.reserve.title, language) });
   await expect(ask).toBeVisible();
-  expect(await cardEntry(page)).not.toBeNull();
+  expect(await overlayEntry(page)).not.toBeNull();
 
   await back(page);
   await expect(ask).toBeHidden();
   await expect(
     page.getByRole("region", { name: say(stickerBoard.board.label, language) }),
   ).toBeVisible();
-  await expect.poll(() => cardEntry(page)).toBeNull();
+  await expect.poll(() => overlayEntry(page)).toBeNull();
   expect(page.url()).toBe(url);
 });
 
@@ -211,11 +201,11 @@ test("Back during StartDrawing's leaving animation stays in Croquis", async ({ p
   await page.waitForTimeout(350);
   await expect(ask).toBeAttached();
   await back(page);
-  await expect.poll(() => cardEntry(page)).not.toBeNull();
+  await expect.poll(() => overlayEntry(page)).not.toBeNull();
   expect(page.url()).toBe(url);
   await expect(ask).toBeHidden();
   await expect(canvas(page, language)).toBeVisible();
-  await expect.poll(() => cardEntry(page)).toBeNull();
+  await expect.poll(() => overlayEntry(page)).toBeNull();
   expect(spendRequests).toHaveLength(1);
 });
 
@@ -233,14 +223,14 @@ test("Back closes TicketsNotLoaded after the ticket request fails", async ({ pag
   await page.getByRole("button", { name: say(stickerBoard.board.drawLabel, language) }).click();
   const card = page.getByRole("dialog", { name: say(tickets.notLoaded.couldntLoad, language) });
   await expect(card).toBeVisible();
-  expect(await cardEntry(page)).not.toBeNull();
+  expect(await overlayEntry(page)).not.toBeNull();
 
   await back(page);
   await expect(card).toBeHidden();
   await expect(
     page.getByRole("region", { name: say(stickerBoard.board.label, language) }),
   ).toBeVisible();
-  await expect.poll(() => cardEntry(page)).toBeNull();
+  await expect.poll(() => overlayEntry(page)).toBeNull();
   expect(page.url()).toBe(url);
 });
 
@@ -265,11 +255,11 @@ test("Back during a free-pack request keeps checkout open, and a later Back clos
   try {
     await card.getByRole("button", { name: say(tickets.checkout.takeFree, language) }).click();
     await expect(card).toHaveAttribute("aria-busy", "true");
-    const payingEntry = await cardEntry(page);
+    const payingEntry = await overlayEntry(page);
     expect(payingEntry).not.toBeNull();
     await back(page);
-    await expect.poll(() => cardEntry(page)).not.toBe(payingEntry);
-    expect(await cardEntry(page)).not.toBeNull();
+    await expect.poll(() => overlayEntry(page)).not.toBe(payingEntry);
+    expect(await overlayEntry(page)).not.toBeNull();
     await expect(card).toBeVisible();
     expect(page.url()).toBe(url);
   } finally {
@@ -282,7 +272,7 @@ test("Back during a free-pack request keeps checkout open, and a later Back clos
   await expect(added).toBeVisible();
   await back(page);
   await expect(added).toBeHidden();
-  await expect.poll(() => cardEntry(page)).toBeNull();
+  await expect.poll(() => overlayEntry(page)).toBeNull();
   expect(page.url()).toBe(url);
 });
 
@@ -396,11 +386,11 @@ test("Back during a simulated paid purchase keeps checkout open, then closes aft
     await expect.poll(() => paidRequests.length).toBe(1);
     await expect(card).toHaveAttribute("aria-busy", "true");
     expect(paidRequests).toEqual([{ purchaseId, digest, signature }]);
-    const payingEntry = await cardEntry(page);
+    const payingEntry = await overlayEntry(page);
     expect(payingEntry).not.toBeNull();
     await back(page);
-    await expect.poll(() => cardEntry(page)).not.toBe(payingEntry);
-    expect(await cardEntry(page)).not.toBeNull();
+    await expect.poll(() => overlayEntry(page)).not.toBe(payingEntry);
+    expect(await overlayEntry(page)).not.toBeNull();
     await expect(card).toBeVisible();
     expect(page.url()).toBe(url);
   } finally {
@@ -413,6 +403,6 @@ test("Back during a simulated paid purchase keeps checkout open, then closes aft
   await expect(added).toBeVisible();
   await back(page);
   await expect(added).toBeHidden();
-  await expect.poll(() => cardEntry(page)).toBeNull();
+  await expect.poll(() => overlayEntry(page)).toBeNull();
   expect(page.url()).toBe(url);
 });

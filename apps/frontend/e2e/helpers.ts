@@ -344,6 +344,20 @@ export async function spendEveryDailyTicket(page: Page, language: Language) {
   }
 }
 
+/**
+ * The overlay whose history entry is the browser's current one, by the id the app marks it with; null
+ * when none is. A closed overlay's entry comes off a moment after it closes.
+ */
+export const overlayEntry = (page: Page) =>
+  page.evaluate(() => {
+    const state: unknown = history.state;
+    const marker =
+      state !== null && typeof state === "object" && "drawingAppOverlay" in state
+        ? state.drawingAppOverlay
+        : null;
+    return typeof marker === "string" ? marker : null;
+  });
+
 /** The signed-in person's user ID, as the API answers their own session. */
 export async function signedInUserId(page: Page) {
   const body = await page.evaluate(async (): Promise<unknown> => (await fetch("/api/me")).json());
