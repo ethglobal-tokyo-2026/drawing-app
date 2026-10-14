@@ -4,7 +4,7 @@ test("concealing artwork immediately discards its old laminate even when replace
   page,
 }) => {
   await page.goto("/e2e/stickerLaminate.html?conceal=1");
-  const coat = page.locator("[data-conceal] canvas.sticker-laminate");
+  const coat = page.locator("[data-conceal] canvas.sticker-material");
   await expect(coat).toHaveAttribute("data-state", "ready");
   let release: () => void = () => {};
   const held = new Promise<void>((resolve) => {

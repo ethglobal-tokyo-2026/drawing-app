@@ -21,7 +21,8 @@ export function StickerCrease({
   ref?: RefObject<HTMLSpanElement | null>;
   onReady?: () => void;
 }) {
-  const { base, normal, ...sides } = crease;
+  const { base, normal, topLeft, bottomRight, topRight, bottomLeft } = crease;
+  const sides = { topLeft, bottomRight, topRight, bottomLeft };
   const local = useRef<HTMLSpanElement>(null);
   const el = ref ?? local;
   // Shown after the light last moved, it starts where the light is, like every crease already shown.
@@ -31,9 +32,13 @@ export function StickerCrease({
   useEffect(() => {
     if (!onReady) return;
     let current = true;
-    const urls = Object.entries(crease)
-      .filter(([name]) => name !== "normal")
-      .map(([, url]) => url);
+    const urls = [
+      crease.base,
+      crease.topLeft,
+      crease.bottomRight,
+      crease.topRight,
+      crease.bottomLeft,
+    ];
     const images = urls.map((url) => {
       const image = new Image();
       image.src = url;

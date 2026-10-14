@@ -568,7 +568,7 @@ ${LIB}
       const fixture = window.laminateFixture;
       if (!fixture) throw new Error("The sticker laminate fixture is absent");
       const surfaces = tiles.map((tile) => {
-        const canvases = tile.querySelectorAll("canvas.sticker-laminate");
+        const canvases = tile.querySelectorAll("canvas.sticker-material");
         if (canvases.length !== 1) throw new Error("Each sticker must have one laminate canvas");
         const canvas = canvases[0];
         const box = canvas.getBoundingClientRect();
@@ -623,7 +623,7 @@ ${LIB}
       `await waitFor("visible sticker laminate canvases", () => {
       const tiles = [...document.querySelectorAll(args[1])];
       if (!window.laminateFixture || tiles.length !== args[0]) return false;
-      const visible = tiles.flatMap((tile) => [...tile.querySelectorAll("canvas.sticker-laminate")])
+      const visible = tiles.flatMap((tile) => [...tile.querySelectorAll("canvas.sticker-material")])
         .filter((canvas) => { const b = canvas.getBoundingClientRect();
           return b.right > 0 && b.bottom > 0 && b.left < innerWidth && b.top < innerHeight; });
       if (visible.some((canvas) => canvas.dataset.state === "failed")) throw new Error("Rendering laminate failed");
@@ -965,7 +965,7 @@ ${LIB}
           fixture.setPhase("idle");
           return { ready, creases, viewport: [innerWidth, innerHeight], dpr: devicePixelRatio,
             userAgent: navigator.userAgent, supportedPerformanceEntries: PerformanceObserver.supportedEntryTypes,
-            surfaces: [...document.querySelectorAll(".placed-sticker canvas.sticker-laminate")]
+            surfaces: [...document.querySelectorAll(".placed-sticker canvas.sticker-material")]
               .map((canvas) => ({ width: canvas.width, height: canvas.height, state: canvas.dataset.state })) };
         `);
           save();

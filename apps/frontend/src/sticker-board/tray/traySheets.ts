@@ -4,8 +4,25 @@
  */
 import { i18next } from "../../i18n/i18n";
 import { formatMonthDay, formatNo } from "../../stickers/format";
-import { lightUp } from "../../stickers/light";
-import { mountLaminate, refreshLaminate, turnLaminate } from "../../stickers/laminateRenderer";
+import { applyStickerFoilCoverage, prepareStickerFoil } from "../../stickers/prepareStickerFoil";
+import { holdFoilCoverageMask } from "../../stickers/acquireFoilCoverage";
+import type { FoilSize } from "../../stickers/foilMaterial";
+import type { StickerFoilMaterial } from "../../stickers/stickerFoilMaterial";
+import {
+  pauseStickerMaterial,
+  refreshStickerMaterial,
+  stickerMaterialActive,
+} from "../../stickers/stickerMaterialHandoff";
+import {
+  mountSticker,
+  mountStickerCopy,
+  stickerFoilCoverage,
+  subscribeStickerFoilCoverage,
+  updateSticker,
+  refreshSticker,
+  turnSticker,
+  type StickerFoilCoverage,
+} from "../../stickers/stickerRenderer";
 import { clamp } from "../../ui/easing";
 import { GIFT_LABEL_SIZE, STICKER_FIT } from "./sheetPacking";
 import { knownShape } from "./stickerShape";
@@ -54,8 +71,15 @@ export function createTraySheets(
   laminateActive: () => boolean = () => true,
 ) {
   const { doc, zip, make, decorative, icon, words, hint, say, stack, ui, colLeft, trayTop } = tray;
-  const { newIds, matches, sheetItems, sheetMatches, topF, resetOrder } = trayModel;
-  const laminates = new Map<HTMLCanvasElement, { turn: number; dispose: () => void }>();
+  const { newIds, matches, sheetItems, sheetMatches, topF, resetOrder, itemOf } = trayModel;
+  const laminates = new Map<
+    HTMLCanvasElement,
+    { turn: number; look: string; dispose: () => void }
+  >();
+  /** What a sticker's material shows: concealing the sticker changes it. */
+  const lookOf = (s: Slot) => `${s.veiled ? "veiled" : "shown"} ${s.urls.png}`;
+  const restoring = new Map<Element, AbortController>();
+  const staticFoils = new Map<HTMLElement, () => void>();
   const moving = new Map<Animation, { host: HTMLElement; stop: () => void }>();
   /** A sticker on its sheet or in hand owns the same laminate until that presentation leaves. */
   function coatSticker(
@@ -63,21 +87,129 @@ export function createTraySheets(
     s: Slot,
     turn = 0,
     active = () => materialOn(canvas),
+    size: FoilSize = "sheet",
   ) {
+    const foil = foilFor(s, size);
     canvas.dataset.state = "loading";
     canvas.dataset.finish = "gloss";
+    if (foil) canvas.dataset.foilStyle = foil.style;
     laminates.set(canvas, {
       turn,
-      dispose: mountLaminate(canvas, {
+      look: lookOf(s),
+      dispose: mountSticker(canvas, {
         print: s.urls.png,
         cut: s.urls.mask,
         turn,
         finish: "gloss",
-        active: () => laminateActive() && active(),
+        ...(foil && { foil }),
+        active: () => stickerMaterialActive(canvas, laminateActive() && active()),
       }),
     });
   }
-  function materialOn(canvas: HTMLCanvasElement) {
+  function foilFor(s: Slot, size: FoilSize): StickerFoilMaterial | undefined {
+    if (!s.gift && !s.nsfw && !s.kyotoSeika) return;
+    return {
+      style: s.nsfw ? "pink" : s.kyotoSeika ? "kyoto-seika" : "holo",
+      size,
+      ...(s.urls.foil && { mask: s.urls.foil }),
+    };
+  }
+  function addStaticFoil(
+    host: HTMLElement,
+    s: Slot,
+    size: FoilSize,
+    active: () => boolean,
+    committed?: StickerFoilCoverage,
+  ) {
+    const material = committed?.material ?? foilFor(s, size);
+    if (!material) return;
+    const element = decorative(
+      make(
+        "span",
+        `sticker-foil sticker-foil--${material.size} sticker-foil--${material.style}`,
+        make("span", "sticker-foil__cast"),
+        make("span", "sticker-foil__band"),
+      ),
+    );
+    host.prepend(element);
+    if (committed) {
+      applyStickerFoilCoverage(element, committed.coverage, host.clientWidth, host.clientHeight);
+      staticFoils.set(element, holdFoilCoverageMask(committed.coverage.mask));
+    } else
+      staticFoils.set(
+        element,
+        prepareStickerFoil(element, material, s.urls.mask, () => laminateActive() && active()),
+      );
+    return element;
+  }
+  /** Seed the visible peel from its exact sheet commit, then replace coverage as one complete generation. */
+  function coatStickerCopy(
+    canvas: HTMLCanvasElement,
+    source: HTMLCanvasElement,
+    s: Slot,
+    flyer: HTMLElement,
+  ) {
+    let stopCommits = () => {};
+    let live = true;
+    const invalidate = () => {
+      live = false;
+      stopCommits();
+      releaseMaterials(flyer);
+      flyer.remove();
+    };
+    const release = mountStickerCopy(
+      canvas,
+      source,
+      () => live && !ui.destroyed && laminateActive(),
+      invalidate,
+    );
+    if (!live) {
+      release();
+      return;
+    }
+    const dispose = () => {
+      live = false;
+      stopCommits();
+      release();
+    };
+    laminates.set(canvas, { turn: 0, look: lookOf(s), dispose });
+    const host = canvas.parentElement;
+    if (!host) {
+      dispose();
+      throw new Error(`The copied peel of sticker ${s.id} has no source frame`);
+    }
+    canvas.dataset.finish = "gloss";
+    const committed = stickerFoilCoverage(canvas);
+    if (committed) canvas.dataset.foilStyle = committed.material.style;
+    let cast: HTMLElement | undefined;
+    try {
+      cast = committed && addStaticFoil(host, s, committed.material.size, () => live, committed);
+    } catch (error) {
+      dispose();
+      laminates.delete(canvas);
+      throw error;
+    }
+    stopCommits = subscribeStickerFoilCoverage(canvas, (current) => {
+      if (!live || !canvas.isConnected || !cast || !current) return;
+      try {
+        cast.className = `sticker-foil sticker-foil--${current.material.size} sticker-foil--${current.material.style}`;
+        applyStickerFoilCoverage(cast, current.coverage, host.clientWidth, host.clientHeight);
+        staticFoils.get(cast)?.();
+        staticFoils.set(cast, holdFoilCoverageMask(current.coverage.mask));
+      } catch (error) {
+        const why = `Updating copied sticker foil for ${s.id} failed: ${String(error)}`;
+        canvas.dataset.error = why;
+        console.error(why);
+      }
+    });
+    const foil = foilFor(s, "board");
+    updateSticker(
+      canvas,
+      { print: s.urls.png, cut: s.urls.mask, finish: "gloss", foil },
+      { width: host.clientWidth, height: host.clientHeight },
+    );
+  }
+  function materialOn(canvas: HTMLElement) {
     if (ui.destroyed || !zip.isOpen) return false;
     const slot = canvas.closest<HTMLElement>(".tray__slot");
     if (slot?.dataset.state === "used" || slot?.dataset.state === "peeling") return false;
@@ -87,7 +219,33 @@ export function createTraySheets(
   }
   /** A newly exposed sheet uses the held light even when its own turn has not changed. */
   function refreshMaterials(host: Element = tray.root) {
-    for (const canvas of laminates.keys()) if (host.contains(canvas)) refreshLaminate(canvas);
+    for (const canvas of laminates.keys()) if (host.contains(canvas)) refreshSticker(canvas);
+  }
+  /** A hidden destination resumes admission and crosses the queued held-pose draw before exposure. */
+  async function settleMaterials(host: HTMLElement) {
+    const canvases = [...host.querySelectorAll<HTMLCanvasElement>("canvas.sticker-material")];
+    if (!canvases.length) return true;
+    restoring.get(host)?.abort();
+    const controller = new AbortController();
+    restoring.set(host, controller);
+    const admissions = canvases.map(pauseStickerMaterial);
+    admissions.forEach((admission) => admission.resume());
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(8000)]);
+    try {
+      await Promise.all(canvases.map((canvas) => refreshStickerMaterial(canvas, signal)));
+      if (signal.aborted && !controller.signal.aborted)
+        console.error(
+          `Refreshing sticker ${host.dataset.id ?? host.dataset.stickerId ?? "(unknown)"}'s tray destination exceeded its material deadline`,
+        );
+      return (
+        !controller.signal.aborted &&
+        host.isConnected &&
+        canvases.every((canvas) => host.contains(canvas))
+      );
+    } finally {
+      admissions.forEach((admission) => admission.release());
+      if (restoring.get(host) === controller) restoring.delete(host);
+    }
   }
   /** A sheet or sticker's current turn, including an in-progress browser animation. */
   function turnOf(host: HTMLElement) {
@@ -105,7 +263,7 @@ export function createTraySheets(
   function turnMaterials(host: HTMLElement, turn = turnOf(host), tiltX = 0, tiltY = 0) {
     if (ui.destroyed || doc.hidden) return;
     for (const [canvas, material] of laminates)
-      if (host.contains(canvas)) turnLaminate(canvas, material.turn + turn, tiltX, tiltY);
+      if (host.contains(canvas)) turnSticker(canvas, material.turn + turn, tiltX, tiltY);
   }
   /** Only an existing movement needs frames; its coating stops with that movement. */
   function animateWithLaminate(
@@ -140,6 +298,16 @@ export function createTraySheets(
   }
   /** A replaced sheet releases its snapshots, shared textures, and resize listeners together. */
   function releaseMaterials(host: Element) {
+    for (const [target, controller] of restoring)
+      if (host.contains(target)) {
+        controller.abort();
+        restoring.delete(target);
+      }
+    for (const [element, release] of staticFoils)
+      if (host.contains(element)) {
+        release();
+        staticFoils.delete(element);
+      }
     for (const [animation, movement] of moving)
       if (host.contains(movement.host)) {
         animation.cancel();
@@ -152,6 +320,14 @@ export function createTraySheets(
       }
   }
   function destroyMaterials() {
+    // Board destinations survive the tray; their finite handoff still refreshes before it exposes.
+    for (const [target, controller] of restoring)
+      if (tray.root.contains(target)) {
+        controller.abort();
+        restoring.delete(target);
+      }
+    for (const release of staticFoils.values()) release();
+    staticFoils.clear();
     for (const [animation, movement] of moving) {
       animation.cancel();
       movement.stop();
@@ -315,25 +491,7 @@ export function createTraySheets(
     if (s.state !== "used" && ui.imagesOn) {
       // Drawn by someone else, NSFW, or drawn in Kyoto Seika Practice Mode, it wears the sheet's foil
       // under its image, in the tone StickerFigure picks: pink, then Kyoto Seika, then holo.
-      if (s.gift || s.nsfw || s.kyotoSeika) {
-        const tone = s.nsfw ? "pink" : s.kyotoSeika ? "kyoto-seika" : "holo";
-        const foil = decorative(
-          make(
-            "span",
-            `sticker-foil sticker-foil--sheet sticker-foil--${tone}${s.urls.foil ? " sticker-foil--baked" : ""}`,
-            make("span", "sticker-foil__cast"),
-            make(
-              "span",
-              "sticker-foil__band",
-              make("i", "sticker-foil__sheen"),
-              make("i", "sticker-foil__glint"),
-            ),
-          ),
-        );
-        if (s.urls.foil) foil.style.setProperty("--foil-mask", cssUrl(s.urls.foil));
-        lightUp(foil);
-        fit.append(foil);
-      }
+      addStaticFoil(fit, s, "sheet", () => materialOn(fit));
       const img = make("img", "tray__img");
       img.decoding = "async";
       img.src = s.urls.png;
@@ -341,7 +499,7 @@ export function createTraySheets(
       img.draggable = false;
       fit.append(img);
       if (!inAGift) {
-        const canvas = decorative(make("canvas", "sticker-laminate"));
+        const canvas = decorative(make("canvas", "sticker-material"));
         fit.append(canvas);
         coatSticker(canvas, s, q.r);
       }
@@ -569,11 +727,26 @@ export function createTraySheets(
     if (ui.model.count !== ui.orderedFor || ui.order.some((f) => f >= ui.model.count)) resetOrder();
     if (ui.g || ui.busy || ui.landing.size > 0) {
       ui.stale = true;
+      releaseConcealed();
       return;
     }
     ui.stale = false;
     rerenderPulled();
     renderStack();
+  }
+  /**
+   * Sheets held from a redraw still let go of a sticker's material once it looks different, as it
+   * does when concealed: the copy flying from it goes too, rather than show what's now veiled.
+   */
+  function releaseConcealed() {
+    for (const [canvas, material] of laminates) {
+      const id = canvas.closest<HTMLElement>(".tray__slot")?.dataset.id;
+      const now = id === undefined ? null : itemOf(id);
+      if (now && lookOf(now) !== material.look) {
+        material.dispose();
+        laminates.delete(canvas);
+      }
+    }
   }
   /** A press or a turn is over: the sheets catch up with what changed during it. */
   const catchUp = () => {
@@ -624,9 +797,12 @@ export function createTraySheets(
     destroyMaterials,
     turnMaterials,
     coatSticker,
+    coatStickerCopy,
+    addStaticFoil,
     turnOf,
     animateWithLaminate,
     refreshMaterials,
+    settleMaterials,
   };
 }
 

@@ -19,6 +19,14 @@ export type CreaseSide = "topLeft" | "bottomRight" | "topRight" | "bottomLeft";
  */
 export type CreaseImage = CreaseSide | "base" | "normal";
 
+/** A rectangle in the raster or normalized source frame, as its caller specifies. */
+export interface CreaseBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 /** The illustrative paper and film thickness, in CSS px, used only for geometric normals. */
 export const STICKER_THICKNESS = 0.35;
 
@@ -261,6 +269,18 @@ function envelopePass(
   }
 }
 
+/** The height-minimum neighborhood used by normals, in pixels. */
+export const creaseNormalReach = (scale: number) => Math.max(1, Math.ceil(ROUNDED_REACH * scale));
+
+/** Full drape dependency reach, including both closings and the rounded ends, in pixels. */
+export function drapeReach(scale: number, heightRange: number): number {
+  return Math.ceil(
+    2 * bridgeRadiusAt(scale) +
+      2 * RAMP * scale * Math.sqrt(heightRange) +
+      3 * boxRadius(ROUND * scale),
+  );
+}
+
 /**
  * A stiff sheet laid over `field`: narrow gaps are bridged level with their supports, then a
  * closing by a parabola ramps down over RAMP beside a step and rounds the corners.
@@ -279,10 +299,8 @@ export function drape(
   }
   if (highest <= lowest) return Float32Array.from(field);
   const reach = RAMP * scale;
-  const bridgeRadius = bridgeRadiusAt(scale);
-  const parabolaReach = reach * Math.sqrt(highest - lowest);
   // Each closing samples twice; keep its full reach and the blur's footprint beyond the crop.
-  const padding = Math.ceil(2 * bridgeRadius + 2 * parabolaReach + 3 * boxRadius(ROUND * scale));
+  const padding = drapeReach(scale, highest - lowest);
   const extendedWidth = width + 2 * padding;
   const extendedHeight = height + 2 * padding;
   const out = new Float32Array(extendedWidth * extendedHeight);
@@ -319,6 +337,7 @@ export function stackedSurface(
   layers: readonly Float32Array[],
   width: number,
   height: number,
+  supportBounds?: CreaseBounds,
 ): Float32Array {
   const surface = new Float32Array(width * height);
   layers.forEach((layer, n) => {
@@ -329,8 +348,27 @@ export function stackedSurface(
     let support = 0;
     let coverage = 0;
     for (let i = 0; i < surface.length; i++) {
+      if (supportBounds) {
+        const x = i % width,
+          y = Math.floor(i / width);
+        if (
+          x < supportBounds.x ||
+          x >= supportBounds.x + supportBounds.width ||
+          y < supportBounds.y ||
+          y >= supportBounds.y + supportBounds.height
+        )
+          continue;
+      }
       support += surface[i] * layer[i];
       coverage += layer[i];
+    }
+    // A support wholly outside the source has no accepted source-plane level. Estimate it by
+    // the same mean-support rule over its real extended coverage; accepted levels stay unchanged.
+    if (coverage === 0 && supportBounds) {
+      for (let i = 0; i < surface.length; i++) {
+        support += surface[i] * layer[i];
+        coverage += layer[i];
+      }
     }
     // Overlapping boxes can still have disjoint silhouettes in this sticker's frame.
     if (coverage === 0) return;
@@ -384,6 +422,8 @@ export interface CreaseInput {
   scale: number;
   /** Toward each side's light, in this sticker's frame (lightIn of CREASE_SIDES). */
   lights: Record<CreaseSide, readonly [number, number]>;
+  /** Expanded geometry can retain a bend independently of painted coverage. */
+  normalRegion?: CreaseBounds;
 }
 
 /**
@@ -407,10 +447,11 @@ export function creasePixels({
   own,
   scale,
   lights,
+  normalRegion,
 }: CreaseInput): CreasePixels | null {
   const field = drape(surface, width, height, scale);
   // Include both plateaus of a complete ramp, with its rounded ends, when measuring its height.
-  const reach = Math.max(1, Math.ceil(ROUNDED_REACH * scale));
+  const reach = creaseNormalReach(scale);
   const scratch = new Float32Array(field.length);
   const highest = new Float32Array(field.length);
   const lowest = new Float32Array(field.length);
@@ -455,6 +496,15 @@ export function creasePixels({
       normal[q + 1] = Math.round(128 - (127 * dy) / length);
       normal[q + 2] = Math.round(128 + 127 / length);
       normal[q + 3] = 255;
+      if (
+        normalRegion &&
+        x >= normalRegion.x &&
+        x < normalRegion.x + normalRegion.width &&
+        y >= normalRegion.y &&
+        y < normalRegion.y + normalRegion.height &&
+        (normal[q] !== 128 || normal[q + 1] !== 128)
+      )
+        any = true;
       if (o <= 0.004) continue;
       const h = field[i];
       // A flat raised plane still supplies normal data without inventing a visible crease.

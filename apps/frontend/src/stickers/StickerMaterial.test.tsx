@@ -2,34 +2,34 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { beforeEach, expect, it, vi } from "vitest";
-import { StickerLaminate } from "./StickerLaminate";
+import { StickerMaterial } from "./StickerMaterial";
 import { LaminateActiveContext } from "./laminateActiveContext";
 
-import { mountLaminate, refreshLaminate, turnLaminate, updateLaminate } from "./laminateRenderer";
+import { mountSticker, refreshSticker, turnSticker, updateSticker } from "./stickerRenderer";
 
 const anyActiveCallback: unknown = expect.any(Function);
 
-vi.mock("./laminateRenderer", () => {
+vi.mock("./stickerRenderer", () => {
   const turns = new WeakMap<HTMLCanvasElement, number>();
   return {
-    mountLaminate: vi.fn((canvas: HTMLCanvasElement, options: { turn: number }) => {
+    mountSticker: vi.fn((canvas: HTMLCanvasElement, options: { turn: number }) => {
       turns.set(canvas, options.turn);
       return vi.fn();
     }),
-    turnLaminate: vi.fn((canvas: HTMLCanvasElement, turn: number) => {
+    turnSticker: vi.fn((canvas: HTMLCanvasElement, turn: number) => {
       turns.set(canvas, turn);
     }),
-    laminateTurn: (canvas: HTMLCanvasElement) => turns.get(canvas),
-    refreshLaminate: vi.fn(),
-    updateLaminate: vi.fn(),
+    stickerTurn: (canvas: HTMLCanvasElement) => turns.get(canvas),
+    refreshSticker: vi.fn(),
+    updateSticker: vi.fn(),
   };
 });
 
 beforeEach(() => {
-  vi.mocked(mountLaminate).mockClear();
-  vi.mocked(refreshLaminate).mockClear();
-  vi.mocked(turnLaminate).mockClear();
-  vi.mocked(updateLaminate).mockClear();
+  vi.mocked(mountSticker).mockClear();
+  vi.mocked(refreshSticker).mockClear();
+  vi.mocked(turnSticker).mockClear();
+  vi.mocked(updateSticker).mockClear();
 });
 
 it("suspends its retained surface through context and refreshes it once when exposed again", () => {
@@ -40,29 +40,29 @@ it("suspends its retained surface through context and refreshes it once when exp
     act(() =>
       root.render(
         <LaminateActiveContext value={active}>
-          <StickerLaminate print="print.png" cut="cut.png" turn={42} />
+          <StickerMaterial print="print.png" cut="cut.png" turn={42} />
         </LaminateActiveContext>,
       ),
     );
   try {
     expose(true);
     const canvas = host.querySelector("canvas");
-    if (!canvas) throw new Error("The sticker laminate did not mount");
-    const options = vi.mocked(mountLaminate).mock.calls[0]?.[1];
+    if (!canvas) throw new Error("The sticker finish did not mount");
+    const options = vi.mocked(mountSticker).mock.calls[0]?.[1];
     expect(options?.active?.()).toBe(true);
-    vi.mocked(refreshLaminate).mockClear();
+    vi.mocked(refreshSticker).mockClear();
 
     expose(false);
     expect(options?.active?.()).toBe(false);
-    expect(refreshLaminate).not.toHaveBeenCalled();
+    expect(refreshSticker).not.toHaveBeenCalled();
 
     expose(true);
     expect(options?.active?.()).toBe(true);
-    expect(refreshLaminate).toHaveBeenCalledExactlyOnceWith(canvas);
+    expect(refreshSticker).toHaveBeenCalledExactlyOnceWith(canvas);
     expect(host.querySelector("canvas")).toBe(canvas);
-    expect(mountLaminate).toHaveBeenCalledOnce();
-    expect(updateLaminate).toHaveBeenCalledOnce();
-    expect(turnLaminate).toHaveBeenCalledExactlyOnceWith(canvas, 42);
+    expect(mountSticker).toHaveBeenCalledOnce();
+    expect(updateSticker).toHaveBeenCalledOnce();
+    expect(turnSticker).toHaveBeenCalledExactlyOnceWith(canvas, 42);
   } finally {
     act(() => root.unmount());
     host.remove();
@@ -77,7 +77,7 @@ it.each([undefined, true, false])(
     const root = createRoot(host);
     const setActive = (active: boolean) =>
       act(() => {
-        const surface = <StickerLaminate print="print.png" cut="cut.png" active={active} />;
+        const surface = <StickerMaterial print="print.png" cut="cut.png" active={active} />;
         root.render(
           exposed === undefined ? (
             surface
@@ -89,19 +89,19 @@ it.each([undefined, true, false])(
     try {
       setActive(false);
       const canvas = host.querySelector("canvas");
-      if (!canvas) throw new Error("The sticker laminate did not mount");
-      const options = vi.mocked(mountLaminate).mock.calls[0]?.[1];
+      if (!canvas) throw new Error("The sticker finish did not mount");
+      const options = vi.mocked(mountSticker).mock.calls[0]?.[1];
       expect(options?.active?.()).toBe(false);
-      expect(refreshLaminate).not.toHaveBeenCalled();
+      expect(refreshSticker).not.toHaveBeenCalled();
 
       setActive(true);
       expect(options?.active?.()).toBe(exposed !== false);
-      if (exposed === false) expect(refreshLaminate).not.toHaveBeenCalled();
-      else expect(refreshLaminate).toHaveBeenCalledExactlyOnceWith(canvas);
+      if (exposed === false) expect(refreshSticker).not.toHaveBeenCalled();
+      else expect(refreshSticker).toHaveBeenCalledExactlyOnceWith(canvas);
 
       setActive(false);
       expect(options?.active?.()).toBe(false);
-      expect(mountLaminate).toHaveBeenCalledOnce();
+      expect(mountSticker).toHaveBeenCalledOnce();
     } finally {
       act(() => root.unmount());
       host.remove();
@@ -114,10 +114,10 @@ it("preserves a live gesture's displayed turn when its crease texture changes be
   document.body.append(host);
   const root = createRoot(host);
   try {
-    act(() => root.render(<StickerLaminate print="print.png" cut="cut.png" turn={0} />));
+    act(() => root.render(<StickerMaterial print="print.png" cut="cut.png" turn={0} />));
     const canvas = host.querySelector("canvas");
-    if (!canvas) throw new Error("The sticker laminate did not mount");
-    expect(mountLaminate).toHaveBeenLastCalledWith(canvas, {
+    if (!canvas) throw new Error("The sticker finish did not mount");
+    expect(mountSticker).toHaveBeenLastCalledWith(canvas, {
       print: "print.png",
       cut: "cut.png",
       normal: undefined,
@@ -127,28 +127,28 @@ it("preserves a live gesture's displayed turn when its crease texture changes be
       canRevealCrease: anyActiveCallback,
       startCreaseReveal: anyActiveCallback,
     });
-    const options = vi.mocked(mountLaminate).mock.calls[0]?.[1];
+    const options = vi.mocked(mountSticker).mock.calls[0]?.[1];
     expect(options?.canRevealCrease?.("normal.png")).toBe(false);
     expect(options?.startCreaseReveal?.("normal.png")).toBe(false);
     // The board gesture changes the surface before its saved placement reaches React.
-    turnLaminate(canvas, 67);
+    turnSticker(canvas, 67);
     act(() =>
-      root.render(<StickerLaminate print="print.png" cut="cut.png" normal="normal.png" turn={0} />),
+      root.render(<StickerMaterial print="print.png" cut="cut.png" normal="normal.png" turn={0} />),
     );
-    expect(mountLaminate).toHaveBeenCalledOnce();
-    expect(updateLaminate).toHaveBeenLastCalledWith(canvas, {
+    expect(mountSticker).toHaveBeenCalledOnce();
+    expect(updateSticker).toHaveBeenLastCalledWith(canvas, {
       print: "print.png",
       cut: "cut.png",
       normal: "normal.png",
       finish: "gloss",
     });
-    expect(turnLaminate).toHaveBeenLastCalledWith(canvas, 67);
+    expect(turnSticker).toHaveBeenLastCalledWith(canvas, 67);
     act(() =>
       root.render(
-        <StickerLaminate print="print.png" cut="cut.png" normal="next-normal.png" turn={90} />,
+        <StickerMaterial print="print.png" cut="cut.png" normal="next-normal.png" turn={90} />,
       ),
     );
-    expect(turnLaminate).toHaveBeenLastCalledWith(canvas, 90);
+    expect(turnSticker).toHaveBeenLastCalledWith(canvas, 90);
   } finally {
     act(() => root.unmount());
     host.remove();
@@ -160,37 +160,37 @@ it("turns the mounted material without replacing textures and keeps that turn on
   document.body.append(host);
   const root = createRoot(host);
   try {
-    act(() => root.render(<StickerLaminate print="print.png" cut="cut.png" turn={10} />));
+    act(() => root.render(<StickerMaterial print="print.png" cut="cut.png" turn={10} />));
     const canvas = host.querySelector("canvas");
-    if (!canvas) throw new Error("The sticker laminate did not mount");
-    expect(mountLaminate).toHaveBeenCalledOnce();
-    const mounted = vi.mocked(mountLaminate).mock.results[0];
+    if (!canvas) throw new Error("The sticker finish did not mount");
+    expect(mountSticker).toHaveBeenCalledOnce();
+    const mounted = vi.mocked(mountSticker).mock.results[0];
     if (!mounted || mounted.type !== "return")
       throw new Error("The laminate mount did not return its cleanup");
     const release = mounted.value;
-    act(() => root.render(<StickerLaminate print="print.png" cut="cut.png" turn={90} />));
-    expect(mountLaminate).toHaveBeenCalledOnce();
+    act(() => root.render(<StickerMaterial print="print.png" cut="cut.png" turn={90} />));
+    expect(mountSticker).toHaveBeenCalledOnce();
     expect(release).not.toHaveBeenCalled();
-    expect(turnLaminate).toHaveBeenLastCalledWith(canvas, 90);
+    expect(turnSticker).toHaveBeenLastCalledWith(canvas, 90);
     act(() =>
       root.render(
-        <StickerLaminate print="print.png" cut="cut.png" normal="normal.png" turn={90} />,
+        <StickerMaterial print="print.png" cut="cut.png" normal="normal.png" turn={90} />,
       ),
     );
-    expect(mountLaminate).toHaveBeenCalledOnce();
+    expect(mountSticker).toHaveBeenCalledOnce();
     expect(release).not.toHaveBeenCalled();
-    expect(updateLaminate).toHaveBeenLastCalledWith(canvas, {
+    expect(updateSticker).toHaveBeenLastCalledWith(canvas, {
       print: "print.png",
       cut: "cut.png",
       normal: "normal.png",
       finish: "gloss",
     });
     act(() =>
-      root.render(<StickerLaminate print="print.png" cut="cut.png" turn={90} finish="matte" />),
+      root.render(<StickerMaterial print="print.png" cut="cut.png" turn={90} finish="matte" />),
     );
-    expect(mountLaminate).toHaveBeenCalledOnce();
+    expect(mountSticker).toHaveBeenCalledOnce();
     expect(release).not.toHaveBeenCalled();
-    expect(updateLaminate).toHaveBeenLastCalledWith(canvas, {
+    expect(updateSticker).toHaveBeenLastCalledWith(canvas, {
       print: "print.png",
       cut: "cut.png",
       normal: undefined,
@@ -207,16 +207,16 @@ it("keeps the mounted surface during a sharper print replacement", () => {
   document.body.append(host);
   const root = createRoot(host);
   try {
-    act(() => root.render(<StickerLaminate print="print.png" cut="cut.png" />));
+    act(() => root.render(<StickerMaterial print="print.png" cut="cut.png" />));
     const canvas = host.querySelector("canvas");
-    if (!canvas) throw new Error("The sticker laminate did not mount");
-    const mounted = vi.mocked(mountLaminate).mock.results[0];
+    if (!canvas) throw new Error("The sticker finish did not mount");
+    const mounted = vi.mocked(mountSticker).mock.results[0];
     if (!mounted || mounted.type !== "return")
       throw new Error("The laminate mount did not return its cleanup");
-    act(() => root.render(<StickerLaminate print="sharp.png" cut="sharp-cut.png" />));
-    expect(mountLaminate).toHaveBeenCalledOnce();
+    act(() => root.render(<StickerMaterial print="sharp.png" cut="sharp-cut.png" />));
+    expect(mountSticker).toHaveBeenCalledOnce();
     expect(mounted.value).not.toHaveBeenCalled();
-    expect(updateLaminate).toHaveBeenLastCalledWith(canvas, {
+    expect(updateSticker).toHaveBeenLastCalledWith(canvas, {
       print: "sharp.png",
       cut: "sharp-cut.png",
       normal: undefined,

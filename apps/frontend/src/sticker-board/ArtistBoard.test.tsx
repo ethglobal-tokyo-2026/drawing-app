@@ -10,7 +10,7 @@ import type { GiftSender } from "../giving/giftSender";
 import { PREPARING_SLOW_MS } from "../giving/giveFlow";
 import { i18next } from "../i18n/i18n";
 import { formatNo, spokenDuration } from "../stickers/format";
-import * as laminate from "../stickers/laminateRenderer";
+import * as laminate from "../stickers/stickerRenderer";
 import { onLargeScreen, ReducedMotion } from "../ui/testing";
 import { forgetGreetings } from "./artistChipGreeting";
 import { ArtistBoard } from "./ArtistBoard";
@@ -33,11 +33,19 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// The board's size sets where stickers sit and so their reading order; happy-dom measures none.
+// Only board layout boxes need size stand-ins; sizing image/foil spans would admit synthetic assets.
 beforeEach(() => {
   forgetGreetings();
-  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(390);
-  vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(741);
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (
+    this: HTMLElement,
+  ) {
+    return this.matches(".board, .board-stage") ? 390 : 0;
+  });
+  vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (
+    this: HTMLElement,
+  ) {
+    return this.matches(".board, .board-stage") ? 741 : 0;
+  });
 });
 
 /** Someone's board with three stickers, listed out of reading order: two on a top row, one below. */
@@ -204,8 +212,8 @@ describe("ArtistBoard's covered laminate", () => {
         query === motion.media ? motion : matchMedia(query),
       );
       // Keep the real component lifecycle; happy-dom cannot paint WebGL snapshots.
-      const mounted = vi.spyOn(laminate, "mountLaminate");
-      const refreshed = vi.spyOn(laminate, "refreshLaminate");
+      const mounted = vi.spyOn(laminate, "mountSticker");
+      const refreshed = vi.spyOn(laminate, "refreshSticker");
       const host = await visit(three());
       const owners = mounted.mock.calls.filter(([canvas]) => canvas.closest(".placed-sticker"));
       expect(owners).toHaveLength(3);
@@ -237,7 +245,7 @@ describe("ArtistBoard's covered laminate", () => {
         heldRefreshes.map((count) => count + 1),
       );
       expect(owners.map(([canvas]) => canvas)).toEqual([
-        ...host.querySelectorAll(".placed-sticker canvas.sticker-laminate"),
+        ...host.querySelectorAll(".placed-sticker canvas.sticker-material"),
       ]);
       for (const [canvas] of owners)
         expect(mounted.mock.calls.filter(([target]) => target === canvas)).toHaveLength(1);
@@ -380,8 +388,16 @@ describe("ArtistBoard's layouts", () => {
   it("shows a large screen a board with no large layout yet as its phone's arrangement spread across it, a size larger", async () => {
     onLargeScreen();
     const [W, H] = [1180, 662];
-    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(W);
-    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(H);
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.matches(".board, .board-stage") ? W : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.matches(".board, .board-stage") ? H : 0;
+    });
     const centerX = (el: HTMLElement) =>
       Number(/translate\((-?[\d.]+)px/.exec(el.style.transform)?.[1]) +
       parseFloat(el.style.width) / 2;

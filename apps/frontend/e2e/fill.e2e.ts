@@ -463,8 +463,7 @@ test("an initially blank released Fill finishes before Seal opens and submits th
   await releaseFillWorkerGate(page);
   await expect(activeSeal(page)).toBeVisible();
   await expect.poll(() => fillSteps(page)).toHaveLength(1);
-  const preview = page.locator("canvas.seal-preview__ink");
-  await expect(preview).toBeVisible();
+  await expect(page.locator(".seal-preview__sticker")).toBeVisible();
   const { card } = await sealOnSheet(page, "en");
   await expect(card).toBeVisible();
   expect(requests).toHaveLength(1);

@@ -40,10 +40,10 @@ export function subscribeLight(listener: (pose: LightPose) => void): () => void 
  */
 
 /**
- * The Shop preview film and each foil's bands and glint follow the light. Setting it on their
- * highlights restyles those highlights without changing the masked layers around them.
+ * The Shop preview film's highlights follow the light; setting it on them restyles only those
+ * highlights, not the masked layers around them.
  */
-const MOVING = ".laminate-film > i > b, .sticker-foil__sheen, .sticker-foil__glint";
+const MOVING = ".laminate-film > i > b";
 /** Only these highlights can continue a replay toward each new light position. */
 export const movesWithLight = (target: Element): boolean => target.matches(MOVING);
 /**

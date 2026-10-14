@@ -457,34 +457,6 @@
   rotate: calc(var(--lx, 0) * 10deg);
 }
 
-/* Backing foils: the foil's six bands in metal. Holo is the foil as it is. */
-.backing-foil--gold {
-  --foil-pink: var(--foil-gold-1);
-  --foil-peach: var(--foil-gold-2);
-  --foil-lemon: var(--foil-gold-3);
-  --foil-aqua: var(--foil-gold-4);
-  --foil-sky: var(--foil-gold-5);
-  --foil-lilac: var(--foil-gold-6);
-}
-
-.backing-foil--silver {
-  --foil-pink: var(--foil-silver-1);
-  --foil-peach: var(--foil-silver-2);
-  --foil-lemon: var(--foil-silver-3);
-  --foil-aqua: var(--foil-silver-4);
-  --foil-sky: var(--foil-silver-5);
-  --foil-lilac: var(--foil-silver-6);
-}
-
-.backing-foil--rose-gold {
-  --foil-pink: var(--foil-rose-gold-1);
-  --foil-peach: var(--foil-rose-gold-2);
-  --foil-lemon: var(--foil-rose-gold-3);
-  --foil-aqua: var(--foil-rose-gold-4);
-  --foil-sky: var(--foil-rose-gold-5);
-  --foil-lilac: var(--foil-rose-gold-6);
-}
-
 /* A still frame, lit from the top left. */
 @media (prefers-reduced-motion: reduce) {
   .finish-preview {

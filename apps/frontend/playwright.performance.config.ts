@@ -19,7 +19,9 @@ export default defineConfig({
             channel: "chrome",
             launchOptions: {
               args:
-                platform === "darwin" ? ["--use-angle=metal", "--enable-gpu"] : ["--enable-gpu"],
+                platform === "darwin"
+                  ? ["--use-angle=metal", "--enable-gpu", "--mute-audio"]
+                  : ["--enable-gpu", "--mute-audio"],
             },
           },
         }

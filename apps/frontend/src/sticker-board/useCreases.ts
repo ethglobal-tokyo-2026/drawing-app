@@ -20,7 +20,7 @@ import type {
 } from "../stickers/creaseWorker";
 import type { Crease } from "../stickers/StickerFigure";
 import { kyotoSeikaBandWidth } from "../stickers/kyotoSeikaFoil";
-import type { FoilTone } from "../stickers/StickerFoil";
+import type { FoilTone } from "../stickers/foilMaterial";
 import type { StickerUrls } from "../stickers/stickerUrls";
 import { workerCanPaint } from "../ui/workerCanPaint";
 import { stickerBox, type Field, type Placement } from "./placement";
@@ -131,7 +131,7 @@ const roundAffine = ([a, b, c, d, e, f]: Affine): Affine => [
 
 /**
  * A sticker's outline as the board draws it: its cut; with holo or pink foil, the band's mask the
- * server made; with the Kyoto Seika Practice Mode foil, its cut grown by that band, as its CSS grows it.
+ * server made; with the Kyoto Seika Practice Mode foil, its cut grown by kyotoSeikaBandWidth.
  */
 function silhouetteOf(
   urls: StickerUrls,
@@ -316,11 +316,16 @@ export class CreaseStore {
    * Shows a bake's crease, unless the sticker's stack has changed since it was posted, or a bake of
    * the same stack already shows: replacing it would press it in again.
    */
-  land({ id, key, crease }: Extract<CreaseReply, { ok: true }>) {
+  land({ id, key, crease, normalBounds }: Extract<CreaseReply, { ok: true }>) {
     if (this.#wanted.get(id) !== key || this.#baked.get(id)?.key === key) return;
     this.#put(id, {
       key,
-      ...(crease && { crease: byImage((image) => URL.createObjectURL(crease[image])) }),
+      ...(crease && {
+        crease: {
+          ...byImage((image) => URL.createObjectURL(crease[image])),
+          ...(normalBounds && { normalBounds }),
+        },
+      }),
     });
   }
 
@@ -350,7 +355,8 @@ export class CreaseStore {
   #put(id: string, baked: Baked | null) {
     const old = this.#baked.get(id);
     if (!baked?.crease) this.#revealKeys.delete(id);
-    if (old?.crease) for (const url of Object.values(old.crease)) URL.revokeObjectURL(url);
+    const oldCrease = old?.crease;
+    if (oldCrease) byImage((image) => URL.revokeObjectURL(oldCrease[image]));
     if (baked) this.#baked.set(id, baked);
     else this.#baked.delete(id);
     this.#settleAssembly();

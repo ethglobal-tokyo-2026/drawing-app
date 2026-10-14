@@ -103,7 +103,7 @@ async function bakeSupports(page: Page, gap: number | null) {
 
 /** The actual laminate canvas over the support seam, away from the sticker's cut. */
 const laminatePixels = (page: Page, box = { left: 0.35, top: 0.3, width: 0.3, height: 0.4 }) =>
-  page.locator("[data-reload] canvas.sticker-laminate").evaluate((canvas, box) => {
+  page.locator("[data-reload] canvas.sticker-material").evaluate((canvas, box) => {
     if (!(canvas instanceof HTMLCanvasElement)) throw new Error("The laminate canvas is missing");
     const context = canvas.getContext("2d");
     if (!context) throw new Error("The laminate snapshot context is missing");
@@ -121,7 +121,7 @@ test("touching and nearby separate supports produce flat crease images and tilte
   page,
 }) => {
   await page.goto("/e2e/stickerLaminate.html?reload=1");
-  const coat = page.locator("[data-reload] canvas.sticker-laminate");
+  const coat = page.locator("[data-reload] canvas.sticker-material");
   await expect(coat).toHaveAttribute("data-state", "ready");
   await page.evaluate(() => window.laminateFixture.tilt(40, 0));
   for (const gap of [0, 2, 4, 8, 12, 16, 24, 32]) {
@@ -223,7 +223,7 @@ test.describe("finite supports on an iPad-sized board", () => {
         });
       });
       await page.goto("/e2e/stickerLaminate.html?reload=1&side=390");
-      const coat = page.locator("[data-reload] canvas.sticker-laminate");
+      const coat = page.locator("[data-reload] canvas.sticker-material");
       await expect(coat).toHaveAttribute("data-state", "ready");
       const result = await page.evaluate(async (arrangement) => {
         const { creaseJobs } = await import("../src/sticker-board/useCreases.ts");

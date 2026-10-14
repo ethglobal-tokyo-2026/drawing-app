@@ -1,10 +1,20 @@
+import { createFoilLookup, createFoilSourceSamples } from "./foilMaterial";
+import {
+  acquireFoilCoverage,
+  FOIL_COVERAGE_TIMEOUT_MS,
+  holdFoilCoverageMask,
+  type SharedFoilCoverage,
+} from "./acquireFoilCoverage";
+import { type FoilCoverage } from "./foilCoverage";
+import { stickerFoilColors, type StickerFoilMaterial } from "./stickerFoilMaterial";
+export type { StickerFoilMaterial } from "./stickerFoilMaterial";
 import { currentLight, subscribeLight } from "./light";
 import {
   isPerformanceRecorderOn,
   notePerformance,
   timeOurWork,
 } from "../performance/performanceRecorder";
-import { laminateFragment, laminateVertex } from "./laminateShader";
+import { stickerFragment, stickerVertex } from "./stickerShader";
 import { releaseCanvas } from "../ui/releaseCanvas";
 import { REDUCED_MOTION } from "../ui/useReducedMotion";
 import { setCreaseRevealSize } from "./creaseRevealSize";
@@ -23,12 +33,17 @@ interface TextureValidation {
 }
 
 export type LaminateFinish = "gloss" | "matte";
-export interface LaminateSurface {
+export interface StickerSurface {
   print: string;
   cut: string;
   normal?: string;
   turn: number;
   finish: LaminateFinish;
+  foil?: StickerFoilMaterial;
+  /** Normal texture bounds in source UV coordinates; required for creased overflow. */
+  normalBounds?: { x: number; y: number; width: number; height: number };
+  paperAmount?: number;
+  foilAmount?: number;
   tiltX?: number;
   tiltY?: number;
   /** Covered Sticker Boards and clipped tray faces pause snapshots until exposed again. */
@@ -41,8 +56,36 @@ export interface LaminateSurface {
   startCreaseReveal?: (normal: string) => boolean;
 }
 
+/** Cached alpha and material captured with one committed complete material. */
+export interface StickerFoilCoverage {
+  readonly cut: string;
+  readonly material: Readonly<StickerFoilMaterial>;
+  readonly frame: Readonly<{ width: number; height: number }>;
+  readonly coverage: Readonly<Omit<FoilCoverage, "alpha">> & {
+    readonly alpha: Readonly<{ length: number; at: (index: number) => number | undefined }>;
+    /** The static band's mask: the baked mask, or the grown band its coverage worker encoded. */
+    readonly mask: string;
+  };
+}
+
+type FoilLookup = ReturnType<typeof createFoilLookup>;
+type FoilResources = {
+  lookupData: FoilLookup;
+  frame: { width: number; height: number };
+  coverage: SharedFoilCoverage;
+  description: StickerFoilCoverage;
+  outer: WebGLTexture;
+  lookup: WebGLTexture;
+  tint: number[];
+  ink: number[];
+  material: StickerFoilMaterial;
+};
+const foilSources = createFoilSourceSamples(0.02, -0.025, 0.1, 0.145, 3);
+const materialIdentity = (options: Pick<StickerSurface, "foil" | "finish" | "normalBounds">) =>
+  JSON.stringify([options.finish, options.foil, options.normalBounds]);
+
 /** One GPU context computes the coating; each visible sticker keeps its own 2D snapshot. */
-class LaminateRenderer {
+class StickerRenderer {
   readonly canvas = document.createElement("canvas");
   readonly uniforms = new Map<string, WebGLUniformLocation | null>();
   readonly normalTransform = new Float32Array(9);
@@ -51,6 +94,16 @@ class LaminateRenderer {
   readonly textures = new Map<
     string,
     { users: number; texture: Promise<WebGLTexture>; abort: AbortController }
+  >();
+  readonly foilLookups = new Map<FoilLookup, { users: number; texture: Promise<WebGLTexture> }>();
+  readonly foils = new Map<
+    string,
+    {
+      users: number;
+      abort: AbortController;
+      releaseCoverage: () => void;
+      resources: Promise<FoilResources>;
+    }
   >();
   readonly surfaces = new Set<MountedSurface>();
   readonly refreshes = new Set<MountedSurface>();
@@ -94,6 +147,8 @@ class LaminateRenderer {
     if (!gl) throw new Error("WebGL is unavailable");
     this.gl = gl;
     try {
+      if (!gl.getExtension("OES_standard_derivatives"))
+        throw new Error("Sticker finish derivatives are unavailable");
       const renderLimit: unknown = gl.getParameter(gl.MAX_RENDERBUFFER_SIZE);
       if (typeof renderLimit !== "number" || renderLimit < 1024)
         throw new Error("The laminate render buffer limit is unavailable or too small");
@@ -110,8 +165,8 @@ class LaminateRenderer {
         }
         return result;
       };
-      const vertex = shader(gl.VERTEX_SHADER, laminateVertex);
-      const fragment = shader(gl.FRAGMENT_SHADER, laminateFragment);
+      const vertex = shader(gl.VERTEX_SHADER, stickerVertex);
+      const fragment = shader(gl.FRAGMENT_SHADER, stickerFragment);
       const program = gl.createProgram();
       if (!program) throw new Error("Allocating the laminate program failed");
       gl.attachShader(program, vertex);
@@ -131,6 +186,20 @@ class LaminateRenderer {
         "pointTurn",
         "roughness",
         "creaseReveal",
+        "outerImage",
+        "sourceBounds",
+        "normalBounds",
+        "amounts",
+        "hasFoil",
+        "foilLookup",
+        "foilSource",
+        "foilIllumination",
+        "foilTint",
+        "foilInk",
+        "foilStyle",
+        "foilSourceGrid",
+        "foilSources[0]",
+        "opaquePaper",
       ])
         this.uniforms.set(name, gl.getUniformLocation(program, name));
       gl.useProgram(program);
@@ -147,6 +216,10 @@ class LaminateRenderer {
       gl.enableVertexAttribArray(position);
       gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
       this.flat = this.texture(new Uint8Array([128, 128, 255, 255]));
+      // The flat normal validates immediately; every later upload validates as a batch.
+      const flatError = gl.getError();
+      if (flatError !== gl.NO_ERROR || gl.isContextLost())
+        throw new Error(`Uploading the flat laminate texture failed (${flatError})`);
       this.stopLight = subscribeLight(() =>
         timeOurWork("laminate", () => {
           this.cancelRefresh();
@@ -169,7 +242,12 @@ class LaminateRenderer {
     }
   }
 
-  texture(source: TexImageSource | Uint8Array): WebGLTexture {
+  texture(
+    source: TexImageSource | Uint8Array | Uint8ClampedArray,
+    width = 1,
+    height = 1,
+    format: GLenum = this.gl.RGBA,
+  ): WebGLTexture {
     const gl = this.gl;
     if (this.disposed || this.lost || gl.isContextLost())
       throw new Error("The laminate GPU context is unavailable during texture upload");
@@ -183,12 +261,11 @@ class LaminateRenderer {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
-      if (source instanceof Uint8Array) {
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, source);
-        // The constructor's flat normal validates immediately; decoded images validate as a batch.
-        const error = gl.getError();
-        if (error !== gl.NO_ERROR || gl.isContextLost())
-          throw new Error(`Uploading the flat laminate texture failed (${error})`);
+      if (source instanceof Uint8Array || source instanceof Uint8ClampedArray) {
+        // Single-byte alpha rows are not padded to four bytes.
+        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+        const pixels = new Uint8Array(source.buffer, source.byteOffset, source.length);
+        gl.texImage2D(gl.TEXTURE_2D, 0, format, width, height, 0, format, gl.UNSIGNED_BYTE, pixels);
       } else gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
       return texture;
     } catch (error) {
@@ -285,6 +362,131 @@ class LaminateRenderer {
 
   cancelTextureValidations(failure: string) {
     for (const pending of [...this.textureValidations]) pending.finish(failure);
+  }
+
+  acquireFoil(
+    material: StickerFoilMaterial,
+    cut: string,
+    element: HTMLElement,
+    width: number,
+    height: number,
+  ) {
+    const colors = stickerFoilColors(element, material);
+    const key = JSON.stringify([material, cut, width, height, colors]);
+    const old = this.foils.get(key);
+    if (old) {
+      old.users++;
+      return { key, resources: old.resources };
+    }
+    const abort = new AbortController();
+    const signal = AbortSignal.any([abort.signal, AbortSignal.timeout(FOIL_COVERAGE_TIMEOUT_MS)]);
+    const acquired = acquireFoilCoverage(cut, material, width, height, signal);
+    const resources = acquired.coverage.then(async (coverage) => {
+      signal.throwIfAborted();
+      if (this.disposed || this.lost)
+        throw new Error("Outer coverage belongs to a retired GPU context");
+      const lookupData = createFoilLookup(material.style, colors.palette);
+      const lookup = this.acquireFoilLookup(lookupData);
+      let outer: Promise<WebGLTexture>;
+      try {
+        // Coverage is one alpha byte per pixel; the shader reads only its alpha.
+        outer = this.validateTexture(
+          this.texture(coverage.alpha, coverage.width, coverage.height, this.gl.ALPHA),
+          `foil coverage for ${cut}`,
+          signal,
+        );
+      } catch (error) {
+        this.releaseFoilLookup(lookupData);
+        throw error;
+      }
+      let outerTexture: WebGLTexture | undefined;
+      try {
+        outerTexture = await outer;
+        const lookupTexture = await lookup;
+        return {
+          lookupData,
+          frame: { width, height },
+          coverage,
+          description: Object.freeze({
+            cut,
+            material: Object.freeze({
+              ...material,
+              palette:
+                material.palette &&
+                Object.freeze(
+                  material.palette.map((color) =>
+                    Object.freeze([...color] as [number, number, number]),
+                  ),
+                ),
+            }),
+            frame: Object.freeze({ width, height }),
+            coverage: Object.freeze({
+              ...coverage,
+              alpha: Object.freeze({
+                length: coverage.alpha.length,
+                at: (index: number) => coverage.alpha.at(index),
+              }),
+            }),
+          }),
+          outer: outerTexture,
+          lookup: lookupTexture,
+          tint: colors.tint,
+          ink: colors.ink,
+          material,
+        };
+      } catch (error) {
+        if (outerTexture && !this.lost) this.gl.deleteTexture(outerTexture);
+        this.releaseFoilLookup(lookupData);
+        throw error;
+      }
+    });
+    this.foils.set(key, { users: 1, abort, releaseCoverage: acquired.release, resources });
+    return { key, resources };
+  }
+  releaseFoil(key: string) {
+    const entry = this.foils.get(key);
+    if (!entry || --entry.users > 0) return;
+    this.foils.delete(key);
+    entry.abort.abort();
+    entry.releaseCoverage();
+    // A live owner reports failures; retired owners only release resources.
+    entry.resources.then(
+      (resources) => {
+        if (!this.lost) this.gl.deleteTexture(resources.outer);
+        this.releaseFoilLookup(resources.lookupData);
+      },
+      () => {},
+    );
+  }
+
+  /** Foils with the same style and palette share one lookup texture. */
+  acquireFoilLookup(data: FoilLookup): Promise<WebGLTexture> {
+    const old = this.foilLookups.get(data);
+    if (old) {
+      old.users++;
+      return old.texture;
+    }
+    // Shared by every owner, so no single owner's cancellation can abort its validation.
+    const texture = this.validateTexture(
+      this.texture(data.pixels, data.width, data.height),
+      "the foil lookup",
+      new AbortController().signal,
+    );
+    // Every owner awaits it and reports its failure; this covers an owner that failed earlier.
+    texture.catch(() => {});
+    this.foilLookups.set(data, { users: 1, texture });
+    return texture;
+  }
+  releaseFoilLookup(data: FoilLookup) {
+    const entry = this.foilLookups.get(data);
+    if (!entry || --entry.users > 0) return;
+    this.foilLookups.delete(data);
+    entry.texture.then(
+      (texture) => {
+        if (!this.lost) this.gl.deleteTexture(texture);
+      },
+      () => {},
+    );
   }
 
   acquire(url: string): Promise<WebGLTexture> {
@@ -443,6 +645,10 @@ class LaminateRenderer {
         surface.finishCreaseReveal();
         return [];
       }
+      surface.resizeCoverage(width, height);
+      const coverage = surface.printCut?.foil?.coverage;
+      const outputWidth = coverage ? (width * coverage.width) / coverage.sourceWidth : width;
+      const outputHeight = coverage ? (height * coverage.height) / coverage.sourceHeight : height;
       // The moving window keeps the unrounded local box, preserving the print's CSS sampling.
       const style = getComputedStyle(surface.container);
       const ratio = Math.min(devicePixelRatio || 1, 2, 1024 / Math.max(width, height));
@@ -452,8 +658,10 @@ class LaminateRenderer {
         height,
         revealWidth: parseFloat(style.width),
         revealHeight: parseFloat(style.height),
-        w: Math.max(1, Math.round(width * ratio)),
-        h: Math.max(1, Math.round(height * ratio)),
+        sourceW: Math.max(1, Math.round(width * ratio)),
+        sourceH: Math.max(1, Math.round(height * ratio)),
+        w: Math.max(1, Math.round(outputWidth * ratio)),
+        h: Math.max(1, Math.round(outputHeight * ratio)),
         x: 0,
         y: 0,
         target: canvas,
@@ -498,6 +706,7 @@ class LaminateRenderer {
             requested.has(surface) &&
             surface.textures &&
             (surface.hasSnapshot || !surface.pendingNormal) &&
+            !(surface.seededCopy && surface.options.normal !== surface.normalUrl) &&
             !(surface.revealing && surface.pendingPrintCut),
         ),
       )
@@ -529,6 +738,8 @@ class LaminateRenderer {
       height: number;
       revealWidth: number;
       revealHeight: number;
+      sourceW: number;
+      sourceH: number;
       w: number;
       h: number;
       creaseProgress: number;
@@ -567,13 +778,63 @@ class LaminateRenderer {
     };
     for (const tile of tiles) {
       const { options, textures } = tile.surface;
+      const material = tile.surface.printCut;
+      const foil = material?.foil;
       if (!textures) continue;
-      setCreaseRevealSize(tile.surface.container, tile.revealWidth, tile.revealHeight);
+      const output = foil?.coverage;
+      setCreaseRevealSize(
+        tile.surface.container,
+        tile.revealWidth * (output ? output.width / output.sourceWidth : 1),
+        tile.revealHeight * (output ? output.height / output.sourceHeight : 1),
+      );
       gl.viewport(tile.x, gl.drawingBufferHeight - tile.y - tile.h, tile.w, tile.h);
       for (let i = 0; i < 3; i++) {
         gl.activeTexture(gl.TEXTURE0 + i);
         gl.bindTexture(gl.TEXTURE_2D, textures[i]);
         gl.uniform1i(this.uniforms.get(["printImage", "cutImage", "normalImage"][i]) ?? null, i);
+      }
+      const coverage = foil?.coverage;
+      gl.activeTexture(gl.TEXTURE3);
+      gl.bindTexture(gl.TEXTURE_2D, foil?.outer ?? this.flat);
+      gl.uniform1i(this.uniforms.get("outerImage") ?? null, 3);
+      gl.activeTexture(gl.TEXTURE4);
+      gl.bindTexture(gl.TEXTURE_2D, foil?.lookup ?? this.flat);
+      gl.uniform1i(this.uniforms.get("foilLookup") ?? null, 4);
+      gl.uniform4f(
+        this.uniforms.get("sourceBounds") ?? null,
+        coverage ? coverage.x / coverage.sourceWidth : 0,
+        coverage ? coverage.y / coverage.sourceHeight : 0,
+        coverage ? coverage.width / coverage.sourceWidth : 1,
+        coverage ? coverage.height / coverage.sourceHeight : 1,
+      );
+      const bounds = tile.surface.normalBounds;
+      gl.uniform4f(
+        this.uniforms.get("normalBounds") ?? null,
+        bounds?.x ?? 0,
+        bounds?.y ?? 0,
+        bounds?.width ?? 1,
+        bounds?.height ?? 1,
+      );
+      gl.uniform2f(
+        this.uniforms.get("amounts") ?? null,
+        options.foilAmount ?? 1,
+        options.paperAmount ?? 1,
+      );
+      gl.uniform1f(this.uniforms.get("hasFoil") ?? null, foil ? 1 : 0);
+      if (foil) {
+        gl.uniform4f(this.uniforms.get("foilSource") ?? null, 0.02, -0.025, 0.1, 0.145);
+        gl.uniform4fv(this.uniforms.get("foilSources[0]") ?? null, foilSources);
+        // A lit room for the metal; the window keeps the paper's radiance so highlights line up.
+        gl.uniform2f(this.uniforms.get("foilIllumination") ?? null, 1, 3.06);
+        gl.uniform3fv(this.uniforms.get("foilTint") ?? null, foil.tint);
+        gl.uniform3fv(this.uniforms.get("foilInk") ?? null, foil.ink);
+        gl.uniform1f(this.uniforms.get("foilSourceGrid") ?? null, 3);
+        gl.uniform1f(
+          this.uniforms.get("foilStyle") ?? null,
+          ["holo", "pink", "kyoto-seika", "gold", "silver", "roseGold"].indexOf(
+            foil.material.style,
+          ),
+        );
       }
       gl.uniform2f(this.uniforms.get("size") ?? null, tile.width, tile.height);
       const turn = ((options.turn + pose.rotationDegrees) * Math.PI) / 180,
@@ -603,10 +864,31 @@ class LaminateRenderer {
       gl.uniform2f(this.uniforms.get("pointTurn") ?? null, cosTurn, sinTurn);
       gl.uniform1f(
         this.uniforms.get("roughness") ?? null,
-        options.finish === "matte" ? 0.16 : 0.016,
+        material?.finish === "matte" ? 0.16 : 0.016,
       );
       gl.uniform1f(this.uniforms.get("creaseReveal") ?? null, tile.creaseProgress);
+      gl.uniform1f(this.uniforms.get("opaquePaper") ?? null, 0);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
+      if (
+        coverage &&
+        (coverage.width !== coverage.sourceWidth || coverage.height !== coverage.sourceHeight)
+      ) {
+        // Overflow changes interpolator rounding in WebKit. Opaque paper uses its original
+        // viewport and UV interpolation, overwriting only fully covered pixels in this same tile.
+        const sourceWidth = tile.sourceW;
+        const sourceHeight = tile.sourceH;
+        const left = Math.round((-coverage.x * tile.w) / coverage.width);
+        const top = Math.round((-coverage.y * tile.h) / coverage.height);
+        gl.viewport(
+          tile.x + left,
+          gl.drawingBufferHeight - tile.y - top - sourceHeight,
+          sourceWidth,
+          sourceHeight,
+        );
+        gl.uniform4f(this.uniforms.get("sourceBounds") ?? null, 0, 0, 1, 1);
+        gl.uniform1f(this.uniforms.get("opaquePaper") ?? null, 1);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+      }
     }
     const submittedMs = recording ? performance.now() - submittedAt : 0;
     let firstCopyMs = 0;
@@ -617,6 +899,7 @@ class LaminateRenderer {
     for (const { surface, x, y, w, h, target } of tiles) {
       const copyStartedAt = recording ? performance.now() : 0;
       const canvas = target ?? surface.flatSnapshot();
+      surface.sizeOutput(canvas);
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w;
         canvas.height = h;
@@ -634,10 +917,28 @@ class LaminateRenderer {
       if (canvas === surface.canvas) {
         const previousNormal = surface.snapshotNormal;
         surface.hasSnapshot = true;
+        surface.seededCopy = false;
         surface.snapshotNormal = surface.normalUrl;
+        surface.snapshotNormalBounds = surface.normalBounds;
+        surface.snapshotMaterial = surface.printCut?.identity;
+        surface.snapshotOptions = {
+          ...surface.options,
+          print: surface.printCut?.print ?? surface.options.print,
+          cut: surface.printCut?.cut ?? surface.options.cut,
+          foil: surface.printCut?.foil?.description.material,
+          finish: surface.printCut?.finish ?? surface.options.finish,
+          normal: surface.normalUrl,
+          normalBounds: surface.normalBounds,
+        };
+        surface.snapshotCoverageFrame = surface.printCut?.foil?.description.frame;
+        const previousCoverage = surface.snapshotFoilCoverage;
+        surface.showFoilCoverage(surface.printCut?.foil?.description);
+        canvas.dataset.foil = surface.printCut?.foil ? "true" : "false";
         surface.snapshotPending = false;
         surface.renderFailed = false;
         if (canvas.dataset.state !== "ready") canvas.dataset.state = "ready";
+        if (previousCoverage !== surface.snapshotFoilCoverage)
+          for (const committed of surface.foilCommits) committed(surface.snapshotFoilCoverage);
         const reveal = surface.reveal;
         const normal = surface.normalUrl;
         // A completed normal consumes its placement even when no animation can be prepared.
@@ -688,6 +989,10 @@ class LaminateRenderer {
       );
     }
     this.textures.clear();
+    for (const [key, entry] of this.foils) {
+      entry.users = 1;
+      this.releaseFoil(key);
+    }
     this.surfaces.clear();
     // Loss already destroyed these resources. Deleting invalid handles after restoration is an error.
     if (!this.lost) {
@@ -701,13 +1006,26 @@ class LaminateRenderer {
   }
 }
 
-let renderer: LaminateRenderer | null = null;
+let renderer: StickerRenderer | null = null;
 const mounted = new WeakMap<HTMLCanvasElement, MountedSurface>();
 class MountedSurface {
-  gpu: LaminateRenderer | null = null;
+  gpu: StickerRenderer | null = null;
   textures: WebGLTexture[] | null = null;
   hasSnapshot = false;
+  seededCopy = false;
   snapshotNormal?: string;
+  snapshotMaterial?: string;
+  snapshotNormalBounds?: StickerSurface["normalBounds"];
+  normalBounds?: StickerSurface["normalBounds"];
+  readonly copies = new Set<() => void>();
+  readonly foilCommits = new Set<(coverage: StickerFoilCoverage | undefined) => void>();
+  coverageSize = "";
+  snapshotOptions?: StickerSurface;
+  snapshotCoverageFrame?: { width: number; height: number };
+  snapshotFoilCoverage?: StickerFoilCoverage;
+  /** The shown snapshot keeps its mask loadable for copies until other pixels replace it. */
+  releaseSnapshotMask = () => {};
+  coverageFrame?: { width: number; height: number };
   snapshotPending = false;
   renderFailed = false;
   initializationAttempted = false;
@@ -716,14 +1034,38 @@ class MountedSurface {
     expected?: { normal?: string };
     finish: () => void;
   }>();
-  printCut: { print: string; cut: string; textures: [WebGLTexture, WebGLTexture] } | null = null;
-  pendingPrintCut: { print: string; cut: string; gpu: LaminateRenderer } | null = null;
+  printCut: {
+    print: string;
+    cut: string;
+    textures: [WebGLTexture, WebGLTexture];
+    foil?: FoilResources;
+    foilKey?: string;
+    identity: string;
+    finish: LaminateFinish;
+  } | null = null;
+  pendingPrintCut: {
+    print: string;
+    cut: string;
+    gpu: StickerRenderer;
+    foilKey?: string;
+    identity: string;
+    commit?: () => void;
+    reject: (error: unknown) => void;
+  } | null = null;
   printCutError: string | null = null;
   normalError: string | null = null;
+  /** The committed material went without foil because its coverage failed. */
+  foilError: string | null = null;
   normalFailure: { url: string } | null = null;
   normalUrl?: string;
   normalTexture: WebGLTexture | null = null;
-  pendingNormal: { url: string; gpu: LaminateRenderer } | null = null;
+  pendingNormal: {
+    url?: string;
+    material?: NonNullable<MountedSurface["pendingPrintCut"]>;
+    gpu: StickerRenderer;
+    bounds?: StickerSurface["normalBounds"];
+    commit?: () => void;
+  } | null = null;
   reveal: {
     normal: string;
     admitted: boolean;
@@ -736,10 +1078,15 @@ class MountedSurface {
   live = true;
   readonly canvas: HTMLCanvasElement;
   readonly container: HTMLElement;
-  readonly options: LaminateSurface;
-  constructor(canvas: HTMLCanvasElement, options: LaminateSurface) {
+  readonly options: StickerSurface;
+  constructor(
+    canvas: HTMLCanvasElement,
+    options: StickerSurface,
+    coverageFrame?: { width: number; height: number },
+  ) {
+    this.coverageFrame = coverageFrame;
     this.canvas = canvas;
-    const container = canvas.closest(".sticker-laminate-surface");
+    const container = canvas.closest(".sticker-material-surface");
     this.container = container instanceof HTMLElement ? container : canvas;
     this.options = options;
     this.reload();
@@ -748,20 +1095,108 @@ class MountedSurface {
     if (!this.live) return;
     this.textures = null;
     this.hasSnapshot = false;
+    this.showFoilCoverage(undefined);
+    this.seededCopy = false;
     this.snapshotNormal = undefined;
+    this.snapshotMaterial = undefined;
     this.snapshotPending = false;
     this.renderFailed = false;
     this.initializationAttempted = false;
     this.gpu = null;
     this.printCut = null;
     this.pendingPrintCut = null;
-    this.printCutError = this.normalError = null;
+    this.printCutError = this.normalError = this.foilError = null;
     this.normalFailure = null;
     delete this.canvas.dataset.error;
     this.normalUrl = undefined;
+    this.normalBounds = undefined;
     this.normalTexture = null;
     this.pendingNormal = null;
     this.initialize();
+  }
+  /** What sizeOutput last wrote, so an unchanged output writes no styles. */
+  readonly outputs = new WeakMap<
+    HTMLCanvasElement,
+    { coverage: object | undefined; wrapped: boolean }
+  >();
+  writtenOrigin: { coverage: object | undefined; width: number; height: number } | null = null;
+  /** The container's size as this frame's draw measured it. */
+  measured: { width: number; height: number } | null = null;
+  showFoilCoverage(coverage: StickerFoilCoverage | undefined) {
+    if (coverage === this.snapshotFoilCoverage) return;
+    const release = this.releaseSnapshotMask;
+    this.releaseSnapshotMask = coverage ? holdFoilCoverageMask(coverage.coverage.mask) : () => {};
+    this.snapshotFoilCoverage = coverage;
+    release();
+  }
+  sizeOutput(
+    canvas: HTMLCanvasElement,
+    coverage: Omit<FoilCoverage, "alpha"> | undefined = this.printCut?.foil?.coverage,
+  ) {
+    // Standalone canvases inside a source frame have no reveal wrappers.
+    const wrapped =
+      this.container !== this.canvas &&
+      canvas.parentElement?.classList.contains("crease-reveal-content") === true;
+    const written = this.outputs.get(canvas);
+    const canvasCurrent =
+      written !== undefined && written.coverage === coverage && written.wrapped === wrapped;
+    if (this.container === this.canvas) {
+      if (canvasCurrent) return;
+      this.outputs.set(canvas, { coverage, wrapped });
+      // Keep the CSS source box responsive; presentation overflow must not resize its input box.
+      canvas.style.transformOrigin = "0 0";
+      canvas.style.scale = coverage
+        ? `${coverage.width / coverage.sourceWidth} ${coverage.height / coverage.sourceHeight}`
+        : "1";
+      canvas.style.translate = coverage
+        ? `${(100 * coverage.x) / coverage.sourceWidth}% ${(100 * coverage.y) / coverage.sourceHeight}%`
+        : "0 0";
+      return;
+    }
+    const width = this.measured?.width ?? this.container.clientWidth,
+      height = this.measured?.height ?? this.container.clientHeight;
+    const origin = this.writtenOrigin;
+    if (
+      !origin ||
+      origin.coverage !== coverage ||
+      origin.width !== width ||
+      origin.height !== height
+    ) {
+      this.writtenOrigin = { coverage, width, height };
+      this.container.style.setProperty(
+        "--crease-origin-x",
+        `${coverage ? (width * coverage.x) / coverage.sourceWidth : 0}px`,
+      );
+      this.container.style.setProperty(
+        "--crease-origin-y",
+        `${coverage ? (height * coverage.y) / coverage.sourceHeight : 0}px`,
+      );
+    }
+    if (canvasCurrent) return;
+    this.outputs.set(canvas, { coverage, wrapped });
+    canvas.style.left = wrapped
+      ? "0"
+      : `${coverage ? (100 * coverage.x) / coverage.sourceWidth : 0}%`;
+    canvas.style.top = wrapped
+      ? "0"
+      : `${coverage ? (100 * coverage.y) / coverage.sourceHeight : 0}%`;
+    canvas.style.width = wrapped
+      ? "100%"
+      : `${coverage ? (100 * coverage.width) / coverage.sourceWidth : 100}%`;
+    canvas.style.height = wrapped
+      ? "100%"
+      : `${coverage ? (100 * coverage.height) / coverage.sourceHeight : 100}%`;
+  }
+  resizeCoverage(width: number, height: number) {
+    if (this.measured?.width !== width || this.measured.height !== height)
+      this.measured = { width, height };
+    if (!this.options.foil) return;
+    const size = this.coverageFrame
+      ? `${this.coverageFrame.width},${this.coverageFrame.height}`
+      : `${width},${height}`;
+    if (size === this.coverageSize) return;
+    this.coverageSize = size;
+    this.replacePrintCut(this.options.print, this.options.cut, true);
   }
   /** Only first exposure admits decoding and uploads; covering a ready surface keeps its resources. */
   initialize() {
@@ -773,7 +1208,7 @@ class MountedSurface {
     if (!this.container.clientWidth || !this.container.clientHeight) return;
     this.initializationAttempted = true;
     try {
-      this.gpu = renderer ??= new LaminateRenderer();
+      this.gpu = renderer ??= new StickerRenderer();
       this.gpu.surfaces.add(this);
       const gpu = this.gpu;
       if (gpu.textureValidationFailure) {
@@ -803,7 +1238,9 @@ class MountedSurface {
     }
     if (kind === "printCut") this.printCutError = why;
     else this.normalError = why;
-    const errors = [this.printCutError, this.normalError].filter(Boolean).join("; ");
+    const errors = [this.printCutError, this.normalError, this.foilError]
+      .filter(Boolean)
+      .join("; ");
     if (errors) this.canvas.dataset.error = errors;
     else delete this.canvas.dataset.error;
     if (why) {
@@ -824,6 +1261,12 @@ class MountedSurface {
   /** A retained bitmap is settled only after its current requested material has reached it. */
   settled(expected?: { normal?: string }) {
     if (this.materialUpdating) return false;
+    if (
+      this.snapshotMaterial !== materialIdentity(this.options) &&
+      !this.renderFailed &&
+      !this.printCutError
+    )
+      return false;
     if (expected) {
       if (
         this.hasSnapshot &&
@@ -836,6 +1279,8 @@ class MountedSurface {
         (this.renderFailed || (!this.pendingPrintCut && this.printCutError !== null))
       );
     }
+    // A copied complete normal remains visible if reacquiring its texture fails.
+    if (this.seededCopy && this.normalFailure && !this.pendingPrintCut) return true;
     // A failed first print cannot produce a snapshot; its pending normal must not hold the failure.
     if (
       this.renderFailed ||
@@ -865,57 +1310,164 @@ class MountedSurface {
     for (const waiter of this.waiters)
       if (!this.live || this.settled(waiter.expected)) waiter.finish();
   }
+  /** Registered material changes commit together; sharp print refinement remains independent. */
+  commitMaterials() {
+    const material = this.pendingPrintCut;
+    if (
+      material &&
+      (material.identity !== this.printCut?.identity || this.pendingNormal?.material === material)
+    ) {
+      if (!material.commit || (this.pendingNormal && !this.pendingNormal.commit)) return;
+      this.pendingNormal?.commit?.();
+      material.commit();
+      return;
+    }
+    this.pendingNormal?.commit?.();
+    material?.commit?.();
+  }
   /** A sharp print replaces its cut with it, while the previous complete sticker remains visible. */
-  replacePrintCut(print: string, cut: string) {
+  replacePrintCut(print: string, cut: string, force = false) {
+    const identity = materialIdentity(this.options);
     const gpu = this.gpu;
     if (
       !gpu ||
       gpu.disposed ||
       !this.live ||
-      (this.pendingPrintCut?.print === print && this.pendingPrintCut.cut === cut)
+      (this.pendingPrintCut?.print === print &&
+        this.pendingPrintCut.cut === cut &&
+        this.pendingPrintCut.identity === identity &&
+        !force)
     )
       return;
     if (this.pendingPrintCut) {
       const old = this.pendingPrintCut;
       this.pendingPrintCut = null;
+      if (this.pendingNormal?.material === old) this.pendingNormal = null;
       old.gpu.release(old.print);
       old.gpu.release(old.cut);
+      if (old.foilKey) old.gpu.releaseFoil(old.foilKey);
     }
-    if (this.printCut?.print === print && this.printCut.cut === cut) {
+    const width = this.coverageFrame?.width ?? this.container.clientWidth;
+    const height = this.coverageFrame?.height ?? this.container.clientHeight;
+    const acquiredFrame = this.printCut?.foil?.description.frame;
+    if (
+      this.printCut?.print === print &&
+      this.printCut.cut === cut &&
+      this.printCut.identity === identity &&
+      !this.printCutError &&
+      (!this.options.foil || (acquiredFrame?.width === width && acquiredFrame.height === height)) &&
+      !force
+    ) {
       this.loadError("printCut", null);
       return;
     }
-    const pending = { print, cut, gpu };
-    this.renderFailed = false;
-    this.pendingPrintCut = pending;
-    Promise.all([gpu.acquire(print), gpu.acquire(cut)]).then(
-      ([printTexture, cutTexture]) => {
+    this.coverageSize = `${width},${height}`;
+    const foilMaterial = this.options.foil;
+    const foil = foilMaterial
+      ? gpu.acquireFoil(foilMaterial, cut, this.container, width, height)
+      : undefined;
+    const finish = this.options.finish;
+    const pending: NonNullable<MountedSurface["pendingPrintCut"]> = {
+      print,
+      cut,
+      gpu,
+      foilKey: foil?.key,
+      identity,
+      reject: (error: unknown) => {
+        // Canceled generations already released their refs; only the current request reports failure.
         if (!this.live || this.gpu !== gpu || gpu.disposed || this.pendingPrintCut !== pending)
           return;
         this.pendingPrintCut = null;
+        // The normal belongs to this complete material change, so failure retires both stages.
+        if (
+          this.pendingNormal &&
+          (identity !== this.printCut?.identity || this.pendingNormal.material === pending)
+        ) {
+          const normal = this.pendingNormal;
+          this.pendingNormal = null;
+          if (normal.url) normal.gpu.release(normal.url);
+        }
+        gpu.release(print);
+        gpu.release(cut);
+        if (foil) gpu.releaseFoil(foil.key);
+        const why = `Replacing sticker print and cut (${print}, ${cut}) failed: ${String(error)}`;
+        if (!this.hasSnapshot) this.canvas.dataset.state = "failed";
+        this.loadError("printCut", why);
+      },
+    };
+    this.renderFailed = false;
+    this.pendingPrintCut = pending;
+    // An earlier terminal failure cannot settle this newly requested generation.
+    this.loadError("printCut", null);
+    // Resize can replace acquisition without a new updateSticker call; removal follows its owner.
+    if (this.normalUrl && !this.options.normal) this.replaceNormal();
+    // A first load whose foil can't be prepared commits paper and laminate without it; a complete
+    // generation already shown is kept instead, as for any failed replacement.
+    let foilFailure: string | null = null;
+    Promise.all([
+      gpu.acquire(print),
+      gpu.acquire(cut),
+      foil?.resources.then(
+        (resources) => {
+          const error = this.geometryError(this.options.normal, resources.coverage);
+          if (error) throw new Error(error);
+          return resources;
+        },
+        (error: unknown) => {
+          if (this.hasSnapshot) throw error;
+          foilFailure = `Preparing ${foilMaterial?.style} foil for ${cut} failed: ${String(error)}`;
+          return undefined;
+        },
+      ),
+    ]).then(([printTexture, cutTexture, foilResources]) => {
+      if (!this.live || this.gpu !== gpu || gpu.disposed || this.pendingPrintCut !== pending)
+        return;
+      pending.commit = () => {
+        this.pendingPrintCut = null;
         const old = this.printCut;
-        this.printCut = { print, cut, textures: [printTexture, cutTexture] };
+        this.printCut = {
+          print,
+          cut,
+          textures: [printTexture, cutTexture],
+          foil: foilResources,
+          foilKey: foilResources && foil?.key,
+          identity,
+          finish,
+        };
+        if (foil && !foilResources) gpu.releaseFoil(foil.key);
+        this.foilError = foilFailure;
+        if (foilFailure) {
+          console.error(`Rendering sticker laminate for ${print} failed: ${foilFailure}`);
+          notePerformance("laminate", foilFailure);
+        }
         this.textures = [printTexture, cutTexture, this.normalTexture ?? gpu.flat];
         this.snapshotPending = true;
         if (old) {
           gpu.release(old.print);
           gpu.release(old.cut);
+          if (old.foilKey) gpu.releaseFoil(old.foilKey);
         }
         this.loadError("printCut", null);
         this.draw();
-      },
-      (error: unknown) => {
-        // Canceled generations already released their refs; the current pair alone reports failure.
-        if (!this.live || this.gpu !== gpu || gpu.disposed || this.pendingPrintCut !== pending)
-          return;
-        this.pendingPrintCut = null;
-        gpu.release(print);
-        gpu.release(cut);
-        const why = `Replacing sticker print and cut (${print}, ${cut}) failed: ${String(error)}`;
-        if (!this.hasSnapshot) this.canvas.dataset.state = "failed";
-        this.loadError("printCut", why);
-      },
-    );
+      };
+      this.commitMaterials();
+    }, pending.reject);
+  }
+  geometryError(normal: string | undefined, coverage = this.printCut?.foil?.coverage) {
+    const c = coverage,
+      bounds = this.options.normalBounds;
+    if (
+      normal &&
+      c &&
+      (c.x < 0 || c.y < 0 || c.width > c.sourceWidth || c.height > c.sourceHeight) &&
+      (!bounds ||
+        bounds.x > c.x / c.sourceWidth + 1e-7 ||
+        bounds.y > c.y / c.sourceHeight + 1e-7 ||
+        bounds.x + bounds.width < (c.x + c.width) / c.sourceWidth - 1e-7 ||
+        bounds.y + bounds.height < (c.y + c.height) / c.sourceHeight - 1e-7)
+    )
+      return "Creased foil overflow requires a normal texture registered over its complete outer coverage";
+    return null;
   }
   /** A crease rebake keeps its last ready snapshot until the replacement normal is uploaded. */
   replaceNormal(url?: string) {
@@ -924,15 +1476,28 @@ class MountedSurface {
       !gpu ||
       gpu.disposed ||
       !this.live ||
-      (this.pendingNormal && this.pendingNormal.url === url)
+      (this.pendingNormal &&
+        this.pendingNormal.url === url &&
+        JSON.stringify(this.pendingNormal.bounds) === JSON.stringify(this.options.normalBounds))
     )
       return;
     if (this.pendingNormal) {
       const old = this.pendingNormal;
       this.pendingNormal = null;
-      old.gpu.release(old.url);
+      if (old.url) old.gpu.release(old.url);
     }
-    if (this.normalUrl === url) {
+    const changingMaterial =
+      this.pendingPrintCut && this.pendingPrintCut.identity !== this.printCut?.identity;
+    const geometryError = changingMaterial ? null : this.geometryError(url);
+    if (geometryError) {
+      this.normalFailure = url ? { url } : null;
+      this.loadError("normal", geometryError);
+      return;
+    }
+    if (
+      this.normalUrl === url &&
+      JSON.stringify(this.normalBounds) === JSON.stringify(this.options.normalBounds)
+    ) {
       this.normalFailure = null;
       this.loadError("normal", null);
       this.showCreaseProgress(this.reveal?.progress ?? 1);
@@ -940,20 +1505,40 @@ class MountedSurface {
       return;
     }
     if (!url) {
-      this.finishCreaseReveal();
-      const old = this.normalUrl;
-      this.normalUrl = undefined;
-      this.normalTexture = gpu.flat;
-      this.normalFailure = null;
-      if (this.textures) this.textures[2] = gpu.flat;
-      this.snapshotPending = true;
-      this.renderFailed = false;
-      if (old) gpu.release(old);
-      this.loadError("normal", null);
-      this.draw();
+      const commit = () => {
+        this.pendingNormal = null;
+        this.finishCreaseReveal();
+        const old = this.normalUrl;
+        this.normalUrl = undefined;
+        this.normalBounds = undefined;
+        this.normalTexture = gpu.flat;
+        this.normalFailure = null;
+        if (this.textures) this.textures[2] = gpu.flat;
+        this.snapshotPending = true;
+        this.renderFailed = false;
+        if (old) gpu.release(old);
+        this.loadError("normal", null);
+        this.draw();
+      };
+      if (this.pendingPrintCut) {
+        // A ready flat transition belongs to the required replacement, including print/cut-only
+        // changes. Keep the accepted normal, bounds and texture until that generation commits.
+        this.pendingNormal = {
+          gpu,
+          material: this.pendingPrintCut,
+          bounds: this.options.normalBounds,
+          commit,
+        };
+        this.commitMaterials();
+      } else commit();
       return;
     }
-    const pending = { url, gpu };
+    const pending: NonNullable<MountedSurface["pendingNormal"]> = {
+      url,
+      gpu,
+      bounds: this.options.normalBounds,
+    };
+    const normalBounds = this.options.normalBounds;
     this.renderFailed = false;
     this.normalFailure = null;
     this.pendingNormal = pending;
@@ -961,26 +1546,40 @@ class MountedSurface {
       (texture) => {
         if (!this.live || this.gpu !== gpu || gpu.disposed || this.pendingNormal !== pending)
           return;
-        this.pendingNormal = null;
-        const old = this.normalUrl;
-        this.normalUrl = url;
-        this.normalTexture = texture;
-        this.normalFailure = null;
-        if (this.textures) this.textures[2] = texture;
-        this.snapshotPending = true;
-        if (old) gpu.release(old);
-        this.loadError("normal", null);
-        gpu.stopReveal(this);
-        this.reveal =
-          this.options.onCreaseProgress &&
-          this.container !== this.canvas &&
-          !gpu.reduced.matches &&
-          CSS.supports("mix-blend-mode", "plus-lighter") &&
-          this.completedNormal !== url &&
-          this.options.canRevealCrease?.(url) === true
-            ? { normal: url, admitted: false, started: null, progress: 0 }
-            : null;
-        this.draw();
+        const changingMaterial =
+          this.pendingPrintCut && this.pendingPrintCut.identity !== this.printCut?.identity;
+        const geometryError = changingMaterial ? null : this.geometryError(url);
+        if (geometryError) {
+          this.pendingNormal = null;
+          gpu.release(url);
+          this.normalFailure = { url };
+          this.loadError("normal", geometryError);
+          return;
+        }
+        pending.commit = () => {
+          this.pendingNormal = null;
+          const old = this.normalUrl;
+          this.normalUrl = url;
+          this.normalBounds = normalBounds;
+          this.normalTexture = texture;
+          this.normalFailure = null;
+          if (this.textures) this.textures[2] = texture;
+          this.snapshotPending = true;
+          if (old) gpu.release(old);
+          this.loadError("normal", null);
+          gpu.stopReveal(this);
+          this.reveal =
+            this.options.onCreaseProgress &&
+            this.container !== this.canvas &&
+            !gpu.reduced.matches &&
+            CSS.supports("mix-blend-mode", "plus-lighter") &&
+            this.completedNormal !== url &&
+            this.options.canRevealCrease?.(url) === true
+              ? { normal: url, admitted: false, started: null, progress: 0 }
+              : null;
+          this.draw();
+        };
+        this.commitMaterials();
       },
       (error: unknown) => {
         // Canceled generations have released their ownership; only the current request reports failure.
@@ -992,6 +1591,8 @@ class MountedSurface {
         const why = `Replacing crease normal ${url} failed: ${String(error)}`;
         // Keep the ready laminate visible; its last normal remains valid after a failed rebake.
         this.loadError("normal", why);
+        if (this.pendingPrintCut && this.pendingPrintCut.identity !== this.printCut?.identity)
+          this.pendingPrintCut.reject(why);
         if (!this.hasSnapshot) this.draw();
       },
     );
@@ -1012,7 +1613,7 @@ class MountedSurface {
   flatSnapshot(): HTMLCanvasElement {
     if (!this.flat) {
       this.flat = document.createElement("canvas");
-      this.flat.className = "sticker-laminate-flat";
+      this.flat.className = "sticker-material-flat";
       this.flat.setAttribute("aria-hidden", "true");
       this.flatFrame = document.createElement("span");
       this.flatFrame.className = "crease-reveal-frame crease-reveal-frame--flat";
@@ -1069,6 +1670,10 @@ class MountedSurface {
   release() {
     if (!this.live) return;
     this.live = false;
+    this.showFoilCoverage(undefined);
+    for (const invalidate of [...this.copies]) invalidate();
+    this.copies.clear();
+    this.foilCommits.clear();
     this.finishCreaseReveal();
     this.settleWaiters();
     const gpu = this.gpu;
@@ -1080,16 +1685,20 @@ class MountedSurface {
     if (this.printCut) {
       gpu.release(this.printCut.print);
       gpu.release(this.printCut.cut);
+      if (this.printCut.foilKey) gpu.releaseFoil(this.printCut.foilKey);
     }
     if (this.pendingPrintCut) {
       this.pendingPrintCut.gpu.release(this.pendingPrintCut.print);
       this.pendingPrintCut.gpu.release(this.pendingPrintCut.cut);
+      if (this.pendingPrintCut.foilKey)
+        this.pendingPrintCut.gpu.releaseFoil(this.pendingPrintCut.foilKey);
     }
     this.printCut = null;
     this.pendingPrintCut = null;
     if (this.normalUrl) gpu.release(this.normalUrl);
-    if (this.pendingNormal) this.pendingNormal.gpu.release(this.pendingNormal.url);
+    if (this.pendingNormal?.url) this.pendingNormal.gpu.release(this.pendingNormal.url);
     this.normalUrl = undefined;
+    this.normalBounds = undefined;
     this.normalTexture = null;
     this.pendingNormal = null;
     if (!gpu.surfaces.size) {
@@ -1100,11 +1709,19 @@ class MountedSurface {
 }
 
 /** A snapshot only changes after a published tilt, resize, load, or explicit container turn. */
-export function mountLaminate(canvas: HTMLCanvasElement, options: LaminateSurface): () => void {
+export function mountSticker(canvas: HTMLCanvasElement, options: StickerSurface): () => void {
+  return mountPresentation(canvas, options);
+}
+function mountPresentation(
+  canvas: HTMLCanvasElement,
+  options: StickerSurface,
+  coverageFrame?: { width: number; height: number },
+): () => void {
   // A reused React canvas can still say ready after its old snapshot was released.
   canvas.dataset.state = "loading";
+  canvas.dataset.partial = (options.paperAmount ?? 1) < 1 ? "true" : "false";
   delete canvas.dataset.error;
-  const surface = new MountedSurface(canvas, options);
+  const surface = new MountedSurface(canvas, options, coverageFrame);
   mounted.set(canvas, surface);
   const resize = new ResizeObserver(() => surface.draw());
   resize.observe(canvas);
@@ -1129,21 +1746,39 @@ export function mountLaminate(canvas: HTMLCanvasElement, options: LaminateSurfac
 }
 
 /** The displayed turn survives a texture replacement before a live gesture commits. */
-export function laminateTurn(canvas: HTMLCanvasElement): number | undefined {
+export function stickerTurn(canvas: HTMLCanvasElement): number | undefined {
   return mounted.get(canvas)?.options.turn;
 }
 
 /** Material changes preserve the print, cut and ready snapshot owned by this surface. */
-export function updateLaminate(
+export function updateSticker(
   canvas: HTMLCanvasElement,
-  options: Pick<LaminateSurface, "print" | "cut" | "normal" | "finish">,
+  options: Pick<StickerSurface, "print" | "cut" | "normal" | "finish" | "foil" | "normalBounds">,
+  requestedCoverageFrame?: { width: number; height: number },
 ) {
+  if (
+    requestedCoverageFrame &&
+    (!Number.isFinite(requestedCoverageFrame.width) ||
+      !Number.isFinite(requestedCoverageFrame.height) ||
+      requestedCoverageFrame.width <= 0 ||
+      requestedCoverageFrame.height <= 0)
+  )
+    throw new Error("A requested sticker coverage frame requires finite positive dimensions");
   const surface = mounted.get(canvas);
   if (!surface) return;
-  const finishChanged = surface.options.finish !== options.finish;
+  const frameChanged =
+    requestedCoverageFrame !== undefined &&
+    (surface.coverageFrame?.width !== requestedCoverageFrame.width ||
+      surface.coverageFrame?.height !== requestedCoverageFrame.height);
+  if (requestedCoverageFrame) surface.coverageFrame = { ...requestedCoverageFrame };
+  const finishChanged =
+    frameChanged || materialIdentity(surface.options) !== materialIdentity(options);
   surface.materialUpdating = true;
   try {
-    Object.assign(surface.options, options);
+    Object.assign(surface.options, options, {
+      foil: options.foil,
+      normalBounds: options.normalBounds,
+    });
     if (surface.gpu?.textureValidationFailure) {
       surface.failed(surface.gpu.textureValidationFailure);
       return;
@@ -1151,7 +1786,7 @@ export function updateLaminate(
     // Deferred admission has no GPU yet; only a failure releases the matching fallback paint.
     if (surface.renderFailed || surface.gpu?.disposed || surface.gpu?.lost)
       surface.finishCreaseReveal();
-    surface.replacePrintCut(options.print, options.cut);
+    surface.replacePrintCut(options.print, options.cut, frameChanged);
     surface.replaceNormal(options.normal);
     if (finishChanged) {
       surface.snapshotPending = true;
@@ -1165,7 +1800,7 @@ export function updateLaminate(
 }
 
 /** Board gestures and finite flights change the surface geometry under the held light. */
-export function turnLaminate(canvas: HTMLCanvasElement, turn: number, tiltX = 0, tiltY = 0) {
+export function turnSticker(canvas: HTMLCanvasElement, turn: number, tiltX = 0, tiltY = 0) {
   const surface = mounted.get(canvas);
   if (
     !surface ||
@@ -1179,16 +1814,124 @@ export function turnLaminate(canvas: HTMLCanvasElement, turn: number, tiltX = 0,
 }
 
 /** An exposed tray face samples the held pose after spending time inside the closed tray. */
-export function refreshLaminate(canvas: HTMLCanvasElement) {
+export function refreshSticker(canvas: HTMLCanvasElement) {
   const surface = mounted.get(canvas);
   surface?.draw();
 }
 
 /** Waits for current material, or a baseline normal on retained print; never starts a covered surface. */
-export function whenLaminateSettled(
+export function whenStickerSettled(
   canvas: HTMLCanvasElement,
   expected?: { normal?: string },
   signal?: AbortSignal,
 ): Promise<void> {
   return mounted.get(canvas)?.whenSettled(expected, signal) ?? Promise.resolve();
+}
+
+/** The coated paper fades independently; full paper coverage still occludes foil. */
+export function setStickerAmounts(
+  canvas: HTMLCanvasElement,
+  paperAmount: number,
+  foilAmount: number,
+) {
+  const surface = mounted.get(canvas);
+  if (
+    !surface ||
+    ((surface.options.paperAmount ?? 1) === paperAmount &&
+      (surface.options.foilAmount ?? 1) === foilAmount)
+  )
+    return;
+  Object.assign(surface.options, { paperAmount, foilAmount });
+  surface.snapshotPending = true;
+  canvas.dataset.partial = paperAmount < 1 ? "true" : "false";
+  surface.draw();
+}
+
+/** A temporary presentation shares assets and light, while retaining its own geometry and lifetime. */
+export function mountStickerCopy(
+  canvas: HTMLCanvasElement,
+  source: HTMLCanvasElement,
+  active: () => boolean,
+  onInvalidated?: () => void,
+): () => void {
+  const owner = mounted.get(source);
+  if (!owner?.live || !owner.hasSnapshot || !owner.snapshotOptions) {
+    releaseCanvas(canvas);
+    canvas.dataset.state = "loading";
+    onInvalidated?.();
+    return () => {};
+  }
+  const release = mountPresentation(
+    canvas,
+    {
+      ...owner.snapshotOptions,
+      turn: owner.options.turn,
+      tiltX: owner.options.tiltX,
+      tiltY: owner.options.tiltY,
+      normal: owner.snapshotNormal,
+      normalBounds: owner.snapshotNormalBounds,
+      active,
+      onCreaseProgress: undefined,
+      canRevealCrease: undefined,
+      startCreaseReveal: undefined,
+    },
+    owner.snapshotCoverageFrame,
+  );
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    release();
+    throw new Error("Copying the complete sticker finish failed: 2D context unavailable");
+  }
+  context.globalCompositeOperation = "copy";
+  context.drawImage(source, 0, 0);
+  canvas.dataset.state = "ready";
+  canvas.dataset.foil = source.dataset.foil;
+  const copy = mounted.get(canvas);
+  if (copy) {
+    copy.hasSnapshot = true;
+    copy.seededCopy = true;
+    copy.snapshotNormal = owner.snapshotNormal;
+    copy.snapshotNormalBounds = owner.snapshotNormalBounds;
+    copy.snapshotMaterial = owner.snapshotMaterial;
+    copy.snapshotOptions = { ...owner.snapshotOptions };
+    copy.snapshotCoverageFrame = owner.snapshotCoverageFrame;
+    copy.showFoilCoverage(owner.snapshotFoilCoverage);
+    copy.sizeOutput(canvas, owner.snapshotFoilCoverage?.coverage);
+  }
+  let live = true;
+  const stop = () => {
+    if (!live) return;
+    live = false;
+    owner.copies.delete(invalidate);
+    release();
+  };
+  const invalidate = () => {
+    stop();
+    canvas.dataset.state = "loading";
+    onInvalidated?.();
+  };
+  owner.copies.add(invalidate);
+  return stop;
+}
+
+/** The immutable alpha description belonging to this canvas's retained complete output. */
+export function stickerFoilCoverage(canvas: HTMLCanvasElement): StickerFoilCoverage | undefined {
+  const owner = mounted.get(canvas);
+  return owner?.live && owner.hasSnapshot ? owner.snapshotFoilCoverage : undefined;
+}
+
+/** Observe changed foil descriptors only after their complete pixels commit; no initial callback.
+ * Pose-only copies retain descriptor identity. Disposal releases every subscription. */
+export function subscribeStickerFoilCoverage(
+  canvas: HTMLCanvasElement,
+  committed: (coverage: StickerFoilCoverage | undefined) => void,
+): () => void {
+  const surface = mounted.get(canvas);
+  if (!surface?.live) return () => {};
+  surface.foilCommits.add(committed);
+  return () => {
+    surface.foilCommits.delete(committed);
+  };
 }

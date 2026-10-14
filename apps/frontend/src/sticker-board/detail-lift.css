@@ -10,7 +10,15 @@
 
 /* A foil sticker casts from its band's edge (sticker-foil.css), so the band's cast takes the shadow in
    place of the image, whose mask would clip a shadow of its own away. */
-.detail-lift__flyer :is(.sticker-figure__img:not(.sticker-foil ~ img), .sticker-foil__cast) {
+.detail-lift__flyer
+  :is(.sticker-figure__img:not(.sticker-foil ~ img), .sticker-figure__cast, .sticker-foil__cast) {
   filter: var(--sticker-cut) drop-shadow(3px 7px 5px rgba(28, 24, 36, 0.18))
+    drop-shadow(8px 16px 18px rgba(28, 24, 36, 0.12));
+}
+
+.detail-lift__flyer
+  .sticker-figure:not(:has(.sticker-figure__cast))
+  > .sticker-material-surface:not(:has([data-foil="true"])) {
+  filter: drop-shadow(3px 7px 5px rgba(28, 24, 36, 0.18))
     drop-shadow(8px 16px 18px rgba(28, 24, 36, 0.12));
 }

@@ -187,7 +187,10 @@ export interface TrayState {
   drop: { id: string; wasOpen: boolean; view: BoardView } | null;
   shutTimer: number;
   relaxTimer: number;
-  /** Board stickers flying back into their used sticker silhouettes: the sheets redraw once they land. */
+  /**
+   * Stickers flying between a sheet and the board, either way: the sheets redraw once they land, so
+   * the slot each flies from or into stays as it is.
+   */
   landing: Set<string>;
   spreadOpen: boolean;
   /** What's been on show in the open tray: seen once the tray zips shut. */

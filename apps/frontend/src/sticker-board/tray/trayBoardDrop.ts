@@ -241,12 +241,12 @@ export function createTrayBoardDrop(
           { duration: 230, easing: EASE_OUT, fill: "forwards" },
         ),
       );
-    removeFlyer(flyer);
     // Landed: the sheets catch up with the board, which let go of it during the flight, before it's
     // pressed in.
     ui.landing.delete(id);
     catchUp();
-    pressIn(id);
+    await pressIn(id);
+    removeFlyer(flyer);
     // Shown home, then shut: unless a hand is back on the tray or another sticker is on its way.
     if (!wasOpen) {
       cancel(ui.shutTimer);

@@ -94,7 +94,7 @@ test("simultaneous observer callbacks and re-exposure share one material batch a
         source: CanvasImageSource,
         ...args: number[]
       ) {
-        if (this.canvas.classList.contains("sticker-laminate"))
+        if (this.canvas.classList.contains("sticker-material"))
           observations.copies.set(this.canvas, (observations.copies.get(this.canvas) ?? 0) + 1);
         Reflect.apply(drawImage, this, [source, ...args]);
       },
@@ -103,11 +103,11 @@ test("simultaneous observer callbacks and re-exposure share one material batch a
   await page.setViewportSize({ width: 1100, height: 1000 });
   await page.goto("/e2e/stickerLaminate.html?count=5&side=160");
   await expect
-    .poll(() => page.locator("canvas.sticker-laminate[data-state=ready]").count())
+    .poll(() => page.locator("canvas.sticker-material[data-state=ready]").count())
     .toBe(8);
   await page.waitForTimeout(200);
   const copies = await page.evaluate(async () => {
-    const { refreshLaminate } = await import("../src/stickers/laminateRenderer.ts");
+    const { refreshSticker } = await import("../src/stickers/stickerRenderer.ts");
     const observations: unknown = Reflect.get(window, "laminateCopyObservations");
     if (!observations || typeof observations !== "object")
       throw new Error("The laminate copy observations are missing");
@@ -116,8 +116,8 @@ test("simultaneous observer callbacks and re-exposure share one material batch a
     Reflect.set(observations, "batches", 0);
     Reflect.set(observations, "draws", 0);
     copies.clear();
-    for (const canvas of document.querySelectorAll<HTMLCanvasElement>("canvas.sticker-laminate"))
-      refreshLaminate(canvas);
+    for (const canvas of document.querySelectorAll<HTMLCanvasElement>("canvas.sticker-material"))
+      refreshSticker(canvas);
     const observers: unknown = Reflect.get(window, "laminateObserverCallbacks");
     if (!Array.isArray(observers)) throw new Error("The laminate observers were not captured");
     for (const entry of observers) {
@@ -198,14 +198,14 @@ test("a single sticker turn does not shrink and reallocate the shared material b
   await page.setViewportSize({ width: 1100, height: 1000 });
   await page.goto("/e2e/stickerLaminate.html?count=5&side=160");
   await expect
-    .poll(() => page.locator("canvas.sticker-laminate[data-state=ready]").count())
+    .poll(() => page.locator("canvas.sticker-material[data-state=ready]").count())
     .toBe(8);
   await page.evaluate(() => {
     window.laminateFixture.tilt(40, 0);
   });
   await page.waitForTimeout(800);
   const snapshot = () =>
-    page.locator('[data-sticker="0"] canvas.sticker-laminate').evaluate(async (element) => {
+    page.locator('[data-sticker="0"] canvas.sticker-material').evaluate(async (element) => {
       if (!(element instanceof HTMLCanvasElement))
         throw new Error("The sticker snapshot is missing");
       const context = element.getContext("2d");
@@ -241,7 +241,7 @@ test("a single sticker turn does not shrink and reallocate the shared material b
     });
   });
   expect(allocations.filter(({ before, after }) => after < before)).toEqual([]);
-  await expect(page.locator("canvas.sticker-laminate[data-state=ready]")).toHaveCount(8);
+  await expect(page.locator("canvas.sticker-material[data-state=ready]")).toHaveCount(8);
   await page.evaluate(() => {
     window.laminateFixture.tilt(40, 0);
   });
@@ -281,7 +281,7 @@ test("a board of stickers retains complete paper during a sustained small tilt",
     Object.defineProperty(CanvasRenderingContext2D.prototype, "drawImage", {
       configurable: true,
       value: function (this: CanvasRenderingContext2D, ...args: unknown[]) {
-        if (this.canvas.classList.contains("sticker-laminate"))
+        if (this.canvas.classList.contains("sticker-material"))
           observations.copies.set(this.canvas, (observations.copies.get(this.canvas) ?? 0) + 1);
         Reflect.apply(drawImage, this, args);
       },
@@ -290,13 +290,13 @@ test("a board of stickers retains complete paper during a sustained small tilt",
   await page.setViewportSize({ width: 820, height: 1180 });
   await page.goto("/e2e/stickerLaminate.html?count=24&side=120");
   await expect
-    .poll(() => page.locator("canvas.sticker-laminate[data-state=ready]").count())
+    .poll(() => page.locator("canvas.sticker-material[data-state=ready]").count())
     .toBe(27);
   await page.evaluate(() => window.laminateFixture.tilt(40, 0));
   await page.waitForTimeout(800);
   const result = await page.evaluate(async () => {
     const fixture = window.laminateFixture;
-    const paper = document.querySelector("[data-white] canvas.sticker-laminate");
+    const paper = document.querySelector("[data-white] canvas.sticker-material");
     if (!(paper instanceof HTMLCanvasElement)) throw new Error("The paper snapshot is missing");
     const context = paper.getContext("2d");
     if (!context) throw new Error("The paper snapshot context is unavailable");
@@ -306,7 +306,7 @@ test("a board of stickers retains complete paper during a sustained small tilt",
     const copyCounts: unknown = Reflect.get(observations, "copies");
     if (!(copyCounts instanceof Map)) throw new Error("The laminate copy counts are missing");
     const eligible = [
-      ...document.querySelectorAll<HTMLCanvasElement>("canvas.sticker-laminate[data-state=ready]"),
+      ...document.querySelectorAll<HTMLCanvasElement>("canvas.sticker-material[data-state=ready]"),
     ].filter((canvas) => {
       const box = canvas.getBoundingClientRect();
       return (
@@ -460,7 +460,7 @@ for (const [presentation, count, side] of [
         const started = performance.now();
         const result: unknown = Reflect.apply(bounds, this, []);
         if (!(result instanceof DOMRect)) throw new Error("The canvas geometry is unavailable");
-        if (this instanceof HTMLCanvasElement && this.classList.contains("sticker-laminate"))
+        if (this instanceof HTMLCanvasElement && this.classList.contains("sticker-material"))
           work.geometryMs += performance.now() - started;
         return result;
       };
@@ -497,7 +497,7 @@ for (const [presentation, count, side] of [
       `/e2e/stickerLaminate.html?count=${count}&side=${side}&${presentation}=1&foil=1`,
     );
     await expect
-      .poll(() => page.locator("canvas.sticker-laminate[data-state=ready]").count())
+      .poll(() => page.locator("canvas.sticker-material[data-state=ready]").count())
       .toBe(count);
     expect(await page.locator(".sticker-figure.is-stuck").count()).toBe(
       presentation === "board" ? count : 0,

@@ -42,7 +42,7 @@ test("an opaque sticker detail pauses the covered Sticker Board and reopening sa
       configurable: true,
       value: function (this: CanvasRenderingContext2D, ...args: unknown[]) {
         Reflect.apply(drawImage, this, args);
-        if (this.canvas.matches("canvas.sticker-laminate"))
+        if (this.canvas.matches("canvas.sticker-material"))
           copies.set(this.canvas, (copies.get(this.canvas) ?? 0) + 1);
       },
     });
@@ -63,10 +63,10 @@ test("an opaque sticker detail pauses the covered Sticker Board and reopening sa
   await expect(zipper).toHaveAttribute("aria-expanded", "false");
   await zipper.press("ArrowDown");
   await expect(zipper).toHaveAttribute("aria-expanded", "true");
-  const trayCoats = page.locator(".tray__stack canvas.sticker-laminate[data-state=ready]");
+  const trayCoats = page.locator(".tray__stack canvas.sticker-material[data-state=ready]");
   await expect.poll(() => trayCoats.count()).toBeGreaterThan(0);
   // A DOM locator retains access while the detail makes the covered board inert.
-  const boardCoat = page.locator(".placed-sticker canvas.sticker-laminate");
+  const boardCoat = page.locator(".placed-sticker canvas.sticker-material");
   await expect(boardCoat).toHaveAttribute("data-state", "ready");
   await page.evaluate(() =>
     window.dispatchEvent(Object.assign(new Event("deviceorientation"), { beta: 40, gamma: 0 })),
@@ -76,7 +76,7 @@ test("an opaque sticker detail pauses the covered Sticker Board and reopening sa
     .click();
   const detail = page.getByRole("dialog", { name: no });
   await expect(detail).toBeVisible();
-  const detailCoat = detail.locator(".sticker-detail__slide canvas.sticker-laminate");
+  const detailCoat = detail.locator(".sticker-detail__slide canvas.sticker-material");
   await expect(detailCoat).toHaveAttribute("data-state", "ready");
   const covered = await snapshot(boardCoat);
   const detailBefore = await snapshot(detailCoat);
@@ -84,7 +84,7 @@ test("an opaque sticker detail pauses the covered Sticker Board and reopening sa
     const copies: unknown = Reflect.get(window, "laminateSnapshotCopies");
     if (!(copies instanceof WeakMap)) throw new Error("The material copy observations are missing");
     copies.delete(canvas);
-    for (const trayCanvas of document.querySelectorAll(".tray__stack canvas.sticker-laminate"))
+    for (const trayCanvas of document.querySelectorAll(".tray__stack canvas.sticker-material"))
       copies.delete(trayCanvas);
   });
   await page.evaluate(() =>

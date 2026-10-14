@@ -44,18 +44,17 @@ const tiltAcross = (from: number, to: number) => {
     vi.advanceTimersByTime(FRAME_MS);
   }
 };
-/** A sticker's foil, whose bands and glint read the light. */
-const makeFoil = () => {
-  const foil = document.createElement("span");
-  foil.className = "sticker-foil";
-  const parts = ["sticker-foil__sheen", "sticker-foil__glint"].map((className) => {
-    const part = document.createElement("i");
-    part.className = className;
-    foil.append(part);
-    return part;
-  });
-  return { foil, parts };
+/** A Shop preview film whose two highlights consume the same displayed light. */
+const makePreviewFilm = () => {
+  const element = document.createElement("span");
+  element.className = "laminate-film";
+  const band = document.createElement("i");
+  const highlights = [document.createElement("b"), document.createElement("b")];
+  band.append(...highlights);
+  element.append(band);
+  return { element, highlights };
 };
+
 const lightOn = (el: HTMLElement) => [
   el.style.getPropertyValue("--lx"),
   el.style.getPropertyValue("--ly"),
@@ -575,14 +574,14 @@ describe("the shared light", () => {
     ["touch", "pointermove"],
     ["touch", "pointerdown"],
   ])("ignores %s %s before and after device tilt lights the stickers", (pointerType, type) => {
-    const { foil, parts } = makeFoil();
-    document.body.append(foil);
+    const { element, highlights } = makePreviewFilm();
+    document.body.append(element);
     uninstall = installLight(root);
     showScreen();
     pointAt(window.innerWidth, 0, pointerType, type);
     vi.advanceTimersByTime(100);
     expect(lightAt()).toEqual(["", ""]);
-    expect(parts.map(lightOn)).toEqual([
+    expect(highlights.map(lightOn)).toEqual([
       ["", ""],
       ["", ""],
     ]);
@@ -592,7 +591,7 @@ describe("the shared light", () => {
     tiltTo(32, 40);
     vi.advanceTimersByTime(10 * GLIDE_MS);
     expect(lightAt()).toEqual(["1.000", "0.000"]);
-    expect(parts.map(lightOn)).toEqual([
+    expect(highlights.map(lightOn)).toEqual([
       ["1.000", "0.000"],
       ["1.000", "0.000"],
     ]);
@@ -600,7 +599,7 @@ describe("the shared light", () => {
     pointAt(0, window.innerHeight, pointerType, type);
     vi.advanceTimersByTime(100);
     expect(lightAt()).toEqual(["1.000", "0.000"]);
-    expect(parts.map(lightOn)).toEqual([
+    expect(highlights.map(lightOn)).toEqual([
       ["1.000", "0.000"],
       ["1.000", "0.000"],
     ]);
@@ -609,7 +608,7 @@ describe("the shared light", () => {
     tiltTo(-32, 40);
     vi.advanceTimersByTime(10 * GLIDE_MS);
     expect(lightAt()).toEqual(["-1.000", "0.000"]);
-    expect(parts.map(lightOn)).toEqual([
+    expect(highlights.map(lightOn)).toEqual([
       ["-1.000", "0.000"],
       ["-1.000", "0.000"],
     ]);
@@ -763,9 +762,9 @@ describe("the shared light", () => {
     expect(lightAt()).toEqual(["1.000", "0.000"]);
   });
 
-  it("lights each foil's bands and glint, not the foil around them, and one shown later where the light already is", () => {
-    const { foil, parts } = makeFoil();
-    document.body.append(foil);
+  it("lights Shop preview highlights and a late preview from the held pose", () => {
+    const { element, highlights } = makePreviewFilm();
+    document.body.append(element);
     uninstall = installLight(root);
     showScreen();
     tiltTo(0, 40);
@@ -773,13 +772,31 @@ describe("the shared light", () => {
     tiltTo(32, 40);
     vi.advanceTimersByTime(10 * GLIDE_MS);
     expect(lightAt()).toEqual(["1.000", "0.000"]);
-    expect(parts.map(lightOn)).toEqual([lightAt(), lightAt()]);
-    expect(lightOn(foil)).toEqual(["", ""]);
+    expect(highlights.map(lightOn)).toEqual([lightAt(), lightAt()]);
+    expect(lightOn(element)).toEqual(["", ""]);
 
     // Shown while the phone is still: no move comes to light it, so it starts from the light.
-    const later = makeFoil();
-    lightUp(later.foil);
-    expect(later.parts.map(lightOn)).toEqual([lightAt(), lightAt()]);
+    const later = makePreviewFilm();
+    lightUp(later.element);
+    expect(later.highlights.map(lightOn)).toEqual([lightAt(), lightAt()]);
+  });
+
+  it("keeps static sticker foil out of CSS light updates while the shared material pose advances", () => {
+    const element = document.createElement("span");
+    element.className = "sticker-foil";
+    const band = document.createElement("span");
+    band.className = "sticker-foil__band";
+    element.append(band);
+    document.body.append(element);
+    uninstall = installLight(root);
+    showScreen();
+    tiltTo(0, 40);
+    tiltTo(32, 40);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
+    lightUp(element);
+    expect(currentLight().x).toBe(1);
+    expect(lightOn(element)).toEqual(["", ""]);
+    expect(lightOn(band)).toEqual(["", ""]);
   });
 
   it("lights a crease only once the light rests, where it rests", () => {
@@ -924,10 +941,10 @@ describe("the shared light", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("publishes one shared fallback pose to subscribed material, foil and late mounts", () => {
+  it("publishes one shared fallback pose to subscribed material, Shop film and late mounts", () => {
     noRotationDesktop();
-    const { foil, parts } = makeFoil();
-    document.body.append(foil);
+    const { element, highlights } = makePreviewFilm();
+    document.body.append(element);
     const poses: { x: number; y: number }[] = [];
     const stop = subscribeLight((pose) => poses.push(pose));
     uninstall = installLight(root);
@@ -935,7 +952,7 @@ describe("the shared light", () => {
     vi.advanceTimersByTime(3500);
     expect(poses.length).toBeGreaterThan(2);
     expect(currentLight().x).toBeGreaterThan(0.3);
-    expect(parts.map(lightOn)).toEqual([lightAt(), lightAt()]);
+    expect(highlights.map(lightOn)).toEqual([lightAt(), lightAt()]);
     const later = addFilm();
     lightUp(later);
     expect(lightOn(later)).toEqual(lightAt());

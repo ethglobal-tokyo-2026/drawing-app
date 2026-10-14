@@ -1,284 +1,61 @@
-/* Holo foil: the sticker's silhouette dilated into a band just past its white edge. The band is the
-   sticker's edge: the kiss-cut and the cast shadow fall from its outer edge, and the image it sits
-   under shows only inside its own cut. Its box is the image's, and the band spills past that box by
-   its width. Six bands of color slide with the app's one light (light.ts) under a fine, still
-   grating, so the band glitters rather than crawls, and a glint sits where the light falls. Both move
-   by transform only, only as the light moves, so a still light holds the foil still. */
+/* The static foil fallback and its cast share the complete material's outer coverage. Reflections
+   belong exclusively to the complete canvas; this presentation never follows light or a clock. */
 .sticker-foil {
-  /* Seventeen copies of the silhouette dilate it: the center, and sixteen a band's width away every
-     22.5°, so the band keeps an even width round curves and points. The band and its cast share them,
-     painted once. */
-  --foil-s: calc(100% - var(--foil-w) * 2);
-  --foil-copies:
-    var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m),
-    var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m);
-  --foil-at:
-    var(--foil-w) var(--foil-w), calc(var(--foil-w) * 2) var(--foil-w),
-    calc(var(--foil-w) * 1.9239) calc(var(--foil-w) * 1.3827),
-    calc(var(--foil-w) * 1.7071) calc(var(--foil-w) * 1.7071),
-    calc(var(--foil-w) * 1.3827) calc(var(--foil-w) * 1.9239),
-    var(--foil-w) calc(var(--foil-w) * 2),
-    calc(var(--foil-w) * 0.6173) calc(var(--foil-w) * 1.9239),
-    calc(var(--foil-w) * 0.2929) calc(var(--foil-w) * 1.7071),
-    calc(var(--foil-w) * 0.0761) calc(var(--foil-w) * 1.3827), 0 var(--foil-w),
-    calc(var(--foil-w) * 0.0761) calc(var(--foil-w) * 0.6173),
-    calc(var(--foil-w) * 0.2929) calc(var(--foil-w) * 0.2929),
-    calc(var(--foil-w) * 0.6173) calc(var(--foil-w) * 0.0761), var(--foil-w) 0,
-    calc(var(--foil-w) * 1.3827) calc(var(--foil-w) * 0.0761),
-    calc(var(--foil-w) * 1.7071) calc(var(--foil-w) * 0.2929),
-    calc(var(--foil-w) * 1.9239) calc(var(--foil-w) * 0.6173);
-  /* The six bands' colors: holo, unless a tone changes them. */
-  --band-1: var(--foil-pink);
-  --band-2: var(--foil-peach);
-  --band-3: var(--foil-lemon);
-  --band-4: var(--foil-aqua);
-  --band-5: var(--foil-sky);
-  --band-6: var(--foil-lilac);
   position: absolute;
   inset: 0;
   pointer-events: none;
+  --foil-static-color: var(--foil-lilac);
 }
-
-/* Pink foil, on an NSFW sticker: pinks only, so it reads apart from holo at a glance. */
 .sticker-foil--pink {
-  --band-1: var(--foil-rose);
-  --band-2: var(--foil-blush);
-  --band-3: var(--foil-pearl);
-  --band-4: var(--foil-candy);
-  --band-5: var(--foil-orchid);
-  --band-6: var(--foil-magenta);
+  --foil-static-color: var(--foil-candy);
 }
-
-/* Kyoto Seika Practice Mode foil: manga screentone, round dots on a 45° screen darkening away from the
-   house light, on a band narrower than holo's. The light glares the dots out where it falls and slides
-   two scraped highlights through the glare. */
-.sticker-foil.sticker-foil--kyoto-seika {
-  /* A size container, so the band keeps to a share of the sticker's long side, as holo's does. */
-  container-type: size;
-  --foil-w: max(2px, 2.4cqmax);
-  --band-6: var(--canvas);
+.sticker-foil--kyoto-seika {
+  --foil-static-color: var(--foil-silver);
 }
-
-/* The band grows from the cut here, narrower than the server's mask: the center and eight copies a
-   band's width away, which round as evenly at this width as sixteen do at holo's. Creases grow it
-   the same way, by kyotoSeikaBandWidth (kyotoSeikaFoil.ts), which keeps to --foil-w above. */
-.sticker-foil--kyoto-seika .sticker-foil__band,
-.sticker-foil--kyoto-seika .sticker-foil__cast::before {
-  --foil-copies:
-    var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m);
-  --foil-at:
-    var(--foil-w) var(--foil-w), calc(var(--foil-w) * 2) var(--foil-w),
-    calc(var(--foil-w) * 1.7071) calc(var(--foil-w) * 1.7071),
-    var(--foil-w) calc(var(--foil-w) * 2),
-    calc(var(--foil-w) * 0.2929) calc(var(--foil-w) * 1.7071), 0 var(--foil-w),
-    calc(var(--foil-w) * 0.2929) calc(var(--foil-w) * 0.2929), var(--foil-w) 0,
-    calc(var(--foil-w) * 1.7071) calc(var(--foil-w) * 0.2929);
+.sticker-foil--gold {
+  --foil-static-color: var(--foil-gold);
 }
-
-/* WebKit's mask leaves a trace of the band's edge when it falls between device pixels, as on a
-   turned sticker. A clear 1px border moves that edge out past the tone and glint, which keep to the
-   padding box with the mask. */
-.sticker-foil--kyoto-seika .sticker-foil__band {
-  inset: calc(var(--foil-w) * -1 - 1px);
-  border: 1px solid transparent;
-  -webkit-mask-origin: padding-box;
-  mask-origin: padding-box;
+.sticker-foil--silver {
+  --foil-static-color: var(--foil-silver);
 }
-
-/* A light tone all round, and a dense one on the same dots that comes in toward the bottom-right,
-   whatever the sticker's turn. The tile is whole device pixels at 2x and 3x, so no dot smears. */
-.sticker-foil--kyoto-seika .sticker-foil__sheen {
-  inset: 0;
-  translate: none;
-  background:
-    var(--kyoto-seika-tone-light) 0 0 / 3px 3px,
-    var(--canvas);
-}
-
-.sticker-foil--kyoto-seika .sticker-foil__sheen::before {
-  --tone-fade: linear-gradient(
-    calc(135deg - (var(--foil-turn, 0) + var(--light-rotation, 0)) * 1deg),
-    transparent 30%,
-    #000 80%
-  );
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: var(--kyoto-seika-tone-dense) 0 0 / 3px 3px;
-  -webkit-mask-image: var(--tone-fade);
-  mask-image: var(--tone-fade);
-}
-
-/* No grating: its hairlines would beat against the dots. */
-.sticker-foil--kyoto-seika .sticker-foil__band::after {
-  content: none;
-}
-
-/* Two highlights scraped out of the tone, a broad one and a fine one, across the screen's rows as a
-   cutter scrapes. The light slides them along their normal only, so they always cross its glare: the
-   translate is the light projected on the 112.5° gradient's normal, a quarter of the box per unit. */
-.sticker-foil--kyoto-seika .sticker-foil__glint::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    112.5deg,
-    transparent 46.6%,
-    #fff 46.8% 49.6%,
-    transparent 49.8% 51.2%,
-    #fff 51.4% 52.6%,
-    transparent 52.8%
-  );
-  translate: calc(var(--lx, -0.6) * 21.3% + var(--ly, -0.6) * 8.85%)
-    calc(var(--lx, -0.6) * 8.84% + var(--ly, -0.6) * 3.67%);
-}
-
-/* The glare dims the tone without wiping it, so the band reads all round. */
-.sticker-foil--kyoto-seika .sticker-foil__glint::before {
-  opacity: 0.8;
-}
-
-/* The band's mask made on the server: the silhouette grown by an even distance, at the image's size.
-   One copy in the center copy's place stands in for them all, with a crisp edge. */
-.sticker-foil.sticker-foil--baked {
-  --foil-copies: var(--foil-mask);
-  --foil-at: var(--foil-w) var(--foil-w);
-}
-
-.sticker-foil--board {
-  --foil-w: 5px;
-}
-
-.sticker-foil--detail {
-  --foil-w: 6px;
-}
-
-.sticker-foil--sheet {
-  --foil-w: 3px;
+.sticker-foil--roseGold {
+  --foil-static-color: var(--foil-rose-gold);
 }
 
 .sticker-foil__cast,
 .sticker-foil__band {
   position: absolute;
-  inset: calc(var(--foil-w) * -1);
+  left: var(--foil-left, 0%);
+  top: var(--foil-top, 0%);
+  width: var(--foil-width, 100%);
+  height: var(--foil-height, 100%);
+  visibility: hidden;
 }
-
-/* The band's shape, filled and held still, casts the sticker's cut and shadow from the band's outer
-   edge. It sits under the band, so the sliding bands never redraw a shadow. Wherever a sticker is
-   lifted, the lifted shadow falls from here too. */
+.sticker-foil[data-state="ready"] :is(.sticker-foil__cast, .sticker-foil__band) {
+  visibility: inherit;
+}
 .sticker-foil__cast {
   filter: var(--sticker-cut) var(--sticker-cast);
 }
-
 .sticker-foil__cast::before,
 .sticker-foil__band {
-  -webkit-mask-image: var(--foil-copies);
-  mask-image: var(--foil-copies);
-  -webkit-mask-position: var(--foil-at);
-  mask-position: var(--foil-at);
-  -webkit-mask-size: var(--foil-s) var(--foil-s);
-  mask-size: var(--foil-s) var(--foil-s);
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
+  -webkit-mask: var(--foil-coverage) 0 0 / 100% 100% no-repeat;
+  mask: var(--foil-coverage) 0 0 / 100% 100% no-repeat;
+  background: var(--foil-static-color);
 }
-
 .sticker-foil__cast::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: var(--band-6);
 }
-
-.sticker-foil__band {
-  overflow: hidden;
+/* The dots keep the pitch the shader prints, overflow included. */
+.sticker-foil--kyoto-seika .sticker-foil__band {
+  background:
+    var(--kyoto-seika-tone-dense) var(--foil-print-x) var(--foil-print-y) / var(--foil-print-pitch),
+    var(--foil-static-color);
 }
-
-/* Six bands, one period apart, slid along their normal by the light as a tilted holo foil runs its
-   colors past: a period from top left to bottom right, so they reach past the band's box only up and
-   left. Light along the bands doesn't slide them. The numbers come from the 115° gradient's normal:
-   the light along it over twice its components' sum, and one 96px period along it. */
-.sticker-foil__sheen {
-  --foil-slide: calc(var(--lx, -0.6) * 0.341 + var(--ly, -0.6) * 0.159 + 0.5);
-  position: absolute;
-  inset: -48px 0 0 -96px;
-  background: repeating-linear-gradient(
-    115deg,
-    var(--band-1) 0,
-    var(--band-2) 16px,
-    var(--band-3) 32px,
-    var(--band-4) 48px,
-    var(--band-5) 64px,
-    var(--band-6) 80px,
-    var(--band-1) 96px
-  );
-  translate: calc(var(--foil-slide) * 87px) calc(var(--foil-slide) * 40.6px);
-}
-
-/* The diffraction grating: fine diagonal hairlines, lit and shaded, pressed into the foil. They hold
-   still across the bands, crossing them, so the eye reads the sliding color as light moving over
-   metal. Each hairline ramps in and out, so it stays smooth at any angle and scale. */
-.sticker-foil__band::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    45deg,
-    rgba(255, 255, 255, 0.34) 0,
-    rgba(255, 255, 255, 0) 0.6px,
-    rgba(28, 24, 36, 0) 0.8px,
-    rgba(28, 24, 36, 0.1) 1.1px,
-    rgba(28, 24, 36, 0) 1.4px,
-    rgba(255, 255, 255, 0) 1.5px,
-    rgba(255, 255, 255, 0.34) 2px
-  );
-}
-
-/* A white glint where the light falls on the band: the top-left until the light first moves, then
-   wherever the last device tilt left it. Its frame undoes the sticker's turn, so the light moves
-   the same way across every sticker. */
-.sticker-foil__glint {
-  position: absolute;
-  inset: -50%;
-  rotate: calc((var(--foil-turn, 0) + var(--light-rotation, 0)) * -1deg);
-}
-
-/* Keep the moving glint in compositor layers instead of repainting the masked foil around it. */
-.sticker-foil__glint,
-.sticker-foil__glint::before,
-.sticker-foil--kyoto-seika .sticker-foil__glint::after {
-  will-change: transform;
-}
-
-.sticker-foil__glint::before {
-  content: "";
-  position: absolute;
-  inset: 35%;
-  border-radius: 50%;
-  background: radial-gradient(
-    closest-side,
-    rgba(255, 255, 255, 0.95),
-    rgba(255, 255, 255, 0.5) 45%,
-    rgba(255, 255, 255, 0)
-  );
-  /* From the middle to the band's edge as the light goes from 0 to ±1: half the band's size over the
-     glint's, which is 60% of the band's. */
-  translate: calc(var(--lx, -0.6) * 83%) calc(var(--ly, -0.6) * 83%);
-}
-
-/* The image a foil sits under shows only inside its cut. Past the cut is the band, the sticker's edge
-   now, and the image's own groove and baked shadow there would draw a dark gap between the white
-   edge and the foil. */
 .sticker-foil ~ img {
   -webkit-mask: var(--m) 0 0 / 100% 100% no-repeat;
   mask: var(--m) 0 0 / 100% 100% no-repeat;
   filter: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sticker-foil__sheen,
-  .sticker-foil__glint,
-  .sticker-foil__glint::before,
-  .sticker-foil--kyoto-seika .sticker-foil__glint::after {
-    transition: none;
-  }
 }

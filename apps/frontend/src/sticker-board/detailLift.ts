@@ -1,4 +1,8 @@
 import { useEffectEvent, useLayoutEffect, useRef, type RefObject } from "react";
+import { applyStickerFoilCoverage } from "../stickers/prepareStickerFoil";
+import { holdFoilCoverageMask } from "../stickers/acquireFoilCoverage";
+import { mountStickerCopy, stickerFoilCoverage, turnSticker } from "../stickers/stickerRenderer";
+import { pauseStickerMaterial, refreshStickerMaterial } from "../stickers/stickerMaterialHandoff";
 import { playStick } from "../stickers/stick";
 import { EASE_OUT, EASE_PEEL_POINTS, splitEasing, T_PEEL_MS, T_STICK_MS } from "../ui/easing";
 import "./detail-lift.css";
@@ -44,6 +48,10 @@ interface Spot {
 /** Everything that moves as the view opens. Closing plays it backward. */
 interface Flight {
   animations: Animation[];
+  release?: () => void;
+  track?: () => void;
+  destination?: HTMLElement;
+  abort?: AbortController;
   /** The copy of the view's sticker that flies, over the view and what it lifts off. */
   flyer: HTMLElement | null;
   /** The sticker's spot while it's away: empty, or down to its ghost. */
@@ -64,10 +72,35 @@ const spotOf = (el: HTMLElement): Spot => {
 const settled = (animations: readonly Animation[]) =>
   Promise.allSettled(animations.map((a) => a.finished)).then(() => undefined);
 
-const stop = ({ animations, flyer }: Flight) => {
-  animations.forEach((a) => a.cancel());
-  flyer?.remove();
+const stop = (flight: Flight) => {
+  flight.abort?.abort();
+  flight.animations.forEach((a) => a.cancel());
+  flight.release?.();
+  flight.flyer?.remove();
 };
+const finishCanvas = (host: Element | null) =>
+  host?.querySelector<HTMLCanvasElement>("canvas.sticker-material") ?? null;
+
+/** A return stays visually hidden while its retained material samples the held pose. */
+async function refreshDestination(flight: Flight, host: HTMLElement | null) {
+  const canvas = finishCanvas(host);
+  if (!canvas || !host?.isConnected) return;
+  const admission = pauseStickerMaterial(canvas);
+  admission.resume();
+  const signal = AbortSignal.any([
+    flight.abort?.signal ?? new AbortController().signal,
+    AbortSignal.timeout(8000),
+  ]);
+  try {
+    await refreshStickerMaterial(canvas, signal);
+    if (signal.aborted && !flight.abort?.signal.aborted)
+      console.error(
+        `Refreshing sticker ${host.closest<HTMLElement>("[data-sticker-id]")?.dataset.stickerId ?? "(unknown)"}'s flight destination exceeded its material deadline`,
+      );
+  } finally {
+    admission.release();
+  }
+}
 
 const LIFT_EASING = splitEasing(EASE_PEEL_POINTS, LIFT.at);
 
@@ -94,20 +127,24 @@ function flightFrames(from: Spot, to: Spot, turn: number): Keyframe[] {
   ];
 }
 
-/** A copy of the view's sticker, on top of it, beside the view so the view's fade and clip pass it by. */
-function makeFlyer(view: HTMLElement, figure: HTMLElement, to: Spot) {
-  const flyer = document.createElement("div");
-  flyer.className = "detail-lift__flyer";
-  flyer.setAttribute("aria-hidden", "true");
+const cloneFigure = (figure: HTMLElement) => {
   const copy = figure.cloneNode(true);
   if (!(copy instanceof HTMLElement)) throw new Error("The sticker flight copy is not an element");
-  const originals = figure.querySelectorAll("canvas");
+  return copy;
+};
+
+/** Each canvas's last paint, into its clone; one that can't be copied leaves the print showing. */
+function copyPaint(
+  figure: HTMLElement,
+  copy: HTMLElement,
+  sticker: string | undefined,
+  live?: Element,
+) {
   const snapshots = copy.querySelectorAll("canvas");
-  originals.forEach((original, index) => {
+  figure.querySelectorAll("canvas").forEach((original, index) => {
     const snapshot = snapshots[index];
-    if (!snapshot) return;
+    if (!snapshot || snapshot === live) return;
     if (!original.width || !original.height) {
-      // A coating still loading has no snapshot; its original print remains the flight image.
       snapshot.dataset.state = "loading";
       return;
     }
@@ -115,15 +152,20 @@ function makeFlyer(view: HTMLElement, figure: HTMLElement, to: Spot) {
       snapshot.width = original.width;
       snapshot.height = original.height;
       const context = snapshot.getContext("2d");
-      if (!context) throw new Error("The sticker flight snapshot context is unavailable");
+      if (!context) throw new Error("its 2D context is unavailable");
       context.drawImage(original, 0, 0);
     } catch (error) {
-      // Preserve the original print when a flight snapshot cannot be copied.
       snapshot.dataset.state = "failed";
       snapshot.dataset.error = String(error);
-      console.error("Copying the sticker laminate into its flight failed", error);
+      console.error(`Copying sticker ${sticker}'s paint into its flight failed`, error);
     }
   });
+}
+
+/** Lays a flyer beside the view, on the figure's spot, so the view's fade and clip pass it by. */
+function launch(flyer: HTMLElement, copy: HTMLElement, view: HTMLElement, to: Spot) {
+  flyer.className = "detail-lift__flyer";
+  flyer.setAttribute("aria-hidden", "true");
   flyer.append(copy);
   view.after(flyer);
   // Where a left and top of 0 put it, whatever the borders and padding of what holds it.
@@ -135,11 +177,124 @@ function makeFlyer(view: HTMLElement, figure: HTMLElement, to: Spot) {
   return flyer;
 }
 
+/** With no ready material to copy, the view's figure flies as it stands: its print and static foil. */
+function stillFlyer(view: HTMLElement, figure: HTMLElement, to: Spot, sticker: string | undefined) {
+  const copy = cloneFigure(figure);
+  copyPaint(figure, copy, sticker);
+  return launch(document.createElement("div"), copy, view, to);
+}
+
+/**
+ * A live copy of the view's sticker, its material seeded from `source`. Null when the source rejects
+ * the copy, as one being retired or concealed does.
+ */
+function makeFlyer(
+  view: HTMLElement,
+  figure: HTMLElement,
+  to: Spot,
+  source: HTMLCanvasElement,
+  sticker: string | undefined,
+) {
+  const flyer = document.createElement("div");
+  const copy = cloneFigure(figure);
+  const canvas = finishCanvas(copy);
+  if (!canvas) return null;
+  let invalidated = false;
+  let live = true;
+  // The copied cast keeps its mask while it shows, whatever its source moves on to.
+  let releaseMask = () => {};
+  let tracking: { raf: number } | undefined;
+  const stopTracking = () => {
+    if (tracking) cancelAnimationFrame(tracking.raf);
+    tracking = undefined;
+  };
+  let movement: Animation | undefined;
+  let hidden: Animation | undefined;
+  const destination = finishCanvas(figure);
+  const admission = destination && pauseStickerMaterial(destination);
+  const abort = new AbortController();
+  // Rejection may call this before mountStickerCopy returns. Do not attach a rejected clone.
+  const invalidate = () => {
+    invalidated = true;
+    abort.abort();
+    stopTracking();
+    movement?.cancel();
+    hidden?.cancel();
+    releaseMask();
+    admission?.release();
+    flyer.remove();
+  };
+  let releaseCopy: () => void;
+  try {
+    releaseCopy = mountStickerCopy(canvas, source, () => live && !invalidated, invalidate);
+  } catch (error) {
+    admission?.release();
+    throw error;
+  }
+  const release = () => {
+    if (!live) return;
+    live = false;
+    abort.abort();
+    stopTracking();
+    releaseCopy();
+    releaseMask();
+    admission?.release();
+    flyer.remove();
+  };
+  if (invalidated) {
+    release();
+    return null;
+  }
+  // Auxiliary crease paint is frozen; the complete material retains its own live material owner.
+  copyPaint(figure, copy, sticker, canvas);
+  launch(flyer, copy, view, to);
+  const copiedFoil = copy.querySelector<HTMLElement>(".sticker-foil");
+  const foil = stickerFoilCoverage(canvas);
+  try {
+    if (copiedFoil && foil) {
+      copiedFoil.className = `sticker-foil sticker-foil--${foil.material.size} sticker-foil--${foil.material.style}`;
+      applyStickerFoilCoverage(copiedFoil, foil.coverage, to.w, to.h);
+      releaseMask = holdFoilCoverageMask(foil.coverage.mask);
+    } else copiedFoil?.remove();
+  } catch (error) {
+    release();
+    throw error;
+  }
+  const track = (animation: Animation, hide: Animation) => {
+    movement = animation;
+    hidden = hide;
+    stopTracking();
+    const run = { raf: 0 };
+    tracking = run;
+    const sample = () => {
+      run.raf = 0;
+      if (!live || invalidated || tracking !== run || !flyer.isConnected) return;
+      const matrix = new DOMMatrixReadOnly(getComputedStyle(flyer).transform);
+      const degrees = 180 / Math.PI;
+      turnSticker(
+        canvas,
+        Math.atan2(matrix.m12, matrix.m11) * degrees,
+        0,
+        Math.atan2(-matrix.m13, matrix.m33) * degrees,
+      );
+      if (animation.playState === "running" || animation.playState === "paused")
+        run.raf = requestAnimationFrame(sample);
+    };
+    sample();
+    void settled([animation]).then(() => {
+      cancelAnimationFrame(run.raf);
+      if (tracking === run) tracking = undefined;
+    });
+  };
+  return { flyer, release, track, abort };
+}
+
 function takeOff(
   view: HTMLElement,
   into: LiftView,
   origin: LiftOrigin | null,
   reduced: boolean,
+  sticker: string | undefined,
 ): Flight {
   const fill = "both";
   // A given sticker's silhouette stays where it is; any other spot empties while the sticker's away.
@@ -166,11 +321,31 @@ function takeOff(
   if (!origin || !figure || !from || !to?.w || !to.h)
     return { animations, flyer: null, away: null };
 
-  const flyer = makeFlyer(view, figure, to);
-  animations.push(
-    flyer.animate(flightFrames(from, to, origin.turn), { duration: T_PEEL_MS, fill }),
-    figure.animate([{ opacity: 0 }, { opacity: 0 }], { duration: T_PEEL_MS, fill }),
+  const source = [finishCanvas(figure), finishCanvas(origin.el)].find(
+    (canvas) => canvas?.dataset.state === "ready",
   );
+  let owner: ReturnType<typeof makeFlyer> = null;
+  if (source)
+    try {
+      owner = makeFlyer(view, figure, to, source, sticker);
+      // A source that rejects its copy is being retired or concealed: only the view comes in.
+      if (!owner) return { animations, flyer: null, away: null };
+    } catch (error) {
+      console.error(`Copying sticker ${sticker}'s material into its flight failed`, error);
+    }
+  const flyer = owner?.flyer ?? stillFlyer(view, figure, to, sticker);
+  const movement = flyer.animate(flightFrames(from, to, origin.turn), {
+    duration: T_PEEL_MS,
+    fill,
+  });
+  const hidden = figure.animate([{ opacity: 0 }, { opacity: 0 }], { duration: T_PEEL_MS, fill });
+  animations.push(movement, hidden);
+  let live: Partial<Flight> = {};
+  if (owner) {
+    const { release, abort, track } = owner;
+    track(movement, hidden);
+    live = { release, abort, track: () => track(movement, hidden), destination: figure };
+  }
   if (!leaves) {
     animations.push(
       flyer.animate([{ opacity: 0 }, { opacity: 1, offset: GIVEN_FADE }, { opacity: 1 }], {
@@ -178,14 +353,14 @@ function takeOff(
         fill,
       }),
     );
-    return { animations, flyer, away: null };
+    return { ...live, animations, flyer, away: null };
   }
   const fade = leaves.animate([{ opacity: left }, { opacity: left }], {
     duration: T_PEEL_MS,
     fill,
   });
   animations.push(fade);
-  return { animations, flyer, away: { el: leaves, fade } };
+  return { ...live, animations, flyer, away: { el: leaves, fade } };
 }
 
 interface Options {
@@ -214,13 +389,14 @@ export function useDetailLift({ root, shownId, originOf, into, reduced, onClose 
   const ghosted = useRef<{ el: HTMLElement; fade: Animation } | null>(null);
 
   const takeOffFrom = (view: HTMLElement) =>
-    takeOff(view, into, shownId === undefined ? null : originOf(shownId), reduced);
+    takeOff(view, into, shownId === undefined ? null : originOf(shownId), reduced, shownId);
   const open = useEffectEvent(takeOffFrom);
 
   /** The sticker landed in the view: the flight ends, and a view with a ghost keeps the spot at it. */
   const land = useEffectEvent((opening: Flight) => {
     const hold = into.ghost !== undefined ? opening.away : null;
     for (const a of opening.animations) if (a !== hold?.fade) a.cancel();
+    opening.release?.();
     opening.flyer?.remove();
     ghosted.current = hold;
   });
@@ -248,7 +424,9 @@ export function useDetailLift({ root, shownId, originOf, into, reduced, onClose 
     if (!view) return;
     const opening = open(view);
     flight.current = opening;
-    void settled(opening.animations).then(() => {
+    void settled(opening.animations).then(async () => {
+      if (flight.current !== opening || closing.current) return;
+      await refreshDestination(opening, opening.destination ?? null);
       if (flight.current !== opening || closing.current) return;
       land(opening);
       flight.current = null;
@@ -294,8 +472,12 @@ export function useDetailLift({ root, shownId, originOf, into, reduced, onClose 
       a.updatePlaybackRate(reduced ? 1 : T_PEEL_MS / T_STICK_MS);
       a.reverse();
     }
-    void settled(back.animations).then(() => {
+    back.track?.();
+    void settled(back.animations).then(async () => {
       if (flight.current !== back) return;
+      await refreshDestination(back, back.away?.el ?? null);
+      if (flight.current !== back) return;
+      back.release?.();
       back.flyer?.remove();
       back.away?.fade.cancel();
       ghosted.current?.fade.cancel();

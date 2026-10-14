@@ -121,7 +121,13 @@
 
 /* Receiving: the sticker lifts a little off the page while the receive is out. Its foil's band is its
    edge, so the shadow falls from there. */
-.receive-gift__figure :is(.sticker-figure__img, .sticker-foil__cast) {
+.receive-gift__figure
+  :is(
+    .sticker-figure__img,
+    .sticker-figure__cast,
+    .sticker-foil__cast,
+    .sticker-material-surface:not(:has([data-foil="true"]))
+  ) {
   transition: filter var(--t-peel) var(--ease-peel);
 }
 
@@ -129,7 +135,14 @@
   transform: translateY(-58px) scale(1.02);
 }
 
-.receive-gift.is-receiving .receive-gift__figure :is(.sticker-figure__img, .sticker-foil__cast) {
+.receive-gift.is-receiving
+  .receive-gift__figure
+  :is(
+    .sticker-figure__img,
+    .sticker-figure__cast,
+    .sticker-foil__cast,
+    .sticker-material-surface:not(:has([data-foil="true"]))
+  ) {
   filter: var(--sticker-cut) drop-shadow(8px 22px 14px rgba(28, 24, 36, 0.18));
 }
 

@@ -74,7 +74,7 @@ test("attribute a fresh cold startup before navigation through settled materials
     "Explicit cold-start diagnostic; no frame-rate qualification",
   );
   test.skip(info.project.name !== "chromium", "The cold-start CPU profile requires Chrome CDP");
-  await page.setViewportSize({ width: 1032, height: 1376 });
+  await page.setViewportSize({ width: 1200, height: 1454 });
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => {
@@ -82,7 +82,7 @@ test("attribute a fresh cold startup before navigation through settled materials
   });
   const capture: Record<string, unknown> = {
     engine: info.project.name,
-    stickerCount: 15,
+    stickerCount: 21,
     diagnosticOnly: true,
     errors,
     exportFailures: [] as string[],
@@ -156,7 +156,7 @@ test("attribute a fresh cold startup before navigation through settled materials
               width: canvas.width,
               height: canvas.height,
             }),
-            ...(elapsed >= 2 && { stack: new Error().stack }),
+            stack: new Error().stack,
           });
         }
       }
@@ -253,6 +253,116 @@ test("attribute a fresh cold startup before navigation through settled materials
         );
       },
     });
+    for (const name of ["getImageData", "putImageData"] as const) {
+      const method = CanvasRenderingContext2D.prototype[name];
+      Object.defineProperty(CanvasRenderingContext2D.prototype, name, {
+        configurable: true,
+        value: function (this: CanvasRenderingContext2D, ...args: unknown[]) {
+          return measure(
+            `canvas.${name}`,
+            () => Reflect.apply(method, this, args),
+            this.canvas,
+            "2d",
+          );
+        },
+      });
+    }
+    const encode: unknown = Reflect.get(HTMLCanvasElement.prototype, "toDataURL");
+    if (typeof encode !== "function") throw new Error("The native PNG encoder is missing");
+    HTMLCanvasElement.prototype.toDataURL = function (...args) {
+      const result: unknown = measure(
+        "canvas.toDataURL",
+        () => Reflect.apply(encode, this, args),
+        this,
+        "2d",
+      );
+      if (typeof result !== "string") throw new Error("The PNG encoder returned no image");
+      return result;
+    };
+    const assetWaits: {
+      operation: string;
+      url: string;
+      start: number;
+      end: number;
+      stack?: string;
+      failure?: string;
+    }[] = [];
+    Reflect.set(window, "stickerAssetWaits", assetWaits);
+    const originalFetch = window.fetch;
+    window.fetch = async (input, init) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      const stack = new Error().stack ?? "";
+      const caller = stack.includes("prepareStickerFoil")
+        ? "static"
+        : stack.includes("stickerRenderer")
+          ? "renderer"
+          : "other";
+      const coverageKeys = stack.includes("foilCoverageImage")
+        ? (window.stickerBoardDragFixture?.assets() ?? [])
+            .filter((asset) => asset.urls.mask === url || asset.urls.foil === url)
+            .map((asset) => {
+              const figure = document.querySelector<HTMLElement>(`[data-sticker-id="${asset.id}"]`);
+              const foil = figure?.querySelector<HTMLElement>(".sticker-foil");
+              const surface = figure?.querySelector<HTMLElement>(
+                caller === "static" ? ".sticker-foil" : ".sticker-material-surface",
+              );
+              if (!foil || !surface)
+                throw new Error("A coverage acquisition has no matching presentation");
+              return {
+                id: asset.id,
+                cut: asset.urls.mask,
+                mask: asset.urls.foil ?? null,
+                style: ["holo", "pink", "kyoto-seika"].find((style) =>
+                  foil.classList.contains(`sticker-foil--${style}`),
+                ),
+                size: "board",
+                width: surface.clientWidth,
+                height: surface.clientHeight,
+                caller,
+              };
+            })
+        : [];
+      const entry = {
+        operation: "fetch",
+        phase: phase(),
+        coverageKeys,
+        url: typeof input === "string" ? input : input instanceof URL ? input.href : input.url,
+        start: performance.now(),
+        end: 0,
+        stack: new Error().stack,
+        failure: undefined as string | undefined,
+      };
+      try {
+        return await originalFetch(input, init);
+      } catch (error) {
+        entry.failure = String(error);
+        throw error;
+      } finally {
+        entry.end = performance.now();
+        assetWaits.push(entry);
+      }
+    };
+    const decode: unknown = Reflect.get(HTMLImageElement.prototype, "decode");
+    if (typeof decode !== "function") throw new Error("The native image decoder is missing");
+    HTMLImageElement.prototype.decode = async function () {
+      const entry = {
+        operation: "decode",
+        url: this.src,
+        start: performance.now(),
+        end: 0,
+        stack: new Error().stack,
+        failure: undefined as string | undefined,
+      };
+      try {
+        await Reflect.apply(decode, this, []);
+      } catch (error) {
+        entry.failure = String(error);
+        throw error;
+      } finally {
+        entry.end = performance.now();
+        assetWaits.push(entry);
+      }
+    };
     for (const name of ["load", "error"] as const)
       document.addEventListener(
         name,
@@ -323,9 +433,39 @@ test("attribute a fresh cold startup before navigation through settled materials
       "Starting the cold-start trace exceeded 5 seconds",
     );
     tracing = true;
-    await page.goto("/e2e/stickerBoardDrag.html");
-    await expect(page.locator(".placed-sticker canvas[data-state=ready]")).toHaveCount(15);
+    await page.goto("/e2e/stickerBoardDrag.html?variant=mixed-21");
+    await expect(page.locator(".placed-sticker canvas[data-state=ready]")).toHaveCount(21);
     await page.evaluate(() => window.stickerBoardDragFixture.whenMaterialsSettled());
+    const originalWidth = await page
+      .locator("[data-sticker-id=large-drag-1]")
+      .evaluate((element: HTMLElement) => parseFloat(element.style.width));
+    for (const width of [originalWidth - 1, originalWidth]) {
+      await page.evaluate((width) => {
+        window.stickerBoardDragFixture.setPhase("startup");
+        const target = document.querySelector<HTMLElement>("[data-sticker-id='large-drag-1']");
+        if (!target) throw new Error("The resize target is missing");
+        target.style.width = `${width}px`;
+      }, width);
+      await page.evaluate(async () => {
+        await new Promise<number>(requestAnimationFrame);
+        await new Promise<number>(requestAnimationFrame);
+      });
+      await page.evaluate(() => window.stickerBoardDragFixture.whenMaterialsSettled());
+      await expect
+        .poll(() =>
+          page
+            .locator("[data-sticker-id=large-drag-1] .sticker-foil")
+            .evaluate((element: HTMLElement) =>
+              parseFloat(element.style.getPropertyValue("--foil-print-pitch")),
+            ),
+        )
+        .toBeCloseTo(width / 80, 5);
+    }
+    await page.evaluate(() => window.stickerBoardDragFixture.setPhase("stationary-hold"));
+    await page.waitForTimeout(250);
+    capture.assetWaits = await page.evaluate((): unknown =>
+      Reflect.get(window, "stickerAssetWaits"),
+    );
     await page.evaluate(async () => {
       await new Promise<number>(requestAnimationFrame);
       await new Promise<number>(requestAnimationFrame);
@@ -416,9 +556,7 @@ test("attribute a fresh cold startup before navigation through settled materials
   }
 });
 
-test("attribute the same 21-sticker motion to foil, laminate, and fenced GL work", async ({
-  page,
-}, info) => {
+test("attribute complete 21-sticker motion and fenced GL work", async ({ page }, info) => {
   test.skip(
     process.env.STICKER_ATTRIBUTION !== "on",
     "Explicit diagnostic; no frame-rate qualification",
@@ -497,7 +635,7 @@ test("attribute the same 21-sticker motion to foil, laminate, and fenced GL work
       throw new Error("The native WebGL clear method is unavailable");
     const contexts: WebGLRenderingContext[] = [];
     Reflect.set(window, "stickerLaminateAttributionContexts", contexts);
-    Reflect.set(window, "restoreStickerLaminateAttributionClear", () =>
+    Reflect.set(window, "restoreStickerMaterialAttributionClear", () =>
       Object.defineProperty(WebGLRenderingContext.prototype, "clear", descriptor),
     );
     Object.defineProperty(WebGLRenderingContext.prototype, "clear", {
@@ -509,19 +647,19 @@ test("attribute the same 21-sticker motion to foil, laminate, and fenced GL work
     });
   });
   try {
-    await page.goto("/e2e/stickerBoardDrag.html?variant=ipad-21");
+    await page.goto("/e2e/stickerBoardDrag.html?variant=mixed-21");
     await expect(page.locator(".placed-sticker canvas[data-state=ready]")).toHaveCount(21);
     await page.evaluate(() => window.stickerBoardDragFixture.whenMaterialsSettled());
     expect(await page.locator(".sticker-crease").count()).toBeGreaterThanOrEqual(13);
     expect(await page.evaluate(() => window.stickerBoardDragFixture.askForMotion())).toBe(
       "granted",
     );
-    const result = await page.evaluate(async (comparisonOnly) => {
+    const result = await page.evaluate(async () => {
       const fixture = window.stickerBoardDragFixture;
       fixture.setPhase("idle");
       fixture.tilt(40, 0, 123);
       const contexts: unknown = Reflect.get(window, "stickerLaminateAttributionContexts");
-      const restoreClear: unknown = Reflect.get(window, "restoreStickerLaminateAttributionClear");
+      const restoreClear: unknown = Reflect.get(window, "restoreStickerMaterialAttributionClear");
       if (
         !Array.isArray(contexts) ||
         contexts.length !== 1 ||
@@ -557,7 +695,7 @@ test("attribute the same 21-sticker motion to foil, laminate, and fenced GL work
       )
         throw new Error("The existing drawing methods are unavailable");
       const materials = [
-        ...document.querySelectorAll<HTMLCanvasElement>(".placed-sticker canvas.sticker-laminate"),
+        ...document.querySelectorAll<HTMLCanvasElement>(".placed-sticker canvas.sticker-material"),
       ];
       const foils = [...document.querySelectorAll<HTMLElement>(".placed-sticker .sticker-foil")];
       const stickers = [...document.querySelectorAll<HTMLElement>(".placed-sticker")];
@@ -578,9 +716,6 @@ test("attribute the same 21-sticker motion to foil, laminate, and fenced GL work
       const diagnosticStyle = document.createElement("style");
       diagnosticStyle.dataset.stickerLaminateAttribution = "";
       document.head.append(diagnosticStyle);
-      const sheen = foils[0]?.querySelector<HTMLElement>(".sticker-foil__sheen");
-      const glint = foils[0]?.querySelector<HTMLElement>(".sticker-foil__glint");
-      if (!sheen || !glint) throw new Error("The foil rotation highlights are missing");
       const positions = [...materials, ...foils].map((node) => {
         if (!node.parentNode) throw new Error("A material node has no original parent");
         return { node, parent: node.parentNode, next: node.nextSibling };
@@ -593,7 +728,7 @@ test("attribute the same 21-sticker motion to foil, laminate, and fenced GL work
       const result = {
         metadata: {
           diagnosticOnly: true,
-          comparisonOnly,
+
           viewport: { width: innerWidth, height: innerHeight, dpr: devicePixelRatio },
           attributes: gl.getContextAttributes(),
           renderer: String(gl.getParameter(debug ? debug.UNMASKED_RENDERER_WEBGL : gl.RENDERER)),
@@ -631,14 +766,6 @@ test("attribute the same 21-sticker motion to foil, laminate, and fenced GL work
           }[];
           geometry: typeof originalGeometry;
           style: string;
-          computed: {
-            sheenRotation: string;
-            glintRotation: string;
-            glintX: string;
-            glintY: string;
-            sheenWillChange: string;
-            glintWillChange: string;
-          };
         }[],
         restored: false,
         stylesRestored: false,
@@ -724,7 +851,7 @@ test("attribute the same 21-sticker motion to foil, laminate, and fenced GL work
           const kind =
             image === source
               ? "GL source"
-              : this.canvas.classList.contains("sticker-laminate")
+              : this.canvas.classList.contains("sticker-material")
                 ? "retained material"
                 : undefined;
           const started = phase && kind ? performance.now() : 0;
@@ -740,49 +867,12 @@ test("attribute the same 21-sticker motion to foil, laminate, and fenced GL work
         },
       });
       try {
-        const phases = comparisonOnly
-          ? ([
-              "full scene",
-              "foil only",
-              "full scene: moving layers promoted",
-              "foil only: glint layers promoted",
-              "foil only: final unpromoted baseline",
-            ] as const)
-          : ([
-              "full scene",
-              "foil only",
-              "laminate only",
-              "foil only: sheen rotation frozen",
-              "foil only: glint rotation frozen",
-              "foil only: both rotations frozen",
-              "foil only: moving layers promoted",
-              "fenced GL",
-            ] as const);
+        const phases = ["full scene", "fenced GL"] as const;
         for (const name of phases) {
           restore();
           diagnosticStyle.textContent = "";
-          if (name.startsWith("foil only")) for (const node of materials) node.remove();
-          if (name === "laminate only") for (const node of foils) node.remove();
-          if (name === "foil only: sheen rotation frozen")
-            diagnosticStyle.textContent =
-              ".sticker-foil__sheen { --light-rotation: 0 !important; }";
-          if (name === "foil only: glint rotation frozen")
-            diagnosticStyle.textContent =
-              ".sticker-foil__glint { --light-rotation: 0 !important; }";
-          if (name === "foil only: both rotations frozen")
-            diagnosticStyle.textContent =
-              ".sticker-foil__sheen, .sticker-foil__glint { --light-rotation: 0 !important; }";
-          if (
-            name === "foil only: moving layers promoted" ||
-            name === "full scene: moving layers promoted"
-          )
-            diagnosticStyle.textContent =
-              ".sticker-foil__glint, .sticker-foil__glint::before, .sticker-foil__glint::after, .sticker-foil__sheen, .sticker-foil__sheen::before { will-change: transform !important; }";
-          if (name === "foil only: glint layers promoted")
-            diagnosticStyle.textContent =
-              ".sticker-foil__glint, .sticker-foil__glint::before, .sticker-foil__glint::after { will-change: transform !important; }";
           await settle();
-          if (name === "foil only") await window.stickerLaminateAttributionTrace?.("start");
+          if (name === "full scene") await window.stickerLaminateAttributionTrace?.("start");
           phase = {
             name,
             timingAltered: name === "fenced GL",
@@ -793,14 +883,6 @@ test("attribute the same 21-sticker motion to foil, laminate, and fenced GL work
             fencedBatches: [],
             geometry: geometry(),
             style: diagnosticStyle.textContent,
-            computed: {
-              sheenRotation: "",
-              glintRotation: "",
-              glintX: "",
-              glintY: "",
-              sheenWillChange: "",
-              glintWillChange: "",
-            },
           };
           result.phases.push(phase);
           frame = 0;
@@ -808,7 +890,7 @@ test("attribute the same 21-sticker motion to foil, laminate, and fenced GL work
           const duration = phase.timingAltered ? 700 : 2000;
           let last = await nextFrame();
           const started = last;
-          performance.mark(`sticker-laminate-attribution-${name}-start`);
+          performance.mark(`sticker-material-attribution-${name}-start`);
           while (last - started < duration) {
             const now = await nextFrame();
             frame++;
@@ -829,21 +911,10 @@ test("attribute the same 21-sticker motion to foil, laminate, and fenced GL work
             });
             last = now;
           }
-          performance.mark(`sticker-laminate-attribution-${name}-end`);
-          const measuredPhase = phase;
+          performance.mark(`sticker-material-attribution-${name}-end`);
           phase = undefined;
           pendingBatch = undefined;
-          const sheenStyle = getComputedStyle(sheen);
-          const glintStyle = getComputedStyle(glint);
-          measuredPhase.computed = {
-            sheenRotation: sheenStyle.getPropertyValue("--light-rotation"),
-            glintRotation: glintStyle.getPropertyValue("--light-rotation"),
-            glintX: glintStyle.getPropertyValue("--lx"),
-            glintY: glintStyle.getPropertyValue("--ly"),
-            sheenWillChange: sheenStyle.willChange,
-            glintWillChange: glintStyle.willChange,
-          };
-          if (name === "foil only") await window.stickerLaminateAttributionTrace?.("end");
+          if (name === "full scene") await window.stickerLaminateAttributionTrace?.("end");
         }
       } catch (error) {
         result.errors.push(String(error));
@@ -866,7 +937,7 @@ test("attribute the same 21-sticker motion to foil, laminate, and fenced GL work
           JSON.stringify(fixture.normals()) === JSON.stringify(result.metadata.normalSources);
       }
       return result;
-    }, process.env.STICKER_ATTRIBUTION_COMPARE === "on");
+    });
     await page.evaluate(() => window.stickerBoardDragFixture.whenMaterialsSettled());
     capture.result = result;
     expect(result.restored).toBe(true);
@@ -877,43 +948,12 @@ test("attribute the same 21-sticker motion to foil, laminate, and fenced GL work
     for (const phase of result.phases) {
       expect(phase.geometry).toEqual(result.metadata.originalGeometry);
       expect(phase.frames.length).toBeGreaterThan(0);
-      if (phase.name.startsWith("foil only")) {
-        expect(phase.batches).toBe(0);
-        expect(phase.draws).toBe(0);
-        expect(phase.copies).toEqual([]);
-      } else {
-        expect(phase.draws).toBeGreaterThan(0);
-        expect(
-          phase.copies.filter((copy: { kind: string }) => copy.kind === "retained material").length,
-        ).toBeGreaterThan(0);
-      }
+      expect(phase.draws).toBeGreaterThan(0);
+      expect(
+        phase.copies.filter((copy: { kind: string }) => copy.kind === "retained material").length,
+      ).toBeGreaterThan(0);
       if (phase.timingAltered) expect(phase.fencedBatches.length).toBe(phase.batches);
       else expect(phase.fencedBatches).toEqual([]);
-      if (
-        phase.name === "foil only: sheen rotation frozen" ||
-        phase.name === "foil only: both rotations frozen"
-      )
-        expect(phase.computed.sheenRotation).toBe("0");
-      if (
-        phase.name === "foil only: glint rotation frozen" ||
-        phase.name === "foil only: both rotations frozen"
-      )
-        expect(phase.computed.glintRotation).toBe("0");
-      if (
-        phase.name === "foil only: moving layers promoted" ||
-        phase.name === "full scene: moving layers promoted"
-      ) {
-        expect(phase.computed.sheenWillChange).toBe("transform");
-        expect(phase.computed.glintWillChange).toBe("transform");
-      }
-      if (phase.name === "foil only: glint layers promoted") {
-        expect(phase.computed.sheenWillChange).toBe("auto");
-        expect(phase.computed.glintWillChange).toBe("transform");
-      }
-      if (phase.name === "foil only: final unpromoted baseline") {
-        expect(phase.computed.sheenWillChange).toBe("auto");
-        expect(phase.computed.glintWillChange).toBe("auto");
-      }
       const intervals = phase.frames
         .map((frame: { interval: number }) => frame.interval)
         .toSorted((a: number, b: number) => a - b);
@@ -980,9 +1020,9 @@ test("attribute the same 21-sticker motion to foil, laminate, and fenced GL work
         capture.exportFailure = String(error);
       }
     }
-    const path = info.outputPath("sticker-laminate-attribution.json");
+    const path = info.outputPath("sticker-material-attribution.json");
     await writeFile(path, JSON.stringify(capture, null, 2), "utf8");
-    await info.attach("sticker-laminate-attribution", { path, contentType: "application/json" });
+    await info.attach("sticker-material-attribution", { path, contentType: "application/json" });
     console.log("Laminate attribution capture", path);
   }
 });

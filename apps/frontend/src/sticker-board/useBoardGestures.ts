@@ -2,7 +2,7 @@ import { MAX_LARGE_SCALE } from "@drawing-app/api/client";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { formatNo } from "../stickers/format";
 import { playStick } from "../stickers/stick";
-import { turnLaminate } from "../stickers/laminateRenderer";
+import { turnSticker } from "../stickers/stickerRenderer";
 import { capturePointer } from "../ui/capturePointer";
 import { clamp, EASE_PEEL } from "../ui/easing";
 import {
@@ -224,8 +224,8 @@ export function useBoardGestures(options: Options) {
 
     /** Keeps the laminate's geometry aligned with an imperative sticker turn. */
     const turnSurface = (el: HTMLElement, turn: number) => {
-      const canvas = el.querySelector("canvas.sticker-laminate");
-      if (canvas instanceof HTMLCanvasElement) turnLaminate(canvas, turn);
+      const canvas = el.querySelector("canvas.sticker-material");
+      if (canvas instanceof HTMLCanvasElement) turnSticker(canvas, turn);
     };
     /** Puts the element where `live` says, without React. */
     const draw = (el: HTMLElement, sticker: BoardSticker, live: Live) => {

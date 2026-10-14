@@ -1,3 +1,4 @@
+import { observeStickerHardware, qualifyStickerScene } from "./stickerPerformance";
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import { hand, FINGERTIP } from "./pen";
@@ -15,25 +16,43 @@ test.use({
 });
 
 /** Pixel reads belong between timed phases; every distinct material must respond and hold. */
-async function materialDigests(page: Page): Promise<Record<string, string>> {
-  return page.evaluate(async () =>
-    Object.fromEntries(
-      await Promise.all(
-        [...document.querySelectorAll<HTMLCanvasElement>("canvas.sticker-laminate")].map(
-          async (canvas) => {
-            const id = canvas.closest<HTMLElement>(".placed-sticker")?.dataset.stickerId;
-            if (!id) throw new Error("A material canvas has no sticker identifier");
-            const context = canvas.getContext("2d");
-            if (!context) throw new Error(`Reading ${id}'s material has no 2D context`);
-            const digest = await crypto.subtle.digest(
-              "SHA-256",
-              context.getImageData(0, 0, canvas.width, canvas.height).data,
-            );
-            return [id, [...new Uint8Array(digest)].join(",")] as const;
-          },
+async function materialDigests(page: Page, foilOnly = false): Promise<Record<string, string>> {
+  return page.evaluate(
+    async (foilOnly) =>
+      Object.fromEntries(
+        await Promise.all(
+          [...document.querySelectorAll<HTMLCanvasElement>("canvas.sticker-material")].map(
+            async (canvas) => {
+              const id = canvas.closest<HTMLElement>(".placed-sticker")?.dataset.stickerId;
+              if (!id) throw new Error("A material canvas has no sticker identifier");
+              const context = canvas.getContext("2d");
+              if (!context) throw new Error(`Reading ${id}'s material has no 2D context`);
+              const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+              if (foilOnly) {
+                const { registeredPaperAlpha } = await import("./stickerMaterialFixture.ts");
+                const alpha = await registeredPaperAlpha(canvas);
+                for (let i = 0; i < pixels.length; i += 4)
+                  if (alpha[i + 3] !== 0) pixels.fill(0, i, i + 4);
+                if (
+                  canvas.dataset.foil !== "true" ||
+                  !pixels.some((value, index) => index % 4 === 3 && value > 0)
+                )
+                  throw new Error(`${id} lost its registered foil pixels outside paper`);
+                if (
+                  getComputedStyle(canvas.closest(".sticker-material-surface") ?? canvas).filter !==
+                  "none"
+                )
+                  throw new Error(
+                    `${id} clips or shadows its complete foil rather than its registered cast`,
+                  );
+              }
+              const digest = await crypto.subtle.digest("SHA-256", pixels);
+              return [id, [...new Uint8Array(digest)].join(",")] as const;
+            },
+          ),
         ),
       ),
-    ),
+    foilOnly,
   );
 }
 
@@ -72,7 +91,7 @@ async function captureRecorder(page: Page, info: TestInfo) {
 
 for (const scene of [
   { count: 15, width: 1032, height: 1376, variant: null },
-  { count: 21, width: 1200, height: 1454, variant: "ipad-21" },
+  { count: 21, width: 1200, height: 1454, variant: "mixed-21" },
 ] as const) {
   test(`dragging a large overlapping sticker on a ${scene.count}-sticker board preserves ready coating and measures each input phase`, async ({
     page,
@@ -121,6 +140,7 @@ for (const scene of [
       expect(await page.evaluate(() => window.stickerBoardDragFixture.recorderOn())).toBe(
         recorderRequested,
       );
+      await qualifyStickerScene(page, info, `drag-${scene.count}`);
       const start = await page.evaluate(() => {
         for (let index = 0; index < 5; index++) {
           const id = `large-drag-${index}`;
@@ -200,6 +220,7 @@ for (const scene of [
       await expect(page.locator(".placed-sticker canvas[data-state=ready]")).toHaveCount(
         scene.count,
       );
+      await materialDigests(page, true);
       const screenshot = info.outputPath("large-board-first-held.png");
       await page.screenshot({ path: screenshot });
       await info.attach("large-board-first-held", { path: screenshot, contentType: "image/png" });
@@ -216,7 +237,7 @@ for (const scene of [
       await page.waitForTimeout(1000);
       await expect(page.locator(".sticker-toolbar")).toHaveCount(1);
       await page.evaluate(() => window.stickerBoardDragFixture.whenMaterialsSettled());
-      await expect(page.locator(".sticker-laminate-flat")).toHaveCount(0);
+      await expect(page.locator(".sticker-material-flat")).toHaveCount(0);
       await expect(page.locator("[data-crease-reveal]")).toHaveCount(0);
       const result = await page.evaluate(
         ({ originalNormals, heldNormals, scene }) => {
@@ -316,6 +337,8 @@ for (const scene of [
   });
 }
 
+test.beforeEach(async ({ page }) => observeStickerHardware(page));
+
 test("21 distinct large creased stickers follow diagonal tilt and retain a stationary reflection", async ({
   page,
 }, info) => {
@@ -346,7 +369,7 @@ test("21 distinct large creased stickers follow diagonal tilt and retain a stati
   });
   try {
     await page.goto(
-      `/e2e/stickerBoardDrag.html?variant=ipad-21${recorderRequested ? "&recorder=on" : ""}`,
+      `/e2e/stickerBoardDrag.html?variant=mixed-21${recorderRequested ? "&recorder=on" : ""}`,
     );
     await expect(page.locator(".placed-sticker canvas[data-state=ready]")).toHaveCount(21);
     await page.evaluate(() => window.stickerBoardDragFixture.whenMaterialsSettled());
@@ -366,7 +389,7 @@ test("21 distinct large creased stickers follow diagonal tilt and retain a stati
       }),
     }));
     expect(scene).toEqual({
-      variant: "ipad-21",
+      variant: "mixed-21",
       count: 21,
       viewport: { width: 1200, height: 1454, dpr: 2 },
       inside: true,
@@ -384,6 +407,23 @@ test("21 distinct large creased stickers follow diagonal tilt and retain a stati
       if (fixture.rememberCanvases() !== 21) throw new Error("The board has missing materials");
     });
     await page.waitForTimeout(1000);
+    await qualifyStickerScene(page, info, "mixed-board-motion");
+    const semantics = await page
+      .locator(".placed-sticker canvas.sticker-material")
+      .evaluateAll((canvases) => canvases.map((canvas) => canvas.getAttribute("data-foil-style")));
+    expect(semantics.filter((style) => style === "holo")).toHaveLength(7);
+    expect(semantics.filter((style) => style === "pink")).toHaveLength(7);
+    expect(semantics.filter((style) => style === "kyoto-seika")).toHaveLength(7);
+    const registration = await page.evaluate(() =>
+      Object.entries(window.stickerBoardDragFixture.acceptedCreases()).map(([id, crease]) => ({
+        id,
+        bounds: crease?.normalBounds,
+      })),
+    );
+    expect(registration.find((entry) => entry.id === "large-drag-1")?.bounds?.x).toBeLessThan(0);
+    expect(
+      registration.filter((entry) => entry.id !== "large-drag-1").every((entry) => !entry.bounds),
+    ).toBe(true);
     const neutral = await materialDigests(page);
     const motion = await page.evaluate(async () => {
       const fixture = window.stickerBoardDragFixture;
@@ -426,6 +466,7 @@ test("21 distinct large creased stickers follow diagonal tilt and retain a stati
     await page.waitForTimeout(1000);
     await page.evaluate(() => window.stickerBoardDragFixture.whenMaterialsSettled());
     const tilted = await materialDigests(page);
+    const tiltedFoil = await materialDigests(page, true);
     const hold = await page.evaluate(async () => {
       const fixture = window.stickerBoardDragFixture;
       await new Promise<number>(requestAnimationFrame);
@@ -442,6 +483,7 @@ test("21 distinct large creased stickers follow diagonal tilt and retain a stati
       return { pose, changedPoses, elapsed: performance.now() - started };
     });
     const stationary = await materialDigests(page);
+    expect(await materialDigests(page, true)).toEqual(tiltedFoil);
     const result = await page.evaluate(() => {
       const fixture = window.stickerBoardDragFixture;
       return {

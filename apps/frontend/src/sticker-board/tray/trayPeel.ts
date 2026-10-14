@@ -72,11 +72,14 @@ export function createTrayPeel(
     stackHome,
     sayStuckOn,
     coatSticker,
+    coatStickerCopy,
+    addStaticFoil,
     releaseMaterials,
     turnMaterials,
     turnOf,
     animateWithLaminate,
-    refreshMaterials,
+    settleMaterials,
+    catchUp,
   } = traySheets;
   /** Where a sticker in hand would land: its shadow, cut to its shape. */
   const landMark = make("i", "");
@@ -97,7 +100,7 @@ export function createTrayPeel(
       r: parseFloat(el.style.getPropertyValue("--r")) || 0,
     };
   }
-  function makeFlyer(s: Slot, size: Size) {
+  function makeFlyer(s: Slot, size: Size, source?: HTMLCanvasElement | null) {
     const img = make("img", "");
     img.src = s.urls.png;
     img.alt = "";
@@ -108,9 +111,22 @@ export function createTrayPeel(
     el.style.width = px(size.w);
     el.style.height = px(size.h);
     fly.append(el);
-    const canvas = decorative(make("canvas", "sticker-laminate"));
+    const canvas = decorative(make("canvas", "sticker-material"));
     curl.append(canvas);
-    coatSticker(canvas, s, 0, () => !ui.destroyed);
+    if (source)
+      try {
+        coatStickerCopy(canvas, source, s, el);
+      } catch (error) {
+        // At iOS's canvas memory cap no copy can be made: it flies as its print and static foil.
+        canvas.dataset.state = "failed";
+        canvas.dataset.error = String(error);
+        console.error(`Copying ${formatNo(s.no)}'s material into its flight failed`, error);
+        addStaticFoil(curl, s, "board", () => !ui.destroyed);
+      }
+    else {
+      addStaticFoil(curl, s, "board", () => !ui.destroyed);
+      coatSticker(canvas, s, 0, () => !ui.destroyed, "board");
+    }
     if (s.veiled)
       curl.append(
         decorative(
@@ -158,11 +174,19 @@ export function createTrayPeel(
     releaseMaterials(el);
     el.remove();
   }
+  const slotReturns = new WeakMap<HTMLElement, Promise<boolean>>();
   function setSlotState(id: string, state: SlotState) {
     const el = slotFor(id);
     if (el) {
       el.dataset.state = state;
-      if (state === "here") refreshMaterials(el);
+      if (state === "here") {
+        el.style.opacity = "0";
+        const exposed = settleMaterials(el).then((ready) => {
+          if (ready && !ui.destroyed && el.dataset.state === "here") el.style.opacity = "";
+          return ready;
+        });
+        slotReturns.set(el, exposed);
+      }
     }
     return el;
   }
@@ -175,7 +199,15 @@ export function createTrayPeel(
     }
     const r = rectOfFit(g.slotEl, g.view);
     const size = api.sizeFor(s.id);
-    const { el, curl } = makeFlyer(s, size);
+    const { el, curl } = makeFlyer(
+      s,
+      size,
+      g.slotEl.querySelector<HTMLCanvasElement>("canvas.sticker-material[data-state=ready]"),
+    );
+    if (!el.isConnected) {
+      g.mode = "none";
+      return;
+    }
     el.classList.add("is-flat");
     const pk: Peel = {
       s,
@@ -298,10 +330,10 @@ export function createTrayPeel(
           removeFlyer(pk.el);
           sayStuckOn(pk.s);
         },
-        (error: unknown) => {
+        async (error: unknown) => {
           reportPlace(pk.s, error);
           removeFlyer(pk.el);
-          pressIn(pk.s.id);
+          await pressIn(pk.s.id);
         },
       );
   }
@@ -321,8 +353,9 @@ export function createTrayPeel(
           { duration: 160, easing: EASE_OUT },
         ),
       );
+      const returned = setSlotState(pk.s.id, "here");
+      if (returned) await slotReturns.get(returned);
       removeFlyer(pk.el);
-      setSlotState(pk.s.id, "here");
       return;
     }
     // Back into its used sticker silhouette as the mouth opens again, or onto the pulled-out sheet
@@ -340,8 +373,8 @@ export function createTrayPeel(
         { duration: 300, easing: EASE_PEEL, fill: "forwards" },
       ),
     );
+    await pressIn(pk.s.id);
     removeFlyer(pk.el);
-    pressIn(pk.s.id);
   }
   /** A sticker in hand lies straight back down in its slot on `p`'s sheet. */
   function lieDown(pk: Peel, p: Pulled) {
@@ -350,8 +383,7 @@ export function createTrayPeel(
     removeFlyer(pk.el);
     const el = slotFor(pk.s.id, p.el);
     if (el) {
-      el.dataset.state = "here";
-      refreshMaterials(el);
+      setSlotState(pk.s.id, "here");
     }
   }
   /** Its placing failed, so it stays in the tray. */
@@ -387,8 +419,9 @@ export function createTrayPeel(
       r: q.r,
     };
   }
-  function pressIn(id: string) {
+  async function pressIn(id: string) {
     const el = setSlotState(id, "here");
+    if (el && !(await slotReturns.get(el))) return;
     if (el && !reduced())
       el.querySelector(".tray__fit")?.animate(
         [
@@ -406,8 +439,10 @@ export function createTrayPeel(
     if (!s || !el) return;
     const r = rectOfFit(el);
     const size = api.sizeFor(id);
+    const source = el.querySelector<HTMLCanvasElement>("canvas.sticker-material[data-state=ready]");
+    const { el: flyer } = makeFlyer(s, size, source);
+    if (!flyer.isConnected) return;
     setSlotState(id, "peeling");
-    const { el: flyer } = makeFlyer(s, size);
     flyer.style.transform = flyerAt(r.x, r.y, size, r.w / size.w, r.r);
     turnFlyer(flyer);
     if (!ui.pulled) zip.relax(CRACK);
@@ -417,18 +452,23 @@ export function createTrayPeel(
       handOver = resolve;
     });
     let onBoard: HTMLElement | undefined;
+    let destinationHidden = false;
+    let destinationRefreshed = false;
+    // Placing it redraws the sheets, which would release the slot material its flyer copies.
+    ui.landing.add(id);
     try {
       try {
         onBoard = placedOrThrow(await api.place(id, undefined, flight));
       } catch (error) {
         reportPlace(s, error);
-        pressIn(id);
+        await pressIn(id);
         if (!ui.pulled) holdOpen(HOLD_OPEN.tapped);
         return;
       }
       if (ui.destroyed) return;
       const to = api.stickerRect(id) ?? { x: Wb() * 0.4, y: Hb() * 0.5, r: 0 };
       onBoard.style.opacity = "0";
+      destinationHidden = true;
       if (!reduced())
         await ended(
           animateFlyer(
@@ -450,7 +490,10 @@ export function createTrayPeel(
             { duration: 460, easing: EASE_PEEL, fill: "forwards" },
           ),
         );
+      destinationRefreshed = await settleMaterials(onBoard);
+      if (!destinationRefreshed) return;
       onBoard.style.opacity = "";
+      destinationHidden = false;
       if (!reduced())
         onBoard.animate(
           [
@@ -462,8 +505,13 @@ export function createTrayPeel(
       sayStuckOn(s);
       if (!ui.pulled) holdOpen(HOLD_OPEN.tapped);
     } finally {
+      if (onBoard && destinationHidden) {
+        if (!destinationRefreshed) destinationRefreshed = await settleMaterials(onBoard);
+        if (destinationRefreshed) onBoard.style.opacity = "";
+      }
       removeFlyer(flyer);
-      if (onBoard) onBoard.style.opacity = "";
+      ui.landing.delete(id);
+      if (!ui.destroyed) catchUp();
       handOver();
     }
   }

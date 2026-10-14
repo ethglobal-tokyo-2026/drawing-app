@@ -4,8 +4,8 @@ import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "../i18n/react";
 import { spokenSubject } from "../kyoto-seika/spokenSubject";
 import { SubjectPair } from "../kyoto-seika/SubjectPair";
-import { madeFoil } from "../stickers/madeFoil";
-import { StickerFoil } from "../stickers/StickerFoil";
+import { StickerFigure } from "../stickers/StickerFigure";
+import type { StickerUrls } from "../stickers/stickerUrls";
 import { Key } from "../ui/Key";
 import { QuietLink } from "../ui/QuietLink";
 import { releaseCanvas } from "../ui/releaseCanvas";
@@ -15,8 +15,10 @@ import { BORDER_UNITS } from "./sealing/dieCut";
 import { prepareSealPreview } from "./sealing/sealPreview";
 import "./SealSheet.css";
 
-/** The preview's turn, as a sticker's on a board, which the foil's glint undoes. */
+/** The preview's turn, as a sticker's on a board. */
 const TURN_DEG = -3;
+/** The preview's long side, as SealSheet.css draws it, and its paper's corner, --r-label, in px. */
+const PREVIEW = { side: 118, corner: 6 };
 
 interface Props {
   open: boolean;
@@ -305,6 +307,7 @@ function SealPreview({
   onPrepared: (status: PreviewStatus) => void;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
+  const [prepared, setPrepared] = useState<{ urls: StickerUrls; width: number; height: number }>();
   // Drawn as the sheet opens; the drawing can't change while it's up.
   useLayoutEffect(() => {
     const target = canvas.current;
@@ -317,7 +320,15 @@ function SealPreview({
       copy = ink();
       if (!copy || copy.width <= 0 || copy.height <= 0)
         throw new Error("The seal preview has no valid ink canvas");
-      onPrepared(prepareSealPreview(target, copy, BORDER_UNITS * perUnit));
+      const result = prepareSealPreview(target, copy, BORDER_UNITS * perUnit);
+      if (result === "ready") {
+        const { width, height } = target;
+        // The paper fills the print's bounds, cut with a label's rounded corners at the size it shows.
+        const corner = (PREVIEW.corner * Math.max(width, height)) / PREVIEW.side;
+        const mask = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%" rx="${corner}" fill="white"/></svg>`)}`;
+        setPrepared({ urls: { png: target.toDataURL(), mask }, width, height });
+      } else setPrepared(undefined);
+      onPrepared(result);
     } catch (error) {
       console.error("The seal sheet's preview couldn't be drawn", error);
       onPrepared("failed");
@@ -325,14 +336,17 @@ function SealPreview({
       if (copy) releaseCanvas(copy);
     }
   }, [open, ink, density, attempt, onPrepared]);
-  const tone = madeFoil({ nsfw, kyotoSeika });
   return (
     <div className="seal-preview" aria-hidden="true" hidden={status !== "ready"}>
-      <span className="seal-preview__sticker">
-        {/* Keyed by tone, so marking 18+ lays the pink foil on fresh. */}
-        {tone && <StickerFoil key={tone} size="board" tone={tone} turn={TURN_DEG} />}
-        <canvas ref={canvas} className="seal-preview__ink" />
-      </span>
+      <canvas ref={canvas} className="seal-preview__ink" hidden />
+      {prepared && (
+        <span
+          className="seal-preview__sticker"
+          style={{ "--ar": prepared.width / prepared.height }}
+        >
+          <StickerFigure {...prepared} nsfw={nsfw} kyotoSeika={kyotoSeika} turn={TURN_DEG} />
+        </span>
+      )}
     </div>
   );
 }

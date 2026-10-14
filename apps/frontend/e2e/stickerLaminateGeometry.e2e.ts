@@ -13,7 +13,7 @@ test("a turn-only React update redraws the held reflection in the sticker's new 
   page,
 }) => {
   await page.goto("/e2e/stickerLaminate.html?reload=1");
-  const coat = page.locator("[data-reload] canvas.sticker-laminate");
+  const coat = page.locator("[data-reload] canvas.sticker-material");
   await expect(coat).toHaveAttribute("data-state", "ready");
   const pose = await page.evaluate(() => window.laminateFixture.getPose());
   const before = await coat.evaluate((el) => {
@@ -73,7 +73,7 @@ test("a turn-only React update redraws the held reflection in the sticker's new 
 
 test("a tilted flight reflects in the same axes as its turned sticker", async ({ page }) => {
   await page.goto("/e2e/stickerLaminate.html?turn=90");
-  const coat = page.locator('[data-sticker="0"] canvas.sticker-laminate');
+  const coat = page.locator('[data-sticker="0"] canvas.sticker-material');
   await expect(coat).toHaveAttribute("data-state", "ready");
   const pose = await page.evaluate(() => window.laminateFixture.getPose());
   await page.evaluate(async () => {
@@ -122,9 +122,9 @@ test("the draped ramp changes reflection by slope while raised plateaus stay fla
   page,
 }) => {
   await page.goto("/e2e/stickerLaminate.html?ramp=1");
-  const ramp = page.locator("[data-ramp] canvas.sticker-laminate");
+  const ramp = page.locator("[data-ramp] canvas.sticker-material");
   await expect(ramp).toHaveAttribute("data-state", "ready");
-  await expect(page.locator("[data-white] canvas.sticker-laminate")).toHaveAttribute(
+  await expect(page.locator("[data-white] canvas.sticker-material")).toHaveAttribute(
     "data-state",
     "ready",
   );
@@ -184,7 +184,7 @@ test("Shop matte uses the same held light and broadens the white-paper reflectio
   page,
 }) => {
   await page.goto("/e2e/stickerLaminate.html");
-  const matte = page.locator("[data-matte] canvas.sticker-laminate");
+  const matte = page.locator("[data-matte] canvas.sticker-material");
   await expect(matte).toHaveAttribute("data-state", "ready");
   const pose = await page.evaluate(() => window.laminateFixture.getPose());
   const points = await matte.evaluate((el) => {
@@ -230,4 +230,364 @@ test("Shop matte uses the same held light and broadens the white-paper reflectio
   expect(await image()).toBe(held);
   await page.evaluate(() => window.laminateFixture.tilt(10, -28));
   await expect.poll(image).not.toBe(held);
+});
+
+test("expanded complete materials preserve source paper and reject unregistered creased overflow", async ({
+  page,
+}) => {
+  await page.goto("/e2e/stickerLaminate.html?board=1");
+  const result = await page.evaluate(async () => {
+    const { required } = await import("./stickerMaterialFixture.ts");
+    const api = await import("../src/stickers/stickerRenderer.ts");
+    const png = (w: number, h: number, color: string) => {
+      const c = document.createElement("canvas");
+      c.width = w;
+      c.height = h;
+      const cx = required(c.getContext("2d"));
+      cx.fillStyle = color;
+      cx.fillRect(0, 0, w, h);
+      return c.toDataURL();
+    };
+    const host = document.createElement("div");
+    host.style.cssText = "position:absolute;left:30px;top:30px;width:120px;height:60px";
+    host.className = "sticker-material-surface";
+    const c = document.createElement("canvas");
+    c.className = "sticker-material";
+    host.append(c);
+    document.body.append(host);
+    const material = {
+      print: png(120, 60, "#ab3764"),
+      cut: png(120, 60, "white"),
+      finish: "gloss" as const,
+    };
+    const release = api.mountSticker(c, { ...material, turn: 0 });
+    const pixels = () =>
+      Array.from(required(c.getContext("2d")).getImageData(0, 0, c.width, c.height).data);
+    try {
+      await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
+      const paper = pixels(),
+        initial = { width: c.width, height: c.height };
+      api.updateSticker(c, { ...material, foil: { style: "silver", size: "board" } });
+      await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
+      const expanded = pixels(),
+        expandedWidth = c.width,
+        expandedHeight = c.height;
+      let max = 0;
+      const dx = (expandedWidth - initial.width) / 2,
+        dy = (expandedHeight - initial.height) / 2;
+      for (let y = 2; y < initial.height - 2; y++)
+        for (let x = 2; x < initial.width - 2; x++)
+          for (let channel = 0; channel < 4; channel++)
+            max = Math.max(
+              max,
+              Math.abs(
+                paper[(y * initial.width + x) * 4 + channel] -
+                  expanded[((y + dy) * expandedWidth + x + dx) * 4 + channel],
+              ),
+            );
+      api.updateSticker(c, {
+        ...material,
+        normal: png(120, 60, "rgb(128,128,255)"),
+        foil: { style: "silver", size: "board" },
+      });
+      await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
+      const diagnostic = c.dataset.error ?? "";
+      const retained = pixels().every((v, i) => v === expanded[i]);
+      api.updateSticker(c, {
+        ...material,
+        normal: png(130, 70, "rgb(128,128,255)"),
+        normalBounds: { x: -5 / 120, y: -5 / 60, width: 130 / 120, height: 70 / 60 },
+        foil: { style: "silver", size: "board" },
+      });
+      await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
+      return {
+        max,
+        initial,
+        expandedWidth,
+        expandedHeight,
+        diagnostic,
+        retained,
+        ready: c.dataset.state,
+        error: c.dataset.error ?? "",
+      };
+    } finally {
+      release();
+      host.remove();
+    }
+  });
+  expect(result.max).toBe(0);
+  expect(result.expandedWidth).toBeGreaterThan(result.initial.width);
+  expect(result.expandedHeight).toBeGreaterThan(result.initial.height);
+  expect(result.diagnostic).toContain("Creased foil overflow");
+  expect(result.retained).toBe(true);
+  expect(result.ready).toBe("ready");
+  expect(result.error).toBe("");
+});
+
+test("a standalone expanded finish keeps its source size through repeated held-pose refreshes", async ({
+  page,
+}) => {
+  await page.goto("/e2e/stickerLaminate.html?board=1");
+  const result = await page.evaluate(async () => {
+    const { required } = await import("./stickerMaterialFixture.ts");
+    const api = await import("../src/stickers/stickerRenderer.ts");
+    const image = document.createElement("canvas");
+    image.width = 120;
+    image.height = 60;
+    required(image.getContext("2d")).fillRect(0, 0, 120, 60);
+    const cut = image.toDataURL();
+    const c = document.createElement("canvas");
+    c.style.cssText = "position:absolute;left:30px;top:30px;width:120.5px;height:60.5px";
+    document.body.append(c);
+    const release = api.mountSticker(c, {
+      print: cut,
+      cut,
+      finish: "gloss",
+      turn: 0,
+      foil: { style: "silver", size: "board" },
+    });
+    try {
+      await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
+      const before = {
+        width: c.width,
+        height: c.height,
+        pixels: c.toDataURL(),
+        style: c.style.width,
+      };
+      for (let i = 0; i < 4; i++) {
+        api.refreshSticker(c);
+        await new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        );
+      }
+      return {
+        before,
+        after: { width: c.width, height: c.height, pixels: c.toDataURL(), style: c.style.width },
+      };
+    } finally {
+      release();
+      c.remove();
+    }
+  });
+  expect(result.after).toEqual(result.before);
+});
+
+test("a live copy retains the source's normalized outer coverage at its independent size", async ({
+  page,
+}) => {
+  await page.goto("/e2e/stickerLaminate.html?board=1");
+  const result = await page.evaluate(async () => {
+    const { required } = await import("./stickerMaterialFixture.ts");
+    const api = await import("../src/stickers/stickerRenderer.ts");
+    const image = document.createElement("canvas");
+    image.width = image.height = 80;
+    required(image.getContext("2d")).fillRect(0, 0, 80, 80);
+    const cut = image.toDataURL();
+    const source = document.createElement("canvas"),
+      copy = document.createElement("canvas");
+    source.style.cssText = "position:absolute;left:20px;top:20px;width:80px;height:80px";
+    copy.style.cssText = "position:absolute;left:130px;top:20px;width:40px;height:40px";
+    document.body.append(source, copy);
+    const stop = api.mountSticker(source, {
+      print: cut,
+      cut,
+      turn: 0,
+      finish: "gloss",
+      foil: { style: "silver", size: "board" },
+    });
+    await api.whenStickerSettled(source, undefined, AbortSignal.timeout(5000));
+    const stopCopy = api.mountStickerCopy(copy, source, () => true);
+    try {
+      await api.whenStickerSettled(copy, undefined, AbortSignal.timeout(5000));
+      return {
+        source: [source.width, source.height],
+        copy: [copy.width, copy.height],
+        sourceScale: source.style.scale,
+        copyScale: copy.style.scale,
+      };
+    } finally {
+      stopCopy();
+      stop();
+      source.remove();
+      copy.remove();
+    }
+  });
+  expect(result.copy).toEqual(result.source.map((v) => Math.round(v / 2)));
+  expect(result.copyScale).toBe(result.sourceScale);
+});
+
+for (const ordering of [
+  "coverage-first",
+  "normal-fails",
+  "normal-first",
+  "coverage-fails",
+] as const) {
+  test(`registered overflow retains the complete generation while ${ordering}`, async ({
+    page,
+  }) => {
+    let answer: (() => void) | undefined;
+    const delayed =
+      ordering === "normal-first" || ordering === "coverage-fails"
+        ? "/registered-outer.svg"
+        : "/registered-normal.svg";
+    await page.route(`**${delayed}`, async (route) => {
+      await new Promise<void>((resolve) => {
+        answer = resolve;
+      });
+      await route.fulfill(
+        ordering === "normal-fails" || ordering === "coverage-fails"
+          ? { status: 503, body: "registered resource unavailable" }
+          : {
+              contentType: "image/svg+xml",
+              body: `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="${ordering === "normal-first" ? "white" : "rgb(158,128,249)"}"/></svg>`,
+            },
+      );
+    });
+    await page.goto("/e2e/stickerLaminate.html?board=1");
+    await page.evaluate(async (ordering) => {
+      const { required } = await import("./stickerMaterialFixture.ts");
+      const api = await import("../src/stickers/stickerRenderer.ts");
+      const png = (color: string) => {
+        const image = document.createElement("canvas");
+        image.width = image.height = 80;
+        const context = required(image.getContext("2d"));
+        context.fillStyle = color;
+        context.fillRect(0, 0, 80, 80);
+        return image.toDataURL();
+      };
+      const c = document.createElement("canvas");
+      c.id = "registered-finish";
+      c.style.cssText = "position:absolute;left:20px;top:20px;width:80px;height:80px";
+      document.body.append(c);
+      const material = { print: png("#ab3764"), cut: png("white"), finish: "gloss" as const };
+      const bounds = { x: -0.125, y: -0.125, width: 1.25, height: 1.25 };
+      api.mountSticker(c, {
+        ...material,
+        turn: 0,
+        normal: png("rgb(128,150,253)"),
+        ...(ordering === "normal-first" || ordering === "coverage-fails"
+          ? { normalBounds: bounds, foil: { style: "silver" as const, size: "board" as const } }
+          : {}),
+      });
+      await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
+      c.dataset.before = c.toDataURL();
+      c.dataset.beforeWidth = String(c.width);
+      api.updateSticker(c, {
+        ...material,
+        normal:
+          ordering === "normal-first" || ordering === "coverage-fails"
+            ? png("rgb(158,128,249)")
+            : "/registered-normal.svg",
+        normalBounds:
+          ordering === "normal-first" || ordering === "coverage-fails" ? undefined : bounds,
+        foil: {
+          style: "silver",
+          size: "board",
+          ...(ordering === "normal-first" || ordering === "coverage-fails"
+            ? { mask: "/registered-outer.svg" }
+            : {}),
+        },
+      });
+      const deadline = AbortSignal.timeout(5000);
+      void api.whenStickerSettled(c, undefined, deadline).then(() => {
+        c.dataset.settled = deadline.aborted ? "aborted" : "true";
+      });
+      // Give decoded immediate assets and subsequent frame copies time to finish before inspection.
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      api.refreshSticker(c);
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      );
+    }, ordering);
+    await expect.poll(() => Boolean(answer)).toBe(true);
+    const c = page.locator("#registered-finish");
+    expect(
+      await c.evaluate(
+        (el) => el instanceof HTMLCanvasElement && el.toDataURL() === el.dataset.before,
+      ),
+    ).toBe(true);
+    await expect(c).not.toHaveAttribute("data-settled", "true");
+    await expect(c).not.toHaveAttribute("data-error", /.+/);
+    answer?.();
+    await expect(c).toHaveAttribute("data-settled", "true");
+    if (ordering === "normal-fails" || ordering === "coverage-fails") {
+      await expect(c).toHaveAttribute("data-error", /normal|outer coverage/);
+      expect(
+        await c.evaluate(
+          (el) => el instanceof HTMLCanvasElement && el.toDataURL() === el.dataset.before,
+        ),
+      ).toBe(true);
+    } else {
+      await expect(c).not.toHaveAttribute("data-error", /.+/);
+      const size = await c.evaluate((el) => {
+        if (!(el instanceof HTMLCanvasElement)) throw new Error("Missing registered finish");
+        return { before: Number(el.dataset.beforeWidth), after: el.width };
+      });
+      if (ordering === "normal-first") expect(size.after).toBeLessThan(size.before);
+      else expect(size.after).toBeGreaterThan(size.before);
+    }
+  });
+}
+
+test("zero-size materials retain coverage without work until nonzero re-exposure", async ({
+  page,
+}) => {
+  await page.goto("/e2e/stickerLaminate.html?board=1");
+  const result = await page.evaluate(async () => {
+    const { required, watchCoverageJobs } = await import("./stickerMaterialFixture.ts");
+    const api = await import("../src/stickers/stickerRenderer.ts");
+    const image = document.createElement("canvas");
+    image.width = image.height = 80;
+    required(image.getContext("2d")).fillRect(0, 0, 80, 80);
+    const cut = image.toDataURL();
+    const c = document.createElement("canvas"),
+      other = document.createElement("canvas");
+    c.style.cssText = "position:absolute;left:20px;top:20px;width:80px;height:80px";
+    other.style.cssText = "position:absolute;left:160px;top:20px;width:80px;height:80px";
+    document.body.append(c, other);
+    const material = { print: cut, cut, turn: 0, finish: "gloss" as const };
+    const stop = api.mountSticker(c, { ...material, foil: { style: "silver", size: "board" } });
+    const stopOther = api.mountSticker(other, material);
+    await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
+    await api.whenStickerSettled(other, undefined, AbortSignal.timeout(5000));
+    const before = c.toDataURL();
+    const jobs = watchCoverageJobs(cut);
+    try {
+      c.style.display = "none";
+      api.refreshSticker(other);
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      );
+      const hidden = {
+        requests: jobs.jobs,
+        error: c.dataset.error ?? "",
+        retained: c.toDataURL() === before,
+      };
+      c.style.width = "100px";
+      c.style.display = "block";
+      api.refreshSticker(c);
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      );
+      await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
+      return {
+        hidden,
+        requests: jobs.jobs,
+        error: c.dataset.error ?? "",
+        width: c.width,
+        changed: c.toDataURL() !== before,
+      };
+    } finally {
+      jobs.restore();
+      stop();
+      stopOther();
+      c.remove();
+      other.remove();
+    }
+  });
+  expect(result.hidden).toEqual({ requests: 0, error: "", retained: true });
+  expect(result.requests).toBeGreaterThan(0);
+  expect(result.error).toBe("");
+  expect(result.changed).toBe(true);
+  expect(result.width).toBeGreaterThan(100);
 });

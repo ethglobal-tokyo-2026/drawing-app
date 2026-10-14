@@ -1,13 +1,15 @@
-import { memo, useCallback, useRef, useState, type CSSProperties, type Ref } from "react";
+import { memo, useCallback, useMemo, useRef, useState, type CSSProperties, type Ref } from "react";
 import { useTranslation } from "../i18n/react";
-import type { CreaseImage } from "./crease";
+import type { CreaseImage, CreaseBounds } from "./crease";
 import { setCreaseRevealSize } from "./creaseRevealSize";
-import { StickerLaminate } from "./StickerLaminate";
-import type { LaminateFinish } from "./laminateRenderer";
+import { StickerMaterial } from "./StickerMaterial";
+import type { LaminateFinish } from "./stickerRenderer";
 import { madeFoil } from "./madeFoil";
 import { useSharpSrc } from "./sharpImage";
 import { StickerCrease } from "./StickerCrease";
-import { StickerFoil, type FoilSize } from "./StickerFoil";
+import { StickerFoil } from "./StickerFoil";
+import type { FoilSize, FoilStyle } from "./foilMaterial";
+import type { StickerFoilMaterial } from "./stickerFoilMaterial";
 import type { StickerUrls } from "./stickerUrls";
 import { revealOnLoad } from "../ui/reveal";
 import "./nsfw-mark.css";
@@ -17,7 +19,7 @@ import "./sticker-figure.css";
  * A sticker's crease, baked: its base and rise lit from each side, which the one light blends between,
  * and its geometric normal data for the laminate reflection.
  */
-export type Crease = Record<CreaseImage, string>;
+export type Crease = Record<CreaseImage, string> & { normalBounds?: CreaseBounds };
 
 interface Props {
   urls: StickerUrls;
@@ -26,6 +28,8 @@ interface Props {
   height: number;
   /** Holo foil, for a sticker someone other than the board's owner drew, sized for where it shows. */
   foil?: FoilSize;
+  /** The explicit coming-soon Backing foil selection in the Shop. */
+  foilStyle?: FoilStyle;
   /** An NSFW sticker: pink foil in place of holo, at `foil`'s size or the board's, and a pink gloss. */
   nsfw?: boolean;
   /**
@@ -38,7 +42,7 @@ interface Props {
    * comes, with the 18+ mark over it; its outline and foil stay sharp.
    */
   veiled?: boolean;
-  /** Degrees it is turned on screen, for material geometry and its foil's glint. */
+  /** Degrees it is turned on screen, for its material's geometry. */
   turn?: number;
   /** Stuck to a board: it sits close to it, with the board's short cast. */
   stuck?: boolean;
@@ -71,6 +75,7 @@ export const StickerFigure = memo(function StickerFigure({
   width,
   height,
   foil,
+  foilStyle,
   nsfw = false,
   kyotoSeika = false,
   veiled = false,
@@ -121,7 +126,12 @@ export const StickerFigure = memo(function StickerFigure({
   // A foil that marks how it was made shows whoever drew it; holo marks someone else's hand.
   const made = madeFoil({ nsfw, kyotoSeika });
   const foilSize = foil ?? (made ? "board" : undefined);
-  const tone = made ?? "holo";
+  const tone = made ?? foilStyle ?? "holo";
+  const foilMaterial = useMemo<StickerFoilMaterial | undefined>(
+    () =>
+      foilSize ? { style: tone, size: foilSize, ...(urls.foil && { mask: urls.foil }) } : undefined,
+    [tone, foilSize, urls.foil],
+  );
   const style: CSSProperties = {
     "--ar": (width / height).toFixed(4),
     "--m": cssUrl(mask),
@@ -136,16 +146,18 @@ export const StickerFigure = memo(function StickerFigure({
   ].filter(Boolean);
   return (
     <span ref={ref} className={classes.join(" ")} style={style}>
-      {foilSize && <StickerFoil size={foilSize} turn={turn} tone={tone} mask={urls.foil} />}
+      {foilMaterial && <StickerFoil material={foilMaterial} cut={mask} active={laminateActive} />}
       {/* A foil's band casts for it. */}
       {stuck && !foilSize && <span className="sticker-figure__cast" aria-hidden="true" />}
       <img ref={imgRef} className="sticker-figure__img" src={src} alt="" draggable={false} />
-      <StickerLaminate
+      <StickerMaterial
         // Concealing artwork discards the previous bitmap before a replacement can load.
         key={veiled ? "veiled" : "visible"}
+        foil={foilMaterial}
         print={src}
         cut={mask}
         normal={readyCrease === crease ? crease?.normal : undefined}
+        normalBounds={readyCrease === crease ? crease?.normalBounds : undefined}
         turn={turn}
         finish={laminate}
         active={laminateActive}

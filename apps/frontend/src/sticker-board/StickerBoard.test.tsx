@@ -29,7 +29,7 @@ import { errors } from "../i18n/strings/errors";
 import { stickerBoard } from "../i18n/strings/stickerBoard";
 import { SessionKeeper } from "../sticker-creation/session/keptSession";
 import { formatMonthDay, formatNo, spokenDuration } from "../stickers/format";
-import * as laminateRenderer from "../stickers/laminateRenderer";
+import * as stickerRenderer from "../stickers/stickerRenderer";
 import type { Sheet } from "../tickets/ticketsContext";
 import { useTickets } from "../tickets/useTickets";
 import { TabsLeadSlot } from "../ui/TabsLead";
@@ -149,6 +149,27 @@ vi.mock("../line/liff", () => ({
   // The developer slip asks it who's signed in once a .env names demo people (VITE_DEMO_PEOPLE).
   mockPerson: () => ({ sub: "U1", name: "You" }),
 }));
+
+// Placement tests have synthetic dimensions and no 2D canvas/image decoder. Their static mask
+// acquisition stays pending until disposal; optical behavior is exercised by the browser fixtures.
+vi.mock("../stickers/foilCoverageImage", () => ({
+  foilCoverageImage: (
+    _cut: string,
+    _material: unknown,
+    _width: number,
+    _height: number,
+    signal: AbortSignal,
+  ) =>
+    new Promise((_, reject) => {
+      const cancel = () => reject(signal.reason);
+      if (signal.aborted) cancel();
+      else signal.addEventListener("abort", cancel, { once: true });
+    }),
+}));
+
+// Evaluate the large tray import graph before placement cases: cleanup's fixed deadline covers UI
+// work, while browser checks exercise loading the tray on demand.
+await import("./tray/StickerTray");
 
 /** Why a request that got no answer failed, as the board's alerts give it. */
 const NETWORK_ERROR = i18next.t(($) => $.errors.network);
@@ -312,8 +333,8 @@ describe("StickerBoard's normalized stack", () => {
   it("turns without rendering sticker wrappers or figures while retaining their active laminate callbacks", async () => {
     onAPhone();
     stubResizeObservers();
-    const mount = vi.spyOn(laminateRenderer, "mountLaminate").mockImplementation(() => vi.fn());
-    const refresh = vi.spyOn(laminateRenderer, "refreshLaminate").mockImplementation(() => {});
+    const mount = vi.spyOn(stickerRenderer, "mountSticker").mockImplementation(() => vi.fn());
+    const refresh = vi.spyOn(stickerRenderer, "refreshSticker").mockImplementation(() => {});
     const rows = [0.14, 0.37, 0.63, 0.86].map((x) =>
       boardSticker({
         sticker: sticker({ artist: TEST_OWNER, ownerId: TEST_ME.id }),
@@ -323,7 +344,7 @@ describe("StickerBoard's normalized stack", () => {
     const { host } = await openBoard(boardApi(rows, { userStats: async () => settledStats }));
     await act(() => vi.dynamicImportSettled());
     const canvases = [
-      ...host.querySelectorAll<HTMLCanvasElement>(".placed-sticker .sticker-laminate"),
+      ...host.querySelectorAll<HTMLCanvasElement>(".placed-sticker .sticker-material"),
     ];
     expect(canvases).toHaveLength(4);
     expect(mount).toHaveBeenCalledTimes(4);
@@ -355,7 +376,7 @@ describe("StickerBoard's normalized stack", () => {
     expect(options.map((surface) => surface.active?.())).toEqual([true, true, true, true]);
     expect(stickerRenders.placed).toEqual(placedBefore);
     expect(stickerRenders.figure).toEqual(figuresBefore);
-    expect([...host.querySelectorAll(".placed-sticker .sticker-laminate")]).toEqual(canvases);
+    expect([...host.querySelectorAll(".placed-sticker .sticker-material")]).toEqual(canvases);
     expect(mount).toHaveBeenCalledTimes(4);
     expect(refresh).toHaveBeenCalledTimes(4);
     for (const canvas of canvases) expect(refresh).toHaveBeenCalledWith(canvas);

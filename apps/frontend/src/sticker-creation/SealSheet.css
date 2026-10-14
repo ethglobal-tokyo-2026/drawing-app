@@ -40,39 +40,24 @@
   margin-top: 8px;
 }
 
-/* A rectangle's silhouette, for the foil to grow its band from: a mask reads only its opacity. */
+/* The paper and its foil share the preview's source bounds and turn. */
 .seal-preview__sticker {
-  --m: linear-gradient(var(--ink) 0 0);
   position: relative;
   display: block;
+  width: min(118px, calc(118px * var(--ar)));
+  aspect-ratio: var(--ar);
   rotate: -3deg;
 }
-
-/* The drawing on white, its edge a kiss-cut with the sticker's cast below. The canvas keeps the
-   crop's own shape inside the box, leaving room for the foil band and the turn. */
-.seal-preview__ink {
-  position: relative;
-  display: block;
-  max-width: 118px;
-  max-height: 118px;
+.seal-preview__ink[hidden] {
+  display: none;
+}
+/* Its print, shown until its material is ready, has the paper's rounded corners too. */
+.seal-preview .sticker-figure__img {
   border-radius: var(--r-label);
-  filter: var(--sticker-cut) var(--sticker-cast);
 }
-
-/* With foil, the band is the edge: the cut and the cast fall from it instead. */
-.seal-preview .sticker-foil ~ .seal-preview__ink {
-  filter: none;
-}
-
-.seal-preview .sticker-foil {
-  animation: seal-foil-on 260ms var(--ease-out);
-}
-
-@keyframes seal-foil-on {
-  from {
-    opacity: 0;
-    scale: 0.94;
-  }
+/* Marked 18+, the preview takes the pink foil but not the board's pink gloss. */
+.seal-preview .sticker-figure__gloss {
+  display: none;
 }
 
 /* The title, the pair on a sheet in Kyoto Seika Practice Mode, and the switch row directly under
@@ -221,7 +206,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .seal-preview .sticker-foil,
   .seal-sheet__title.is-turned {
     animation: none;
   }

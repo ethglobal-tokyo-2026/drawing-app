@@ -24,8 +24,8 @@ async function observeCreaseWork(page: Page) {
         if (record.type === "attributes") work.revealChanges++;
         for (const node of record.addedNodes) {
           if (!(node instanceof Element)) continue;
-          if (node.matches(".sticker-laminate-flat")) work.flatSnapshots++;
-          work.flatSnapshots += node.querySelectorAll(".sticker-laminate-flat").length;
+          if (node.matches(".sticker-material-flat")) work.flatSnapshots++;
+          work.flatSnapshots += node.querySelectorAll(".sticker-material-flat").length;
         }
       }
     }).observe(document, {
@@ -40,8 +40,8 @@ async function observeCreaseWork(page: Page) {
       configurable: true,
       value: function (this: CanvasRenderingContext2D, ...args: unknown[]) {
         if (
-          this.canvas.classList.contains("sticker-laminate") ||
-          this.canvas.classList.contains("sticker-laminate-flat")
+          this.canvas.classList.contains("sticker-material") ||
+          this.canvas.classList.contains("sticker-material-flat")
         )
           work.materialCopies++;
         Reflect.apply(drawImage, this, args);
@@ -66,9 +66,9 @@ async function expectSettledCrease(page: Page) {
   expect(settled.work.revealChanges, "No timed reveal may start without placement intent").toBe(0);
   expect(settled.work.flatSnapshots, "Baseline creases need no temporary flat material").toBe(0);
   await expect(page.locator("[data-reveal] [data-crease-reveal]")).toHaveCount(0);
-  await expect(page.locator("[data-reveal] canvas.sticker-laminate-flat")).toHaveCount(0);
+  await expect(page.locator("[data-reveal] canvas.sticker-material-flat")).toHaveCount(0);
   const paperIsComplete = await page
-    .locator("[data-reveal] canvas.sticker-laminate")
+    .locator("[data-reveal] canvas.sticker-material")
     .evaluate((canvas) => {
       if (!(canvas instanceof HTMLCanvasElement)) throw new Error("The laminate canvas is missing");
       if (!canvas.width || !canvas.height)
@@ -186,7 +186,7 @@ async function figurePixels(page: Page) {
 
 const figureBounds = (page: Page) =>
   page
-    .locator("[data-reveal] .sticker-figure__img, [data-reveal] canvas.sticker-laminate")
+    .locator("[data-reveal] .sticker-figure__img, [data-reveal] canvas.sticker-material")
     .evaluateAll((elements) =>
       elements.map((element) => {
         const { left, top, width, height } = element.getBoundingClientRect();
@@ -217,7 +217,7 @@ async function openFixture(page: Page, query = "") {
     if (message.type() === "error") errors.push(message.text());
   });
   await page.goto(`/e2e/creaseReveal.html${query}`);
-  const coat = page.locator("[data-reveal] canvas.sticker-laminate");
+  const coat = page.locator("[data-reveal] canvas.sticker-material");
   await expect(coat).toHaveAttribute("data-state", "ready");
   await page.evaluate(() => {
     window.creaseRevealFixture.tilt(40, 0);
@@ -719,7 +719,7 @@ test("a failed crease normal keeps new paint hidden over retained material and r
       }),
     ),
   );
-  const coat = page.locator("[data-reveal] canvas.sticker-laminate");
+  const coat = page.locator("[data-reveal] canvas.sticker-material");
   await expect(coat).toHaveAttribute("data-error", /Replacing crease normal.*bake=1.*503/);
   await page.evaluate(() => window.creaseRevealFixture.whenSettled("normal-error"));
   await page.clock.runFor(32);
@@ -819,7 +819,7 @@ test("a failed print upgrade reveals a ready crease over retained artwork withou
       }),
     ),
   );
-  const coat = page.locator("[data-reveal] canvas.sticker-laminate");
+  const coat = page.locator("[data-reveal] canvas.sticker-material");
   await expect(coat).toHaveAttribute("data-error", /print.*503/);
   await page.clock.runFor(1000);
   const final = { paint: await figurePixels(page), coat: await coatPixels(page) };
@@ -886,7 +886,7 @@ test("a crease arriving after GPU failure paints over visible artwork", async ({
     if (message.type() === "error") errors.push(message.text());
   });
   await page.goto("/e2e/creaseReveal.html");
-  const coat = page.locator("[data-reveal] canvas.sticker-laminate");
+  const coat = page.locator("[data-reveal] canvas.sticker-material");
   await expect(coat).toHaveAttribute("data-state", "failed");
   await expect(coat).toHaveAttribute("data-error", /WebGL.*unavailable/);
   const image = page.locator("[data-reveal] .sticker-figure__img");

@@ -71,8 +71,8 @@ test("premultiplied laminate preserves the qualified color and fractional cut ov
   await page.goto("/e2e/stickerLaminate.html");
   const observed = await page.evaluate(
     async ({ vertex, fragment, samples, cases }) => {
-      const { mountLaminate, updateLaminate, turnLaminate, whenLaminateSettled } =
-        await import("../src/stickers/laminateRenderer.ts");
+      const { mountSticker, updateSticker, turnSticker, whenStickerSettled } =
+        await import("../src/stickers/stickerRenderer.ts");
       const width = 140;
       const height = 112;
       const contexts: WebGLRenderingContext[] = [];
@@ -149,7 +149,7 @@ test("premultiplied laminate preserves the qualified color and fractional cut ov
       if (!first) throw new Error("The alpha qualification has no cases");
       const initialPrint = prints.get(first.print);
       if (!initialPrint) throw new Error("The first alpha reference print is missing");
-      const release = mountLaminate(canvas, {
+      const release = mountSticker(canvas, {
         print: initialPrint,
         cut,
         turn: first.turn,
@@ -158,7 +158,7 @@ test("premultiplied laminate preserves the qualified color and fractional cut ov
       const reference = document.createElement("canvas");
       let referenceGL: WebGLRenderingContext | null = null;
       try {
-        await whenLaminateSettled(canvas, undefined, AbortSignal.timeout(20_000));
+        await whenStickerSettled(canvas, undefined, AbortSignal.timeout(20_000));
         if (canvas.dataset.state !== "ready")
           throw new Error("The actual laminate snapshot did not become ready");
         recordingProduction = false;
@@ -272,14 +272,14 @@ test("premultiplied laminate preserves the qualified color and fractional cut ov
         for (const material of cases) {
           const print = prints.get(material.print);
           if (!print) throw new Error(`The ${material.print} reference is missing`);
-          updateLaminate(canvas, {
+          updateSticker(canvas, {
             print,
             cut,
             normal: material.normal ? normal : undefined,
             finish: material.finish,
           });
-          turnLaminate(canvas, material.turn, material.tiltX, material.tiltY);
-          await whenLaminateSettled(canvas, undefined, AbortSignal.timeout(20_000));
+          turnSticker(canvas, material.turn, material.tiltX, material.tiltY);
+          await whenStickerSettled(canvas, undefined, AbortSignal.timeout(20_000));
           const textures = [
             await bind(0, "printImage", print),
             await bind(1, "cutImage", cut),
@@ -459,4 +459,67 @@ test("premultiplied laminate preserves the qualified color and fractional cut ov
     observed.attributes[0]?.premultipliedAlpha,
     "The actual laminate must use the qualified premultiplied snapshot path",
   ).toBe(true);
+});
+
+test("complete material covers fractional paper edges and independent sealing amounts", async ({
+  page,
+}) => {
+  await page.goto("/e2e/stickerLaminate.html?board=1");
+  const result = await page.evaluate(async () => {
+    const { required } = await import("./stickerMaterialFixture.ts");
+    const api = await import("../src/stickers/stickerRenderer.ts");
+    const png = (alpha: number) => {
+      const c = document.createElement("canvas");
+      c.width = c.height = 32;
+      const cx = required(c.getContext("2d"));
+      cx.fillStyle = `rgba(255,255,255,${alpha / 255})`;
+      cx.fillRect(0, 0, 32, 32);
+      return c.toDataURL();
+    };
+    const c = document.createElement("canvas");
+    c.style.cssText = "position:absolute;left:20px;top:20px;width:32px;height:32px";
+    document.body.append(c);
+    const foil = { style: "silver" as const, size: "board" as const, mask: png(128) };
+    const material = { print: png(255), cut: png(128), finish: "gloss" as const, foil };
+    const release = api.mountSticker(c, { ...material, turn: 0 });
+    const pixel = () =>
+      Array.from(required(c.getContext("2d")).getImageData(c.width / 2, c.height / 2, 1, 1).data);
+    try {
+      await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
+      const combined = pixel();
+      api.setStickerAmounts(c, 0, 1);
+      await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
+      const foilOnly = pixel();
+      api.setStickerAmounts(c, 1, 0);
+      await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
+      const paperOnly = pixel();
+      api.setStickerAmounts(c, 1, 1);
+      api.updateSticker(c, { ...material, cut: png(255) });
+      await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
+      const opaque = pixel();
+      api.setStickerAmounts(c, 0, 1);
+      await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
+      const occluded = pixel();
+      api.setStickerAmounts(c, 1, 1);
+      api.updateSticker(c, { ...material, cut: png(255), foil: undefined });
+      await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
+      return { combined, foilOnly, paperOnly, opaque, occluded, paper: pixel() };
+    } finally {
+      release();
+      c.remove();
+    }
+  });
+  expect(result.combined[3]).toBeCloseTo(192, -0.3);
+  expect(result.opaque).toEqual(result.paper);
+  expect(result.occluded).toEqual([0, 0, 0, 0]);
+  expect(result.foilOnly[3]).toBeCloseTo(64, -0.3);
+  expect(result.paperOnly[3]).toBe(128);
+  for (let channel = 0; channel < 3; channel++) {
+    const expected =
+      (result.paperOnly[channel] * result.paperOnly[3]) / 255 +
+      (result.foilOnly[channel] * result.foilOnly[3]) / 255;
+    expect(
+      Math.abs((result.combined[channel] * result.combined[3]) / 255 - expected),
+    ).toBeLessThanOrEqual(2);
+  }
 });

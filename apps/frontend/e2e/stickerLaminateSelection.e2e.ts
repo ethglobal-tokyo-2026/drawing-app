@@ -1,3 +1,4 @@
+import { observeStickerHardware, qualifyStickerScene } from "./stickerPerformance";
 import { expect } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
 import { say, sealFromBoard, signIn, signedInUserId, test } from "./helpers.ts";
@@ -9,6 +10,7 @@ import {
 } from "./stickerPerformance.ts";
 
 test.use(ipad);
+test.beforeEach(async ({ page }) => observeStickerHardware(page));
 
 test("initial board material settles before deferred startup work begins", async ({ page }) => {
   await signIn(page, "laminate-startup", "en");
@@ -74,7 +76,7 @@ test("initial board material settles before deferred startup work begins", async
     )
     .toBeGreaterThan(0);
   await expect(
-    page.locator(".placed-sticker canvas.sticker-laminate[data-state=ready]"),
+    page.locator(".placed-sticker canvas.sticker-material[data-state=ready]"),
   ).toHaveCount(2);
   // Cross the old image-only quiet period: incomplete material must not release deferred imports or tray images.
   await page.waitForTimeout(1100);
@@ -87,7 +89,7 @@ test("initial board material settles before deferred startup work begins", async
     Reflect.apply(release, undefined, []);
   });
   await expect.poll(readStartup).toContain("board complete");
-  await expect(page.locator(".placed-sticker canvas.sticker-laminate[data-error]")).toHaveCount(0);
+  await expect(page.locator(".placed-sticker canvas.sticker-material[data-error]")).toHaveCount(0);
 });
 
 test("selecting overlapping stickers retains their coating without a long input stall", async ({
@@ -121,13 +123,14 @@ test("selecting overlapping stickers retains their coating without a long input 
     expect(response.status(), await response.text()).toBe(200);
   }
   await page.reload();
-  const coats = page.locator(".placed-sticker canvas.sticker-laminate[data-state=ready]");
+  const coats = page.locator(".placed-sticker canvas.sticker-material[data-state=ready]");
   await expect(coats).toHaveCount(2);
+  await qualifyStickerScene(page, info, "selection");
   // Include the normal rebake after selecting, rather than measuring only an already-settled board.
   const frames = await page.evaluate(async (id) => {
     const sticker = document.querySelector(`[data-sticker-id="${id}"]`);
     if (!(sticker instanceof HTMLElement)) throw new Error("The selection target is missing");
-    const originalCoats = [...document.querySelectorAll(".placed-sticker canvas.sticker-laminate")];
+    const originalCoats = [...document.querySelectorAll(".placed-sticker canvas.sticker-material")];
     const intervals: number[] = [];
     let lostSnapshots = 0;
     const started = performance.now();
@@ -176,4 +179,60 @@ test("selecting overlapping stickers retains their coating without a long input 
     ),
     "At least 95% of selection frames should remain within 16.7ms",
   ).toBeLessThanOrEqual(stickerDisplayBudget.p95Ms);
+});
+
+test("decoded board artwork waits for an actual delayed required foil commit", async ({ page }) => {
+  await page.goto("/e2e/stickerLaminate.html?count=1&board=1&side=240");
+  await expect(page.locator("canvas.sticker-material")).toHaveAttribute("data-state", "ready");
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let requested = false;
+  await page.route("**/required-foil.svg", async (route) => {
+    requested = true;
+    await held;
+    await route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><rect width="240" height="240" fill="white"/></svg>',
+    });
+  });
+  await page.evaluate(async () => {
+    const { updateSticker } = await import("../src/stickers/stickerRenderer.ts");
+    const { followBoardAssembly, forgetBoardComplete } =
+      await import("../src/sticker-board/boardComplete.ts");
+    const { CreaseStore } = await import("../src/sticker-board/useCreases.ts");
+    const host = document.querySelector("[data-sticker]");
+    const canvas = host?.querySelector("canvas.sticker-material");
+    const img = host?.querySelector("img");
+    if (!(host instanceof HTMLElement) || !(canvas instanceof HTMLCanvasElement) || !img)
+      throw new Error("The foil readiness fixture is missing");
+    host.classList.add("placed-sticker");
+    host.dataset.stickerId = "required";
+    const print = img.src;
+    const figure = host.querySelector(".sticker-figure");
+    if (!figure) throw new Error("The foil readiness figure is missing");
+    const cut = getComputedStyle(figure).getPropertyValue("--m").slice(5, -2);
+    updateSticker(canvas, {
+      print,
+      cut,
+      finish: "gloss",
+      foil: { style: "holo", size: "board", mask: "/required-foil.svg" },
+    });
+    const creases = new CreaseStore();
+    creases.want([]);
+    forgetBoardComplete();
+    followBoardAssembly([], { fresh: true, materials: { root: host, creases, active: true } });
+  });
+  await expect.poll(() => requested).toBe(true);
+  const complete = () =>
+    page.evaluate(async () => {
+      const { readBootMilestones } = await import("../src/performance/bootMilestones.ts");
+      return readBootMilestones().some((entry) => entry.step === "board complete");
+    });
+  await page.waitForTimeout(1100);
+  expect(await complete()).toBe(false);
+  release();
+  await expect.poll(complete).toBe(true);
+  await expect(page.locator("canvas.sticker-material")).toHaveAttribute("data-foil", "true");
 });

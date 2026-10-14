@@ -84,7 +84,7 @@
 .seal-ceremony__plain,
 .seal-ceremony__gloss,
 .seal-ceremony__pour,
-.seal-ceremony__sticker :is(.sticker-foil, .sticker-laminate) {
+.seal-ceremony__sticker :is(.sticker-foil, .sticker-material) {
   opacity: 0;
 }
 
@@ -142,4 +142,12 @@
     inset 0 0 0 2.5px rgba(255, 255, 255, 0.95),
     inset 0 0 0 5.5px rgba(28, 24, 36, 0.08),
     inset 0 0 16px 7px rgba(255, 255, 255, 0.38);
+}
+
+/* A committed complete canvas replaces only the static band. Timed plain/gloss/pour passes keep
+   forming beneath its independently faded paper, including while the material is partial. */
+.seal-ceremony__sticker:has(> .sticker-material[data-state="ready"][data-foil="true"])
+  > .sticker-foil
+  .sticker-foil__band {
+  visibility: hidden;
 }

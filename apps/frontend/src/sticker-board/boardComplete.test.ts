@@ -23,7 +23,7 @@ const material = vi.hoisted(() => ({
   settled:
     vi.fn<(canvas: HTMLCanvasElement, expected: unknown, signal: AbortSignal) => Promise<void>>(),
 }));
-vi.mock("../stickers/laminateRenderer", () => ({ whenLaminateSettled: material.settled }));
+vi.mock("../stickers/stickerRenderer", () => ({ whenStickerSettled: material.settled }));
 const materialDecodes = new Map<HTMLCanvasElement, () => void>();
 
 function placedCanvas(root: HTMLElement, left = 20) {
@@ -31,7 +31,7 @@ function placedCanvas(root: HTMLElement, left = 20) {
   sticker.className = "placed-sticker";
   sticker.dataset.stickerId = "top";
   const canvas = document.createElement("canvas");
-  canvas.className = "sticker-laminate";
+  canvas.className = "sticker-material";
   canvas.dataset.state = "loading";
   Object.defineProperties(canvas, {
     clientWidth: { value: 120 },

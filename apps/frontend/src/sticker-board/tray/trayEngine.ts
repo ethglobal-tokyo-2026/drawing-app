@@ -49,7 +49,7 @@ import {
 import { createZipper, mouthRange, showsFrom } from "./zipper";
 import "../../stickers/nsfw-mark.css";
 import "../../stickers/sticker-foil.css";
-import "../../stickers/sticker-laminate.css";
+import "../../stickers/sticker-material.css";
 import "./sticker-tray.css";
 
 // The tray's callers take its types and icons from here.

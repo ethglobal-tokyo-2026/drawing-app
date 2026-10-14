@@ -60,6 +60,7 @@ describe("StickerFigure's laminate", () => {
         crease={{
           base: "base.png",
           normal: "normal.png",
+          normalBounds: { x: -0.1, y: 0, width: 1.1, height: 1 },
           topLeft: "top-left.png",
           bottomRight: "bottom-right.png",
           topRight: "top-right.png",
@@ -70,12 +71,25 @@ describe("StickerFigure's laminate", () => {
     await act(async () => {
       await Promise.resolve();
     });
-    expect(rendered.host.querySelector(".sticker-laminate")?.getAttribute("data-state")).toBe(
+    expect(rendered.host.querySelector(".sticker-material")?.getAttribute("data-state")).toBe(
       "failed",
     );
     expect(rendered.host.querySelector(".sticker-figure__img")?.getAttribute("src")).toBe(
       testStickerUrls("s").png,
     );
     expect(rendered.host.querySelectorAll(".sticker-crease > i")).toHaveLength(5);
+  });
+});
+
+describe("StickerFigure's complete foil finish", () => {
+  it.each([
+    [{ kyotoSeika: true }, "kyoto-seika"],
+    [{ kyotoSeika: true, nsfw: true }, "pink"],
+    [{ foil: "board" as const }, "holo"],
+  ])("renders the resolved foil in its one finish", (props, style) => {
+    foilOf(props);
+    const canvas = rendered?.host.querySelector("canvas.sticker-material");
+    expect(canvas?.getAttribute("data-foil-style")).toBe(style);
+    expect(rendered?.host.querySelectorAll("canvas.sticker-material")).toHaveLength(1);
   });
 });

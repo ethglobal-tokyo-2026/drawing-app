@@ -2,14 +2,21 @@ import {
   useEffect,
   useEffectEvent,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
 } from "react";
 import { useLight } from "../../stickers/light";
-import { mountLaminate, turnLaminate } from "../../stickers/laminateRenderer";
-import "../../stickers/sticker-laminate.css";
+import {
+  mountSticker,
+  turnSticker,
+  updateSticker,
+  setStickerAmounts,
+} from "../../stickers/stickerRenderer";
+import "../../stickers/sticker-material.css";
 import { madeFoil } from "../../stickers/madeFoil";
+import type { StickerFoilMaterial } from "../../stickers/stickerFoilMaterial";
 import { StickerFoil } from "../../stickers/StickerFoil";
 import type { Sticker } from "@drawing-app/api/client";
 import { releaseCanvas } from "../../ui/releaseCanvas";
@@ -39,8 +46,6 @@ const CUTTER_FADE_MS = 160;
 const TRAIL_GROW_MS = 700;
 /** A frame after a hitch moves the ceremony on by at most this, so a hitch slows it rather than skipping it. */
 const MAX_FRAME_MS = 64;
-/** The sticker's turn as it lands on the card, which a foil's glint undoes. */
-const LANDED_TURN_DEG = -2;
 /** Until the card is there, the sticker stays on its backing: nothing flies before the seal is recorded. */
 const ON_BACKING: Flight = { peel: { x: 0, y: 0 }, dx: 0, dy: 0, scale: 1 };
 
@@ -125,6 +130,17 @@ export function SealCeremony({
   onBoard,
   onShop,
 }: Props) {
+  const tone =
+    sealed && madeFoil({ nsfw: sealed.nsfw, kyotoSeika: sealed.kyotoSeikaSubjects !== null });
+  const foil = useMemo<StickerFoilMaterial | undefined>(
+    () => (tone ? { style: tone, size: "board" } : undefined),
+    [tone],
+  );
+  const heldFoil = useRef(foil);
+  useLayoutEffect(() => {
+    heldFoil.current = foil;
+  }, [foil]);
+  const heldPrint = useRef<string | undefined>(undefined);
   const reduced = useReducedMotion();
   useLight();
   // Read by the frame loop, so neither the seal's answer nor a change to reduced motion restarts it.
@@ -160,7 +176,7 @@ export function SealCeremony({
       gloss: el<HTMLCanvasElement>(".seal-ceremony__gloss"),
       pour: el<HTMLElement>(".seal-ceremony__pour"),
       front: el<HTMLElement>(".seal-ceremony__pour > b"),
-      laminate: el<HTMLCanvasElement>("canvas.sticker-laminate"),
+      laminate: el<HTMLCanvasElement>("canvas.sticker-material"),
     };
 
     const r = Math.min(devicePixelRatio || 1, 2);
@@ -171,11 +187,15 @@ export function SealCeremony({
     paintUsedStickerSilhouette(parts.usedStickerSilhouette, box, sticker.maskImage, r);
     const cutLine = makeCutLine(parts.cut, parts.cutter, box, contour, r);
     const print = URL.createObjectURL(sticker.png);
-    const releaseLaminate = mountLaminate(parts.laminate, {
+    heldPrint.current = print;
+    const releaseFinish = mountSticker(parts.laminate, {
       print,
       cut: sticker.maskUrl,
       turn: 0,
       finish: "gloss",
+      foil: heldFoil.current,
+      paperAmount: 0,
+      foilAmount: 0,
     });
 
     // The card comes with the sealed sticker, so its slot is measured once the card is there, and
@@ -242,13 +262,14 @@ export function SealCeremony({
       parts.front.style.transform = `scale(${f.pour.scale.toFixed(4)}) rotate(${f.pour.turn.toFixed(2)}deg)`;
       opacity(parts.pour, f.pour.opacity);
       opacity(parts.gloss, f.gloss);
-      opacity(parts.laminate, f.spec.opacity);
+      opacity(parts.laminate, 1);
+      setStickerAmounts(parts.laminate, f.spec.opacity, f.foil);
       // A foil that marks how the sticker was made comes with the seal's answer.
       const foil = parts.sticker.querySelector<HTMLElement>(".sticker-foil");
       if (foil) opacity(foil, f.foil);
       const p = f.sticker;
       parts.sticker.style.transform = `perspective(1000px) translate(${p.x}px, ${p.y}px) rotate(${p.rotate}deg) rotateX(${p.rotateX}deg) rotateY(${p.rotateY}deg) scale(${p.scale})`;
-      turnLaminate(parts.laminate, p.rotate, p.rotateX, p.rotateY);
+      turnSticker(parts.laminate, p.rotate, p.rotateX, p.rotateY);
       const s = f.shadow;
       opacity(parts.shadow, s.opacity);
       parts.shadow.style.transform = `translate(${s.x}px, ${s.y}px) rotate(${s.rotate}deg) scale(${s.scale})`;
@@ -315,7 +336,8 @@ export function SealCeremony({
       stopKeys();
       slotAt?.stop();
       host.removeAttribute("data-lifted");
-      releaseLaminate();
+      releaseFinish();
+      heldPrint.current = undefined;
       URL.revokeObjectURL(print);
       [
         parts.shadow,
@@ -327,6 +349,14 @@ export function SealCeremony({
       ].forEach(releaseCanvas);
     };
   }, [sticker, sheet]);
+
+  // The server's answer chooses foil without restarting the existing formation timeline.
+  useLayoutEffect(() => {
+    const canvas = root.current?.querySelector<HTMLCanvasElement>("canvas.sticker-material");
+    const print = heldPrint.current;
+    if (canvas && print)
+      updateSticker(canvas, { print, cut: sticker.maskUrl, finish: "gloss", foil });
+  }, [foil, sticker]);
 
   // The seal is recorded, or motion is back on: the ceremony goes on from its wait.
   useEffect(() => {
@@ -343,11 +373,6 @@ export function SealCeremony({
     "--w": px(box.w),
     "--h": px(box.h),
   };
-
-  // Pink on an 18+ sticker, else the Kyoto Seika Practice Mode foil on one drawn in that mode: the
-  // Other Hand Rule lets these show on your own stickers.
-  const foil =
-    sealed && madeFoil({ nsfw: sealed.nsfw, kyotoSeika: sealed.kyotoSeikaSubjects !== null });
 
   const classes = ["seal-ceremony", failed && "is-failed", leaving && "is-leaving"];
   return (
@@ -396,13 +421,13 @@ export function SealCeremony({
         )}
         <canvas className="seal-ceremony__shadow" style={boxStyle(box)} aria-hidden="true" />
         <div className="seal-ceremony__sticker" style={resin} aria-hidden="true">
-          {foil && sealed && <StickerFoil size="board" tone={foil} turn={LANDED_TURN_DEG} />}
+          {foil && <StickerFoil material={foil} cut={sticker.maskUrl} />}
           <canvas className="seal-ceremony__plain" />
           <canvas className="seal-ceremony__gloss" />
           <span className="seal-ceremony__pour">
             <b style={boxStyle(pour)} />
           </span>
-          <canvas className="sticker-laminate" data-state="loading" data-finish="gloss" />
+          <canvas className="sticker-material" data-state="loading" data-finish="gloss" />
         </div>
       </div>
     </div>

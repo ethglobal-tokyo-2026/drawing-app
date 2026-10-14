@@ -1,0 +1,50 @@
+.sticker-material-surface {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  isolation: isolate;
+  filter: var(--sticker-cut) var(--sticker-cast);
+}
+
+.sticker-material,
+.sticker-material-flat {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.sticker-material[data-state="ready"],
+.sticker-material-flat {
+  visibility: inherit;
+}
+.sticker-figure:has(
+    > .sticker-material-surface .sticker-material[data-state="ready"]:not([data-partial="true"])
+  )
+  > .sticker-figure__img {
+  visibility: hidden;
+}
+.sticker-figure:is(.is-stuck, .is-veiled) > .sticker-material-surface {
+  filter: none;
+}
+
+/* Ready flat paper stays beneath the bent snapshot for the short diagonal press. */
+.sticker-material-surface[data-crease-reveal] > .sticker-material-bend {
+  /* Complementary coverage adds within the isolated film, preserving its cut's alpha. */
+  mix-blend-mode: plus-lighter;
+}
+
+.sticker-figure:has(
+    > .sticker-material-surface
+      .sticker-material[data-state="ready"][data-foil="true"]:not([data-partial="true"])
+  )
+  > .sticker-foil
+  .sticker-foil__band {
+  visibility: hidden;
+}
+.sticker-material-surface:has(.sticker-material[data-foil="true"]) {
+  filter: none;
+}

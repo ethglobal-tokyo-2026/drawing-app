@@ -441,3 +441,41 @@ describe("crease", () => {
     }
   });
 });
+
+describe("registered crease support", () => {
+  it("averages accepted support planes only in the source frame", () => {
+    const lower = field((x) => (x < 30 ? 1 : 0));
+    const upper = field(() => 1);
+    const surface = stackedSurface([lower, upper], W, H, { x: 0, y: 0, width: 60, height: H });
+    expect(surface[W - 1]).toBe(1.5);
+  });
+
+  it("retains a normal-only bend within requested geometry when paint has no coverage", () => {
+    const pixels = creasePixels({
+      width: W,
+      height: H,
+      scale: 1,
+      lights: CREASE_SIDES,
+      own: field(() => 0),
+      surface: field((x) => (x < 60 ? 1 : 0)),
+      normalRegion: { x: 45, y: 10, width: 30, height: 40 },
+    });
+    expect(pixels).not.toBeNull();
+    if (!pixels) throw new Error("The outside bend lost its normal");
+    expect(bends(pixels, 45, 75, 10, 50)).toBe(true);
+    expect(peakTone(pixels)).toBe(0);
+  });
+});
+
+it("keeps real later supports outside the source without changing accepted source levels", () => {
+  const lower = field((x) => (x < 30 || x >= 80 ? 1 : 0));
+  const outside = field((x) => (x >= 80 ? 1 : 0));
+  const accepted = field((x) => (x < 60 ? 1 : 0));
+  const bounds = { x: 0, y: 0, width: 60, height: H };
+  const extended = stackedSurface([lower, outside, accepted], W, H, bounds);
+  expect(extended[100]).toBe(2);
+  expect(extended[10]).toBe(1.5);
+  const withoutOutside = stackedSurface([lower, accepted], W, H, bounds);
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < 60; x++) expect(extended[y * W + x]).toBe(withoutOutside[y * W + x]);
+});

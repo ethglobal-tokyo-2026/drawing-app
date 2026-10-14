@@ -270,7 +270,7 @@ test("fully erased ink offers recovery, and Undo restores a ready preview", asyn
   await undo(page).click();
   await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBeGreaterThan(0);
   await openSealSheet(page, language);
-  await expect(page.locator(".seal-preview__ink")).toBeVisible();
+  await expect(page.locator(".seal-preview__sticker")).toBeVisible();
   await expect(page.getByRole("switch", { name: creation.sealSheet.nsfwLabel.en })).toBeVisible();
 });
 
@@ -309,7 +309,7 @@ test("restoring opacity replaces an empty preview with ready ink", async ({ page
   await expect(page.getByText(creation.sealSheet.empty.en, { exact: true })).toBeVisible();
   await expect(page.locator(".seal-sheet").getByRole("switch")).toHaveCount(0);
   await expect(button(page, creation.sealSheet.seal)).toBeDisabled();
-  await expect(page.locator(".seal-preview__ink")).toBeHidden();
+  await expect(page.locator(".seal-preview__sticker")).toBeHidden();
   await button(page, creation.sealSheet.backToDrawing).click();
   await page.reload();
   await button(page, stickerBoard.board.continueDrawing).click();
@@ -320,7 +320,7 @@ test("restoring opacity replaces an empty preview with ready ink", async ({ page
   await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBeGreaterThan(0);
   await chip(page, 2).click();
   await openSealSheet(page, language);
-  await expect(page.locator(".seal-preview__ink")).toBeVisible();
+  await expect(page.locator(".seal-preview__sticker")).toBeVisible();
   await expect(page.getByRole("switch", { name: creation.sealSheet.nsfwLabel.en })).toBeVisible();
   expect(sealRequests).toHaveLength(0);
 });
@@ -336,7 +336,7 @@ test("clipping to an empty base preserves recoverable ink", async ({ page }) => 
   await expect(page.getByText(creation.sealSheet.empty.en, { exact: true })).toBeVisible();
   await expect(page.locator(".seal-sheet").getByRole("switch")).toHaveCount(0);
   await expect(button(page, creation.sealSheet.seal)).toBeDisabled();
-  await expect(page.locator(".seal-preview__ink")).toBeHidden();
+  await expect(page.locator(".seal-preview__sticker")).toBeHidden();
   await button(page, creation.sealSheet.backToDrawing).click();
   await page.reload();
   await button(page, stickerBoard.board.continueDrawing).click();
@@ -346,7 +346,7 @@ test("clipping to an empty base preserves recoverable ink", async ({ page }) => 
   await layerSwitch(page, copy.clip).click();
   await chip(page, 2).click();
   await openSealSheet(page, language);
-  await expect(page.locator(".seal-preview__ink")).toBeVisible();
+  await expect(page.locator(".seal-preview__sticker")).toBeVisible();
   await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBeGreaterThan(0);
   expect(sealRequests).toHaveLength(0);
 });

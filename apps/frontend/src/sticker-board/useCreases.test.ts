@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { CREASE_SIDES } from "../stickers/crease";
 import type { Affine, CreaseJob, CreaseReply } from "../stickers/creaseWorker";
 import { kyotoSeikaBandWidth } from "../stickers/kyotoSeikaFoil";
-import type { FoilTone } from "../stickers/StickerFoil";
+import type { FoilTone } from "../stickers/foilMaterial";
 import { testStickerUrls } from "../stickers/testStickerUrls";
 import { fieldOf, PHONE_BOARD, stickerBox, unitOf, type Placement } from "./placement";
 import { CreaseStore, creaseJobs, FOIL_REACH } from "./useCreases";
@@ -199,6 +199,18 @@ describe("CreaseStore", () => {
         }
       : null,
     timings: { decode: 0, draw: 0, shade: 0, encode: 0, total: 0 },
+  });
+
+  it("carries accepted normal bounds and releases only six image URLs", () => {
+    const revoke = vi.spyOn(URL, "revokeObjectURL");
+    const store = new CreaseStore();
+    const normalBounds = { x: -0.1, y: 0, width: 1.2, height: 1.1 };
+    store.want([job]);
+    store.land({ ...bake(job), normalBounds });
+    expect(store.creaseOf(job.id)?.normalBounds).toEqual(normalBounds);
+    store.clear();
+    expect(revoke).toHaveBeenCalledTimes(6);
+    expect(revoke.mock.calls.every(([url]) => typeof url === "string")).toBe(true);
   });
 
   describe("placement-only crease reveal", () => {

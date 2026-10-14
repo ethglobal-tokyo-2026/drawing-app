@@ -2,7 +2,7 @@ import { createRoot } from "react-dom/client";
 import { StickerFigure, type Crease } from "../src/stickers/StickerFigure";
 import { creasePixels, CREASE_SIDES, type CreaseImage } from "../src/stickers/crease";
 import { acquireLight, currentLight, installLight } from "../src/stickers/light";
-import { refreshLaminate, whenLaminateSettled } from "../src/stickers/laminateRenderer";
+import { refreshSticker, whenStickerSettled } from "../src/stickers/stickerRenderer";
 import "../src/styles/tokens.css";
 
 const side = 240;
@@ -135,13 +135,13 @@ window.creaseRevealFixture = {
   imageData: images,
   startedNormals,
   whenSettled: async (expected) => {
-    const canvas = document.querySelector("[data-reveal] canvas.sticker-laminate");
+    const canvas = document.querySelector("[data-reveal] canvas.sticker-material");
     const image = document.querySelector("[data-reveal] .sticker-figure__img");
     if (!(canvas instanceof HTMLCanvasElement) || !(image instanceof HTMLImageElement))
       throw new Error("The current fixture image and laminate are missing");
     await image.decode();
     const signal = AbortSignal.timeout(10_000);
-    await whenLaminateSettled(canvas, { normal: crease?.normal }, signal);
+    await whenStickerSettled(canvas, { normal: crease?.normal }, signal);
     if (signal.aborted) throw new Error("The fixture's current normal snapshot did not settle");
     const normalError = canvas.dataset.error?.startsWith(
       `Replacing crease normal ${crease?.normal} failed:`,
@@ -192,9 +192,9 @@ window.creaseRevealFixture = {
     render();
   },
   refresh: () => {
-    const canvas = document.querySelector("[data-reveal] canvas.sticker-laminate");
+    const canvas = document.querySelector("[data-reveal] canvas.sticker-material");
     if (!(canvas instanceof HTMLCanvasElement)) throw new Error("The fixture laminate is missing");
-    refreshLaminate(canvas);
+    refreshSticker(canvas);
   },
   tilt: (beta, gamma) =>
     window.dispatchEvent(Object.assign(new Event("deviceorientation"), { alpha: 0, beta, gamma })),

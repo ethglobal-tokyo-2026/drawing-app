@@ -53,7 +53,7 @@ test("setting an overlapping sticker down sweeps its crease on the actual board"
   }
   await page.reload();
   await expect(
-    page.locator(".placed-sticker canvas.sticker-laminate[data-state=ready]"),
+    page.locator(".placed-sticker canvas.sticker-material[data-state=ready]"),
   ).toHaveCount(2);
   await expect(page.locator(".sticker-crease")).toHaveCount(1);
   await page.waitForTimeout(1200);
@@ -74,7 +74,7 @@ test("setting an overlapping sticker down sweeps its crease on the actual board"
               progress: paint.style.getPropertyValue("--crease-reveal"),
             }),
           ),
-          laminate: [...sticker.querySelectorAll<HTMLElement>(".sticker-laminate-surface")].map(
+          laminate: [...sticker.querySelectorAll<HTMLElement>(".sticker-material-surface")].map(
             (coat) => ({
               reveal: coat.hasAttribute("data-crease-reveal"),
               progress: coat.style.getPropertyValue("--crease-reveal"),

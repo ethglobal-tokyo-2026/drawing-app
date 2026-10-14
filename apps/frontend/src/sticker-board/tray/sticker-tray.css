@@ -502,28 +502,30 @@
   -webkit-user-drag: none;
 }
 
-.tray__fit:has(> .sticker-laminate[data-state="ready"]) > .tray__img,
-.tray__curl:has(> .sticker-laminate[data-state="ready"]) > img {
+.tray__fit:has(> .sticker-material[data-state="ready"]) > .tray__img,
+.tray__curl:has(> .sticker-material[data-state="ready"]) > img,
+:is(.tray__fit, .tray__curl):has(> .sticker-material[data-state="ready"][data-foil="true"])
+  > .sticker-foil
+  .sticker-foil__band {
   visibility: hidden;
 }
 
 /* A sticker on a sheet lies flat: its cut and a short contact shadow, from its image, or from its
    foil's band when someone else drew it; so does one in hand until it's drawn free. */
 .tray__img,
-.tray__fit > .sticker-laminate,
 .tray__fit .sticker-foil__cast,
 .tray__flyer.is-flat img,
-.tray__flyer.is-flat .sticker-laminate {
+.tray__flyer.is-flat .sticker-foil__cast {
   filter: var(--sticker-cut) drop-shadow(0.4px 0.8px 0.5px rgba(28, 24, 36, 0.18));
 }
 
 /* A used sticker silhouette shows no sticker. */
 .tray__slot[data-state="peeling"] .tray__img,
-.tray__slot[data-state="peeling"] .sticker-laminate,
+.tray__slot[data-state="peeling"] .sticker-material,
 .tray__slot[data-state="peeling"] .sticker-foil,
 .tray__slot[data-state="peeling"] .tray__mark,
 .tray__slot[data-state="used"] .tray__img,
-.tray__slot[data-state="used"] .sticker-laminate {
+.tray__slot[data-state="used"] .sticker-material {
   opacity: 0;
 }
 
@@ -810,13 +812,15 @@
   transform-style: preserve-3d;
 }
 
-.tray__flyer img,
-.tray__flyer .sticker-laminate {
+.tray__flyer img {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   max-width: none;
+}
+
+.tray__flyer :is(img, .sticker-foil__cast) {
   filter: var(--sticker-cut) drop-shadow(3px 7px 5px rgba(28, 24, 36, 0.2))
     drop-shadow(8px 16px 18px rgba(28, 24, 36, 0.14));
 }
@@ -907,4 +911,22 @@
   .tray__x {
     scale: calc(1 / var(--scale, 1));
   }
+}
+
+/* Complete foil pixels extend beyond paper; its registered cast supplies the only shadow. */
+.tray__fit > .sticker-material,
+.tray__flyer .sticker-material {
+  filter: none;
+}
+.tray__fit > .sticker-material:not([data-foil="true"]),
+.tray__flyer .sticker-material:not([data-foil="true"]) {
+  filter: drop-shadow(0.4px 0.8px 0.5px rgba(28, 24, 36, 0.18));
+}
+
+.tray__flyer .sticker-material:not([data-foil="true"]) {
+  filter: drop-shadow(3px 7px 5px rgba(28, 24, 36, 0.2))
+    drop-shadow(8px 16px 18px rgba(28, 24, 36, 0.14));
+}
+.tray__flyer.is-flat .sticker-material:not([data-foil="true"]) {
+  filter: drop-shadow(0.4px 0.8px 0.5px rgba(28, 24, 36, 0.18));
 }

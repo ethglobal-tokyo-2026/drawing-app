@@ -9,13 +9,22 @@
   transform-origin: 0 0;
 }
 
+.sticker-material-surface > .crease-reveal-frame:not([data-crease-reveal]) {
+  top: var(--crease-origin-y, 0px);
+  left: var(--crease-origin-x, 0px);
+}
+.sticker-material-surface:not([data-crease-reveal]) > .crease-reveal-frame {
+  width: var(--crease-width, 100%);
+  height: var(--crease-height, 100%);
+}
+
 /* A fixed feather moves diagonally; the inverse translation keeps the artwork in place. */
 :is(.crease-reveal-frame[data-crease-reveal], [data-crease-reveal] > .crease-reveal-frame) {
   --crease-shift: calc(var(--crease-distance) * (var(--crease-reveal, 0) - 1));
 
   inset: auto;
-  top: 0;
-  left: 0;
+  top: var(--crease-origin-y, 0px);
+  left: var(--crease-origin-x, 0px);
   width: calc(var(--crease-width) + var(--crease-distance) + 2px);
   height: calc(var(--crease-height) + var(--crease-distance) + 2px);
   overflow: hidden;

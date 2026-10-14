@@ -16,7 +16,7 @@ test("the displayed full-cut coat agrees with the independent linear reference o
     [480, 320, -27],
   ]) {
     await page.goto(`/e2e/stickerLaminate.html?side=${side}&height=${height}&turn=${turn}`);
-    const coat = page.locator('[data-sticker="0"] canvas.sticker-laminate');
+    const coat = page.locator('[data-sticker="0"] canvas.sticker-material');
     await expect(coat).toHaveAttribute("data-state", "ready");
     const pose = await page.evaluate(() => window.laminateFixture.getPose());
     for (const [u, v, rgb] of [
@@ -53,7 +53,7 @@ test("the displayed full-cut coat agrees with the independent linear reference o
         expect(Math.abs(actual.rgba[channel] - reference[channel] * 255)).toBeLessThanOrEqual(2);
       expect(actual.rgba[3]).toBe(255);
     }
-    const paper = page.locator("[data-white] canvas.sticker-laminate");
+    const paper = page.locator("[data-white] canvas.sticker-material");
     await expect(paper).toHaveAttribute("data-state", "ready");
     const range = await paper.evaluate((el) => {
       if (!(el instanceof HTMLCanvasElement)) throw new Error("The paper snapshot is not a canvas");
@@ -80,7 +80,7 @@ test("the displayed full-cut coat agrees with the independent linear reference o
 
 test("blank paper and gray ink share a persistent laminate after iPad tilt", async ({ page }) => {
   await page.goto("/e2e/stickerLaminate.html");
-  const coat = page.locator('[data-sticker="0"] canvas.sticker-laminate');
+  const coat = page.locator('[data-sticker="0"] canvas.sticker-material');
   await expect(coat).toHaveAttribute("data-state", "ready");
   await page.evaluate(() => window.laminateFixture.tilt(40, 0));
   const pixels = () =>
@@ -135,7 +135,7 @@ test("GPU loss shows the original print and restoration recovers the held coatin
     });
   });
   await page.goto("/e2e/stickerLaminate.html");
-  const coat = page.locator('[data-sticker="0"] canvas.sticker-laminate');
+  const coat = page.locator('[data-sticker="0"] canvas.sticker-material');
   await expect(coat).toHaveAttribute("data-state", "ready");
   const still = await coat.evaluate((canvas) => {
     if (!(canvas instanceof HTMLCanvasElement))
@@ -171,7 +171,7 @@ test("GPU loss shows the original print and restoration recovers the held coatin
     await expect
       .poll(() =>
         page
-          .locator("canvas.sticker-laminate")
+          .locator("canvas.sticker-material")
           .evaluateAll((canvases) =>
             canvases.every((canvas) => canvas.getAttribute("data-state") === "ready"),
           ),

@@ -87,6 +87,7 @@ export function FinishPreview({
           width={width}
           height={height}
           foil={foil ? "detail" : undefined}
+          foilStyle={foil ?? undefined}
           turn={-4}
           laminate={laminate === "matte" ? "matte" : "gloss"}
           reveal

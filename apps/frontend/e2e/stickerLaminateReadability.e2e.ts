@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page, type JSHandle } from "@playwright/test";
 
 test.use({
   viewport: { width: 820, height: 1180 },
@@ -26,9 +26,18 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-/** Opaque paper inside the cut; these budgets concern perception, not reference agreement. */
-async function paperPixels(paper: Locator): Promise<number[]> {
-  return paper.evaluate((element) => {
+type PaperSnapshot = JSHandle<Uint8ClampedArray>;
+const snapshots = new Set<PaperSnapshot>();
+test.afterEach(async () => {
+  try {
+    await Promise.all([...snapshots].map((snapshot) => snapshot.dispose()));
+  } finally {
+    snapshots.clear();
+  }
+});
+/** Keep every exact interior byte in the browser; only totals cross the process boundary. */
+async function paperPixels(paper: Locator): Promise<PaperSnapshot> {
+  const snapshot = await paper.evaluateHandle((element) => {
     if (!(element instanceof HTMLCanvasElement)) throw new Error("The paper canvas is missing");
     const context = element.getContext("2d");
     if (!context) throw new Error("The paper snapshot context is unavailable");
@@ -37,27 +46,22 @@ async function paperPixels(paper: Locator): Promise<number[]> {
       width = Math.floor(element.width * 0.9),
       height = Math.floor(element.height * 0.9);
     if (!width || !height) throw new Error("The paper snapshot has no readable interior");
-    return [...context.getImageData(x, y, width, height).data];
+    return context.getImageData(x, y, width, height).data;
   });
+  snapshots.add(snapshot);
+  return snapshot;
 }
 
-function readablePaper(pixels: number[]) {
-  let min = 255,
-    max = 0,
-    missingCoverage = 0,
-    tinted = 0;
-  for (let i = 0; i < pixels.length; i += 4) {
-    if (pixels[i + 3] !== 255) missingCoverage++;
-    if (pixels[i + 1] !== pixels[i] || pixels[i + 2] !== pixels[i]) tinted++;
-    min = Math.min(min, pixels[i]);
-    max = Math.max(max, pixels[i]);
-  }
+async function readablePaper(snapshot: PaperSnapshot) {
+  const { min, max, missingCoverage, tinted, brightFraction } = await snapshot.evaluate(
+    async (pixels) => {
+      const { paperReadability } = await import("./paperSnapshot.ts");
+      return paperReadability(pixels);
+    },
+  );
   expect(missingCoverage, "Opaque paper must retain complete coverage").toBe(0);
   expect(tinted, "Clear laminate should reflect neutral light on white paper").toBe(0);
   expect(min, "The clear film should preserve near-white paper").toBeGreaterThanOrEqual(238);
-  let bright = 0;
-  for (let i = 0; i < pixels.length; i += 4) if (pixels[i] >= min + (max - min) / 2) bright++;
-  const brightFraction = bright / (pixels.length / 4);
   expect(
     max - min,
     "White paper must reveal a distinct reflected source edge",
@@ -106,35 +110,21 @@ async function glossEdge(paper: Locator) {
   });
 }
 
-function paperChange(before: number[], after: number[]) {
-  expect(after.length).toBe(before.length);
-  let sum = 0,
-    visible = 0,
-    changedPixels = 0,
-    maxChannelDifference = 0;
-  for (let i = 0; i < before.length; i += 4) {
-    const difference = Math.abs(after[i] - before[i]);
-    sum += difference;
-    if (difference >= 2) visible++;
-    let changed = false;
-    for (let channel = 0; channel < 4; channel++) {
-      const delta = Math.abs(after[i + channel] - before[i + channel]);
-      if (delta) changed = true;
-      maxChannelDifference = Math.max(maxChannelDifference, delta);
-    }
-    if (changed) changedPixels++;
-  }
-  const count = before.length / 4;
-  return {
-    mean: sum / count,
-    visibleFraction: visible / count,
-    changedPixels,
-    maxChannelDifference,
-  };
+async function paperChange(before: PaperSnapshot, after: PaperSnapshot) {
+  const result = await before.evaluate(async (before, after) => {
+    const { paperDifference } = await import("./paperSnapshot.ts");
+    return {
+      beforeLength: before.length,
+      afterLength: after.length,
+      ...paperDifference(before, after),
+    };
+  }, after);
+  expect(result.afterLength).toBe(result.beforeLength);
+  return result;
 }
 
-function unchangedPaper(before: number[], after: number[], message: string) {
-  const { changedPixels, maxChannelDifference } = paperChange(before, after);
+async function unchangedPaper(before: PaperSnapshot, after: PaperSnapshot, message: string) {
+  const { changedPixels, maxChannelDifference } = await paperChange(before, after);
   expect({ changedPixels, maxChannelDifference }, message).toEqual({
     changedPixels: 0,
     maxChannelDifference: 0,
@@ -145,11 +135,13 @@ async function settledPaper(page: Page, paper: Locator) {
   await page.waitForTimeout(1000);
   const pixels = await paperPixels(paper);
   await page.waitForTimeout(100);
-  unchangedPaper(
-    pixels,
-    await paperPixels(paper),
-    "A held sensor pose must retain its settled reflection",
-  );
+  const second = await paperPixels(paper);
+  try {
+    await unchangedPaper(pixels, second, "A held sensor pose must retain its settled reflection");
+  } finally {
+    await second.dispose();
+    snapshots.delete(second);
+  }
   return pixels;
 }
 
@@ -188,7 +180,7 @@ test("the first iPad sensor reading retains the already visible neutral laminate
   page,
 }) => {
   await page.goto("/e2e/stickerLaminate.html");
-  const paper = page.locator("[data-white] canvas.sticker-laminate");
+  const paper = page.locator("[data-white] canvas.sticker-material");
   await expect(paper).toHaveAttribute("data-state", "ready");
   const initial = await settledPaper(page, paper);
   const held = await page.evaluate(() => window.laminateFixture.getPose());
@@ -199,13 +191,13 @@ test("the first iPad sensor reading retains the already visible neutral laminate
     return window.laminateFixture.getPose();
   });
   expect(first, "Sensor acquisition must calibrate from the displayed held pose").toEqual(held);
-  unchangedPaper(
+  await unchangedPaper(
     initial,
     await settledPaper(page, paper),
     "Sensor acquisition must not flash the paper",
   );
   expect(
-    readablePaper(initial).span,
+    (await readablePaper(initial)).span,
     "Neutral paper needs a localized reflection even when the ink is absent",
   ).toBeGreaterThanOrEqual(12);
   expect(await glossEdge(paper), "Gloss should reveal a short source boundary").toBeLessThanOrEqual(
@@ -217,13 +209,13 @@ test("a five-degree iPad tilt visibly moves full-cut gloss while preserving the 
   page,
 }, info) => {
   await page.goto("/e2e/stickerLaminate.html");
-  const paper = page.locator("[data-white] canvas.sticker-laminate");
-  const print = page.locator('[data-sticker="0"] canvas.sticker-laminate');
+  const paper = page.locator("[data-white] canvas.sticker-material");
+  const print = page.locator('[data-sticker="0"] canvas.sticker-material');
   await expect(paper).toHaveAttribute("data-state", "ready");
   await expect(print).toHaveAttribute("data-state", "ready");
   await page.evaluate(() => window.laminateFixture.tilt(40, 0));
   const neutral = await settledPaper(page, paper);
-  expect(readablePaper(neutral).span).toBeGreaterThanOrEqual(12);
+  expect((await readablePaper(neutral)).span).toBeGreaterThanOrEqual(12);
   expect(await glossEdge(paper)).toBeLessThanOrEqual(0.15);
   expect(await inkContrast(paper, print)).toBeGreaterThanOrEqual(5);
   await info.attach("neutral-laminate", {
@@ -238,7 +230,7 @@ test("a five-degree iPad tilt visibly moves full-cut gloss while preserving the 
     ["backward", 35, 0],
   ] as const) {
     await page.evaluate(() => window.laminateFixture.tilt(40, 0));
-    unchangedPaper(
+    await unchangedPaper(
       neutral,
       await settledPaper(page, paper),
       `${name}: returning to neutral must restore the held reflection`,
@@ -250,8 +242,8 @@ test("a five-degree iPad tilt visibly moves full-cut gloss while preserving the 
         body: await page.screenshot({ path: info.outputPath("five-degree.png") }),
         contentType: "image/png",
       });
-    readablePaper(tilted);
-    const change = paperChange(neutral, tilted);
+    await readablePaper(tilted);
+    const change = await paperChange(neutral, tilted);
     expect(
       change.mean,
       `${name}: small tilt must move a readable reflection`,

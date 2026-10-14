@@ -1,3 +1,4 @@
+import { boardFoil } from "../src/stickers/madeFoil";
 import { Fragment, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
@@ -13,7 +14,7 @@ import { useBoardGestures } from "../src/sticker-board/useBoardGestures";
 import { acquireLight, currentLight, installLight } from "../src/stickers/light";
 import { askForMotion } from "../src/ui/motionPermission";
 import { formatNo } from "../src/stickers/format";
-import { whenLaminateSettled } from "../src/stickers/laminateRenderer";
+import { whenStickerSettled } from "../src/stickers/stickerRenderer";
 import {
   clearPerformanceRecording,
   isPerformanceRecorderOn,
@@ -28,10 +29,19 @@ import "../src/styles/tokens.css";
 import "../src/sticker-board/StickerBoard.css";
 
 const variant = new URLSearchParams(location.search).get("variant");
-if (variant !== null && variant !== "ipad-21")
+if (
+  variant !== null &&
+  variant !== "ipad-21" &&
+  variant !== "crease-overflow" &&
+  variant !== "mixed-21"
+)
   throw new Error(`Unknown large sticker board fixture variant: ${variant}`);
-const stickerCount = variant === "ipad-21" ? 21 : 15;
-const size = variant === "ipad-21" ? { W: 1200, H: 1454, U: 1200 } : { W: 1032, H: 1376, U: 1032 };
+const stickerCount =
+  variant === "crease-overflow" ? 3 : variant === "ipad-21" || variant === "mixed-21" ? 21 : 15;
+const size =
+  variant === "ipad-21" || variant === "mixed-21"
+    ? { W: 1200, H: 1454, U: 1200 }
+    : { W: 1032, H: 1376, U: 1032 };
 const field = fieldOf(size.W, size.H);
 const svg = (body: string) =>
   `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600">${body}</svg>`)}`;
@@ -51,7 +61,7 @@ const sources = Array.from({ length: stickerCount }, (_, index) => {
         on: true,
         x: index % 2 ? 0.16 : 0.84,
         y:
-          variant === "ipad-21"
+          variant === "ipad-21" || variant === "mixed-21"
             ? 0.12 + Math.floor((index - 5) / 2) * 0.105
             : 0.14 + Math.floor((index - 5) / 2) * 0.16,
         s: 0.16 + (index % 3) * 0.02,
@@ -63,15 +73,31 @@ const sources = Array.from({ length: stickerCount }, (_, index) => {
     no: index + 1,
     width: 600,
     height: 600,
-    kyotoSeikaSubjects: [
-      { ja: "風", reading: "かぜ", en: "wind" },
-      { ja: "再会", reading: "さいかい", en: "reunion" },
-    ],
+    artist: {
+      id: variant === "mixed-21" && index % 3 === 1 ? "other" : "me",
+      handle: "fixture",
+      name: "Fixture",
+      nsfwOptIn: true,
+    },
+    nsfw: variant === "mixed-21" && index % 3 === 2,
+    kyotoSeikaSubjects:
+      variant === "mixed-21" && index % 3 !== 0
+        ? null
+        : [
+            { ja: "風", reading: "かぜ", en: "wind" },
+            { ja: "再会", reading: "さいかい", en: "reunion" },
+          ],
     urls: {
       png: svg(
         `<rect width="600" height="600" fill="white"/><path d="M${60 + index} 180Q300 ${35 + index * 6} 540 180V420Q300 530 60 420Z" stroke="#181818" stroke-width="${4 + (index % 3)}" fill="none"/><path d="M100 280H500M100 350H500M300 160V450" stroke="#181818" stroke-width="4"/><rect x="${85 + index * 3}" y="320" width="${100 + index * 5}" height="80" fill="${index % 3 ? "#888888" : "#dd498c"}"/>`,
       ),
-      mask: svg(`<rect x="3" y="3" width="594" height="594" rx="${24 + index}" fill="white"/>`),
+      mask: svg(
+        variant === "mixed-21"
+          ? `<rect x="${index === 1 ? 3 : 45}" y="45" width="${index === 1 ? 552 : 510}" height="510" rx="${24 + index}" fill="white"/>`
+          : variant === "crease-overflow"
+            ? `<rect x="${index === 1 ? 3 : 30}" y="30" width="${index === 1 ? 567 : 540}" height="540" rx="${24 + index}" fill="white"/>`
+            : `<rect x="3" y="3" width="594" height="594" rx="${24 + index}" fill="white"/>`,
+      ),
     },
     placement,
     placements: { phone: placement, large: placement },
@@ -90,7 +116,7 @@ type Phase =
   | "stationary-hold";
 const rememberedCanvases = new Map<string, HTMLCanvasElement>();
 const materialCanvases = () => [
-  ...document.querySelectorAll<HTMLCanvasElement>(".placed-sticker canvas.sticker-laminate"),
+  ...document.querySelectorAll<HTMLCanvasElement>(".placed-sticker canvas.sticker-material"),
 ];
 const diagnostics = {
   variant,
@@ -136,6 +162,10 @@ const diagnostics = {
       })
     );
   },
+  acceptedCreases(): Record<string, import("../src/stickers/StickerFigure").Crease | null> {
+    return {};
+  },
+  assets: () => initial.map(({ id, urls }) => ({ id, urls })),
   normals(): Record<string, string | null> {
     throw new Error("The large sticker board has not planned its creases");
   },
@@ -203,7 +233,7 @@ Object.defineProperty(CanvasRenderingContext2D.prototype, "drawImage", {
     Reflect.apply(copyImage, this, args);
     if (
       (diagnostics.phase === "steady-tilt" || diagnostics.phase === "stationary-hold") &&
-      this.canvas.classList.contains("sticker-laminate")
+      this.canvas.classList.contains("sticker-material")
     ) {
       const id = this.canvas.closest<HTMLElement>(".placed-sticker")?.dataset.stickerId;
       if (!id) throw new Error("A copied laminate has no sticker identifier");
@@ -389,11 +419,18 @@ export function Board() {
     stickers: sorted,
     field,
     unit: size.U,
-    foilOf: () => "kyoto-seika",
+    foilOf: (sticker) =>
+      boardFoil({
+        nsfw: sticker.nsfw,
+        kyotoSeika: sticker.kyotoSeikaSubjects !== null,
+        byOther: sticker.artist.id !== "me",
+      }),
     held: hold?.id,
     placementGeneration,
   });
   useLayoutEffect(() => {
+    diagnostics.acceptedCreases = () =>
+      Object.fromEntries(initial.map(({ id }) => [id, crease.creaseOf(id) ?? null]));
     diagnostics.normals = () =>
       Object.fromEntries(initial.map(({ id }) => [id, crease.creaseOf(id)?.normal ?? null]));
     diagnostics.whenMaterialsSettled = async () => {
@@ -402,10 +439,10 @@ export function Board() {
       await new Promise<number>(requestAnimationFrame);
       await Promise.all(
         [
-          ...(stage.current?.querySelectorAll<HTMLCanvasElement>("canvas.sticker-laminate") ?? []),
+          ...(stage.current?.querySelectorAll<HTMLCanvasElement>("canvas.sticker-material") ?? []),
         ].map((canvas) => {
           const id = canvas.closest<HTMLElement>(".placed-sticker")?.dataset.stickerId;
-          return whenLaminateSettled(
+          return whenStickerSettled(
             canvas,
             { normal: id ? crease.creaseOf(id)?.normal : undefined },
             signal,
@@ -435,6 +472,7 @@ export function Board() {
             <Fragment key={sticker.id}>
               <PlacedSticker
                 sticker={sticker}
+                foil={sticker.artist.id !== "me"}
                 field={field}
                 unit={size.U}
                 selected={selected === sticker.id}

@@ -63,14 +63,14 @@ describe("FinishPreview", () => {
 
   it.each(["gloss", "matte"] as const)("uses the %s coating inside the sticker cut", (finish) => {
     const host = preview(finish);
-    const coat = host.querySelector("canvas.sticker-laminate");
+    const coat = host.querySelector("canvas.sticker-material");
     expect(coat?.getAttribute("data-finish")).toBe(finish);
     const box = coat?.closest<HTMLElement>(".finish-preview__art");
     expect(box?.style.getPropertyValue("--m")).toBe(`url("${sticker.urls.mask}")`);
     expect(host.querySelector(".laminate-haze")).toBeNull();
     load(sticker.urls.mask);
     expect(host.querySelector(".laminate-haze")).toBeNull();
-    expect(host.querySelector("canvas.sticker-laminate")).toBe(coat);
+    expect(host.querySelector("canvas.sticker-material")).toBe(coat);
   });
 
   it("takes the film away while a newer sticker's mask loads", () => {
@@ -83,4 +83,11 @@ describe("FinishPreview", () => {
     load(dog.urls.mask);
     expect(host.querySelector(".laminate-film")).not.toBeNull();
   });
+});
+
+it.each(["gold", "silver", "roseGold"] as const)("selects %s as a conductor preview", (foil) => {
+  rendered = renderInHost(<FinishPreview sticker={sticker} side={96} finish={{ foil }} />);
+  expect(
+    rendered.host.querySelector("canvas.sticker-material")?.getAttribute("data-foil-style"),
+  ).toBe(foil);
 });

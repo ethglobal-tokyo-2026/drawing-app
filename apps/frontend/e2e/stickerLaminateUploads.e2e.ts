@@ -134,8 +134,7 @@ async function prepareUploads(page: Page) {
 
 async function mountUpload(page: Page) {
   await page.evaluate(async () => {
-    const { mountLaminate, whenLaminateSettled } =
-      await import("../src/stickers/laminateRenderer.ts");
+    const { mountSticker, whenStickerSettled } = await import("../src/stickers/stickerRenderer.ts");
     const canvas = document.createElement("canvas");
     canvas.dataset.validation = "";
     canvas.style.cssText = "width:120px;height:120px";
@@ -143,7 +142,7 @@ async function mountUpload(page: Page) {
     Reflect.set(
       window,
       "releaseLaminateUpload",
-      mountLaminate(canvas, {
+      mountSticker(canvas, {
         print: "/validation-print.svg",
         cut: "/validation-cut.svg",
         normal: "/validation-normal.svg",
@@ -152,7 +151,7 @@ async function mountUpload(page: Page) {
       }),
     );
     Reflect.set(window, "laminateUploadSettled", false);
-    void whenLaminateSettled(canvas).then(
+    void whenStickerSettled(canvas).then(
       () => Reflect.set(window, "laminateUploadSettled", true),
       (error: unknown) => Reflect.set(window, "laminateUploadSettled", { error: String(error) }),
     );
@@ -253,18 +252,18 @@ test("decoded laminate images share deferred validation before material becomes 
   expect(await observation(page)).toMatchObject({ checks: 1, inlineChecks: 0, pendingTasks: 0 });
   const pixels = await bitmap(coat);
   await page.evaluate(async () => {
-    const { updateLaminate, whenLaminateSettled } =
-      await import("../src/stickers/laminateRenderer.ts");
+    const { updateSticker, whenStickerSettled } =
+      await import("../src/stickers/stickerRenderer.ts");
     const canvas = document.querySelector<HTMLCanvasElement>("[data-validation]");
     if (!canvas) throw new Error("The retained snapshot is missing");
-    updateLaminate(canvas, {
+    updateSticker(canvas, {
       print: "/validation-print-copy.svg",
       cut: "/validation-cut-copy.svg",
       normal: "/validation-normal-copy.svg",
       finish: "gloss",
     });
     Reflect.set(window, "laminateUploadSettled", false);
-    void whenLaminateSettled(canvas).then(
+    void whenStickerSettled(canvas).then(
       () => Reflect.set(window, "laminateUploadSettled", true),
       (error: unknown) => Reflect.set(window, "laminateUploadSettled", { error: String(error) }),
     );
@@ -385,28 +384,27 @@ test("an undrained upload error state settles ready and cached owners while pres
   await expect(coat).toHaveAttribute("data-state", "ready");
   const previousBitmap = await bitmap(coat);
   await page.evaluate(async () => {
-    const { mountLaminate, whenLaminateSettled } =
-      await import("../src/stickers/laminateRenderer.ts");
+    const { mountSticker, whenStickerSettled } = await import("../src/stickers/stickerRenderer.ts");
     const canvas = document.createElement("canvas");
     canvas.dataset.validationRetained = "";
     canvas.style.cssText = "width:120px;height:120px";
     document.body.append(canvas);
-    mountLaminate(canvas, {
+    mountSticker(canvas, {
       print: "/validation-print.svg",
       cut: "/validation-cut.svg",
       normal: "/validation-normal.svg",
       turn: 0,
       finish: "gloss",
     });
-    await whenLaminateSettled(canvas);
+    await whenStickerSettled(canvas);
   });
   const retained = page.locator("[data-validation-retained]");
   const retainedBitmap = await bitmap(retained);
   await page.evaluate(async () => {
-    const { updateLaminate } = await import("../src/stickers/laminateRenderer.ts");
+    const { updateSticker } = await import("../src/stickers/stickerRenderer.ts");
     const canvas = document.querySelector<HTMLCanvasElement>("[data-validation]");
     if (!canvas) throw new Error("The ready material is missing");
-    updateLaminate(canvas, {
+    updateSticker(canvas, {
       print: "/validation-print-copy.svg",
       cut: "/validation-cut-copy.svg",
       normal: "/validation-normal-copy.svg",
@@ -417,18 +415,18 @@ test("an undrained upload error state settles ready and cached owners while pres
   const draws = (await observation(page)).draws;
   await control(page, "failForever");
   await page.evaluate(async () => {
-    const { updateLaminate, whenLaminateSettled } =
-      await import("../src/stickers/laminateRenderer.ts");
+    const { updateSticker, whenStickerSettled } =
+      await import("../src/stickers/stickerRenderer.ts");
     const canvas = document.querySelector<HTMLCanvasElement>("[data-validation-retained]");
     if (!canvas) throw new Error("The retained owner is missing");
-    updateLaminate(canvas, {
+    updateSticker(canvas, {
       print: "/validation-print.svg",
       cut: "/validation-cut.svg",
       normal: "/validation-normal.svg",
       finish: "matte",
     });
     Reflect.set(window, "laminateRetainedSettled", false);
-    void whenLaminateSettled(canvas).then(() =>
+    void whenStickerSettled(canvas).then(() =>
       Reflect.set(window, "laminateRetainedSettled", true),
     );
     const controls: unknown = Reflect.get(window, "laminateUploadObservation");
@@ -447,13 +445,12 @@ test("an undrained upload error state settles ready and cached owners while pres
   expect(await bitmap(coat)).toBe(previousBitmap);
   expect(await bitmap(retained)).toBe(retainedBitmap);
   await page.evaluate(async () => {
-    const { mountLaminate, whenLaminateSettled } =
-      await import("../src/stickers/laminateRenderer.ts");
+    const { mountSticker, whenStickerSettled } = await import("../src/stickers/stickerRenderer.ts");
     const canvas = document.createElement("canvas");
     canvas.dataset.validationCached = "";
     canvas.style.cssText = "width:120px;height:120px";
     document.body.append(canvas);
-    mountLaminate(canvas, {
+    mountSticker(canvas, {
       print: "/validation-print.svg",
       cut: "/validation-cut.svg",
       normal: "/validation-normal.svg",
@@ -461,16 +458,16 @@ test("an undrained upload error state settles ready and cached owners while pres
       finish: "gloss",
     });
     Reflect.set(window, "laminateCachedSettled", false);
-    void whenLaminateSettled(canvas).then(() => Reflect.set(window, "laminateCachedSettled", true));
+    void whenStickerSettled(canvas).then(() => Reflect.set(window, "laminateCachedSettled", true));
   });
   await expect(page.locator("[data-validation-cached]")).toHaveAttribute("data-state", "failed");
   await expect.poll(() => settlement(page, "laminateCachedSettled")).toBe(true);
   await control(page, "nativeTimers");
   await page.evaluate(async () => {
-    const { turnLaminate } = await import("../src/stickers/laminateRenderer.ts");
+    const { turnSticker } = await import("../src/stickers/stickerRenderer.ts");
     const canvas = document.querySelector<HTMLCanvasElement>("[data-validation]");
     if (!canvas) throw new Error("The retained failed material is missing");
-    turnLaminate(canvas, 17);
+    turnSticker(canvas, 17);
     await new Promise<void>((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
     );

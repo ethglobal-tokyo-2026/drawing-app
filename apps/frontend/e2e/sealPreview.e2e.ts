@@ -7,11 +7,15 @@ import { eraseTestLine } from "./emptySeal.ts";
 import {
   canvas,
   chooseLanguage,
+  drawKey,
   drawKeyName,
+  drawStroke,
+  nsfwSwitch,
   openSealSheet,
   openSettings,
   say,
   signIn,
+  tapKey,
 } from "./helpers.ts";
 import { along, inkedPixels, pencil, penStroke } from "./pen.ts";
 
@@ -88,6 +92,30 @@ test("real preview retains ink when its padded crop crosses the source edge", as
   const edge = await previewFixture(page, "edge");
   expect(edge.result).toBe("ready");
   expect(edge.edgeRgba).toEqual([7, 31, 83, 255]);
+});
+
+test("the preview's paper has a label's rounded corners, and marking it 18+ adds no pink gloss", async ({
+  page,
+}) => {
+  await signIn(page, "seal-preview-paper", "en");
+  await tapKey(drawKey(page, "en"));
+  await drawStroke(page, "en");
+  const dialog = await openSealSheet(page, "en");
+  const paper = dialog.locator(".seal-preview__sticker canvas.sticker-material");
+  await expect(paper).toHaveAttribute("data-state", "ready");
+  const alpha = await paper.evaluate((canvas) => {
+    if (!(canvas instanceof HTMLCanvasElement)) throw new Error("The preview paper is missing");
+    const pixels = canvas.getContext("2d")?.getImageData(0, 0, canvas.width, canvas.height).data;
+    if (!pixels) throw new Error("The preview paper's pixels are unreadable");
+    const at = (x: number, y: number) => pixels[(y * canvas.width + x) * 4 + 3];
+    return { corner: at(0, 0), middle: at(canvas.width >> 1, canvas.height >> 1) };
+  });
+  expect(alpha.corner).toBe(0);
+  expect(alpha.middle).toBeGreaterThan(0);
+  await nsfwSwitch(page, "en").check();
+  const gloss = dialog.locator(".sticker-figure__gloss");
+  await expect(gloss).toBeAttached();
+  await expect(gloss).toBeHidden();
 });
 
 test("measures normal and empty maximum-size preparation", async ({ page, browserName }) => {
@@ -232,7 +260,12 @@ for (const language of ["en", "ja"] as const) {
             });
           const dialog = await openSealSheet(page, language);
           if (state === "ready") {
-            await expect(dialog.locator(".seal-preview__ink")).toBeVisible();
+            await expect(
+              dialog.locator(".seal-preview__sticker canvas.sticker-material"),
+            ).toHaveAttribute("data-state", "ready");
+            await expect(
+              dialog.locator(".seal-preview__sticker canvas.sticker-material"),
+            ).toBeVisible();
             await expect(
               dialog.getByRole("switch", { name: say(labels.nsfwLabel, language) }),
             ).toBeFocused();

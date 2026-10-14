@@ -3,21 +3,6 @@ import { ipad } from "./ipad.ts";
 
 test.use(ipad);
 
-test("the foil does not add a second long glide after the shared light", async ({ page }) => {
-  await page.goto("/e2e/stickerLaminate.html?foil=1");
-  const durations = await page
-    .locator('[data-sticker="0"] .sticker-foil__glint')
-    .evaluate((element) =>
-      getComputedStyle(element, "::before")
-        .transitionDuration.split(",")
-        .map((duration) => Number.parseFloat(duration)),
-    );
-  expect(
-    Math.max(...durations),
-    "Foil interpolation may bridge a 45ms publication beat, not add another 280ms response",
-  ).toBeLessThanOrEqual(0.05);
-});
-
 /** Bright-source centroid, measured from the actual white-paper output rather than its reference. */
 async function reflection(paper: Locator) {
   return paper.evaluate((element) => {
@@ -69,10 +54,12 @@ test("turning a flat iPad preserves twist and moves the reflection without an un
       });
   });
   await page.goto("/e2e/stickerLaminate.html?foil=1&side=240");
-  const paper = page.locator("[data-white] canvas.sticker-laminate");
+  const paper = page.locator("[data-white] canvas.sticker-material");
   await expect(paper).toHaveAttribute("data-state", "ready");
   await page.evaluate(() => window.laminateFixture.tilt(0, 0, 123));
   await page.waitForTimeout(900);
+  const foil = page.locator('[data-sticker="0"] canvas.sticker-material');
+  const foilBefore = await snapshot(foil);
   const before = await snapshot(paper);
   await page.evaluate(() => window.laminateFixture.tilt(0, 0, 133));
   await expect
@@ -83,14 +70,11 @@ test("turning a flat iPad preserves twist and moves the reflection without an un
   expect(pose.y).toBeCloseTo(0, 5);
   await expect.poll(() => snapshot(paper)).not.toBe(before);
   const after = await snapshot(paper);
-  const foilRotation = await page
-    .locator('[data-sticker="0"] .sticker-foil__glint')
-    .evaluate((element) =>
-      Number.parseFloat(getComputedStyle(element).getPropertyValue("--light-rotation")),
-    );
-  expect(foilRotation).toBeCloseTo(-10, 2);
+  await expect.poll(() => snapshot(foil)).not.toBe(foilBefore);
+  const foilAfter = await snapshot(foil);
   await page.waitForTimeout(1000);
   expect(await snapshot(paper)).toBe(after);
+  expect(await snapshot(foil)).toBe(foilAfter);
 });
 
 for (const [name, angle, beta, axis] of [
@@ -122,8 +106,8 @@ for (const [name, angle, beta, axis] of [
     }, angle);
     await page.goto("/e2e/stickerLaminate.html?foil=1&side=240");
     expect(await page.evaluate(() => window.screen.orientation.angle)).toBe(angle);
-    const paper = page.locator("[data-white] canvas.sticker-laminate");
-    const foil = page.locator('[data-sticker="0"] .sticker-foil__glint');
+    const paper = page.locator("[data-white] canvas.sticker-material");
+    const foil = page.locator('[data-sticker="0"] .sticker-material');
     await expect(paper).toHaveAttribute("data-state", "ready");
     await page.evaluate((b) => window.laminateFixture.tilt(b, 0, 123), beta);
     await page.waitForTimeout(900);
@@ -137,6 +121,7 @@ for (const [name, angle, beta, axis] of [
       "The controlled first reading must calibrate without moving the light",
     ).toBeCloseTo(0, 5);
     const neutral = await reflection(paper);
+    const foilNeutral = await snapshot(foil);
     for (const sign of [-1, 1]) {
       await page.evaluate(
         ([b, direction, screenAngle]) => {
@@ -153,13 +138,7 @@ for (const [name, angle, beta, axis] of [
       );
       await page.waitForTimeout(900);
       const after = await reflection(paper);
-      const travel = await foil.evaluate((element) =>
-        Number.parseFloat(getComputedStyle(element).getPropertyValue("--lx")),
-      );
-      expect(
-        travel * sign,
-        "The mixed sensor reading must move the horizontal foil light",
-      ).toBeGreaterThan(0.05);
+      await expect.poll(() => snapshot(foil)).not.toBe(foilNeutral);
       expect(
         (after[axis] - neutral[axis]) * sign,
         "The laminate must travel with the foil under the same reading",

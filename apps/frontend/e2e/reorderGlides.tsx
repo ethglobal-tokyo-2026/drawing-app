@@ -24,11 +24,9 @@ style.textContent = `
   [data-sticker] { display: inline-block; width: 160px; height: 180px; }
   [data-part] { display: block; width: 20px; height: 20px; background: hotpink; }
   b[data-part] { translate: calc(var(--lx, 0) * 100px) 0; transition: translate 1000ms linear; }
-  .sticker-foil__sheen::before { content: ''; display: block; width: 20px; height: 20px;
-    background: blue; translate: calc(var(--lx, 0) * 100px) 0; transition: translate 1000ms linear; }
   .sticker-crease > i { opacity: 0; transition: opacity 1000ms linear; }
   @media (prefers-reduced-motion: reduce) {
-    b[data-part], .sticker-foil__sheen::before, .sticker-crease > i { transition: none; }
+    b[data-part], .sticker-crease > i { transition: none; }
   }
 `;
 document.head.append(style);
@@ -49,7 +47,6 @@ const render = () =>
                   <b data-part={part} />
                 </i>
               ))}
-              <i className="sticker-foil__sheen" data-part="foil" />
               <span className="sticker-crease">
                 <i data-part="crease" data-side="lit" />
               </span>
@@ -65,8 +62,7 @@ const release = acquireLight();
 const parts = [...host.querySelectorAll<HTMLElement>('[data-sticker="a"] [data-part]')];
 const positions = () =>
   parts.map((part) => {
-    const pseudo = part.dataset.part === "foil" ? "::before" : null;
-    const computed = getComputedStyle(part, pseudo);
+    const computed = getComputedStyle(part);
     return parseFloat(part.dataset.part === "crease" ? computed.opacity : computed.translate);
   });
 const animations = () => host.getAnimations({ subtree: true });

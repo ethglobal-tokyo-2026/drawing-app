@@ -15,9 +15,9 @@ import {
 import type { StickerTrayHandle } from "./tray/StickerTray";
 import { STEP_SAVE_IDLE_MS, UncommittedBoardSpots, useBoardGestures } from "./useBoardGestures";
 import { testBoardSticker } from "./testBoardSticker";
-import { turnLaminate } from "../stickers/laminateRenderer";
+import { turnSticker } from "../stickers/stickerRenderer";
 
-vi.mock("../stickers/laminateRenderer", () => ({ turnLaminate: vi.fn() }));
+vi.mock("../stickers/stickerRenderer", () => ({ turnSticker: vi.fn() }));
 
 type Options = Parameters<typeof useBoardGestures>[0];
 type BoardProps = Omit<Options, "stage">;
@@ -34,7 +34,7 @@ function Board(props: BoardProps) {
         <div key={s.id} className="placed-sticker" data-sticker-id={s.id} tabIndex={0}>
           <span data-handle="scale" />
           <span data-handle="rotate" />
-          <canvas className="sticker-laminate" />
+          <canvas className="sticker-material" />
         </div>
       ))}
     </div>
@@ -128,7 +128,7 @@ const drawnAt = (placement: Placement) => {
 };
 
 beforeEach(() => {
-  vi.mocked(turnLaminate).mockClear();
+  vi.mocked(turnSticker).mockClear();
   // Where things are drawn isn't tested here; happy-dom's own animations reject unhandled.
   vi.spyOn(Element.prototype, "animate").mockImplementation(() => new Animation());
   host = document.createElement("div");
@@ -166,11 +166,11 @@ describe("useBoardGestures", () => {
         }
       });
       expect(onCommit).not.toHaveBeenCalled();
-      expect(turnLaminate).toHaveBeenLastCalledWith(canvas, 90);
+      expect(turnSticker).toHaveBeenLastCalledWith(canvas, 90);
       act(() => {
         point(el, "pointercancel", 1, 0, 0);
       });
-      expect(turnLaminate).toHaveBeenLastCalledWith(canvas, 0);
+      expect(turnSticker).toHaveBeenLastCalledWith(canvas, 0);
       expect(onCommit).not.toHaveBeenCalled();
     },
   );
@@ -192,12 +192,12 @@ describe("useBoardGestures", () => {
       point(el, "pointermove", 1, 160, 300);
     });
     expect(onCommit).not.toHaveBeenCalled();
-    expect(turnLaminate).toHaveBeenLastCalledWith(canvas, 67);
+    expect(turnSticker).toHaveBeenLastCalledWith(canvas, 67);
     snapped = false;
     act(() => {
       point(el, "pointermove", 1, 170, 300);
     });
-    expect(turnLaminate).toHaveBeenLastCalledWith(canvas, 0);
+    expect(turnSticker).toHaveBeenLastCalledWith(canvas, 0);
     expect(onCommit).not.toHaveBeenCalled();
   });
   it("exposes only uncommitted positions, clearing settled steps and canceled drags", () => {

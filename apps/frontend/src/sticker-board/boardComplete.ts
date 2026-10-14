@@ -5,8 +5,8 @@ import {
   noteBootMilestone,
 } from "../performance/bootMilestones";
 import { watchFrames } from "../performance/performanceRecorder";
-import { whenLaminateSettled } from "../stickers/laminateRenderer";
-import type { FoilTone } from "../stickers/StickerFoil";
+import { whenStickerSettled } from "../stickers/stickerRenderer";
+import type { FoilTone } from "../stickers/foilMaterial";
 import { onTheBoard, type BoardStickerView } from "./boardSticker";
 import type { CreaseStore } from "./useCreases";
 
@@ -107,7 +107,7 @@ async function initialMaterials(
   if (!active || document.hidden) return;
   // Geometry is read once, outside motion. A hidden owner is not admitted just to finish boot.
   const surfaces = [
-    ...root.querySelectorAll<HTMLCanvasElement>(".placed-sticker canvas.sticker-laminate"),
+    ...root.querySelectorAll<HTMLCanvasElement>(".placed-sticker canvas.sticker-material"),
   ].filter((canvas) => {
     if (!canvas.isConnected || !canvas.clientWidth || !canvas.clientHeight) return false;
     const box = canvas.getBoundingClientRect();
@@ -130,7 +130,7 @@ async function initialMaterials(
   await Promise.all(
     surfaces.map((canvas) => {
       const id = canvas.closest<HTMLElement>(".placed-sticker")?.dataset.stickerId;
-      return whenLaminateSettled(
+      return whenStickerSettled(
         canvas,
         { normal: id ? creases.creaseOf(id)?.normal : undefined },
         signal,

@@ -16,7 +16,7 @@ const runningOn = (foil: Locator) =>
 
 /** The screen over a foil's band, as it looks now. */
 async function bandPixels(page: Page, foil: Locator) {
-  const box = await foil.locator(".sticker-foil__band").boundingBox();
+  const box = await foil.locator("..").locator("canvas.sticker-material").boundingBox();
   if (!box) throw new Error("The foil's band isn't on screen");
   return page.screenshot({ clip: box });
 }
@@ -24,7 +24,13 @@ async function bandPixels(page: Page, foil: Locator) {
 /** Shares a device tilt with the app, and waits for the foil to reach that light and settle. */
 async function tiltLight(page: Page, foil: Locator, gamma: number, lx: string) {
   await tiltScreen(page, 40, gamma);
-  await expect(foil.locator(".sticker-foil__sheen")).toHaveCSS("--lx", lx);
+  await expect
+    .poll(async () =>
+      page.evaluate(async () =>
+        (await import("../src/stickers/light.ts")).currentLight().x.toFixed(3),
+      ),
+    )
+    .toBe(lx);
   await expect.poll(() => runningOn(foil)).toBe(0);
 }
 
@@ -65,10 +71,11 @@ test("a foil follows only device tilt, holding still through mouse and Apple Pen
   const { card, no } = await drawAndSeal(page, language, { nsfw: true });
   await card.getByRole("button", { name: say(ui.backToBoard, language) }).click();
   const foil = (await openDetail(page, language, no)).locator(".sticker-foil--pink");
-  // The image, its laminate and the glint follow the light too, so they're hidden: only the bands count.
-  await page.addStyleTag({
-    content: ".sticker-foil ~ *, .sticker-foil__glint { visibility: hidden !important; }",
-  });
+  // The complete material contains the paper and foil in the same held orientation.
+  await expect(foil.locator("..").locator("canvas.sticker-material")).toHaveAttribute(
+    "data-foil",
+    "true",
+  );
   // A copy of the sticker flies from the board to its place in the detail, over it, until it lands.
   await expect(page.locator(".detail-lift__flyer")).toHaveCount(0);
 
@@ -79,7 +86,7 @@ test("a foil follows only device tilt, holding still through mouse and Apple Pen
   expect((await bandPixels(page, foil)).equals(still)).toBe(true);
   await ignorePointers(page, foil, still);
 
-  // Device tilt swings the light across the screen, and the bands slide with it.
+  // Device tilt swings the light across the screen, and the complete reflection follows it.
   await tiltScreen(page, 40, 0);
   await tiltLight(page, foil, -32, "-1.000");
   const left = await bandPixels(page, foil);
