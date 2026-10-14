@@ -7,7 +7,7 @@ import {
   whenStickerSettled,
   type StickerSurface,
 } from "../src/stickers/stickerRenderer";
-import { required } from "./stickerMaterialFixture";
+import { required, solidPng, twoFrames } from "./stickerMaterialFixture";
 
 type Material = Parameters<typeof updateSticker>[1];
 let state:
@@ -21,10 +21,6 @@ let state:
     }
   | undefined;
 const current = () => required(state);
-const frames = async () => {
-  await new Promise(requestAnimationFrame);
-  await new Promise(requestAnimationFrame);
-};
 function output(id: string, left: number, width = 80) {
   const host = document.createElement("div");
   host.className = "sticker-material-surface";
@@ -39,35 +35,20 @@ async function settled(canvas: HTMLCanvasElement) {
   const signal = AbortSignal.timeout(5000);
   await whenStickerSettled(canvas, undefined, signal);
   signal.throwIfAborted();
-  await frames();
+  await twoFrames();
 }
 
-/** Real registered material and normal resources in a fixed source frame. */
-export async function setup(kind: "foil" | "paper", registered = true) {
-  const image = document.createElement("canvas");
-  image.width = image.height = 80;
-  const context = required(image.getContext("2d"));
-  context.fillStyle = "white";
-  context.fillRect(12, 12, 56, 56);
-  const cut = image.toDataURL();
-  context.fillStyle = "#a95276";
-  context.fillRect(12, 12, 56, 56);
-  const print = image.toDataURL();
-  image.width = image.height = 0;
+/** Real foil material and normal resources in a fixed source frame; the target turns the foil pink
+ * and drops the normal. */
+export async function setup(registered = true) {
   const canvas = output("normal-removal", 15);
   const initial: Material = {
-    print,
-    cut,
+    print: solidPng(80, 80, "#a95276", 12),
+    cut: solidPng(80, 80, "white", 12),
     finish: "gloss",
     normal: "/normal-removal-normal.svg",
-    ...(kind === "foil"
-      ? {
-          foil: { style: "holo", size: "board" },
-          ...(registered && {
-            normalBounds: { x: -0.125, y: -0.125, width: 1.25, height: 1.25 },
-          }),
-        }
-      : {}),
+    foil: { style: "holo", size: "board" },
+    ...(registered && { normalBounds: { x: -0.125, y: -0.125, width: 1.25, height: 1.25 } }),
   };
   const dispose = mountSticker(canvas, { ...initial, turn: 0 } satisfies StickerSurface);
   await settled(canvas);
@@ -77,9 +58,7 @@ export async function setup(kind: "foil" | "paper", registered = true) {
     ...initial,
     normal: undefined,
     normalBounds: undefined,
-    ...(kind === "foil"
-      ? { foil: { style: "pink", size: "board", mask: "/normal-removal-target-mask.svg" } }
-      : { print: "/normal-removal-target-print.svg", cut: "/normal-removal-target-cut.svg" }),
+    foil: { style: "pink", size: "board", mask: "/normal-removal-target-mask.svg" },
   };
   state = {
     canvas,
@@ -90,6 +69,7 @@ export async function setup(kind: "foil" | "paper", registered = true) {
     dispose,
   };
 }
+/** Requests the target; a late removal keeps the normal until `remove` drops it mid-replacement. */
 export function begin(late: boolean) {
   const { canvas, initial, target } = current();
   updateSticker(
@@ -104,19 +84,13 @@ export function remove() {
 export async function inspect() {
   const { canvas, before, description } = current();
   refreshSticker(canvas);
-  await frames();
+  await twoFrames();
   return {
     retainedPixels: canvas.toDataURL() === before,
     retainedDescription: stickerFoilCoverage(canvas) === description,
-    style: stickerFoilCoverage(canvas)?.material.style,
     error: canvas.dataset.error ?? null,
     pixels: canvas.width * canvas.height,
   };
-}
-export async function restore() {
-  const { canvas, initial } = current();
-  updateSticker(canvas, initial);
-  await settled(canvas);
 }
 export function cancel() {
   current().dispose();
@@ -139,7 +113,7 @@ export async function compareCopy() {
   try {
     await settled(copy);
     refreshSticker(copy);
-    await frames();
+    await twoFrames();
     return {
       samePixels: copy.toDataURL() === canvas.toDataURL(),
       retainedPixels: copy.toDataURL() === before,
@@ -155,21 +129,20 @@ export async function compareCopy() {
 /** Compare actual replacement pixels with an independently mounted flat target. */
 export async function compareFlat(unchanged = false) {
   const { canvas, initial, target } = current();
+  const host = required(canvas.parentElement);
   const restore = matchResizeAtlasSlot(canvas);
-  const reference = output(
-    "normal-removal-reference",
-    205,
-    required(canvas.parentElement).clientWidth,
-  );
+  const reference = output("normal-removal-reference", 205, host.clientWidth);
   const material = unchanged ? { ...initial, normal: undefined } : target;
   const dispose = mountSticker(reference, { ...material, turn: 0 });
   try {
     await settled(reference);
+    const description = stickerFoilCoverage(canvas);
     return {
       samePixels: canvas.toDataURL() === reference.toDataURL(),
-      style: stickerFoilCoverage(canvas)?.material.style,
-      mask: stickerFoilCoverage(canvas)?.material.mask,
-      frame: stickerFoilCoverage(canvas)?.frame,
+      style: description?.material.style,
+      mask: description?.material.mask,
+      frame: description?.frame,
+      shownFrame: { width: host.clientWidth, height: host.clientHeight },
     };
   } finally {
     dispose();
@@ -199,7 +172,7 @@ export async function resizePending() {
     await settled(copy);
     required(owner.canvas.parentElement).style.width = "96px";
     required(copy.parentElement).style.width = "96px";
-    await frames();
+    await twoFrames();
     required(owner.canvas.parentElement).style.left = "-2000px";
     refreshSticker(copy);
     await settled(copy);
@@ -209,7 +182,7 @@ export async function resizePending() {
     copy.parentElement?.remove();
     required(owner.canvas.parentElement).style.left = "15px";
     refreshSticker(owner.canvas);
-    await frames();
+    await twoFrames();
   }
 }
 
