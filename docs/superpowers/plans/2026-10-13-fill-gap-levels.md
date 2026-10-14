@@ -21,9 +21,10 @@
 - Initially fix **Fill narrow areas on** inside the replacement algorithm. This matches the observed standard Fill reference tools and native comparison configuration. Do not add another user setting. Test the native off branch as a comparison control.
 - A failed preference write still applies the choice for the current page, logs the failure, and displays a persistent localized notice. A failed Fill prevents the requested choice change and its save.
 - User-facing copy belongs in `apps/frontend/src/i18n/strings/stickerCreation.ts`, in English and Japanese, with required one-line screen/interaction comments. Follow `apps/frontend/src/i18n/glossary.md`.
+- The feature's user-facing name is **Close gap** (CSP's label; Japanese 隙間閉じ). Code identifiers here still use the `fillGap` stem (`FillGapLevel`, `fillGapForLevel`, `canvas/fill-gap/`, `draw.fillGapLevel`); align them to a `closeGap` stem so the feature has one name, pending the engineer's vocabulary confirmation.
 - Preserve worker region/drain deadlines, memory limits, layer restrictions, cancellation, and one-Undo-action-per-drag behavior. The larger native range must pass browser measurements before shipping.
 - Keep one authoritative fill implementation. Remove the old chamfer/`ROOM`/`POCKET` gap path when the replacement is integrated; do not ship a legacy-algorithm branch.
-- No server, database, or cookie changes are needed for the selector. A selection-geometry migration, if chosen for historical replay, needs separately reviewed scope before changing kept-session or timelapse formats.
+- No server, database, or cookie changes are needed for the selector. Historical replay is settled: the timelapse gains stored fill pixels (**timelapse v5**), specced separately in `docs/superpowers/plans/2026-10-14-timelapse-fill-pixels.md`, and must ship before Task 3's algorithm change. The kept-session format is unchanged; recovered in-progress drawings re-flood with the installed algorithm.
 - When implemented and merged, remove this completed plan according to the project's post-merge instructions.
 
 ## Review Focus
@@ -31,14 +32,14 @@
 1. CSP gap 5 closes the retained five-pixel opening while current Croquis gap 5 leaks outside. Exact native selection agreement in Task 1 is a gate; substituting the table into the old algorithm is insufficient.
 2. The larger-width captures establish exterior leakage on a small canvas under Croquis gap 20 and recovery of a 500-pixel pocket under native gap 10. Closure-edge differences remain even when both fills are contained. Tasks 0–1 use those full masks, recovered endpoint order/ties, and crop checks; generic dilation or distance rules are insufficient.
 3. Canonical gap must not change with display zoom or backing density. Task 3 checks canonical values, raster conversion, crop/full-sheet agreement, and density-dependent raster limits separately.
-4. Replacement can change regenerated old fills even when recorded gaps are unchanged. Task 0 decides historical replay policy; Tasks 1 and 3 verify the accepted policy and new-operation replay.
+4. Replacement can change regenerated old fills even when recorded gaps are unchanged. Historical replay is decided — timelapse v5 stores each fill's written pixels so sealed timelapses replay faithfully (see `docs/superpowers/plans/2026-10-14-timelapse-fill-pixels.md`); pre-v5 timelapses and recovered kept drawings re-flood, which is accepted. Tasks 1 and 3 verify new-operation replay against it.
 5. Setting changes during queued Fill, blocked storage, and a taller control on narrow Japanese phone layouts can break the drawing flow. Tasks 2–4 test ordering, persistent errors, both hands, and supported layouts.
 
 ---
 
 ## Design brief and scale
 
-An artist should be able to reduce gap closure for intentional small openings or increase it for broken lines, using behavior that closely follows CSP. While Fill is selected, extend the current floating control below the tool strip with five choices labeled `1 2 3 4 5`, beneath Fill reference. The group label is **Gap size**. Both groups remain independent native radio groups, with keyboard selection and 44px touch targets.
+An artist should be able to reduce gap closure for intentional small openings or increase it for broken lines, using behavior that closely follows CSP. While Fill is selected, extend the current floating control below the tool strip with five choices labeled `1 2 3 4 5`, beneath Fill reference. The group label is **Close gap** (CSP's label; Japanese 隙間閉じ). Both groups remain independent native radio groups, with keyboard selection and 44px touch targets.
 
 The control retains its material and hand-dependent position. It does not open a modal or pause the clock. Help and save errors wrap inside its existing bounded width. Changes affect future fills, not pixels already painted.
 
@@ -140,16 +141,16 @@ Official primary references:
 
 ## File responsibilities
 
-| Responsibility                                          | Files                                                                                                                                                                                                                                                                    |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Native fixtures, comparisons, remaining evidence        | `docs/research/clip-studio-paint-stabilization/spikes/fill-gap/`                                                                                                                                                                                                         |
-| Recovered selection stages, isolated from color writing | New `apps/frontend/src/sticker-creation/canvas/fill-gap/types.ts`, `barriers.ts`, `restoration.ts`, `narrowAreas.ts`, `components.ts`, `selection.ts`; tests `barriers.test.ts`, `restoration.test.ts`, `narrowAreas.test.ts`, `components.test.ts`, `selection.test.ts` |
-| Authoritative levels/default/mapping                    | New `apps/frontend/src/sticker-creation/canvas/fillGap.ts` and `.test.ts`                                                                                                                                                                                                |
-| Device preference                                       | `apps/frontend/src/sticker-creation/drawingSettings.ts` and `.test.ts`                                                                                                                                                                                                   |
-| Selection integration, gesture settings, worker         | Existing `canvas/fill.ts`, `canvas/inkEngine.ts`, `canvas/fillGesture.ts`, `canvas/fill-worker/core.ts`, and tests                                                                                                                                                       |
-| Replay and accepted historical policy                   | Existing `layers/layerInk.ts`, `session/keptSession.ts`, `sealing/timelapse.ts`, `sticker-board/timelapse/fillSnapshots.ts`, and tests; formats change only for a separately scoped Task 0 migration                                                                     |
-| Control and copy                                        | Existing `tools/FillReferenceBar.tsx`, `.css`, `.test.tsx`; `DrawingScreen.tsx`, `.test.tsx`; `i18n/strings/stickerCreation.ts`                                                                                                                                          |
-| Browser validation                                      | Existing `e2e/fill.e2e.ts`, `e2e/fillEngine.e2e.ts`, `e2e/fillHistory.e2e.ts`                                                                                                                                                                                            |
+| Responsibility                                          | Files                                                                                                                                                                                                                                                                                   |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Native fixtures, comparisons, remaining evidence        | `docs/research/clip-studio-paint-stabilization/spikes/fill-gap/`                                                                                                                                                                                                                        |
+| Recovered selection stages, isolated from color writing | New `apps/frontend/src/sticker-creation/canvas/fill-gap/types.ts`, `barriers.ts`, `restoration.ts`, `narrowAreas.ts`, `components.ts`, `selection.ts`; tests `barriers.test.ts`, `restoration.test.ts`, `narrowAreas.test.ts`, `components.test.ts`, `selection.test.ts`                |
+| Authoritative levels/default/mapping                    | New `apps/frontend/src/sticker-creation/canvas/fillGap.ts` and `.test.ts`                                                                                                                                                                                                               |
+| Device preference                                       | `apps/frontend/src/sticker-creation/drawingSettings.ts` and `.test.ts`                                                                                                                                                                                                                  |
+| Selection integration, gesture settings, worker         | Existing `canvas/fill.ts`, `canvas/inkEngine.ts`, `canvas/fillGesture.ts`, `canvas/fill-worker/core.ts`, and tests                                                                                                                                                                      |
+| Replay and accepted historical policy                   | Existing `layers/layerInk.ts`, `session/keptSession.ts`, `sealing/timelapse.ts`, `sticker-board/timelapse/fillSnapshots.ts`, and tests; the timelapse format change (v5, stored fill pixels) is specced in `docs/superpowers/plans/2026-10-14-timelapse-fill-pixels.md` and ships first |
+| Control and copy                                        | Existing `tools/FillReferenceBar.tsx`, `.css`, `.test.tsx`; `DrawingScreen.tsx`, `.test.tsx`; `i18n/strings/stickerCreation.ts`                                                                                                                                                         |
+| Browser validation                                      | Existing `e2e/fill.e2e.ts`, `e2e/fillEngine.e2e.ts`, `e2e/fillHistory.e2e.ts`                                                                                                                                                                                                           |
 
 Extend `FillReferenceBar`; do not create a competing control. Retire `FILL_GAP` when callers use the mapping. Split native stages by responsibility rather than putting the whole reconstruction in `fill.ts`.
 
@@ -168,8 +169,8 @@ Extend `FillReferenceBar`; do not create a competing control. Retire `FILL_GAP` 
 - [ ] Complete near-line seed, edge opening, and additional-width diagonal, pocket, and green-bridge comparisons. Add isolated specks, odd/even openings, tiny loops, omitted components below/at/above `8*g*g`, and components touching each crop side. Capture narrow off as a representative control.
 - [ ] Resolve remaining startup/local-window interactions and validate recovered stop-line rules against native endpoint boundaries. Static endpoint rules are recovered; their integration and active-path observations remain gates. Native results determine missing stages; do not invent a heuristic.
 - [ ] Record the parity domain: exact source raster/candidate assumptions, integer width, seed, reference/color settings, and narrow-on policy. Investigate soft/partial-alpha and colored references before settling candidate conversion and Croquis edge writing. A-mask parity does not prove native RGBA parity.
-- [ ] Review historical kept/timelapse examples. Choose and record one shipping policy: accept/review regenerated old fill changes under the single replacement, or separately scope recorded-selection-geometry migration. Migration must establish how old selections are obtained, stored, validated, and replayed without shipping two algorithms. Sealed PNGs stay unchanged. Numeric gaps alone cannot preserve old pixels.
-- [ ] Update the plan with further successful comparisons and the replay decision. Until these gates are reviewed, product execution is not authorized.
+- [x] Historical replay decided: ship **timelapse v5** (stored fill pixels) before this algorithm change so sealed timelapses replay faithfully; pre-v5 timelapses and recovered kept drawings re-flood under the new algorithm, which is accepted. Sealed PNGs stay unchanged. Full scope in `docs/superpowers/plans/2026-10-14-timelapse-fill-pixels.md`.
+- [ ] Update the plan with further successful comparisons. The replay decision is recorded (timelapse v5, `docs/superpowers/plans/2026-10-14-timelapse-fill-pixels.md`). Until the remaining native gates are reviewed, product execution is not authorized.
 
 ## Task 1: Implement native selection and verify it before UI
 
@@ -192,7 +193,7 @@ Extend `FillReferenceBar`; do not create a competing control. Retire `FILL_GAP` 
 **Interfaces:** Produce `FillGapLevel = 1 | 2 | 3 | 4 | 5`, `DEFAULT_FILL_GAP_LEVEL = 3`, and `fillGapForLevel(level: FillGapLevel): number`, mapping `[1, 3, 5, 10, 20]`. Produce `useFillGapLevel(): FillGapLevel`, `readFillGapLevel(): FillGapLevel`, and `keepFillGapLevel(value: FillGapLevel): boolean`. Use existing `deviceSetting`, key `draw.fillGapLevel`, and default-entry removal.
 
 - [ ] Test exact table/default, five stored choices, default-entry removal, and empty/malformed/fractional/out-of-range saved levels: `0`, `6`, `1.5`, `NaN`, `Infinity`, and object text.
-- [ ] Test save refusal/retry: false result, chosen in-page value, unchanged prior storage, fresh-page prior value, then successful persistence.
+- [ ] Test save refusal then later persistence: false result, chosen in-page value, unchanged prior storage, fresh-page prior value, then a successful save.
 - [ ] Run focused tests and confirm missing exports fail.
 - [ ] Add mapping/preference using existing conventions. Log malformed text whole with its key; do not add kept-drawing tool metadata.
 - [ ] Run focused tests/type check and commit.
@@ -210,7 +211,7 @@ Extend `FillReferenceBar`; do not create a competing control. Retire `FILL_GAP` 
 - [ ] Connect selection to reviewed paper/color candidates and edge-writing policy; add gap to `fillSelection`/`sameFillSelection`; replace the fixed `fills.begin` gap.
 - [ ] Remove chamfer/`ROOM`/`POCKET` gap selection and `FILL_GAP`. Positive-gap recoloring uses the replacement selection, including the verified green-bridge outcome. Retain ordinary zero-gap connectivity. Update default imports and complete settings constructors to gap 5.
 - [ ] Add mixed-gap `[1, 3, 5, 10, 20]` kept/timelapse round trips. Require unchanged recorded numbers after preference changes and identical newly created fill replay at the same saved density. Cover references, locked/clipped layers, Undo/Redo, cancellation, and one Undo per drag.
-- [ ] Implement/test Task 0 historical policy with actual gap-2 kept/timelapse examples and `sticker-board/timelapse/fillSnapshots.test.ts`. Successful decoding alone does not establish old-pixel preservation.
+- [ ] Confirm timelapse v5 (stored fill pixels, `docs/superpowers/plans/2026-10-14-timelapse-fill-pixels.md`) shipped before changing the algorithm, then verify new fills replay from stored pixels while pre-v5 timelapses and recovered kept drawings re-flood. Use `sticker-board/timelapse/fillSnapshots.test.ts`.
 - [ ] Measure level 5 at maximum-sheet/dense-reference sizes and repeated fills in Chromium/WebKit. Verify region/drain/preparation deadlines, memory budgets, and persistent reviewable failure notices. Desktop timing does not prove native/physical-phone equivalence.
 - [ ] Run focused canvas/worker/layer/session/timelapse tests/type check and commit integration.
 
@@ -218,22 +219,22 @@ Extend `FillReferenceBar`; do not create a competing control. Retire `FILL_GAP` 
 
 **Files:** `DrawingScreen.tsx`/`.test.tsx`, `tools/FillReferenceBar.tsx`/`.css`/`.test.tsx`, `i18n/strings/stickerCreation.ts`, and existing Fill browser tests.
 
-**Interfaces:** Consume `useFillGapLevel`, `keepFillGapLevel`, `fillGapForLevel`. Add `gapLevel: FillGapLevel`, `onGapLevelChange: (level: FillGapLevel) => void`, `gapSaveFailed: boolean`, and `onRetryGapSave: () => void` to existing `FillReferenceBar` props; retain reference props.
+**Interfaces:** Consume `useFillGapLevel`, `keepFillGapLevel`, `fillGapForLevel`. Add `gapLevel: FillGapLevel`, `onGapLevelChange: (level: FillGapLevel) => void`, and `gapSaveFailed: boolean` to existing `FillReferenceBar` props; retain reference props. No retry action — a failed save shows the notice only and clears on a later successful save.
 
 - [ ] Test independently named native radio groups, five gap choices, initial level 3, keyboard/focus behavior, and English/Japanese accessible names. Displayed digits are data; accessible names use catalog copy.
 - [ ] Test preference reaching canvas settings and surviving tool switches/new stickers/remount/restored drawings without pausing time. Do not add it to `keeper.keepTools` or `putBack`.
 - [ ] Test `changeAfterFill`: old gap/storage until success; Fill failure changes neither choice nor storage.
-- [ ] Test save failure: current choice works, `ErrorLine` shows while Fill is selected, state survives hiding/showing, successful save/retry clears it. Use existing retry action; selecting a checked radio cannot retry.
+- [ ] Test save failure: current choice works, `ErrorLine` shows while Fill is selected, state survives hiding/showing, and a later successful save clears it. No retry action.
 - [ ] Confirm new tests fail, read required UI guidance, and add the row inside the existing control. Use an ordinary outer wrapper with two separate radio groups.
-- [ ] Read preference beside device settings; apply changes through `changeAfterFill` before saving. Keep failure state in `DrawingScreen`; retry saves current choice through the same path.
+- [ ] Read preference beside device settings; apply changes through `changeAfterFill` before saving. Keep failure state in `DrawingScreen`; the next accepted level change saves through the same path and clears it.
 - [ ] Add catalog entries below with required comments and keep help/errors inside the screen.
 
-| Key under `stickerCreation.fillGap` | English                                                                      | Japanese                                                                                 |
-| ----------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `label`                             | Gap size                                                                     | すき間の大きさ                                                                           |
-| `level`                             | Level {{level}}                                                              | レベル{{level}}                                                                          |
-| `help`                              | Higher levels close larger gaps.                                             | 数値が大きいほど、大きなすき間を閉じます。                                               |
-| `notKept`                           | This device couldn’t keep the gap size, so it lasts until you close Croquis. | すき間の大きさをこの端末に保存できなかったため、クロッキーを閉じるまでの設定になります。 |
+| Key under `stickerCreation.fillGap` | English                                                                              | Japanese                                                                                   |
+| ----------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `label`                             | Close gap                                                                            | 隙間閉じ                                                                                   |
+| `level`                             | Level {{level}}                                                                      | レベル{{level}}                                                                            |
+| `help`                              | Higher levels close larger gaps.                                                     | 数値が大きいほど、大きなすき間を閉じます。                                                 |
+| `notKept`                           | This device couldn’t keep your close gap level, so it lasts until you close Croquis. | 隙間閉じのレベルをこの端末に保存できなかったため、クロッキーを閉じるまでの設定になります。 |
 
 - [ ] Browser flow: choose level 2, record gap **3**, reload/resume, start another sticker, retain level 2. Add default level 3/gap 5 and level 5/gap 20 broken-outline/exterior checks against reviewed native fixtures. Verify one Undo per drag and recorded gaps after later preference changes.
 - [ ] Check narrow/normal phones and iPads, both hands/languages, with Visible layers help, timer note, and save error. All choices stay reachable/in-screen with 44px targets. Capture one batched review and fix collisions.
