@@ -1,5 +1,6 @@
 import { FOIL_ROOM, type FoilRoom } from "./foilMaterial";
 import { glslFloat as f } from "./glsl";
+import { SCREENTONE } from "./screentone";
 
 /**
  * Lookup RGBA8: RGB is linear chromaticity / max channel; A²×8 is integrated Y.
@@ -14,6 +15,7 @@ import { glslFloat as f } from "./glsl";
  */
 export function createFoilFragment({ window, level, grid }: FoilRoom) {
   const extent = `vec2(${f(window.halfWidth)},${f(window.halfHeight)})`;
+  const dot = f(SCREENTONE.dotRadius);
   return `
 uniform sampler2D foilLookup;
 uniform vec3 foilTint;
@@ -60,8 +62,8 @@ float foilCoat(float cosine){
 float foilDots(vec2 print,float footprint){
  vec2 d=abs(fract(print+.5)-.5);
  float distance=min(length(d),length(.5-d));
- float resolved=smoothstep(-.5,.5,(.268-distance)/max(footprint,.0001));
- return mix(resolved,2.*3.14159265359*.268*.268,clamp((footprint-.25)/.75,0.,1.));
+ float resolved=smoothstep(-.5,.5,(${dot}-distance)/max(footprint,.0001));
+ return mix(resolved,2.*3.14159265359*${dot}*${dot},clamp((footprint-.25)/.75,0.,1.));
 }
 // The window's quadrature is lit by its radiance; the lamps sample the room's bright features, whose
 // mirror image foilRoom already carries, so they add only colored orders. Shift moves both orders

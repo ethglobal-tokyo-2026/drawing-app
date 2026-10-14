@@ -1,6 +1,7 @@
 import { foilFragment } from "./foilShader";
 import { glslFloat as f } from "./glsl";
 import { OVERHEAD_WINDOW as overhead } from "./overheadWindow";
+import { SCREENTONE } from "./screentone";
 
 const windowExtent = `vec2(${f(overhead.halfWidth)},${f(overhead.halfHeight)})`;
 /** Shared shader: air/film Fresnel, a finite camera, and a nine-tap neutral environment filter. */
@@ -65,8 +66,7 @@ void main() {
   float cutAlpha=texture2D(cutImage,sourceUv).a*inSource;
   vec3 paper=vec3(display(result.r),display(result.g),display(result.b));
   // Derivatives are evaluated before material branches, including opaque paper fragments.
-  // Screentone tiles are 80 across the short side but never under 3 CSS px, so board dots stay crisp.
-  vec2 printCoordinate=sourceUv*size/max(3.,min(size.x,size.y)/80.);
+  vec2 printCoordinate=sourceUv*size/max(${f(SCREENTONE.minPitch)},min(size.x,size.y)/${f(SCREENTONE.tilesAcross)});
   float printFootprint=max(length(dFdx(printCoordinate)),length(dFdy(printCoordinate)));
   vec3 angular=n+view;
   float angularFootprint=max(length(dFdx(angular)),length(dFdy(angular)));

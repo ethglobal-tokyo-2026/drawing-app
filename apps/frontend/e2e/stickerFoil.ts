@@ -6,6 +6,8 @@ import {
   type FoilStyle,
 } from "../src/stickers/foilMaterial";
 import { createFoilFragment } from "../src/stickers/foilShader";
+import { glslFloat } from "../src/stickers/glsl";
+import { SCREENTONE } from "../src/stickers/screentone";
 import { stickerVertex } from "../src/stickers/stickerShader";
 import { orientNormal } from "../../../docs/research/sticker-laminate/material-reference";
 import "../src/styles/tokens.css";
@@ -62,6 +64,8 @@ gpu.bindBuffer(gpu.ARRAY_BUFFER, buffer);
 gpu.bufferData(gpu.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gpu.STATIC_DRAW);
 /** The room is compiled into the foil shader, so each room has its own program. */
 const programs = new Map<string, WebGLProgram>();
+/** A fixture side spans as many screentone tiles as a sticker's short side. */
+const tiles = glslFloat(SCREENTONE.tilesAcross);
 function programForRoom(room: FoilRoom) {
   const fragment = `precision highp float;varying vec2 uv;uniform mat3 frame;uniform vec2 turn;uniform vec2 grating;uniform float diagnostic;uniform float geometry;uniform float side;${createFoilFragment(room)}
 float display(float v){return v<=.0031308?v*12.92:1.055*pow(v,1./2.4)-.055;}
@@ -75,7 +79,7 @@ void main(){
  float encoded=floor(clamp((log2(max(value,exp2(-30.)))+30.)/34.,0.,1.)*65535.+.5);
  gl_FragColor=vec4(floor(encoded/256.)/255.,mod(encoded,256.)/255.,0.,1.);return;
  }
- vec3 c=shadeFoil(uv*80.,0.,n,v,t,80./side,0.);
+ vec3 c=shadeFoil(uv*${tiles},0.,n,v,t,${tiles}/side,0.);
  gl_FragColor=vec4(display(c.r),display(c.g),display(c.b),1.);
 }`;
   let program = programs.get(fragment);

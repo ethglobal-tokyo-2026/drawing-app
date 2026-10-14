@@ -1,4 +1,5 @@
 import { acquireFoilCoverage, FOIL_COVERAGE_TIMEOUT_MS } from "./acquireFoilCoverage";
+import { screentonePitch } from "./screentone";
 import type { StickerFoilMaterial } from "./stickerFoilMaterial";
 import type { StickerFoilCoverage } from "./stickerRenderer";
 
@@ -120,8 +121,7 @@ function applyPrintRegistration(
   shownWidth: number,
   shownHeight: number,
 ) {
-  // The shader's screentone: 80 tiles across the short side, never under 3 CSS px.
-  const pitch = Math.max(3, Math.min(shownWidth, shownHeight) / 80);
+  const pitch = screentonePitch(shownWidth, shownHeight);
   element.style.setProperty("--foil-print-pitch", `${pitch}px ${pitch}px`);
   element.style.setProperty(
     "--foil-print-x",
