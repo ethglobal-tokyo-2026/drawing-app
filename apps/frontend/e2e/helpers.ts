@@ -385,6 +385,58 @@ export const overlayEntry = (page: Page) =>
     return typeof marker === "string" ? marker : null;
   });
 
+/** A JSON object, as an API answer is read. */
+export const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object";
+
+/** GET /api/me's answer: whom the session acts for, who signed in, and the person switch. */
+export interface Envelope {
+  me: { id: string; handle: string; lineUserId: string };
+  authenticated: { id: string; lineUserId: string };
+  selectionVersion: string | null;
+  allowedSelections: { id: string }[];
+  personSwitchMode: string;
+}
+
+const isPerson = (value: unknown): value is Envelope["me"] =>
+  isRecord(value) &&
+  typeof value.id === "string" &&
+  typeof value.handle === "string" &&
+  typeof value.lineUserId === "string";
+
+const isEnvelope = (value: unknown): value is Envelope =>
+  isRecord(value) &&
+  isPerson(value.me) &&
+  isRecord(value.authenticated) &&
+  typeof value.authenticated.id === "string" &&
+  typeof value.authenticated.lineUserId === "string" &&
+  (value.selectionVersion === null || typeof value.selectionVersion === "string") &&
+  typeof value.personSwitchMode === "string" &&
+  Array.isArray(value.allowedSelections) &&
+  value.allowedSelections.every(
+    (selection: unknown) => isRecord(selection) && typeof selection.id === "string",
+  );
+
+/** The session of the person signed in on `page`, as the API answers it. */
+export async function envelope(page: Page): Promise<Envelope> {
+  const response = await page.request.get("/api/me");
+  const text = await response.text();
+  expect(response.status(), `GET /api/me: ${text}`).toBe(200);
+  const answer: unknown = JSON.parse(text);
+  if (!isEnvelope(answer)) throw new Error(`GET /api/me answered no session envelope: ${text}`);
+  return answer;
+}
+
+/**
+ * The headers the API refuses a change without, as the app sends them: whom it acts for, and the
+ * person switch's selection when the session has one. Made from a session already read, so a test can
+ * send a stale one.
+ */
+export const actorHeaders = (session: Envelope) => ({
+  "x-croquis-user-id": session.me.id,
+  ...(session.selectionVersion ? { "x-croquis-selection-version": session.selectionVersion } : {}),
+});
+
 /** The signed-in person's user ID, as the API answers their own session. */
 export async function signedInUserId(page: Page) {
   const body = await page.evaluate(async (): Promise<unknown> => (await fetch("/api/me")).json());

@@ -3,22 +3,13 @@ import type { Language } from "../src/i18n/language.ts";
 import { strings } from "../src/i18n/strings/index.ts";
 import { STAGE_INSET } from "../src/sticker-board/timelapse/timelapseFrame.ts";
 import { MIN_LENGTH_MS } from "../src/sticker-board/timelapse/timelapseSchedule.ts";
-import {
-  boardSticker,
-  drawKey,
-  openDetail,
-  openSealSheet,
-  say,
-  sealFromBoard,
-  sealOnSheet,
-  signIn,
-  tapKey,
-} from "./helpers.ts";
-import { ipad } from "./ipad.ts";
-import { at, type At, type Box } from "./pen.ts";
+import { sealWithErasedMarks } from "./erasedMarks.ts";
+import { boardSticker, openDetail, say, signIn } from "./helpers.ts";
+import { ipad, ipadOnItsSide } from "./ipad.ts";
+import type { Box } from "./pen.ts";
+import { sealStoredSticker, type StoredSticker } from "./storedStickers.ts";
 
-const { stickerBoard, stickerCreation, ui } = strings;
-const { timelapse } = stickerBoard;
+const { timelapse } = strings.stickerBoard;
 
 /** What the recorder saw: each inline transform and opacity the figure took, and when the overlay took each phase. */
 interface Recorded {
@@ -30,130 +21,6 @@ declare global {
   interface Window {
     timelapseRecorded?: Recorded;
   }
-}
-
-/** A point on the sheet, as shares of its width and height. */
-type OnSheet = [across: number, down: number];
-
-/** Nine strokes' worth of zigzag across the sheet's top, outside the sticker's cut once it's erased. */
-const ZIGZAG: OnSheet[] = Array.from({ length: 10 }, (_, i) => [
-  0.14 + (0.72 * i) / 9,
-  i % 2 ? 0.19 : 0.1,
-]);
-/** A loop at the sheet's foot, erased too; its radius is a share of the sheet's width. */
-const LOOP = { middle: [0.2, 0.86] satisfies OnSheet, radius: 0.09 };
-/** The circle that's filled and stays: the sticker. */
-const CIRCLE = { middle: [0.5, 0.52] satisfies OnSheet, radius: 0.24 };
-/** An arm from the circle to the sheet's right edge; its outer half is erased. */
-const ARM: OnSheet[] = [
-  [0.73, 0.5],
-  [0.8, 0.46],
-  [0.87, 0.41],
-  [0.93, 0.36],
-  [0.97, 0.32],
-];
-const ARM_OUTER_HALF = ARM.slice(2);
-/** Each eraser pass's shift down the sheet, as a share of its height, so the passes cover each mark. */
-const ERASER_PASSES = [-0.01, 0, 0.01];
-
-/** An 11-inch iPad on its side, its screen given over to the page. */
-const IPAD_ON_ITS_SIDE = { ...ipad, viewport: { width: 1180, height: 820 } };
-
-/** A path on the sheet's screen box, each point `shift` of the sheet's height further down. */
-const path =
-  (shares: OnSheet[], shift = 0) =>
-  (sheet: Box) =>
-    shares.map(([across, down]) => at(sheet, across, down + shift));
-
-/** A ring on the sheet's screen box, round on screen, running a step past its start so it closes. */
-const ring =
-  ({ middle: [across, down], radius }: { middle: OnSheet; radius: number }, shift = 0) =>
-  (sheet: Box): At[] => {
-    const segments = 24;
-    return Array.from({ length: segments + 2 }, (_, i) => {
-      const turn = (i / segments) * 2 * Math.PI;
-      return {
-        x: sheet.x + sheet.width * (across + radius * Math.cos(turn)),
-        y: sheet.y + sheet.height * (down + shift) + sheet.width * radius * Math.sin(turn),
-      };
-    });
-  };
-
-const nextFrame = (page: Page) => page.evaluate(() => new Promise(requestAnimationFrame));
-
-/** The drawing screen's sheet, where it is now: nothing, such as the screen rising, covers it. */
-async function sheetBox(page: Page) {
-  const sheet = page.locator(".ink-sheet");
-  await sheet.hover();
-  const box = await sheet.boundingBox();
-  if (!box) throw new Error("The sheet isn't on screen");
-  return box;
-}
-
-/** One stroke with the tool in hand, through the path's points: small moves, a frame apart. */
-async function drawThrough(page: Page, pathOn: (sheet: Box) => At[]) {
-  const [first, ...rest] = pathOn(await sheetBox(page));
-  if (!first) throw new Error("A stroke needs a point");
-  await page.mouse.move(first.x, first.y);
-  await page.mouse.down();
-  for (const point of rest) {
-    await page.mouse.move(point.x, point.y, { steps: 3 });
-    await nextFrame(page);
-  }
-  await page.mouse.up();
-}
-
-/** Picks a tool tile, and waits for it to be in hand. */
-async function pickTool(page: Page, language: Language, tool: "fill" | "eraser") {
-  const tile = page.getByRole("button", {
-    name: say(stickerCreation.tools[tool], language),
-    exact: true,
-  });
-  await tile.click();
-  await expect(tile).toHaveAttribute("aria-pressed", "true");
-}
-
-/**
- * From the board: a filled circle with an arm to the sheet's edge, a zigzag across the top and a loop
- * at the foot, then the zigzag, the loop and the arm's outer half erased, so the sheet was drawn on
- * well outside the sticker's cut. Seals it, and resolves with its number once it's on the board.
- */
-async function sealWithErasedMarks(page: Page, language: Language) {
-  await tapKey(drawKey(page, language));
-  await expect(page.locator(".drawing-screen")).not.toHaveAttribute("inert");
-  const undo = page.getByRole("button", { name: say(stickerCreation.history.undo, language) });
-  // A fresh sheet takes no ink until the server answers its ticket's spend, so a refused stroke is
-  // drawn again.
-  await expect(async () => {
-    await drawThrough(page, path(ZIGZAG));
-    await expect(undo).toBeEnabled({ timeout: 5_000 });
-  }).toPass();
-  await drawThrough(page, ring(LOOP));
-  await drawThrough(page, ring(CIRCLE));
-  await drawThrough(page, path(ARM));
-
-  await pickTool(page, language, "fill");
-  const sheet = await sheetBox(page);
-  const inCircle = at(sheet, ...CIRCLE.middle);
-  await page.mouse.click(inCircle.x, inCircle.y);
-
-  await pickTool(page, language, "eraser");
-  const size = page.getByRole("slider", { name: say(stickerCreation.sizeRail.eraser, language) });
-  const widest = await size.getAttribute("aria-valuemax");
-  if (widest === null) throw new Error("The eraser's size rail has no maximum");
-  for (let press = 0; press < 30; press++) await size.press("ArrowUp");
-  await expect(size).toHaveAttribute("aria-valuenow", widest);
-  for (const shift of ERASER_PASSES) {
-    await drawThrough(page, path(ZIGZAG, shift));
-    await drawThrough(page, ring(LOOP, shift));
-    await drawThrough(page, path(ARM_OUTER_HALF, shift));
-  }
-
-  await openSealSheet(page, language);
-  const { card, no } = await sealOnSheet(page, language);
-  await card.getByRole("button", { name: say(ui.backToBoard, language) }).click();
-  await expect(boardSticker(page, language, no)).toBeVisible();
-  return no;
 }
 
 /** Timelapse, named to watch `no` play: as it's named while nothing plays. */
@@ -319,10 +186,27 @@ async function untilEnded(detail: Locator, language: Language, no: string) {
   return shown;
 }
 
+/** Presses Skip while the timelapse plays, and waits for the end as `untilEnded` does. */
+async function skipToEnd(detail: Locator, language: Language, no: string) {
+  await skipKey(detail, language).click();
+  return untilEnded(detail, language, no);
+}
+
 /** Expects the figure back in its spot, with none of the timelapse's inline styles left on it. */
 function expectBackInSpot(shown: Look, spot: Box) {
   expect.soft(shown.inline, "the figure's inline styles").toEqual(NO_INLINE_STYLES);
   expectNear(onStage(shown.figure, shown.stage), spot, "the figure, back in its spot");
+}
+
+/** The room layoutFor keeps the paper in: the stage, inset where the figure leaves it spare. */
+function roomOf(stage: Box, spot: Box) {
+  const s = edgesOf(spot);
+  return {
+    left: Math.min(STAGE_INSET, s.left),
+    top: Math.min(STAGE_INSET, s.top),
+    right: Math.max(stage.width - STAGE_INSET, s.right),
+    bottom: Math.max(stage.height - STAGE_INSET, s.bottom),
+  };
 }
 
 /** Expects the paper to show the sheet beyond the sticker's spot, inside the stage's room, above the pager. */
@@ -337,13 +221,7 @@ function expectPaperOnStage(shown: Look, spot: Box) {
       "the paper reaches past the sticker's spot",
     )
     .toBe(true);
-  // The room layoutFor keeps the paper in: the stage, inset where the figure leaves it spare.
-  const room = {
-    left: Math.min(STAGE_INSET, s.left),
-    top: Math.min(STAGE_INSET, s.top),
-    right: Math.max(stage.width - STAGE_INSET, s.right),
-    bottom: Math.max(stage.height - STAGE_INSET, s.bottom),
-  };
+  const room = roomOf(stage, spot);
   expect.soft(p.left, "the paper's left edge").toBeGreaterThanOrEqual(room.left - 1);
   expect.soft(p.top, "the paper's top edge").toBeGreaterThanOrEqual(room.top - 1);
   expect.soft(p.right, "the paper's right edge").toBeLessThanOrEqual(room.right + 1);
@@ -353,53 +231,104 @@ function expectPaperOnStage(shown: Look, spot: Box) {
     .toBeLessThanOrEqual(pager.y);
 }
 
-/** Signs someone new in, seals a sticker with erased marks outside its cut, and opens its detail. */
-async function detailWithErasedMarks(page: Page, language: Language) {
-  await signIn(page, "timelapse", language);
-  const no = await sealWithErasedMarks(page, language);
-  const detail = await openDetail(page, language, no);
-  return { no, detail, spot: await stillSpot(detail) };
+/** Expects the paper held by the stage's width: it spans the room from side to side. */
+function expectPaperAcrossRoom({ paper, stage }: Look, spot: Box) {
+  if (!paper) throw new Error("No paper while the timelapse plays");
+  const p = edgesOf(onStage(paper, stage));
+  const room = roomOf(stage, spot);
+  for (const side of ["left", "right"] as const)
+    expect
+      .soft(Math.abs(p[side] - room[side]), `the paper's ${side} edge, at the room's`)
+      .toBeLessThanOrEqual(1);
 }
 
 /**
- * The sticker flies from its spot onto its place on the sheet it was drawn on, which shows past it,
- * fades into the ink as it plays, and is back in its spot as it was once it ends.
+ * Opens sticker `no`'s detail from the board. Resolves with its number, the detail and the sticker's
+ * spot once it holds still.
  */
-async function expectFlightOntoItsSheet(page: Page, language: Language) {
-  const { no, detail, spot } = await detailWithErasedMarks(page, language);
+async function detailOf(page: Page, language: Language, no: string) {
+  const detail = await openDetail(page, language, no);
+  return { no, detail, spot: await stillSpot(detail) };
+}
+type Opened = Awaited<ReturnType<typeof detailOf>>;
+
+/**
+ * Signs someone new in, draws a sticker with erased marks outside its cut on the drawing screen and
+ * seals it, and opens its detail.
+ */
+async function detailWithErasedMarks(page: Page, language: Language) {
+  await signIn(page, "timelapse", language);
+  return detailOf(page, language, await sealWithErasedMarks(page, language));
+}
+
+/**
+ * Signs someone new in, seals stored sticker `name` through the API, and opens its detail: for tests
+ * whose point is what plays, not how it was drawn.
+ */
+async function detailWithStored(page: Page, language: Language, name: StoredSticker) {
+  await signIn(page, "timelapse", language);
+  const { no } = await sealStoredSticker(page, name);
+  // The board places a sticker sealed through the API when it next loads.
+  await page.reload();
+  await expect(boardSticker(page, language, no)).toBeVisible();
+  return detailOf(page, language, no);
+}
+
+/**
+ * Presses Timelapse on a sticker with marks outside its cut: it flies from its spot onto its place on
+ * the sheet it was drawn on, which shows past it, and fades into the ink as it plays. Resolves with
+ * how the detail looks while it plays.
+ */
+async function expectFlightOntoItsSheet(
+  page: Page,
+  language: Language,
+  { no, detail, spot }: Opened,
+) {
   const playing = await pressUntilPlaying(detail, language, no);
   expectPaperOnStage(playing, spot);
   expect(await figureMoves(page), "the recorder saw the figure fly").toBe(true);
-  expectBackInSpot(await untilEnded(detail, language, no), spot);
+  return playing;
+}
+
+/**
+ * Stored sticker `name`, with marks outside its cut, flies onto its sheet, and Skip brings it back as
+ * it was. Resolves with how the detail looked while it played, and the sticker's spot.
+ */
+async function expectFlightThenSkip(page: Page, language: Language, name: StoredSticker) {
+  const opened = await detailWithStored(page, language, name);
+  const playing = await expectFlightOntoItsSheet(page, language, opened);
+  expectBackInSpot(await skipToEnd(opened.detail, language, opened.no), opened.spot);
+  return { playing, spot: opened.spot };
 }
 
 test("a sticker drawn within its cut plays in its spot, on paper the figure's size, and is left as it was", async ({
   page,
 }) => {
   const language = "en";
-  await signIn(page, "timelapse", language);
-  const no = await sealFromBoard(page, language);
-  const detail = await openDetail(page, language, no);
-  const spot = await stillSpot(detail);
-
+  const { no, detail, spot } = await detailWithStored(page, language, "oneStroke");
   const playing = await pressUntilPlaying(detail, language, no);
   if (!playing.paper) throw new Error("No paper while the timelapse plays");
   expectNear(playing.paper, playing.figure, "the paper, over the figure");
   expect(await figureMoves(page), "the recorder saw the figure move").toBe(false);
-  expectBackInSpot(await untilEnded(detail, language, no), spot);
+  expectBackInSpot(await skipToEnd(detail, language, no), spot);
 });
 
+// The one test that draws its sticker: what plays is the timelapse the drawing screen recorded. It
+// plays to its own end, where the sticker flies back.
 test("a sticker with marks outside its cut flies onto the sheet it was drawn on, and back", async ({
   page,
 }) => {
-  await expectFlightOntoItsSheet(page, "en");
+  const language = "en";
+  const opened = await detailWithErasedMarks(page, language);
+  await expectFlightOntoItsSheet(page, language, opened);
+  expectBackInSpot(await untilEnded(opened.detail, language, opened.no), opened.spot);
 });
 
 test("Skip, while the timelapse plays, ends it at once with the sticker back in its spot", async ({
   page,
 }) => {
   const language = "en";
-  const { no, detail, spot } = await detailWithErasedMarks(page, language);
+  const { no, detail, spot } = await detailWithStored(page, language, "erasedMarks");
   await startRecorder(detail);
   await watchKey(detail, language, no).click();
   await skipKey(detail, language).click();
@@ -416,11 +345,12 @@ test("Skip, while the timelapse plays, ends it at once with the sticker back in 
 test.describe("Under reduced motion", () => {
   test.use({ reducedMotion: "reduce" });
 
+  // Reduced motion changes how it plays as well as how it ends, so this one plays to its own end.
   test("nothing flies: the sticker goes as its sheet plays, and is back in its spot after", async ({
     page,
   }) => {
     const language = "en";
-    const { no, detail, spot } = await detailWithErasedMarks(page, language);
+    const { no, detail, spot } = await detailWithStored(page, language, "erasedMarks");
     const playing = await pressUntilPlaying(detail, language, no);
     expectPaperOnStage(playing, spot);
     expect(await figureMoves(page), "the recorder saw the figure move").toBe(false);
@@ -432,15 +362,18 @@ test.describe("On an iPad held upright", () => {
   test.use(ipad);
 
   test("a sticker with marks outside its cut flies onto its sheet and back", async ({ page }) => {
-    await expectFlightOntoItsSheet(page, "en");
+    await expectFlightThenSkip(page, "en", "erasedMarks");
   });
 });
 
 test.describe("On an iPad on its side", () => {
-  test.use(IPAD_ON_ITS_SIDE);
+  test.use(ipadOnItsSide);
 
+  // Drawn on this screen, its sheet is wider than tall: the stage's width holds its paper, where a
+  // phone's sheet is held by the stage's height.
   test("a sticker with marks outside its cut flies onto its sheet and back", async ({ page }) => {
-    await expectFlightOntoItsSheet(page, "en");
+    const { playing, spot } = await expectFlightThenSkip(page, "en", "erasedMarksSideways");
+    expectPaperAcrossRoom(playing, spot);
   });
 });
 
@@ -450,6 +383,6 @@ test.describe("In Japanese", () => {
   test("a sticker with marks outside its cut flies onto its sheet and back, its labels in Japanese", async ({
     page,
   }) => {
-    await expectFlightOntoItsSheet(page, "ja");
+    await expectFlightThenSkip(page, "ja", "erasedMarks");
   });
 });

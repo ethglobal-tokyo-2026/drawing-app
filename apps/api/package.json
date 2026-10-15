@@ -8,6 +8,7 @@
     "./dev-sign-in": "./src/services/devSignIn.ts",
     "./tickets": "./src/tickets/tickets.ts",
     "./testing/purchases": "./src/tickets/testPurchases.ts",
+    "./testing/replays": "./src/gratitude/testReplays.ts",
     "./testing/timelapses": "./src/stickers/testTimelapses.ts"
   },
   "scripts": {

@@ -8,3 +8,9 @@ export const ipad = {
   hasTouch: true,
   locale: "en-US",
 } satisfies BrowserContextOptions;
+
+/** The same iPad on its side, its screen given over to the page. */
+export const ipadOnItsSide = {
+  ...ipad,
+  viewport: { width: 1180, height: 820 },
+} satisfies BrowserContextOptions;

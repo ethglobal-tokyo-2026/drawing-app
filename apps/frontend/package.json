@@ -10,6 +10,7 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "test:e2e": "env -u NO_COLOR playwright test",
+    "e2e:stored-stickers": "env -u NO_COLOR playwright test --config playwright.stored-stickers.config.ts",
     "test:sticker-performance": "env -u NO_COLOR STICKER_FRAME_BUDGET=on playwright test --config playwright.performance.config.ts stickerLaminateFrames.e2e.ts stickerLaminateSelection.e2e.ts stickerBoardDrag.e2e.ts stickerLaminateFlight.e2e.ts --grep 'display frame budget|selecting overlapping|dragging a large overlapping|21 distinct large creased'",
     "chat-menus": "tsx --tsconfig tsconfig.scripts.json scripts/renderChatMenus.tsx",
     "croquis-sans": "uv run --script scripts/buildCroquisSans.py",

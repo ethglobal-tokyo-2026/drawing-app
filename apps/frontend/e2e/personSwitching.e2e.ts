@@ -1,16 +1,21 @@
+import { recordBody, tapReplay } from "@drawing-app/api/testing/replays";
 import type { LiffMockApi } from "@line/liff-mock";
 import { mkdir, rmdir } from "node:fs/promises";
 import { setTimeout as pause } from "node:timers/promises";
 import { openDb } from "../../../packages/db/src/index.ts";
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import { GAME_CONFIG } from "../src/gratitude/gameConfig.ts";
 import { strings } from "../src/i18n/strings/index.ts";
 import { E2E_DATA_DIR, E2E_DATABASE } from "./dataDir.ts";
 import { E2E_BIGWHEEL_ID, E2E_BIGWHEEL_LINE_ID, E2E_HANA_ID } from "./personPair.ts";
 import {
+  actorHeaders,
   boardSticker,
   drawKey,
   drawStroke,
+  envelope,
+  gratitudeAsk,
+  isRecord,
   openDetail,
   openExplore,
   openSettings,
@@ -23,6 +28,7 @@ import {
   test as browserTest,
   unpackageAndAccept,
 } from "./helpers.ts";
+import { sealStoredSticker } from "./storedStickers.ts";
 
 const { app, explore, giving, personSwitch, receiving, stickerBoard, stickerCreation, ui } =
   strings;
@@ -69,46 +75,8 @@ const test = browserTest.extend<{ personPairLock: void }>({
     { auto: true },
   ],
 });
-test.describe.configure({ mode: "serial", timeout: 240_000 });
-test.use({ actionTimeout: 15_000 });
+test.describe.configure({ mode: "serial", timeout: 120_000 });
 
-interface Envelope {
-  me: { id: string; handle: string; lineUserId: string };
-  authenticated: { id: string; lineUserId: string };
-  selectionVersion: string | null;
-  allowedSelections: { id: string }[];
-  personSwitchMode: string;
-}
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  value !== null && typeof value === "object";
-const isPerson = (value: unknown): value is Envelope["me"] =>
-  isRecord(value) &&
-  typeof value.id === "string" &&
-  typeof value.handle === "string" &&
-  typeof value.lineUserId === "string";
-const isEnvelope = (value: unknown): value is Envelope =>
-  isRecord(value) &&
-  isPerson(value.me) &&
-  isRecord(value.authenticated) &&
-  typeof value.authenticated.id === "string" &&
-  typeof value.authenticated.lineUserId === "string" &&
-  (value.selectionVersion === null || typeof value.selectionVersion === "string") &&
-  typeof value.personSwitchMode === "string" &&
-  Array.isArray(value.allowedSelections) &&
-  value.allowedSelections.every(
-    (selection: unknown) => isRecord(selection) && typeof selection.id === "string",
-  );
-async function envelope(page: Page): Promise<Envelope> {
-  const response = await page.request.get("/api/me");
-  expect(response.ok()).toBe(true);
-  const answer: unknown = await response.json();
-  if (!isEnvelope(answer)) throw new Error("The isolated API returned an invalid session envelope");
-  return answer;
-}
-const actorHeaders = (session: Envelope) => ({
-  "x-croquis-user-id": session.me.id,
-  ...(session.selectionVersion ? { "x-croquis-selection-version": session.selectionVersion } : {}),
-});
 async function expectActor(page: Page, id: string) {
   await expect.poll(async () => (await envelope(page)).me.id).toBe(id);
   const session = await envelope(page);
@@ -131,12 +99,11 @@ async function operator(page: Page) {
   await expect(drawKey(page, language)).toBeVisible();
   return expectActor(page, E2E_BIGWHEEL_ID);
 }
-async function selectionButton(page: Page, name: string) {
-  await page
-    .getByRole("navigation", { name: say(app.tabs.sections, language) })
-    .getByRole("button", { name: say(app.tabs.myBoard, language), exact: true })
-    .click();
-  await openSettings(page, language);
+/**
+ * Proves the closed developer slip keeps the switch to `name` out of reach: inert and flat, it takes
+ * no focus or click, and Tab from `reveal`, the key that opens the slip, skips it.
+ */
+async function expectSwitchOutOfReach(page: Page, reveal: Locator, name: string) {
   const selection = page.getByRole("button", {
     name: say(stickerBoard.developer.personSwitch.switchTo, language, { name }),
     exact: true,
@@ -155,13 +122,29 @@ async function selectionButton(page: Page, name: string) {
     }),
   ).toBe(false);
   await expect(selection.click({ trial: true, timeout: 500 })).rejects.toThrow(/Timeout/);
+  await reveal.focus();
+  await page.keyboard.press("Tab");
+  expect(await selection.evaluate((button) => document.activeElement === button)).toBe(false);
+}
+/**
+ * Pages that have proven the closed slip out of reach. Every load closes the slip, so each test, on
+ * its own page, proves it on its first switch only.
+ */
+const slipProven = new WeakSet<Page>();
+async function selectionButton(page: Page, name: string) {
+  await page
+    .getByRole("navigation", { name: say(app.tabs.sections, language) })
+    .getByRole("button", { name: say(app.tabs.myBoard, language), exact: true })
+    .click();
+  await openSettings(page, language);
   const reveal = page.getByRole("button", {
     name: say(stickerBoard.developer.label, language),
     exact: true,
   });
-  await reveal.focus();
-  await page.keyboard.press("Tab");
-  expect(await selection.evaluate((button) => document.activeElement === button)).toBe(false);
+  if (!slipProven.has(page)) {
+    await expectSwitchOutOfReach(page, reveal, name);
+    slipProven.add(page);
+  }
   await reveal.press("Enter");
   const slip = page.getByRole("region", {
     name: say(stickerBoard.developer.label, language),
@@ -228,6 +211,22 @@ async function waiting(page: Page, from: string) {
   await button.click();
   await unpackageAndAccept(page, language, from);
 }
+/**
+ * Records the signed-in receiver's thanks for `giftId` through the API: a tap combo of as many hits
+ * as Hana's played one, each at ×1, under the app's game config, which its replay looks up.
+ */
+async function recordThanks(page: Page, giftId: string) {
+  const recorded = await page.request.post("/api/gratitude", {
+    headers: actorHeaders(await envelope(page)),
+    data: recordBody(giftId, {
+      hits: GAME_CONFIG.burst,
+      total: GAME_CONFIG.burst * GAME_CONFIG.gratitudePerHit,
+      gameConfigVersion: GAME_CONFIG.version,
+      replay: tapReplay(GAME_CONFIG.burst),
+    }),
+  });
+  expect(recorded.status(), `POST /api/gratitude: ${await recorded.text()}`).toBe(201);
+}
 async function moveSticker(page: Page, no: string, expectedStatus = 200) {
   const sticker = boardSticker(page, language, no);
   await sticker.hover();
@@ -287,7 +286,10 @@ function stickerSnapshot(no: string) {
         )
         .all(sticker.id),
       gifts: db.$client
-        .prepare(
+        .prepare<
+          [string],
+          { id: string; status: string; giver_id: string; receiver_id: string | null }
+        >(
           "select id, status, giver_id, receiver_id from gifts where sticker_id = ? order by created_at",
         )
         .all(sticker.id),
@@ -304,7 +306,10 @@ function stickerSnapshot(no: string) {
 
 test("same_tab_sticker_round_trip", async ({ page }) => {
   await operator(page);
-  const no = await sealFromBoard(page, language);
+  const { no } = await sealStoredSticker(page, "oneStroke");
+  // The board places a sticker sealed through the API when it next loads.
+  await page.reload();
+  await expect(boardSticker(page, language, no)).toBeVisible();
   await moveSticker(page, no);
   await page.setViewportSize({ width: 1024, height: 900 });
   await moveSticker(page, no);
@@ -335,8 +340,13 @@ test("same_tab_sticker_round_trip", async ({ page }) => {
   await closeReceivedNotice(page, "@Hana");
   await page.unroute("**/api/gratitude");
   await waiting(page, "@Hana");
-  const returned = await playCombo(page, language, "@Hana", GAME_CONFIG.burst);
-  await returned.receipt.getByRole("button", { name: say(ui.backToBoard, language) }).click();
+  // The Mini-game is under test in Hana's combo, so BIGWHEEL's thanks go through the API.
+  const ask = gratitudeAsk(page, language, "@Hana");
+  await ask.getByRole("button", { name: say(receiving.sendGratitude.later, language) }).click();
+  await expect(ask).toBeHidden();
+  const returnGift = stickerSnapshot(no).gifts.find((gift) => gift.giver_id === E2E_HANA_ID);
+  if (!returnGift) throw new Error(`Hana's gift of ${no} back to BIGWHEEL is absent`);
+  await recordThanks(page, returnGift.id);
   // Receiving a sticker again puts it in the tray while retaining both arrangements.
   await expect(boardSticker(page, language, no)).toHaveCount(0);
   expect(stickerSnapshot(no).placements).toEqual(
@@ -402,6 +412,7 @@ test("same_tab_sticker_round_trip", async ({ page }) => {
       name: say(stickerBoard.transferTrail.replaying.stopLabel, language),
     });
     await expect(stop).toBeVisible();
+    await stop.click();
     await expect(stop).toHaveCount(0);
   }
   await detail.getByRole("button", { name: say(ui.backToBoard, language) }).click();

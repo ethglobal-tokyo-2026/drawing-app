@@ -9,7 +9,14 @@
     },
     "apps/frontend": {
       "entry": ["e2e/thoughtReview.tsx"],
-      "vite": { "config": ["vite.config.ts", "e2e/vite.config.ts", "vite.demo.config.ts"] }
+      "vite": { "config": ["vite.config.ts", "e2e/vite.config.ts", "vite.demo.config.ts"] },
+      "playwright": {
+        "config": [
+          "playwright.config.ts",
+          "playwright.performance.config.ts",
+          "playwright.stored-stickers.config.ts"
+        ]
+      }
     },
     "packages/line-auth": {
       "entry": ["src/start-auth-server.ts"],

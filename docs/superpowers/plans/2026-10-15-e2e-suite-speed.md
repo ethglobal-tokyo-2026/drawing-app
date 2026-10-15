@@ -127,8 +127,9 @@ export async function drawAndSeal(
 
 `POST /api/stickers` takes multipart (`apps/api/src/stickers/sealForm.ts`): `ticketUseId`, `timeUsed`, `width`, `height`, `drawnWidth`, `drawnHeight`, `outline`, `png`, `mask`, `flat`, optional `sharp`, `timelapse`, `nsfw`, `kyotoSeikaSubjects`. Sealing inserts the sticker's placement row; the board places an unplaced sticker when it loads. A ticket use comes from `POST /api/tickets/spend` with `{ kind, idempotencyKey }` (`apps/api/src/tickets/tickets.ts` `spendRequestSchema`). `page.request` shares the page's cookies, so it calls the API as the signed-in person.
 
-- [ ] **Step 1:** Write the capture: sign in, seal (a) one stroke as `sealFromBoard` draws it and (b) the erased-marks drawing as `timelapse.e2e.ts`'s `sealWithErasedMarks` draws it (move that drawing into a shared module both use, don't copy it), each in Chromium; take each `POST /api/stickers` request (`page.waitForRequest`), parse its body with `new Response(request.postDataBuffer(), { headers: { "content-type": … } }).formData()`, and write every field except `ticketUseId` to the sticker's folder. Report the folder sizes; if they pass ~1 MB together, drop `sharp` if the specs don't need it.
-- [ ] **Step 2:** Write the helper:
+- [x] **Step 1:** Write the capture: sign in, seal (a) one stroke as `sealFromBoard` draws it and (b) the erased-marks drawing as `timelapse.e2e.ts`'s `sealWithErasedMarks` draws it (move that drawing into a shared module both use, don't copy it), each in Chromium; take each `POST /api/stickers` request (`page.waitForRequest`), parse its body with `new Response(request.postDataBuffer(), { headers: { "content-type": … } }).formData()`, and write every field except `ticketUseId` to the sticker's folder. Report the folder sizes; if they pass ~1 MB together, drop `sharp` if the specs don't need it.
+  - Done as `e2e/storedStickers.capture.ts`, with the drawing in `e2e/erasedMarks.ts`. Chromium gives Playwright no body made of files, so the capture wraps the page's `fetch` and reads the form there. Both folders keep `sharp` where the app sent it: well under 1 MB together.
+- [x] **Step 2:** Write the helper:
 
 ```ts
 /** A sticker the drawing screen sealed once, kept in e2e/storedStickers/<name>/ to seal again. */
@@ -155,8 +156,10 @@ export async function sealStoredSticker(page: Page, name: StoredSticker) {
 
 `storedForm` reads `form.json` and each file part (`{ name, mimeType, buffer }`). Check the real status codes and response shapes against the routes and fix the expectations to them.
 
-- [ ] **Step 3:** Prove it: a throwaway run that signs in, seals each stored sticker, reloads, and sees it on the board (`boardSticker`) with its detail's Timelapse playing. Don't commit the throwaway.
-- [ ] **Step 4:** Commit `test(e2e): stored stickers sealed through the API, and the command that captures them`. Tell the coordinator the commit hash: lane C starts from it.
+- Done: 201 and 201 hold. The API refuses any change without `x-croquis-user-id` (and the person switch's `x-croquis-selection-version` when the session has one), so the helper reads both from `GET /api/me` and sends them. `no` is the board's padded form, `formatNo` (`No.0001`); the board places the sticker once it loads again, so callers reload.
+
+- [x] **Step 3:** Prove it: a throwaway run that signs in, seals each stored sticker, reloads, and sees it on the board (`boardSticker`) with its detail's Timelapse playing. Don't commit the throwaway.
+- [x] **Step 4:** Commit `test(e2e): stored stickers sealed through the API, and the command that captures them`. Tell the coordinator the commit hash: lane C starts from it.
 
 ### Task 4: Person switching builds its state through the API (lane B)
 
@@ -165,13 +168,13 @@ export async function sealStoredSticker(page: Page, name: StoredSticker) {
 - Modify: `apps/frontend/e2e/personSwitching.e2e.ts`
 - Possibly modify: `apps/api/package.json` (`exports`: `./testing/replays` → `./src/gratitude/testReplays.ts`, as `./testing/purchases` is)
 
-- [ ] **Step 1:** `same_tab_sticker_round_trip`: replace `sealFromBoard` with `sealStoredSticker(page, "oneStroke")`, then reload and wait for the sticker on the board.
-- [ ] **Step 2:** The Transfer Trail replays: once Stop is visible, press it and expect it gone, instead of waiting for the replay to end.
-- [ ] **Step 3:** Record the return combo (BIGWHEEL's, for Hana's gift back) through `POST /api/gratitude` with `tapReplay(GAME_CONFIG.burst)` (`apps/api/src/gratitude/testReplays.ts`) and the gift's id from `stickerSnapshot`; the outward combo stays played, as its failed send and the outbox are under test. Keep every later assertion (both gratitude rows, the Explore leaderboards). If recording it needs the Mini-game's ask dismissed in a way that changes what the test proves, keep it played and say so in the report.
-- [ ] **Step 4:** `selectionButton` proves the developer slip is hidden (inert, no height, unfocusable, trial click times out, Tab skips it) on each test's first switch only; later switches go straight to the revealed button.
-- [ ] **Step 5:** `test.describe.configure({ mode: "serial", timeout: 120_000 })`; delete `test.use({ actionTimeout: 15_000 })` (the config sets it now, once Task 1 merges; until then keep it on the branch and delete it in the merge).
-- [ ] **Step 6:** Run `personSwitching.e2e.ts` in both browsers with the timing reporter; report each test's duration against `/tmp/e2e-invest/run1.jsonl`.
-- [ ] **Step 7:** Commit `test(e2e): person switching seals, replays and thanks through the API where the UI isn't under test`.
+- [x] **Step 1:** `same_tab_sticker_round_trip`: replace `sealFromBoard` with `sealStoredSticker(page, "oneStroke")`, then reload and wait for the sticker on the board.
+- [x] **Step 2:** The Transfer Trail replays: once Stop is visible, press it and expect it gone, instead of waiting for the replay to end.
+- [x] **Step 3:** Record the return combo (BIGWHEEL's, for Hana's gift back) through `POST /api/gratitude` with `tapReplay(GAME_CONFIG.burst)` (`apps/api/src/gratitude/testReplays.ts`) and the gift's id from `stickerSnapshot`; the outward combo stays played, as its failed send and the outbox are under test. Keep every later assertion (both gratitude rows, the Explore leaderboards). If recording it needs the Mini-game's ask dismissed in a way that changes what the test proves, keep it played and say so in the report.
+- [x] **Step 4:** `selectionButton` proves the developer slip is hidden (inert, no height, unfocusable, trial click times out, Tab skips it) on each test's first switch only; later switches go straight to the revealed button.
+- [x] **Step 5:** `test.describe.configure({ mode: "serial", timeout: 120_000 })`; delete `test.use({ actionTimeout: 15_000 })` (the config sets it now, once Task 1 merges; until then keep it on the branch and delete it in the merge).
+- [x] **Step 6:** Run `personSwitching.e2e.ts` in both browsers with the timing reporter; report each test's duration against `/tmp/e2e-invest/run1.jsonl`.
+- [x] **Step 7:** Commit `test(e2e): person switching seals, replays and thanks through the API where the UI isn't under test`.
 
 ### Task 5: Timelapse tests draw once and skip where the ending isn't under test (lane C)
 
@@ -179,11 +182,13 @@ export async function sealStoredSticker(page: Page, name: StoredSticker) {
 
 - Modify: `apps/frontend/e2e/timelapse.e2e.ts`
 
-- [ ] **Step 1:** "a sticker with marks outside its cut flies onto the sheet it was drawn on, and back" keeps drawing through the UI and plays to its end: it's the test that drawing records the timelapse.
-- [ ] **Step 2:** A `detailWithStoredMarks(page, language)` that signs in, seals `erasedMarks` with `sealStoredSticker`, loads the board and opens the detail, returning `{ no, detail, spot }` as `detailWithErasedMarks` does. The Skip, reduced-motion, both iPad and Japanese tests use it.
-- [ ] **Step 3:** The iPad and Japanese tests check the playing state (paper on stage, the figure flew, labels), then press Skip and check it ends back in its spot. Reduced motion still plays to its end (its own ending: nothing flies). "a sticker drawn within its cut…" seals `oneStroke` through the API and skips too.
-- [ ] **Step 4:** Run `timelapse.e2e.ts` in both browsers with the timing reporter; report durations against `/tmp/e2e-invest/run1.jsonl`.
-- [ ] **Step 5:** Commit `test(e2e): one timelapse test draws its sticker; the rest seal it through the API and skip to the end`.
+- [x] **Step 1:** "a sticker with marks outside its cut flies onto the sheet it was drawn on, and back" keeps drawing through the UI and plays to its end: it's the test that drawing records the timelapse.
+- [x] **Step 2:** A `detailWithStoredMarks(page, language)` that signs in, seals `erasedMarks` with `sealStoredSticker`, loads the board and opens the detail, returning `{ no, detail, spot }` as `detailWithErasedMarks` does. The Skip, reduced-motion, both iPad and Japanese tests use it.
+  - Done as `detailWithStored(page, language, name)`, which "a sticker drawn within its cut…" uses with `oneStroke` too.
+- [x] **Step 3:** The iPad and Japanese tests check the playing state (paper on stage, the figure flew, labels), then press Skip and check it ends back in its spot. Reduced motion still plays to its end (its own ending: nothing flies). "a sticker drawn within its cut…" seals `oneStroke` through the API and skips too.
+  - A phone's sheet on the iPad on its side has its paper held by the stage's height, where a sheet drawn there is held by its width. That test plays `erasedMarksSideways`, captured on that screen, and expects its paper across the stage's room.
+- [x] **Step 4:** Run `timelapse.e2e.ts` in both browsers with the timing reporter; report durations against `/tmp/e2e-invest/run1.jsonl`.
+- [x] **Step 5:** Commit `test(e2e): one timelapse test draws its sticker; the rest seal it through the API and skip to the end`.
 
 ### Task 6: The stat board's cork flips the board back only on a press that's all cork (lane D)
 

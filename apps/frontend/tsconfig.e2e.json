@@ -24,5 +24,11 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["e2e", "playwright.config.ts", "playwright.performance.config.ts", "src/**/*.d.ts"]
+  "include": [
+    "e2e",
+    "playwright.config.ts",
+    "playwright.performance.config.ts",
+    "playwright.stored-stickers.config.ts",
+    "src/**/*.d.ts"
+  ]
 }
