@@ -23,7 +23,7 @@ import {
   type StickerFoilCoverage,
 } from "../../stickers/stickerRenderer";
 import { clamp } from "../../ui/easing";
-import { GIFT_LABEL_SIZE, STICKER_FIT } from "./sheetPacking";
+import { GIFT_LABEL_SIZE, STICKER_FIT, cutClipPath } from "./sheetPacking";
 import { knownShape } from "./stickerShape";
 import {
   DEPTH_BUTTON_H,
@@ -329,6 +329,7 @@ export function createTraySheets(
   // The CSS draws every sheet, edge and +N button to these sizes.
   tray.root.style.setProperty("--sheet-w", px(SHEET.w));
   tray.root.style.setProperty("--gift-label-w", px(GIFT_LABEL_SIZE.w));
+  tray.root.style.setProperty("--gift-label-h", px(GIFT_LABEL_SIZE.h));
   tray.root.style.setProperty("--peek", px(PEEK));
   tray.root.style.setProperty("--depth-h", px(DEPTH_BUTTON_H));
 
@@ -393,6 +394,20 @@ export function createTraySheets(
     svg.append(path);
     return decorative(svg);
   }
+  /**
+   * Where a slot takes a press: inside its sticker's cut, mapped into its slot's `box`, which an
+   * outgoing label makes larger. A cut not yet traced, or unreadable, leaves the whole box; stickerShape
+   * logs why.
+   */
+  function hitCutOf(s: Slot, q: Size, box: Size) {
+    const poly = knownShape(s)?.poly ?? [];
+    if (poly.length < 3) return "none";
+    const kx = q.w / box.w;
+    const ky = q.h / box.h;
+    return cutClipPath(
+      poly.map(([u, v]): [number, number] => [(1 - kx) / 2 + u * kx, (1 - ky) / 2 + v * ky]),
+    );
+  }
   /** Puts `el` where a sticker sits on its sheet: centered on its place, its size, and turned with it. */
   function placeAt(el: HTMLElement, q: Box) {
     el.style.setProperty("--x", px(q.x));
@@ -417,12 +432,11 @@ export function createTraySheets(
     el.dataset.id = s.id;
     el.dataset.state = s.state;
     // An outgoing label can be larger than its sticker: every part of it opens the same detail.
-    placeAt(
-      el,
-      inAGift
-        ? { ...q, w: Math.max(q.w, GIFT_LABEL_SIZE.w), h: Math.max(q.h, GIFT_LABEL_SIZE.h) }
-        : q,
-    );
+    const box = inAGift
+      ? { ...q, w: Math.max(q.w, GIFT_LABEL_SIZE.w), h: Math.max(q.h, GIFT_LABEL_SIZE.h) }
+      : q;
+    placeAt(el, box);
+    el.style.setProperty("--sticker-hit-cut", hitCutOf(s, q, box));
     const no = { no: formatNo(s.no) };
     // A given sticker's spot shows only its cut line, faint, and takes the shared press.
     if (s.givenTo !== undefined) {

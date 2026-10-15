@@ -280,6 +280,10 @@ export function outlineShape(path: string, width: number, height: number): Shape
   return { w: width, h: height, poly: simplifyRing(pts, OUTLINE_TOLERANCE) };
 }
 
+/** A cut line as a CSS clip path over the box its points run from 0 to 1 across: presses stay inside it. */
+export const cutClipPath = (poly: readonly Point[]) =>
+  `polygon(${poly.map(([x, y]) => `${x * 100}% ${y * 100}%`).join(",")})`;
+
 /** A sticker's cut line as placed, in sheet pixels. */
 export function outline(shape: Shape, item: Pick<PackedItem, "x" | "y" | "r" | "s">): Point[] {
   const sh = normShape(shape);

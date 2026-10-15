@@ -41,7 +41,7 @@ export function knownShape(sticker: ShapeSource): Shape | undefined {
     if (shape.poly.length < 3) {
       unreadable.set(sticker.id, "its stored cut line has fewer than 3 points");
       console.error(
-        `${formatNo(sticker.no)}'s stored cut line is unreadable, so its sheet packs its box`,
+        `${formatNo(sticker.no)}'s stored cut line is unreadable, so its sheet packs it, and its slot takes presses, by its box`,
       );
     }
     known.set(sticker.id, shape);
@@ -100,7 +100,7 @@ export function stickerShape(
         tracing.delete(sticker.id);
         unreadable.set(sticker.id, messageOf(error));
         console.error(
-          `Tracing ${formatNo(sticker.no)}'s cut failed, so its sheet packs its box`,
+          `Tracing ${formatNo(sticker.no)}'s cut failed, so its sheet packs it, and its slot takes presses, by its box`,
           error,
         );
         return box;

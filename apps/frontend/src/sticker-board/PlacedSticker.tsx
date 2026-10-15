@@ -9,7 +9,7 @@ import type { BoardSticker } from "./boardSticker";
 import { stickerBox, type Field } from "./placement";
 import type { InHand } from "./useBoardGestures";
 import { useCrease, useCreaseReveal } from "./useCreases";
-import { outlineShape } from "./tray/sheetPacking";
+import { cutClipPath, outlineShape } from "./tray/sheetPacking";
 
 interface Props {
   sticker: BoardSticker;
@@ -78,7 +78,7 @@ export const PlacedSticker = memo(function PlacedSticker({
       );
       return "none";
     }
-    return `polygon(${poly.map(([x, y]) => `${x * 100}% ${y * 100}%`).join(",")})`;
+    return cutClipPath(poly);
   }, [sticker.outline, sticker.width, sticker.height, sticker.no]);
 
   const land = useEffectEvent((el: HTMLElement) =>
