@@ -241,7 +241,7 @@ it("pauses the pile's tilt under an artist's board and resumes it with the loade
       }
     },
   );
-  let pose: light.DevicePose = { beta: 55, gamma: 0, screenAngle: 0 };
+  let pose: light.DevicePose = { beta: 47, gamma: 0, screenAngle: 0 };
   const listeners = new Set<(pose: light.DevicePose) => void>();
   vi.spyOn(light, "currentLight").mockImplementation(() => ({ ...pose }));
   vi.spyOn(light, "subscribeLight").mockImplementation((listener) => {

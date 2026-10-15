@@ -1,15 +1,17 @@
 // @vitest-environment happy-dom
-import { act, useRef } from "react";
+import { act, useRef, type CSSProperties } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DevicePose } from "../stickers/light";
-import { usePilePlay } from "./usePilePlay";
+import { STILL_POSE } from "../stickers/lightMode";
+import type { PiledSticker } from "./pileLayout";
+import { usePilePlay, type PlayDay } from "./usePilePlay";
 
 const motion = vi.hoisted(() => ({
   reduced: false,
   device: "phone-or-tablet" as "phone-or-tablet" | "desktop" | "unknown",
   permission: "granted" as "granted" | "denied" | "unasked" | "not-needed",
-  pose: { beta: 55, gamma: 0, screenAngle: 0 } as DevicePose,
+  pose: { beta: 47, gamma: 0, screenAngle: 0 } as DevicePose,
   lightListeners: new Set<(pose: DevicePose) => void>(),
   permissionListeners: new Set<() => void>(),
   useLight: vi.fn(),
@@ -32,130 +34,150 @@ vi.mock("../ui/motionPermission", () => ({
 }));
 vi.mock("../ui/useReducedMotion", () => ({ useReducedMotion: () => motion.reduced }));
 
-const firstLayout = {};
-const opened = vi.fn();
-const captured = vi.fn();
-function Pile({ active = true, layout = firstLayout }: { active?: boolean; layout?: unknown }) {
+/** An 80-unit square sticker laid with its center at (x, y) from the heap's floor. */
+function laidAt(id: string, x: number, y: number): PlayDay["laid"][number] {
+  const spot: PiledSticker = {
+    id,
+    n: 0,
+    x,
+    y,
+    r: 0,
+    s: 1,
+    w: 80,
+    h: 80,
+    tag: { x: 0, y: 0, w: 0, h: 0, r: 0 },
+    tagClear: { x0: 0, y0: 0, x1: 0, y1: 0 },
+  };
+  return { pile: { sticker: { id } }, spot, shape: { w: 80, h: 80, poly: [] } };
+}
+
+/** A day 300 units down, with "a" at (80, 150) and "b" at (250, 150) in it. */
+const DAY: PlayDay = { day: 1, height: 300, laid: [laidAt("a", 80, -150), laidAt("b", 250, -150)] };
+
+const opened = vi.fn<(id: string) => void>();
+function Pile({ active = true, days = [DAY] }: { active?: boolean; days?: PlayDay[] }) {
   const root = useRef<HTMLDivElement>(null);
-  usePilePlay(root, { active, layout });
+  usePilePlay(root, { active, days, width: 360 });
+  // happy-dom lays nothing out, so client px are pile units from the heap's top left.
   return (
-    <div ref={root} className="sticker-pile">
-      <ol className="pile-day__heap">
-        <li className="pile-sticker">
-          <button type="button" className="pile-sticker__button" onClick={opened}>
-            <span className="pile-sticker__play">
-              <span className="pile-sticker__drop">Sticker and name tags</span>
-            </span>
-          </button>
-        </li>
-      </ol>
+    <div ref={root} className="sticker-pile" style={{ "--k": "1" } as CSSProperties}>
+      {days.map(({ day, laid }) => (
+        <ol key={day} className="pile-day__heap" data-day={day}>
+          {laid.map(({ pile: { sticker } }) => (
+            <li key={sticker.id} className="pile-sticker" data-pile-id={sticker.id}>
+              <button
+                type="button"
+                className="pile-sticker__button"
+                onClick={() => opened(sticker.id)}
+              >
+                <span className="pile-sticker__hit" />
+              </button>
+            </li>
+          ))}
+        </ol>
+      ))}
     </div>
   );
 }
 
-interface Played {
-  frames: Keyframe[];
-  cancel: ReturnType<typeof vi.fn>;
-  pause: ReturnType<typeof vi.fn>;
-  play: ReturnType<typeof vi.fn>;
-  finish: () => void;
-}
-let played: Played[];
 let host: HTMLDivElement;
 let root: Root;
-let resized: () => void;
-let hidden = false;
 const show = (props: Parameters<typeof Pile>[0] = {}) =>
   act(() => root.render(<Pile {...props} />));
-function element<T extends HTMLElement>(selector: string): T {
-  const found = host.querySelector<T>(selector);
+function element(selector: string): HTMLElement {
+  const found = host.querySelector<HTMLElement>(selector);
   if (!found) throw new Error(`The pile is missing ${selector}`);
   return found;
 }
-const pile = () => element<HTMLElement>(".sticker-pile");
-const heap = () => element<HTMLElement>(".pile-day__heap");
-const item = () => element<HTMLElement>(".pile-sticker");
-const button = () => element<HTMLButtonElement>("button");
-const wrapper = () => element<HTMLElement>(".pile-sticker__play");
-const pointer = (type: string, x = 0, y = 0, id = 1, on: EventTarget = button()) =>
+const pile = () => element(".sticker-pile");
+const heap = () => element(".pile-day__heap");
+const item = (id: string) => element(`[data-pile-id="${id}"]`);
+const hit = (id: string) => element(`[data-pile-id="${id}"] .pile-sticker__hit`);
+
+function pointer(type: string, x: number, y: number, on: EventTarget = document, pointerId = 1) {
   act(() => {
     on.dispatchEvent(
       new PointerEvent(type, {
-        pointerId: id,
+        pointerId,
         pointerType: "touch",
+        isPrimary: pointerId === 1,
+        button: 0,
         clientX: x,
         clientY: y,
-        button: 0,
-        isPrimary: id === 1,
         bubbles: true,
         cancelable: true,
       }),
     );
   });
-const wait = (ms: number) =>
-  act(() => {
-    vi.advanceTimersByTime(ms);
+}
+/** A finger's move over sticker `id`, as a touch; whether it kept the page from scrolling. */
+function touchMove(id: string, x: number, y: number): boolean {
+  const target = hit(id);
+  const event = new TouchEvent("touchmove", {
+    touches: [new Touch({ identifier: 1, target, clientX: x, clientY: y })],
+    bubbles: true,
+    cancelable: true,
   });
-const hold = () => {
-  pointer("pointerdown");
-  wait(320);
-};
+  act(() => {
+    target.dispatchEvent(event);
+  });
+  return event.defaultPrevented;
+}
+const click = (id: string) =>
+  act(() => {
+    hit(id).dispatchEvent(new MouseEvent("click", { detail: 1, bubbles: true, cancelable: true }));
+  });
+/** Plays `count` frames at 60 a second. */
+const frames = (count = 1) =>
+  act(() => {
+    vi.advanceTimersByTime((1000 / 60) * count);
+  });
+/** How far play has moved sticker `id` from where the pile laid it. */
+function moveOf(id: string) {
+  const [x = 0, y = 0, turn = 0] = (item(id).style.transform.match(/-?[\d.]+/g) ?? []).map(Number);
+  return { x, y, turn };
+}
+/** Swipes sticker `id` sideways from (x, y) by `by`, a frame a step, and lets go. */
+function swipe(id: string, x: number, y: number, by: number) {
+  pointer("pointerdown", x, y, hit(id));
+  for (let step = 1; step <= 4; step++) {
+    if (step > 1) frames();
+    if (!touchMove(id, x + (by * step) / 4, y)) throw new Error("The swipe didn't pick it up");
+    pointer("pointermove", x + (by * step) / 4, y);
+  }
+  pointer("pointerup", x + by, y);
+}
 /** Shares a device pose that leans the pile all the way: -1, 0 or 1 across, and 0 or -1 up. */
 const publish = (x: -1 | 0 | 1, y: -1 | 0) =>
   act(() => {
-    motion.pose = { beta: y ? 15 : 55, gamma: 60 * x, screenAngle: 0 };
+    motion.pose = { beta: y ? 15 : STILL_POSE.beta, gamma: 60 * x, screenAngle: 0 };
     for (const listener of motion.lightListeners) listener(motion.pose);
-  });
-const click = (detail = 1) =>
-  act(() => {
-    button().dispatchEvent(new MouseEvent("click", { detail, bubbles: true, cancelable: true }));
   });
 
 beforeEach(() => {
-  vi.useFakeTimers();
-  played = [];
-  hidden = false;
+  vi.useFakeTimers({
+    toFake: [
+      "setTimeout",
+      "clearTimeout",
+      "requestAnimationFrame",
+      "cancelAnimationFrame",
+      "performance",
+    ],
+  });
   motion.reduced = false;
   motion.device = "phone-or-tablet";
   motion.permission = "granted";
-  motion.pose = { beta: 55, gamma: 0, screenAngle: 0 };
+  motion.pose = { ...STILL_POSE };
   motion.useLight.mockClear();
   opened.mockClear();
-  captured.mockClear();
-  vi.spyOn(document, "hidden", "get").mockImplementation(() => hidden);
-  vi.spyOn(Element.prototype, "setPointerCapture").mockImplementation(captured);
-  vi.spyOn(Element.prototype, "hasPointerCapture").mockReturnValue(false);
   vi.stubGlobal(
     "ResizeObserver",
     class implements ResizeObserver {
-      constructor(callback: ResizeObserverCallback) {
-        resized = () => callback([], this);
-      }
       observe() {}
       unobserve() {}
       disconnect() {}
     },
   );
-  vi.spyOn(Element.prototype, "animate").mockImplementation((frames) => {
-    if (!Array.isArray(frames))
-      throw new Error("The pile toss must supply a sequence of keyframes");
-    let finish!: () => void;
-    let reject!: (reason: Error) => void;
-    const finished = new Promise<void>((resolve, no) => {
-      finish = resolve;
-      reject = no;
-    });
-    const cancel = vi.fn(() => reject(new Error("Animation cancelled")));
-    const pause = vi.fn();
-    const play = vi.fn();
-    played.push({ frames, cancel, pause, play, finish });
-    const animation = new Animation();
-    Object.defineProperty(animation, "finished", { get: () => finished });
-    animation.cancel = cancel;
-    animation.pause = pause;
-    animation.play = play;
-    return animation;
-  });
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -164,176 +186,121 @@ beforeEach(() => {
 afterEach(() => {
   act(() => root.unmount());
   host.remove();
-  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.useRealTimers();
 });
 
-describe("Explore's loose sticker play", () => {
-  it("keeps a short tap as the existing preview action without capturing the pointer", () => {
-    pointer("pointerdown");
-    wait(180);
-    pointer("pointerup");
-    click();
-    expect(opened).toHaveBeenCalledOnce();
-    expect(captured).not.toHaveBeenCalled();
-    expect(item().dataset.playing).toBeUndefined();
+describe("Explore's loose stickers", () => {
+  it("open with a tap, a slow one too, and stay where they lie", () => {
+    pointer("pointerdown", 80, 150, hit("a"));
+    pointer("pointerup", 80, 150);
+    click("a");
+    pointer("pointerdown", 80, 150, hit("a"));
+    frames(15);
+    expect(item("a").dataset.playing).toBe("held");
+    pointer("pointerup", 80, 150);
+    click("a");
+    expect(opened.mock.calls).toEqual([["a"], ["a"]]);
+    frames(30);
+    expect(moveOf("a")).toEqual({ x: 0, y: 0, turn: 0 });
   });
 
-  it("lets movement and page scrolling before pickup cancel the hold", () => {
-    pointer("pointerdown");
-    pointer("pointermove", 0, 25);
-    wait(400);
-    expect(item().dataset.playing).toBeUndefined();
-    expect(captured).not.toHaveBeenCalled();
-    pointer("pointerup");
-    pointer("pointerdown");
-    document.dispatchEvent(new Event("scroll"));
-    wait(400);
-    expect(item().dataset.playing).toBeUndefined();
+  it("scroll the page under a swipe up or down, and aren't picked up by it", () => {
+    pointer("pointerdown", 80, 150, hit("a"));
+    expect(touchMove("a", 82, 170)).toBe(false);
+    frames(30);
+    expect(item("a").dataset.playing).toBeUndefined();
   });
 
-  it("picks up after a hold, follows the drag, suppresses its click and tosses back to rest", async () => {
-    hold();
-    expect(item().dataset.playing).toBe("held");
-    expect(captured).toHaveBeenCalledOnce();
-    pointer("pointermove", 30);
-    wait(16);
-    pointer("pointermove", 60);
-    expect(wrapper().style.transform).toContain("60px");
-    const menu = new Event("contextmenu", { bubbles: true, cancelable: true });
-    button().dispatchEvent(menu);
-    expect(menu.defaultPrevented).toBe(true);
-    pointer("pointerup", 60);
-    expect(item().dataset.playing).toBe("settling");
-    click();
+  it("are picked up by a sideways swipe at once, thrown on by it, and knock what they hit", () => {
+    swipe("a", 80, 150, 60);
+    click("a");
     expect(opened).not.toHaveBeenCalled();
-    expect(played).toHaveLength(1);
-    expect(played[0].frames.at(-1)?.transform).toBe("none");
-    await act(async () => played[0].finish());
-    expect(item().dataset.playing).toBeUndefined();
-    expect(wrapper().style.transform).toBe("");
+    expect(item("a").dataset.playing).toBeUndefined();
+    const letGo = moveOf("a").x;
+    frames(150);
+    expect(moveOf("a").x).toBeGreaterThan(letGo + 20);
+    expect(moveOf("b").x).toBeGreaterThan(10);
+    expect(item("a").dataset.moving).toBeUndefined();
   });
 
-  it.each(["pointercancel", "second pointer", "inactive", "layout", "resize", "hidden", "blur"])(
-    "restores a held sticker on %s and permits a later tap",
+  it("are picked up by a held touch, to drag any way without scrolling the page", () => {
+    pointer("pointerdown", 80, 150, hit("a"));
+    frames(13);
+    expect(item("a").dataset.playing).toBe("held");
+    expect(touchMove("a", 80, 200)).toBe(true);
+    pointer("pointermove", 80, 200);
+    frames(20);
+    expect(moveOf("a").y).toBeGreaterThan(30);
+  });
+
+  it("are caught by a touch while they slide", () => {
+    swipe("a", 80, 150, 60);
+    frames(2);
+    pointer("pointerdown", 80 + moveOf("a").x, 150, hit("a"));
+    expect(item("a").dataset.playing).toBe("held");
+    pointer("pointerup", 80 + moveOf("a").x, 150);
+    click("a");
+    expect(opened).not.toHaveBeenCalled();
+  });
+
+  it.each(["pointercancel", "blur", "visibilitychange"])(
+    "are let go on %s, and picked up again by the next swipe",
     (reason) => {
-      hold();
-      pointer("pointermove", 40);
-      expect(item().dataset.playing).toBe("held");
-      if (reason === "pointercancel") pointer("pointercancel");
-      else if (reason === "second pointer") {
-        pointer("pointerdown", 0, 0, 2);
-        pointer("pointerup", 0, 0, 2);
-      } else if (reason === "inactive") {
-        show({ active: false });
-        show();
-      } else if (reason === "layout") show({ layout: {} });
-      else if (reason === "resize") resized();
-      else if (reason === "blur") {
-        window.dispatchEvent(new Event("blur"));
-        window.dispatchEvent(new Event("focus"));
-      } else {
-        hidden = true;
-        document.dispatchEvent(new Event("visibilitychange"));
-        hidden = false;
-        document.dispatchEvent(new Event("visibilitychange"));
+      pointer("pointerdown", 80, 150, hit("a"));
+      touchMove("a", 92, 150);
+      expect(item("a").dataset.playing).toBe("held");
+      if (reason === "pointercancel") pointer("pointercancel", 92, 150);
+      else if (reason === "blur")
+        act(() => {
+          window.dispatchEvent(new Event("blur"));
+        });
+      else {
+        vi.spyOn(document, "hidden", "get").mockReturnValueOnce(true);
+        act(() => {
+          document.dispatchEvent(new Event("visibilitychange"));
+        });
       }
-      pointer("pointerup");
-      wait(800);
-      expect(item().dataset.playing).toBeUndefined();
-      expect(wrapper().style.transform).toBe("");
-      expect(played).toHaveLength(0);
-      pointer("pointerdown");
-      pointer("pointerup");
-      click();
-      expect(opened).toHaveBeenCalledOnce();
+      expect(item("a").dataset.playing).toBeUndefined();
+      pointer("pointerdown", 80, 150, hit("a"));
+      expect(touchMove("a", 92, 150)).toBe(true);
+      expect(item("a").dataset.playing).toBe("held");
     },
   );
 
-  it("releases a settling animation when the old list detaches or the view hides", async () => {
-    hold();
-    pointer("pointermove", 40);
-    pointer("pointerup", 40);
-    const old = wrapper();
-    item().remove();
+  it("stay where they stopped while the pile is put away and brought back", () => {
+    swipe("a", 80, 150, 60);
+    frames(150);
+    const stopped = item("a").style.transform;
+    expect(stopped).not.toBe("");
     show({ active: false });
-    expect(played[0].cancel).toHaveBeenCalledOnce();
-    expect(old.style.transform).toBe("");
-    await act(async () => played[0].finish());
-    show();
-    expect(pile().querySelector("[data-playing]")).toBeNull();
+    show({ active: true });
+    frames(5);
+    expect(item("a").style.transform).toBe(stopped);
   });
 
-  it("bounds a stalled settling animation and restores the sticker", () => {
-    hold();
-    pointer("pointermove", 40);
-    pointer("pointerup", 40);
-    wait(1000);
-    expect(played[0].cancel).toHaveBeenCalledOnce();
-    expect(item().dataset.playing).toBeUndefined();
+  it("go back to their spots when their day is laid out anew", () => {
+    swipe("a", 80, 150, 60);
+    frames(150);
+    show({ days: [{ ...DAY, laid: [...DAY.laid, laidAt("c", 300, -60)] }] });
+    expect(item("a").style.transform).toBe("");
+    expect(item("b").style.transform).toBe("");
   });
 
-  it("holds a tossing sticker still for a new tap, then restores its preview origin before opening", () => {
-    hold();
-    pointer("pointermove", 40);
-    pointer("pointerup", 40);
-    click();
-    pointer("pointerdown");
-    expect(played[0].pause).toHaveBeenCalledOnce();
-    pointer("pointerup");
-    click();
-    expect(opened).toHaveBeenCalledOnce();
-    expect(played[0].cancel).toHaveBeenCalledOnce();
-    expect(wrapper().style.transform).toBe("");
-    expect(item().dataset.playing).toBeUndefined();
-  });
-
-  it("allows a deliberate new tap when the browser omitted the previous drag's click", () => {
-    hold();
-    pointer("pointermove", 40);
-    pointer("pointerup", 40);
-    pointer("pointerdown");
-    wait(30);
-    pointer("pointerup");
-    click();
-    expect(opened).toHaveBeenCalledOnce();
-    expect(item().dataset.playing).toBeUndefined();
-  });
-
-  it("never swallows keyboard or assistive activation after a pickup", () => {
-    hold();
-    pointer("pointermove", 40);
-    pointer("pointerup", 40);
-    click(0);
-    expect(opened).toHaveBeenCalledOnce();
-    expect(item().dataset.playing).toBeUndefined();
-  });
-
-  it("leaves an ordinary context menu alone and does not pick up a sticker still falling in", () => {
-    const menu = new Event("contextmenu", { bubbles: true, cancelable: true });
-    button().dispatchEvent(menu);
-    expect(menu.defaultPrevented).toBe(false);
-    item().dataset.falling = "falling";
-    hold();
-    expect(captured).not.toHaveBeenCalled();
-    expect(item().dataset.playing).toBeUndefined();
-  });
-
-  it("under reduced motion allows direct drag and immediate return without a toss or tilt", () => {
+  it("under reduced motion, stop where they're let go, and the pile doesn't lean", () => {
     motion.reduced = true;
     show();
     expect(motion.useLight).toHaveBeenLastCalledWith(false);
+    swipe("a", 80, 150, 60);
+    const letGo = moveOf("a");
+    frames(60);
+    expect(moveOf("a")).toEqual(letGo);
     publish(1, -1);
-    hold();
-    pointer("pointermove", 45);
-    expect(wrapper().style.transform).toBe("translate(45px, 0px)");
-    pointer("pointerup", 45);
-    expect(played).toHaveLength(0);
-    expect(item().dataset.playing).toBeUndefined();
     expect(heap().style.translate).toBe("0px 0px");
   });
+});
 
+describe("Explore's pile leaning with the device", () => {
   it.each([
     ["phone-or-tablet", "granted", "6px -4px"],
     ["phone-or-tablet", "not-needed", "6px -4px"],
@@ -342,49 +309,33 @@ describe("Explore's loose sticker play", () => {
     ["desktop", "granted", "0px 0px"],
     ["unknown", "granted", "0px 0px"],
   ] as const)(
-    "only permitted real-device tilt moves the pile: %s / %s",
+    "follows only permitted real-device tilt: %s / %s",
     (device, permission, expected) => {
       motion.device = device;
       motion.permission = permission;
-      show({ layout: {} });
+      show();
       publish(1, -1);
       expect(motion.useLight).toHaveBeenLastCalledWith(expected !== "0px 0px");
       expect(heap().style.translate).toBe(expected);
     },
   );
 
-  it("freezes tilt through any touch, including one released outside the pile, then follows again", () => {
+  it("holds still through any touch, one let go outside the pile too, then follows again", () => {
     publish(1, 0);
-    pointer("pointerdown", 0, 0, 1, pile());
+    pointer("pointerdown", 0, 0, pile());
     publish(-1, -1);
     expect(heap().style.translate).toBe("6px 0px");
-    pointer("pointerup", 0, 0, 1, document);
+    pointer("pointerup", 0, 0);
     expect(heap().style.translate).toBe("-6px -4px");
   });
 
-  it("freezes tilt while touching elsewhere on Explore and cancels pickup for a second touch there", () => {
-    publish(1, 0);
-    pointer("pointerdown", 0, 0, 1, document.body);
-    publish(-1, 0);
-    wait(400);
-    expect(heap().style.translate).toBe("6px 0px");
-    expect(item().dataset.playing).toBeUndefined();
-    pointer("pointerup", 0, 0, 1, document.body);
-    expect(heap().style.translate).toBe("-6px 0px");
-    hold();
-    pointer("pointerdown", 0, 0, 2, document.body);
-    expect(item().dataset.playing).toBeUndefined();
-    pointer("pointerup", 0, 0, 2, document.body);
-    pointer("pointerup");
-    expect(played).toHaveLength(0);
-  });
-
-  it("keeps a keyboard-focused sticker still and responds to permission changes", () => {
-    vi.spyOn(button(), "matches").mockImplementation((selector) => selector === ":focus-visible");
-    act(() => button().focus());
+  it("holds still while a keyboard focuses a sticker, and follows permission changes", () => {
+    const button = element(".pile-sticker__button");
+    vi.spyOn(button, "matches").mockImplementation((selector) => selector === ":focus-visible");
+    act(() => button.focus());
     publish(1, -1);
     expect(heap().style.translate).toBe("0px 0px");
-    act(() => button().blur());
+    act(() => button.blur());
     publish(1, -1);
     expect(heap().style.translate).toBe("6px -4px");
     motion.permission = "denied";

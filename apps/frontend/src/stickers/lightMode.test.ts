@@ -3,7 +3,9 @@ import {
   fallbackPose,
   lightMode,
   nearestAngles,
+  IDENTITY,
   readAt,
+  rotate,
   rotationInputForLight,
   screenLean,
   STILL_POSE,
@@ -132,7 +134,7 @@ describe("rotationInputForLight", () => {
 
 describe("fallbackPose", () => {
   it("starts at the still pose and sweeps continuously around it, the same each cycle", () => {
-    expect(fallbackPose(0)).toEqual(STILL_POSE);
+    expect(fallbackPose(0)).toMatchObject(STILL_POSE);
     expect(fallbackPose(0.25)).toEqual(fallbackPose(1.25));
     for (let phase = 0; phase < 1; phase += 0.05) {
       const before = fallbackPose(phase);
@@ -144,5 +146,13 @@ describe("fallbackPose", () => {
     expect(fallbackPose(0.75).gamma).toBeLessThan(-5);
     expect(fallbackPose(0.125).beta).toBeGreaterThan(STILL_POSE.beta + 5);
     expect(fallbackPose(0.375).beta).toBeLessThan(STILL_POSE.beta - 5);
+  });
+
+  it("keeps the viewer centered on the still pose, carrying its gravity into the sweep's", () => {
+    for (const phase of [0.1, 0.3, 0.6, 0.85]) {
+      const swept = fallbackPose(phase);
+      const carried = rotate(swept.turn ?? IDENTITY, upOnScreen(STILL_POSE));
+      upOnScreen(swept).forEach((v, i) => expect(carried[i]).toBeCloseTo(v, 9));
+    }
   });
 });

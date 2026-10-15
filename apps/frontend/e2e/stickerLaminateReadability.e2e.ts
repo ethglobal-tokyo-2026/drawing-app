@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page, type JSHandle } from "@playwright/test";
+import { STILL_POSE } from "../src/stickers/lightMode.ts";
 
 test.use({
   viewport: { width: 820, height: 1180 },
@@ -54,6 +55,13 @@ async function paperPixels(paper: Locator): Promise<PaperSnapshot> {
   return snapshot;
 }
 
+/**
+ * The least step, in display levels, across the shoji's edge on white paper. Near white the glare's
+ * lift rolls off into the highlight shoulder; inside the glare the lattice alone varies the paper by
+ * less than this.
+ */
+const EDGE_SPAN = 10;
+
 async function readablePaper(snapshot: PaperSnapshot) {
   const { min, max, missingCoverage, tinted, brightFraction } = await snapshot.evaluate(
     async (pixels) => {
@@ -67,7 +75,7 @@ async function readablePaper(snapshot: PaperSnapshot) {
   expect(
     max - min,
     "White paper must reveal a distinct reflected source edge",
-  ).toBeGreaterThanOrEqual(12);
+  ).toBeGreaterThanOrEqual(EDGE_SPAN);
   expect(
     brightFraction,
     "The source should occupy a localized part of the cut",
@@ -223,27 +231,25 @@ test("the first iPad sensor reading glides the laminate to the device's pose, an
   const paper = page.locator("[data-white] canvas.sticker-material");
   await expect(paper).toHaveAttribute("data-state", "ready");
   const still = await settledPaper(page, paper);
-  expect(await page.evaluate(() => window.laminateFixture.getPose())).toEqual({
-    beta: 55,
-    gamma: 0,
-    screenAngle: 0,
-  });
+  expect(await page.evaluate(() => window.laminateFixture.getPose())).toEqual(STILL_POSE);
 
   // The first pose the light writes after the reading, which lies on its way rather than at it.
-  const first = await page.evaluate(async () => {
-    window.laminateFixture.tilt(40, 0);
+  const first = await page.evaluate(async (stillBeta) => {
+    window.laminateFixture.tilt(stillBeta - 15, 0);
     for (let frame = 0; frame < 60; frame++) {
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       const pose = window.laminateFixture.getPose();
-      if (pose.beta !== 55) return pose;
+      if (pose.beta !== stillBeta) return pose;
     }
     throw new Error("The light never left the still pose after a reading");
-  });
-  expect(first.beta, "The first reading glides rather than jumping").toBeGreaterThan(40);
-  expect(first.beta, "The first reading glides rather than jumping").toBeLessThan(55);
+  }, STILL_POSE.beta);
+  expect(first.beta, "The first reading glides rather than jumping").toBeGreaterThan(
+    STILL_POSE.beta - 15,
+  );
+  expect(first.beta, "The first reading glides rather than jumping").toBeLessThan(STILL_POSE.beta);
   const landed = await settledPaper(page, paper);
-  expect(await page.evaluate(() => window.laminateFixture.getPose())).toEqual({
-    beta: 40,
+  expect(await page.evaluate(() => window.laminateFixture.getPose())).toMatchObject({
+    beta: STILL_POSE.beta - 15,
     gamma: 0,
     screenAngle: 0,
   });
@@ -252,14 +258,20 @@ test("the first iPad sensor reading glides the laminate to the device's pose, an
     "The device's real pose moves the reflection from the still pose's",
   ).toBeGreaterThanOrEqual(1.5);
 
-  // One eye sees the shoji at one place on screen: tilt until its edge crosses this sticker.
+  // One eye sees the shoji at one place on screen: tilt until its edge crosses this sticker. Each
+  // step clears the light's half-degree tremor floor, which a step of exactly that drops to rounding.
   let crossing: number | null = null;
-  for (let beta = 40; beta <= 80 && crossing === null; beta += 0.5) {
+  const seen: string[] = [];
+  for (let beta = 40; beta <= 80 && crossing === null; beta += 0.75) {
     await holdPose(page, beta, 0);
     const { span, brightFraction } = await reflectionOn(paper);
-    if (span >= 12 && brightFraction >= 0.1 && brightFraction <= 0.45) crossing = beta;
+    seen.push(`${beta}: span ${span}, bright ${brightFraction.toFixed(3)}`);
+    if (span >= EDGE_SPAN && brightFraction >= 0.1 && brightFraction <= 0.45) crossing = beta;
   }
-  expect(crossing, "Some tilt must carry the shoji's edge across the paper").not.toBeNull();
+  expect(
+    crossing,
+    `Some tilt must carry the shoji's edge across the paper:\n${seen.join("\n")}`,
+  ).not.toBeNull();
   await readablePaper(await settledPaper(page, paper));
   expect(await glossEdge(paper), "Gloss should reveal a short source boundary").toBeLessThanOrEqual(
     0.15,

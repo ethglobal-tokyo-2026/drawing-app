@@ -180,7 +180,6 @@ export class StickerRenderer {
         "normalTransform",
         "pointTurn",
         "roughness",
-        "creaseReveal",
         "outerImage",
         "sourceBounds",
         "normalBounds",
@@ -773,7 +772,7 @@ export class StickerRenderer {
         screenY,
         screenScale,
         target,
-        creaseProgress: 1,
+        flat: false,
       };
       return [job];
     });
@@ -823,7 +822,7 @@ export class StickerRenderer {
           !(surface.revealing && surface.pendingPrintCut),
       );
       const flats = drawn.flatMap((job) =>
-        job.surface.revealing ? [{ ...job, target: null, creaseProgress: 0 }] : [],
+        job.surface.revealing ? [{ ...job, target: null, flat: true }] : [],
       );
       return [flats, drawn].filter((tiles) => tiles.length);
     });
@@ -859,7 +858,7 @@ export class StickerRenderer {
       sourceH: number;
       w: number;
       h: number;
-      creaseProgress: number;
+      flat: boolean;
       target: HTMLCanvasElement | null;
       x: number;
       y: number;
@@ -883,7 +882,7 @@ export class StickerRenderer {
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.disable(gl.SCISSOR_TEST);
-    // The room turns with the device; normals stay fixed to the sticker.
+    // The room holds still in the world as the device turns; normals stay fixed to the sticker.
     const room = roomFrame();
     gl.uniform3fv(this.uniforms.get("roomUp") ?? null, room.up);
     gl.uniform3fv(this.uniforms.get("roomToward") ?? null, room.toward);
@@ -912,7 +911,9 @@ export class StickerRenderer {
       gl.viewport(tile.x, gl.drawingBufferHeight - tile.y - tile.h, tile.w, tile.h);
       for (let i = 0; i < 3; i++) {
         gl.activeTexture(gl.TEXTURE0 + i);
-        gl.bindTexture(gl.TEXTURE_2D, textures[i]);
+        // A crease's flat snapshot takes the normal of a sticker without one, so it has exactly that
+        // sticker's pixels: a normal decoded any other way can differ by a byte under a soft glare.
+        gl.bindTexture(gl.TEXTURE_2D, i === 2 && tile.flat ? this.flat : textures[i]);
         gl.uniform1i(this.uniforms.get(["printImage", "cutImage", "normalImage"][i]) ?? null, i);
       }
       const coverage = foil?.coverage;
@@ -995,7 +996,6 @@ export class StickerRenderer {
         );
         gl.uniform3fv(this.uniforms.get("laminatePalette[0]") ?? null, this.laminatePalette);
       }
-      gl.uniform1f(this.uniforms.get("creaseReveal") ?? null, tile.creaseProgress);
       gl.uniform1f(this.uniforms.get("opaquePaper") ?? null, 0);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
       if (

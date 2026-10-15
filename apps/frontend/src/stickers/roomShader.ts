@@ -10,7 +10,7 @@ const bounce = (levels: (typeof ROOM)["glossBounce" | "foilBounce"]) =>
   `vec4(${f(levels.ceiling)},${f(levels.litWall)},${f(levels.walls)},${f(levels.floor)}),${f(levels.litWallFade)}`;
 
 /**
- * The one room every material mirrors, fixed to gravity (prototype). roomUp, roomToward (the viewer,
+ * The one room every material mirrors, fixed in the world (prototype). roomUp, roomToward (the viewer,
  * level), roomLight and the shoji's roomAcross (viewer's right) and roomDown axes are in screen
  * axes, y down, from roomFrame; roomEye is in CSS px from the screen's center. A direction's shoji
  * coordinates are on the plane one unit along the light. roomFootprint is the reflection's change
@@ -28,7 +28,12 @@ vec2 roomPlane(vec3 r){
  float z=dot(r,roomLight);
  return z>.05?vec2(dot(r,roomAcross),dot(r,roomDown))/z:vec2(1e3);
 }
-vec2 roomShojiAxes(vec2 q){return 1.-smoothstep(${extent}-${f(s.feather)},${extent}+${f(s.feather)},abs(q));}
+// The frame along each axis through a logistic blur of scale b: the box's exact convolution, so it
+// fades in and out with no step and no cutoff.
+vec2 roomShojiAxes(vec2 q,float b){
+ vec2 d=abs(q);
+ return 1./(1.+exp(clamp((d-${extent})/b,-40.,40.)))-1./(1.+exp(clamp((d+${extent})/b,-40.,40.)));
+}
 // One bar of half width b at distance d, in cells, softened over w cells.
 float roomBar(float d,float b,float w){return 1.-smoothstep(b-w,b+w+.0001,d);}
 // Kumiko along one axis: bars at whole cells; once w spans much of a cell, only their average shows,
@@ -36,20 +41,25 @@ float roomBar(float d,float b,float w){return 1.-smoothstep(b-w,b+w+.0001,d);}
 float roomBars(float u,float b,float w){
  return mix(roomBar(abs(fract(u+.5)-.5),b,w),2.*b,smoothstep(.2,.45,w));
 }
-// The shoji screen: washi glowing brightest at its middle, darker kumiko over it, and a crisp frame,
-// seen through a 1:2:1 filter of the given spread.
+// The shoji screen: washi glowing brightest at its middle, darker kumiko over it, and its frame, all
+// blurred by a coat whose lobe is spread wide, plus the halo of the wall and ceiling it lights and the
+// eye's veiling glare, which brighten before the frame arrives and fade after it leaves.
 float roomShoji(vec3 r,float spread){
  vec2 q=roomPlane(r);
- vec2 f=(roomShojiAxes(q-spread)+2.*roomShojiAxes(q)+roomShojiAxes(q+spread))*.25;
+ vec2 h=roomShojiAxes(q,${f(s.haloScale)});
+ float halo=${f(s.haloLevel)}*h.x*h.y;
+ float blur=sqrt(${f(s.feather * s.feather)}+${f(0.4 * 0.4)}*spread*spread);
+ vec2 f=roomShojiAxes(q,blur);
  float frame=f.x*f.y;
- if(frame<=0.)return 0.;
+ if(frame<.001)return halo;
  vec2 local=q/${extent};
  vec2 cells=(local*.5+.5)*${extent}*2./${cell};
- vec2 w=vec2(.7*spread+roomFootprint)/${cell};
+ // Bars soften by less than the frame's edge, so the lattice stays readable in the glare's middle.
+ vec2 w=vec2(2.4*blur+roomFootprint)/${cell};
  float bars=max(roomBars(cells.x,${barHalf}.x,w.x),roomBars(cells.y,${barHalf}.y,w.y));
  // The bottom rail: one more bar the rail's share of a row above the frame's lower edge.
  bars=max(bars,roomBar(abs(cells.y-${f(s.rows - s.rail)}),${barHalf}.y,w.y)*(1.-smoothstep(.2,.45,w.y)));
- return frame*(1.-${f(s.glow)}*.5*dot(local,local))*(1.-${f(s.barShade)}*bars);
+ return halo+frame*(1.-${f(s.glow)}*.5*dot(local,local))*(1.-${f(s.barShade)}*bars);
 }
 // The room's bounce: the ceiling, the wall the shoji lights (beyond the device), the other walls, a
 // soft horizon, and the floor. Levels are ceiling, lit wall, walls, floor. The lit wall fades by

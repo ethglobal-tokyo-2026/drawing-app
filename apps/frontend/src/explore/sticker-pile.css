@@ -100,13 +100,20 @@
 
 /* ---------- A sticker in the pile ---------- */
 
+/* A sticker picked up goes over every one before it (--raised), and stays there once let go. */
 .pile-sticker {
   position: absolute;
   left: calc(var(--x) * var(--k) * 1px);
   top: calc(var(--y) * var(--k) * 1px);
   width: calc(var(--w) * var(--k) * 1px);
   height: calc(var(--h) * var(--k) * 1px);
-  z-index: var(--z);
+  z-index: var(--raised, var(--z));
+}
+
+/* While it slides, a sticker has a layer of its own, so its frames composite without repainting the
+   heap under it. */
+.pile-sticker[data-moving] {
+  will-change: transform;
 }
 
 /* The button is the sticker's name for screen readers and its keyboard stop; taps land only on
@@ -127,17 +134,7 @@
   outline: none;
 }
 
-/* Pickup moves artwork, tags, and their hit regions as one, above the fall's own wrapper. */
-.pile-sticker__play {
-  position: absolute;
-  inset: 0;
-  transform-origin: 50% 85%;
-}
-
-.pile-sticker[data-playing] {
-  z-index: 100000;
-}
-
+/* Under the finger, a sticker casts a shadow on the stickers below. */
 .pile-sticker[data-playing="held"] .pile-sticker__image {
   filter: drop-shadow(2px 5px 4px rgba(28, 24, 36, 0.18));
 }
@@ -224,7 +221,10 @@
       translate 180ms var(--ease-out);
   }
 
-  .pile-sticker:not([data-falling], [data-playing]):has(.pile-sticker__hit:hover, .pile-tags:hover)
+  .pile-sticker:not([data-falling], [data-playing], [data-moving]):has(
+      .pile-sticker__hit:hover,
+      .pile-tags:hover
+    )
     :is(.pile-sticker__image, .pile-tag) {
     translate: 0 -4px;
   }
@@ -236,7 +236,10 @@
     transition: none;
   }
 
-  .pile-sticker:not([data-falling], [data-playing]):has(.pile-sticker__hit:hover, .pile-tags:hover)
+  .pile-sticker:not([data-falling], [data-playing], [data-moving]):has(
+      .pile-sticker__hit:hover,
+      .pile-tags:hover
+    )
     :is(.pile-sticker__image, .pile-tag) {
     translate: none;
   }

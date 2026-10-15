@@ -240,31 +240,29 @@ function PileSticker({
       data-falling={falling ?? undefined}
     >
       <button type="button" className="pile-sticker__button" aria-label={label} onClick={onLift}>
-        <span className="pile-sticker__play">
-          <span className="pile-sticker__drop">
-            <span className="pile-sticker__art">
-              {falling && (
-                <img
-                  className={`pile-sticker__air${nsfw}`}
-                  src={sticker.images.webp.sticker}
-                  alt=""
-                  draggable={false}
-                />
-              )}
+        <span className="pile-sticker__drop">
+          <span className="pile-sticker__art">
+            {falling && (
               <img
-                ref={revealOnLoad}
-                className={`pile-sticker__image reveal-img${nsfw}`}
+                className={`pile-sticker__air${nsfw}`}
                 src={sticker.images.webp.sticker}
                 alt=""
                 draggable={false}
-                loading={falling ? "eager" : "lazy"}
-                decoding="async"
               />
-              <span className="pile-sticker__hit" style={{ clipPath: clipOf(laid.shape) }} />
-              <span className="pile-sticker__ring" style={cutBox(laid.shape)} />
-            </span>
-            <NameTags laid={laid} fresh={fresh} />
+            )}
+            <img
+              ref={revealOnLoad}
+              className={`pile-sticker__image reveal-img${nsfw}`}
+              src={sticker.images.webp.sticker}
+              alt=""
+              draggable={false}
+              loading={falling ? "eager" : "lazy"}
+              decoding="async"
+            />
+            <span className="pile-sticker__hit" style={{ clipPath: clipOf(laid.shape) }} />
+            <span className="pile-sticker__ring" style={cutBox(laid.shape)} />
           </span>
+          <NameTags laid={laid} fresh={fresh} />
         </span>
       </button>
     </li>
@@ -496,7 +494,7 @@ export function StickerPile({ days, today, end, onReachEnd, meId, onLift, visibl
   /** The pile's width in units, from pileFit. */
   const [units, setUnits] = useState(PILE_WIDTH);
   const laidDays = useMemo(() => layDays(days, today, units), [days, today, units]);
-  usePilePlay(root, { active: visible, layout: laidDays });
+  usePilePlay(root, { active: visible, days: laidDays, width: units });
   // Read once as the pile opens: the last look, what's new since, and what falls.
   const [seen] = useState(() => lastSeen(meId));
   const [arrivals] = useState(() => arrivalsOf(days, today, seen));
@@ -577,7 +575,11 @@ export function StickerPile({ days, today, end, onReachEnd, meId, onLift, visibl
           </h2>
           <DayEdge day={day} today={today} />
           {laid.length ? (
-            <ol className="pile-day__heap" style={{ "--hh": height } as CSSProperties}>
+            <ol
+              className="pile-day__heap"
+              data-day={day}
+              style={{ "--hh": height } as CSSProperties}
+            >
               {laid.map((item) => (
                 <PileSticker
                   key={item.pile.sticker.id}
