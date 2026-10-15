@@ -6,7 +6,12 @@ import { formatNo } from "../src/stickers/format.ts";
 import { actorHeaders, envelope, isRecord } from "./helpers.ts";
 
 /** The stickers kept in e2e/storedStickers/, each in a folder of its name. */
-export const STORED_STICKERS = ["oneStroke", "erasedMarks", "erasedMarksSideways"] as const;
+export const STORED_STICKERS = [
+  "oneStroke",
+  "oneStrokeRising",
+  "erasedMarks",
+  "erasedMarksSideways",
+] as const;
 
 /** What captures the stored stickers anew, which a change to the seal form needs. */
 const RECAPTURE = "run pnpm --filter frontend e2e:stored-stickers";

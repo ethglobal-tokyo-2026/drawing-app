@@ -1,6 +1,7 @@
 import { expect, type Locator } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
-import { boardSticker, say, sealIntoTray, signIn, startsWith, test } from "./helpers.ts";
+import { actorHeaders, boardSticker, envelope, say, signIn, startsWith, test } from "./helpers.ts";
+import { sealStoredSticker } from "./storedStickers.ts";
 
 const { stickerBoard } = strings;
 const language = "en";
@@ -107,9 +108,21 @@ function inkUnderNeighbor(sheet: Locator) {
 
 test("a tray sticker's blank corner lets a tap reach the sticker under it", async ({ page }) => {
   await signIn(page, "tray-cut-selection", language);
-  // Diagonal strokes leave two corners of each box blank: a sheet too narrow for three in a row packs
-  // one onto the others, its box over their cuts.
-  for (let i = 0; i < 3; i++) await sealIntoTray(page, language);
+  // Sheets pack by cut line, not box: each sticker settles onto the cuts below it. A stroke rising to
+  // the right leaves its box's lower right blank, so a sticker settling on the one before it hangs that
+  // corner over the earlier stroke's raised end.
+  const headers = actorHeaders(await envelope(page));
+  for (let z = 0; z < 3; z++) {
+    const { id } = await sealStoredSticker(page, "oneStrokeRising");
+    const placement = { onBoard: false, x: 0.5, y: 0.5, scale: 0.5, rotation: 0, z };
+    const response = await page.request.patch(`/api/sticker-boards/me/sticker-placements/${id}`, {
+      headers,
+      data: { placement },
+    });
+    expect(response.status(), await response.text()).toBe(200);
+  }
+  // The board reads its stickers' placements as it loads.
+  await page.reload();
   const zipper = page.getByRole("button", {
     name: startsWith(say(stickerBoard.tray.zipper, language)),
   });
