@@ -2,7 +2,7 @@
 
 **Goal:** the holo backing foil shows its warm Foil hues (peach, lemon) beside its cool ones (aqua, sky, lilac) on every band at every pose, as DESIGN.md's Foil colors describe. It must never show green or a white band, and pink foil must stay pink.
 
-**Status:** approach chosen (ad0ll, 2026-10-15): A3's warm floor plus the cool floor's aqua rest point. Built as one commit on branch `holo-hues`, not merged. Paused while the shared light's behavior shipped.
+**Status:** approach chosen (ad0ll, 2026-10-15): A3's warm floor plus the cool floor's aqua rest point. Kept the aqua rest point: the critique found no flat stripe or brightness step, so the fallback isn't used. Built on branch `holo-hues-finish` with its guard test, not merged; only the device check in LINE is left.
 
 **Why the warm hues were missing:**
 
@@ -20,7 +20,7 @@
 - `foilShader.ts` samples it in `foilDiffraction` (the lamps' and window's orders) and `foilRoomOrders` (holo's colored floor, the only part the chosen approach changes).
 - `docs/research/sticker-foil/material-reference.ts` is the independent reference the foil e2e integrates against.
 
-## The change on `holo-hues`
+## The change on `holo-hues-finish`
 
 In `foilRoomOrders` only:
 
@@ -30,9 +30,9 @@ In `foilRoomOrders` only:
 
 ## Before merging
 
-- [ ] **Harness settle wait.** Under the world-fixed viewer, wait until the light hasn't published for 1.5 s. Then measure acceptance 1–5a in both engines, plus the strict green count (green beating red and blue by more than 2).
-- [ ] **Guard test.** Extend `e2e/stickerFoil.e2e.ts`'s holo color test to require warm and cool pixels. The fixture renders at polar 0, so render each pose at several polars around the band. Confirm it fails with main's floor (`.62 + .26·sin`). The first draft is in `data/scratch/holo-warm/holo-guard-test-wip.patch`.
-- [ ] **Critique.** Compare the aqua rest point with the fallback, then the foil e2e in both engines.
+- [x] **Harness settle wait.** Measured with the settle wait in both engines, against main. Acceptance 1–5a pass on every band-pose; main fails item 1 on 84 of 256. Strict green is 0 on both, and pink and Kyoto Seika bands match main.
+- [x] **Guard test.** The fixture takes a `polar` option, and the holo color test renders each pose at six polars and requires warm and cool pixels. Main's floor fails it in both engines, with no warm hue at β 55 and 75.
+- [x] **Critique.** The aqua rest point shows no flat stripe and no brightness step against main, so it stays. The rest reads as sky-cyan, not true aqua. The foil e2e passes in both engines.
 - [ ] **Real phone, in LINE,** through the developer slip's performance recorder: the material's GPU cost while tilting and dragging, and the look in motion.
 
 ## Acceptance (measured, never eyeballed)
