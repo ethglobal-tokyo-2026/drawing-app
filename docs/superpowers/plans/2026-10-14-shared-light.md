@@ -61,7 +61,9 @@
 - **Critique:** each round is critiqued with impeccable.
   - Round 1 scored 13/20, with two P1s (grey holo; gloss at the still pose) and three P2s.
   - Round 2 scored 12/20: the flat viewpoint, the washout and the creases are fixed, but the still pose now veils the art, and the foils lose their identity near upright.
+  - Round 3 (c1b42fd6) scored 15/20, Good with no P1s, so it's being built. The still glare stays on the detail's top margin: that's where a real sticker shows the shoji's mirror image (ad0ll: "behave like a real sticker").
   - **Build rule (ad0ll):** once a round scores Good (70%+) with no P1s, it's built into the app.
+  - **Follow-up after shipping (ad0ll):** holo's warm hues (peach, lemon, aqua) in a lane of their own. Main lacks them too: `scripts/generateFoilLookup.ts` puts them at the dim red end of the lookup.
 - **Performance:** the 21-sticker board tilt and drag at 4× CPU throttle, against main.
 - **Real device:** a phone check in LINE through the performance recorder.
 
@@ -69,7 +71,7 @@
 
 - [x] **A. Prototype and pose matrix (spike):** branch `shared-light-spike`, d7b0a9d5; critiqued.
 - [x] **A2. Second round on the spike:** cb46336f; critiqued (12/20).
-- [ ] **A3. Third round on the spike:**
+- [x] **A3. Third round on the spike (c1b42fd6, 15/20):**
   - the still glare in the upper third with a crisp edge, and paper brightening under it;
   - the foils keep their identity near upright;
   - holo's warm hues;
