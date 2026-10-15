@@ -84,7 +84,9 @@ export function ThoughtTrail({
   return (
     <svg ref={layer} className="subject-trail" aria-hidden="true">
       {trail.map((bead, i) => (
-        <g key={i} transform={`translate(${bead.x} ${bead.y})`}>
+        // Placed by the translate property: the pop's scale composes outside a transform attribute,
+        // which would pull each bubble toward the trail's corner as it pops.
+        <g key={i} style={{ translate: `${bead.x}px ${bead.y}px` }}>
           <path className="subject-puff__white" d={drawings[i].white} />
           <path className="subject-puff__ink" d={drawings[i].ink} />
         </g>
