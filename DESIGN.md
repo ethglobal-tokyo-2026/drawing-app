@@ -397,7 +397,7 @@ The sticker board is free-form, not a grid, and Explore's pile is a heap of die-
 
 ## Elevation & Depth
 
-Depth is physical, from one light at the top left. Every cast shadow falls down and to the right in neutral Ink alpha, in two parts: a tight contact and a soft throw. Controls get depth from thickness, not shading: a key sits on a 6px lip, a label on 3px of paper, and the base casts the shadow. Stickers get their edge from the kiss-cut groove round their silhouette; on a foil sticker the band is the edge.
+Depth is physical. A control's cast shadow falls down and to the right from a light at the top left; a sticker's follows the room's light (the One Light Rule). Cast shadows are neutral Ink alpha, in two parts: a tight contact and a soft throw. Controls get depth from thickness, not shading: a key sits on a 6px lip, a label on 3px of paper, and the base casts the shadow. Stickers get their edge from the kiss-cut groove round their silhouette; on a foil sticker the band is the edge.
 
 Stickers and foils follow the app's one moving light. It tracks only device tilt; mouse, pen and finger interactions never move it. With no tilt reading, or while the device is still, the light holds still. Controls don't follow it.
 
@@ -417,7 +417,7 @@ Stickers and foils follow the app's one moving light. It tracks only device tilt
 
 ### Named Rules
 
-**The One Light Rule.** One light for the whole app, including Shop previews. Static shadows and crease shading fall from the top left; the laminate and foil reflect one room that stays put in the world, seen by one viewer in front of the screen. On phone and iPad, real device tilt turns the screen within that room, so reflections slide as a mirror's do; after a large change of posture the viewer settles back in front of the screen, and then the reflection holds. Unasked, denied, blocked, silent, or uncertain rotation input stays still. Only a recognized device without rotation input may use the shared timed fallback. Pointer movement never moves material light. Reduced motion, backgrounding, and the last light owner's release stop pending motion while preserving the held pose.
+**The One Light Rule.** One light for the whole app, including Shop previews. Crease shading, drop shadows and reflections all come from one room that stays put in the world, seen by one viewer in front of the screen. On phone and iPad, real device tilt turns the screen within that room, so reflections slide as a mirror's do; after a large change of posture the viewer settles back in front of the screen, and then the reflection holds. Unasked, denied, blocked, silent, or uncertain rotation input stays still. Only a recognized device without rotation input may use the shared timed fallback. Pointer movement never moves material light. Reduced motion, backgrounding, and the last light owner's release stop pending motion while preserving the held pose.
 
 **The Neutral Shadow Rule.** Shadows are Ink alpha, never tinted, except on the stat board, where paper casts a cork-brown throw over an Ink contact line.
 
@@ -536,7 +536,7 @@ Every icon is Phosphor, through one registry (`apps/frontend/src/icons`): bold a
 - **Do** let the shared press drive every key and label.
 - **Do** animate only transform and opacity, on the house curves: spring, ease-out and peel.
 - **Do** keep every in-phone text size at 11px or above, with widths from the shared tokens.
-- **Do** cast shadows down and to the right from the top-left light, in neutral Ink alpha.
+- **Do** cast a control's shadow down and to the right from the top-left light, in neutral Ink alpha.
 - **Do** give every touch target a 44px hit area.
 - **Do** honor reduced motion: durations collapse, presses halve and lose their spring, and moving materials hold still.
 

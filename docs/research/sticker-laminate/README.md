@@ -4,7 +4,7 @@ The live laminate covers the sticker's full cut, including blank line-art interi
 
 `apps/frontend/src/stickers/stickerShader.ts` composes paper, ink, and neutral dielectric reflection in linear light using exact Fresnel. Every material on screen reflects one room from one viewpoint (`sharedRoom.ts`, `roomShader.ts`):
 
-- **The light:** a shoji screen above and behind the viewer, a little left, with a frame and kumiko lattice, so its reflection reads on near-white paper. Each coat blurs it by its own lobe, and a soft halo around it, for the wall it lights and the eye's veiling glare, brightens before its reflection arrives and fades after it leaves. Its still glare sits in the screen's upper third.
+- **The lights:** a shoji screen above and behind the viewer, a little left, with a squared frame and a softened kumiko lattice; its still glare sits in the screen's upper third. Round lights (`ROOM.lights`) light the poses the shoji misses: a ceiling lamp beyond the device for a device lying back, and a marumado behind and above the viewer for an upright one. Each coat blurs a light by its own lobe, and a soft halo around each, for the wall it lights and the eye's veiling glare, brightens before its reflection arrives and fades after it leaves. Gloss, foil and glitter mirror the same lights.
 - **The bounce:** a ceiling, the wall the shoji lights, other walls and a floor.
 - **The viewpoint:** one viewer in front of the screen's center, toward its bottom edge when the device lies flat. The room and the viewer stay put in the world while the hand turns the device; once the device turns past a release, the viewer glides back in front of it. A sticker's reflection depends on where it sits on screen.
 - **Paper's highlights** roll off above a shoulder, so the print never clips.
@@ -13,13 +13,13 @@ Gloss and matte use different angular filter widths. The separable filter matche
 
 ## Runtime
 
-The light publishes the device's pose, beta and gamma from DeviceOrientation plus the screen angle, and the turn since the attitude the viewer is centered on, smoothed by a finite glide (`light.ts`, `lightMode.ts`):
+The light publishes the device's pose, beta and gamma from DeviceOrientation plus the screen angle, and the turn since the attitude the viewer is centered on (`light.ts`, `lightMode.ts`). A One Euro filter removes sensor noise and lag without hiding the hand's tremor, which a real reflection shows; a frame publishes once the reflection moves half a CSS pixel, at most 60 times a second, and a held reading lands exactly:
 
 - **Orientation:** alpha, beta and gamma give the device's attitude; without alpha, each change in gravity is the smallest turn that explains it. A restarted listener keeps the heading the device was lit at. A turned screen turns the room with the content at once.
-- **The still pose:** before any reading the room is lit at the usual reading angle, and the first reading glides from it, with the viewer centered on that reading.
+- **The still pose:** before any reading the room is lit at the usual reading angle; the first reading moves the light to the device's pose, with the viewer centered on it.
 - **Pauses:** release, a hidden page, reduced motion or revoked permission hold the last pose.
 - **Redraws:** coating and foil receive the same pose each display frame. A surface that moves on screen redraws as it moves: a drag, a landing, a scroll once it stops, a resize.
-- **Creases** are lit from the static top left, as the drop shadows are, and don't follow tilt. Mobile, unknown, denied, blocked, and silent sensor states remain stationary; only positively classified devices without rotation input qualify for timed fallback motion. The static foil span supplies only the fallback and registered cast; complete material rendering replaces the former live CSS effects.
+- **Creases and shadows** follow the room. The shader shades a crease's slopes by the room's irradiance on its normal (`roomIrradiance.ts`: the bounce as spherical harmonics, plus each light), relative to flat paper, so upright the bottom-facing slopes darken; the baked base keeps only the shoulder and foot. A sticker's key shadow (`keyShadow.ts`) falls away from the shoji, longer and softer as the light lowers, over a static ambient shadow. Mobile, unknown, denied, blocked, and silent sensor states remain stationary; only positively classified devices without rotation input qualify for timed fallback motion. The static foil span supplies only the fallback and registered cast; complete material rendering replaces the former live CSS effects.
 
 One WebGL context renders packed tiles. It requests `premultipliedAlpha: true`; the shader composes paper over foil and multiplies final display-space RGB by their combined alpha, leaving optical calculations and print uploads unchanged. Zero combined alpha produces zero RGBA. Each batch clears its used GL rectangle, submits its tile draws, then crops directly into retained sticker canvases with `copy`, including transparent pixels. All crops finish before the next batch overwrites the source. There is no second full-size 2D atlas.
 
