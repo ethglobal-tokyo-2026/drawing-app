@@ -95,6 +95,9 @@ const STAMPS = [
 // Things stuck on the cork; a tap anywhere else is on bare cork.
 const ON_CORK = ".stat-board__note, .stat-board__stamp, .stat-board__tape, a, button";
 
+const onBareCork = (target: EventTarget | null) =>
+  target instanceof Element && !target.closest(ON_CORK);
+
 /** A paper hanging from its pin or tape swings and settles; `k` scales the swing and turns it. */
 function swing(paper: Element, k: number, delay = 0) {
   paper.animate(
@@ -148,8 +151,15 @@ export const StatCork = memo(function StatCork({
     [reduced],
   );
 
+  // Only a press that began on bare cork turns the board back. A paper's control can move out from
+  // under a press, as the Settings note does when it scrolls itself into view, and the click then
+  // lands on the cork; a keyboard's click has no press at all.
+  const pressedOnCork = useRef(false);
+
   const onCorkClick = (e: MouseEvent<HTMLDivElement>) => {
-    if (e.target instanceof Element && !e.target.closest(ON_CORK)) onFlipBack();
+    const pressed = pressedOnCork.current;
+    pressedOnCork.current = false;
+    if (pressed && onBareCork(e.target)) onFlipBack();
   };
 
   // A tap on a note's paper nudges it. Its controls press, and its selectable text selects, without
@@ -163,6 +173,11 @@ export const StatCork = memo(function StatCork({
     const note = target.closest(".stat-board__note");
     const paper = note?.querySelector(":scope > .stat-board__paper");
     if (note && paper) swing(paper, note.classList.contains("stat-board__scrap") ? 0.45 : 0.6);
+  };
+
+  const onCorkPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    pressedOnCork.current = onBareCork(e.target);
+    nudge(e);
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -187,7 +202,12 @@ export const StatCork = memo(function StatCork({
         tabIndex={-1}
         onKeyDown={onKeyDown}
       >
-        <div className="stat-board__cork" ref={cork} onClick={onCorkClick} onPointerDown={nudge}>
+        <div
+          className="stat-board__cork"
+          ref={cork}
+          onClick={onCorkClick}
+          onPointerDown={onCorkPointerDown}
+        >
           <p className="visually-hidden" role="status">
             {f.loading
               ? f.own

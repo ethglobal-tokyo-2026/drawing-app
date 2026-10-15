@@ -232,10 +232,37 @@ describe("StatCork's Flip back", () => {
 });
 
 describe("StatCork's bare cork", () => {
-  it("turns the board back for a tap on it", () => {
+  const cork = () => {
+    const found = view.host.querySelector(".stat-board__cork");
+    if (!found) throw new Error("No cork");
+    return found;
+  };
+
+  /**
+   * A press that starts on `from` and is let go over `to`, as when what was pressed moves out from
+   * under the pointer: the browser clicks the nearest element holding both.
+   */
+  function press(from: Element, to: Element = from) {
+    let both: Element | null = from;
+    while (both && !both.contains(to)) both = both.parentElement;
+    act(() => {
+      from.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+      to.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+      both?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+  }
+
+  it("turns the board back for a press on it", () => {
     const onFlipBack = vi.fn();
     render(NEW_ARTIST, { onFlipBack });
-    act(() => view.host.querySelector<HTMLElement>(".stat-board__cork")?.click());
+    press(cork());
     expect(onFlipBack).toHaveBeenCalledOnce();
+  });
+
+  it("stays for a press that starts on a paper's control and is let go over bare cork", () => {
+    const onFlipBack = vi.fn();
+    render(null, { onFlipBack });
+    press(buttonNamed(view.host, TRY_AGAIN), cork());
+    expect(onFlipBack).not.toHaveBeenCalled();
   });
 });

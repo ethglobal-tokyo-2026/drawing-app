@@ -33,7 +33,7 @@ const PEEK_UNDER_TITLE = 10;
 /**
  * Tucks the note against the cork's foot so only its title shows, counting the cork's padding, which a
  * sticky box keeps clear of; below the stats instead where they'd run under it. `reveal` scrolls the
- * whole note into view, for a tap or focus, which the browser's own scrolling can't untuck.
+ * whole note into view, for a tap or keyboard focus, which the browser's own scrolling can't untuck.
  */
 function usePeek(note: RefObject<HTMLElement | null>, title: RefObject<HTMLElement | null>) {
   const reduced = useReducedMotion();
@@ -174,7 +174,11 @@ export function SettingsNote() {
       className="stat-board__note settings-note"
       aria-labelledby={`${id}-title`}
       onClick={() => reveal()}
-      onFocus={() => reveal()}
+      // Keyboard focus only: a press focuses its control before its click, and scrolling then would
+      // move the control out from under the press. The press's click reveals the note instead.
+      onFocus={(e) => {
+        if (e.target instanceof Element && e.target.matches(":focus-visible")) reveal();
+      }}
     >
       <div className="stat-board__paper">
         <h3 ref={title} className="settings-note__title" id={`${id}-title`}>

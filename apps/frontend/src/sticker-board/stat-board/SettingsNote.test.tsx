@@ -499,4 +499,53 @@ describe("the Settings note's peek", () => {
     expect(statsClearPeek(520, 480, 60)).toBe(false);
     expect(statsClearPeek(900, 480, 60)).toBe(true);
   });
+
+  /** The note in a cork whose foot it runs past, and the cork's scrolls. */
+  function partlyHidden() {
+    const view = renderWithApi(
+      <div className="stat-board__cork">
+        <SettingsNote />
+      </div>,
+      emptyApi({}),
+      TEST_ME,
+    );
+    unmount = view.unmount;
+    const cork = view.host.querySelector<HTMLElement>(".stat-board__cork");
+    const note = view.host.querySelector<HTMLElement>(".settings-note");
+    if (!cork || !note) throw new Error("The Settings paper is missing");
+    vi.spyOn(cork, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 0, 390, 776));
+    vi.spyOn(note, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 436, 390, 362));
+    return { host: view.host, scrollBy: vi.spyOn(cork, "scrollBy").mockImplementation(() => {}) };
+  }
+
+  /** Focus on `control` as the browser reads it, which happy-dom can't: by keyboard or by a press. */
+  const focusedBy = (control: HTMLElement, by: "keyboard" | "press") =>
+    vi
+      .spyOn(control, "matches")
+      .mockImplementation((selector) =>
+        selector === ":focus-visible"
+          ? by === "keyboard"
+          : Element.prototype.matches.call(control, selector),
+      );
+
+  it("lets a press on a control land before the note scrolls itself into view", () => {
+    const { host, scrollBy } = partlyHidden();
+    const choice = languageRadios(host)[0];
+    focusedBy(choice, "press");
+    let scrollsBeforeClick = -1;
+    choice.addEventListener("click", () => (scrollsBeforeClick = scrollBy.mock.calls.length));
+    // A press focuses what it presses as it goes down, before its click.
+    act(() => choice.focus());
+    act(() => choice.click());
+    expect(scrollsBeforeClick).toBe(0);
+    expect(scrollBy).toHaveBeenCalledOnce();
+  });
+
+  it("scrolls itself into view for keyboard focus", () => {
+    const { host, scrollBy } = partlyHidden();
+    const choice = languageRadios(host)[0];
+    focusedBy(choice, "keyboard");
+    act(() => choice.focus());
+    expect(scrollBy).toHaveBeenCalledOnce();
+  });
 });

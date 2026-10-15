@@ -227,10 +227,11 @@ for (const language of ["en", "ja"] as const) {
           name: say(strings.stickerBoard.settings.title, language),
         });
         const handWords = strings.stickerBoard.settings.drawing.hand;
-        await settings
+        const handChoice = settings
           .getByRole("radiogroup", { name: say(handWords.label, language) })
-          .getByRole("radio", { name: say(handWords[hand], language) })
-          .click();
+          .getByRole("radio", { name: say(handWords[hand], language) });
+        await handChoice.click();
+        await expect(handChoice).toBeChecked();
         await page
           .getByRole("button", { name: say(strings.stickerBoard.statBoard.flipBack, language) })
           .click();
