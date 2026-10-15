@@ -7,6 +7,11 @@ Each entry:
 - `ja`: a subject the exam could set, broad enough to read many ways (風, 地図, 再会), never a narrow everyday item (缶コーヒー, はたき): food comes in as meals and treats (弁当, 駄菓子), never as a dish (おにぎり). A noun as the test would print it, up to six characters, that a student can picture. Action nouns (散歩, 再会) carry the verbs. A word whose kanji few can read prints in kana (団扇 → うちわ).
 - `reading`: its furigana, in kana; empty for a word without kanji.
 - `en`: JMdict's English for the sense meant, in American spelling.
-- `kind`: `moment`, `thing`, `phenomenon`, `people` or `loanword`. A deal never holds two words of one kind, nor two that share their English.
+- `kind`: one of five, as each set the exam has published holds one word of each (風, 再会, 地図, SNS, 双子). A deal never holds two words of one kind, nor two that share their English.
+  - `phenomenon`: what the senses take in from the world that has no shape of its own (風, 光, 音, 匂い, 熱).
+  - `moment`: what happens, what's felt, and when (再会, 瞬間, 不安, 夏).
+  - `thing`: something with a shape you can draw (地図, 果物, 雨, 猫).
+  - `loanword`: a modern topic, pastime, occasion or idea in katakana or the alphabet (SNS, スポーツ, チャンス). A katakana object is a thing, and a katakana person is people.
+  - `people`: a person, a group or a character, creatures and spirits included (双子, 小学生, 鬼).
 
 Words newer than JMdict's commonness marks (推し) come in only by hand.

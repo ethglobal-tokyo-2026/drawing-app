@@ -21,7 +21,7 @@
     "ja": "アーティスト",
     "reading": "",
     "en": "artist",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "アート",
@@ -39,7 +39,7 @@
     "ja": "アイドル",
     "reading": "",
     "en": "Japanese idol",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "あくび",
@@ -63,13 +63,13 @@
     "ja": "アルバム",
     "reading": "",
     "en": "album",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "イケメン",
     "reading": "",
     "en": "good-looking guy",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "いたずら",
@@ -87,13 +87,13 @@
     "ja": "ウイルス",
     "reading": "",
     "en": "virus",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "うさぎ",
     "reading": "",
     "en": "rabbit",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "うそ",
@@ -117,13 +117,13 @@
     "ja": "エレベーター",
     "reading": "",
     "en": "elevator",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "オーロラ",
     "reading": "",
     "en": "aurora",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "おしゃべり",
@@ -135,7 +135,7 @@
     "ja": "オタク",
     "reading": "",
     "en": "otaku",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "おもちゃ",
@@ -257,19 +257,19 @@
     "ja": "かけら",
     "reading": "",
     "en": "fragment",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "カフェ",
     "reading": "",
     "en": "café",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "カメラ",
     "reading": "",
     "en": "camera",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "カラオケ",
@@ -281,7 +281,7 @@
     "ja": "ガラス",
     "reading": "",
     "en": "glass",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "カンニング",
@@ -293,31 +293,31 @@
     "ja": "ギター",
     "reading": "",
     "en": "guitar",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "きつね",
     "reading": "",
     "en": "fox",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "キャラクター",
     "reading": "",
     "en": "character",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "ギャル",
     "reading": "",
     "en": "gyaru",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "キャンパス",
     "reading": "",
     "en": "campus",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "キャンプ",
@@ -335,13 +335,13 @@
     "ja": "くじら",
     "reading": "",
     "en": "whale",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "クラス",
     "reading": "",
     "en": "class",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "クリスマス",
@@ -353,7 +353,7 @@
     "ja": "ケーキ",
     "reading": "",
     "en": "cake",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "ゲーム",
@@ -371,13 +371,13 @@
     "ja": "コーチ",
     "reading": "",
     "en": "coach",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "ゴール",
     "reading": "",
     "en": "goal",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "コスプレ",
@@ -408,7 +408,7 @@
     "ja": "コンビニ",
     "reading": "",
     "en": "convenience store",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "サーカス",
@@ -426,19 +426,19 @@
     "ja": "サラリーマン",
     "reading": "",
     "en": "office worker",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "シール",
     "reading": "",
     "en": "sticker",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "シャーマン",
     "reading": "",
     "en": "shaman",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "じゃんけん",
@@ -456,7 +456,7 @@
     "ja": "スーツケース",
     "reading": "",
     "en": "suitcase",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "スカウト",
@@ -480,7 +480,7 @@
     "ja": "スタジオ",
     "reading": "",
     "en": "studio",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "ずぶ濡れ",
@@ -498,31 +498,31 @@
     "ja": "スマホ",
     "reading": "",
     "en": "smartphone",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "ゾンビ",
     "reading": "",
     "en": "zombie",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "タイムマシン",
     "reading": "",
     "en": "time machine",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "ダイヤモンド",
     "reading": "",
     "en": "diamond",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "たき火",
     "reading": "たきび",
     "en": "open-air fire",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "ため息",
@@ -540,7 +540,7 @@
     "ja": "チーム",
     "reading": "",
     "en": "team",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "チャイム",
@@ -558,19 +558,19 @@
     "ja": "チャンピオン",
     "reading": "",
     "en": "champion",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "チョコレート",
     "reading": "",
     "en": "chocolate",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "つぼみ",
     "reading": "",
     "en": "bud",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "デート",
@@ -582,7 +582,7 @@
     "ja": "デザート",
     "reading": "",
     "en": "dessert",
-    "kind": "loanword",
+    "kind": "thing",
     "tier": false
   },
   {
@@ -601,13 +601,13 @@
     "ja": "テレビ",
     "reading": "",
     "en": "television",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "とげ",
     "reading": "",
     "en": "thorn",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "ドライブ",
@@ -619,7 +619,7 @@
     "ja": "ドラゴン",
     "reading": "",
     "en": "dragon",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "ドラマ",
@@ -631,19 +631,19 @@
     "ja": "トランプ",
     "reading": "",
     "en": "playing cards",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "ドレス",
     "reading": "",
     "en": "dress",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "トンネル",
     "reading": "",
     "en": "tunnel",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "ニュース",
@@ -673,37 +673,37 @@
     "ja": "パートナー",
     "reading": "",
     "en": "partner",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "パイロット",
     "reading": "",
     "en": "pilot",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "バス",
     "reading": "",
     "en": "bus",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "パスポート",
     "reading": "",
     "en": "passport",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "パズル",
     "reading": "",
     "en": "puzzle",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "パパ",
     "reading": "",
     "en": "dad",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "バレンタイン",
@@ -721,25 +721,25 @@
     "ja": "ハンター",
     "reading": "",
     "en": "hunter",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "ピアノ",
     "reading": "",
     "en": "piano",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "ビーチ",
     "reading": "",
     "en": "beach",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "ヒーロー",
     "reading": "",
     "en": "hero",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "ピクニック",
@@ -751,7 +751,7 @@
     "ja": "ひな",
     "reading": "",
     "en": "young bird",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "ビリ",
@@ -763,7 +763,7 @@
     "ja": "ヒロイン",
     "reading": "",
     "en": "heroine",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "ファッション",
@@ -775,49 +775,49 @@
     "ja": "ファン",
     "reading": "",
     "en": "fan",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "プール",
     "reading": "",
     "en": "pool",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "プレゼント",
     "reading": "",
     "en": "present",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "ペット",
     "reading": "",
     "en": "pet",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "ベテラン",
     "reading": "",
     "en": "veteran",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "ベンチ",
     "reading": "",
     "en": "bench",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "ボート",
     "reading": "",
     "en": "boat",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "ボス",
     "reading": "",
     "en": "boss",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "ホラー",
@@ -829,31 +829,31 @@
     "ja": "ボランティア",
     "reading": "",
     "en": "volunteer",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "マイク",
     "reading": "",
     "en": "mike",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "マスク",
     "reading": "",
     "en": "mask",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "マフラー",
     "reading": "",
     "en": "scarf",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "ママ",
     "reading": "",
     "en": "mom",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "マラソン",
@@ -877,7 +877,7 @@
     "ja": "モンスター",
     "reading": "",
     "en": "monster",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "やる気",
@@ -895,19 +895,19 @@
     "ja": "ライオン",
     "reading": "",
     "en": "lion",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "ライダー",
     "reading": "",
     "en": "rider",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "ライバル",
     "reading": "",
     "en": "rival",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "ライブ",
@@ -919,31 +919,31 @@
     "ja": "ラジオ",
     "reading": "",
     "en": "radio",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "ランドセル",
     "reading": "",
     "en": "randoseru",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "ランプ",
     "reading": "",
     "en": "lamp",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "リーダー",
     "reading": "",
     "en": "leader",
-    "kind": "loanword"
+    "kind": "people"
   },
   {
     "ja": "リボン",
     "reading": "",
     "en": "ribbon",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "レース",
@@ -955,13 +955,13 @@
     "ja": "レコード",
     "reading": "",
     "en": "record",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "レストラン",
     "reading": "",
     "en": "restaurant",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "ろうそく",
@@ -973,13 +973,13 @@
     "ja": "ロケット",
     "reading": "",
     "en": "rocket",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "ロボット",
     "reading": "",
     "en": "robot",
-    "kind": "loanword"
+    "kind": "thing"
   },
   {
     "ja": "ロマンス",
@@ -1041,7 +1041,7 @@
     "ja": "遺跡",
     "reading": "いせき",
     "en": "remains",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "医者",
@@ -1071,13 +1071,13 @@
     "ja": "隠れ家",
     "reading": "かくれが",
     "en": "hiding place",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "宇宙",
     "reading": "うちゅう",
     "en": "universe",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "宇宙人",
@@ -1095,13 +1095,13 @@
     "ja": "羽",
     "reading": "はね",
     "en": "feather",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "雨",
     "reading": "あめ",
     "en": "rain",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "雨上がり",
@@ -1113,7 +1113,7 @@
     "ja": "渦",
     "reading": "うず",
     "en": "whirlpool",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "運",
@@ -1144,13 +1144,13 @@
     "ja": "雲",
     "reading": "くも",
     "en": "cloud",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "影",
     "reading": "かげ",
     "en": "shadow",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "映画",
@@ -1198,7 +1198,7 @@
     "ja": "炎",
     "reading": "ほのお",
     "en": "flame",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "炎上",
@@ -1210,13 +1210,13 @@
     "ja": "煙",
     "reading": "けむり",
     "en": "smoke",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "猿",
     "reading": "さる",
     "en": "monkey",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "縁日",
@@ -1246,7 +1246,7 @@
     "ja": "王国",
     "reading": "おうこく",
     "en": "kingdom",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "王子",
@@ -1258,7 +1258,7 @@
     "ja": "黄金",
     "reading": "こがね",
     "en": "gold",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "黄色",
@@ -1270,7 +1270,7 @@
     "ja": "屋上",
     "reading": "おくじょう",
     "en": "rooftop",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "屋敷",
@@ -1288,7 +1288,7 @@
     "ja": "温泉",
     "reading": "おんせん",
     "en": "hot spring",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "音",
@@ -1313,7 +1313,7 @@
     "ja": "下町",
     "reading": "したまち",
     "en": "low-lying part of a city",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "化粧",
@@ -1325,7 +1325,7 @@
     "ja": "化石",
     "reading": "かせき",
     "en": "fossil",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "仮面",
@@ -1404,19 +1404,19 @@
     "ja": "火",
     "reading": "ひ",
     "en": "fire",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "火花",
     "reading": "ひばな",
     "en": "spark",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "火山",
     "reading": "かざん",
     "en": "volcano",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "火事",
@@ -1428,13 +1428,13 @@
     "ja": "花",
     "reading": "はな",
     "en": "flower",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "花びら",
     "reading": "はなびら",
     "en": "petal",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "花嫁",
@@ -1488,7 +1488,7 @@
     "ja": "芽",
     "reading": "め",
     "en": "sprout",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "会話",
@@ -1519,7 +1519,7 @@
     "ja": "海",
     "reading": "うみ",
     "en": "sea",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "海外",
@@ -1531,7 +1531,7 @@
     "ja": "海岸",
     "reading": "かいがん",
     "en": "seashore",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "海賊",
@@ -1543,7 +1543,7 @@
     "ja": "灰",
     "reading": "はい",
     "en": "ash",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "絵",
@@ -1567,7 +1567,7 @@
     "ja": "貝殻",
     "reading": "かいがら",
     "en": "seashell",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "外国人",
@@ -1579,7 +1579,7 @@
     "ja": "崖",
     "reading": "がけ",
     "en": "cliff",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "街角",
@@ -1702,7 +1702,7 @@
     "ja": "岩",
     "reading": "いわ",
     "en": "rock",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "顔",
@@ -1842,7 +1842,7 @@
     "ja": "亀",
     "reading": "かめ",
     "en": "tortoise",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "儀式",
@@ -1872,7 +1872,7 @@
     "ja": "丘",
     "reading": "おか",
     "en": "hill",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "久しぶり",
@@ -1927,7 +1927,7 @@
     "ja": "魚",
     "reading": "さかな",
     "en": "fish",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "競争",
@@ -1945,7 +1945,7 @@
     "ja": "恐竜",
     "reading": "きょうりゅう",
     "en": "dinosaur",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "教会",
@@ -2006,19 +2006,19 @@
     "ja": "金魚",
     "reading": "きんぎょ",
     "en": "goldfish",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "銀河",
     "reading": "ぎんが",
     "en": "Milky Way",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "空",
     "reading": "そら",
     "en": "sky",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "空気",
@@ -2054,7 +2054,7 @@
     "ja": "隅",
     "reading": "すみ",
     "en": "corner",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "靴",
@@ -2066,7 +2066,7 @@
     "ja": "熊",
     "reading": "くま",
     "en": "bear",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "刑事",
@@ -2090,7 +2090,7 @@
     "ja": "景色",
     "reading": "けしき",
     "en": "scenery",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "警察",
@@ -2108,7 +2108,7 @@
     "ja": "隙間",
     "reading": "すきま",
     "en": "gap",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "決意",
@@ -2126,7 +2126,7 @@
     "ja": "穴",
     "reading": "あな",
     "en": "hole",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "結婚",
@@ -2144,13 +2144,13 @@
     "ja": "結晶",
     "reading": "けっしょう",
     "en": "crystal",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "月",
     "reading": "つき",
     "en": "Moon",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "月光",
@@ -2162,7 +2162,7 @@
     "ja": "月食",
     "reading": "げっしょく",
     "en": "lunar eclipse",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "剣",
@@ -2180,7 +2180,7 @@
     "ja": "犬",
     "reading": "いぬ",
     "en": "dog",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "見合い",
@@ -2204,7 +2204,7 @@
     "ja": "原っぱ",
     "reading": "はらっぱ",
     "en": "open field",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "幻",
@@ -2246,13 +2246,13 @@
     "ja": "湖",
     "reading": "みずうみ",
     "en": "lake",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "虎",
     "reading": "とら",
     "en": "tiger",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "誇り",
@@ -2288,13 +2288,13 @@
     "ja": "光線",
     "reading": "こうせん",
     "en": "ray",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "公園",
     "reading": "こうえん",
     "en": "park",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "向こう",
@@ -2338,7 +2338,7 @@
     "ja": "広場",
     "reading": "ひろば",
     "en": "public square",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "校長",
@@ -2350,19 +2350,19 @@
     "ja": "校庭",
     "reading": "こうてい",
     "en": "schoolyard",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "洪水",
     "reading": "こうずい",
     "en": "flood",
-    "kind": "phenomenon"
+    "kind": "moment"
   },
   {
     "ja": "港",
     "reading": "みなと",
     "en": "harbor",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "皇帝",
@@ -2374,7 +2374,7 @@
     "ja": "紅葉",
     "reading": "こうよう",
     "en": "autumn leaves",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "行方不明",
@@ -2422,7 +2422,7 @@
     "ja": "国境",
     "reading": "こっきょう",
     "en": "border",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "黒",
@@ -2458,7 +2458,7 @@
     "ja": "根",
     "reading": "ね",
     "en": "root",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "魂",
@@ -2470,13 +2470,13 @@
     "ja": "砂",
     "reading": "すな",
     "en": "sand",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "砂漠",
     "reading": "さばく",
     "en": "desert",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "再会",
@@ -2518,7 +2518,7 @@
     "ja": "坂",
     "reading": "さか",
     "en": "slope",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "作家",
@@ -2536,7 +2536,7 @@
     "ja": "桜",
     "reading": "さくら",
     "en": "cherry tree",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "撮影",
@@ -2554,7 +2554,7 @@
     "ja": "三日月",
     "reading": "みかづき",
     "en": "crescent moon",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "傘",
@@ -2566,7 +2566,7 @@
     "ja": "山",
     "reading": "やま",
     "en": "mountain",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "散歩",
@@ -2644,7 +2644,7 @@
     "ja": "枝",
     "reading": "えだ",
     "en": "branch",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "糸",
@@ -2741,7 +2741,7 @@
     "ja": "鹿",
     "reading": "しか",
     "en": "deer",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "七夕",
@@ -2814,7 +2814,7 @@
     "ja": "蛇",
     "reading": "へび",
     "en": "snake",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "寂しさ",
@@ -2856,7 +2856,7 @@
     "ja": "種",
     "reading": "たね",
     "en": "seed",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "受験",
@@ -2940,7 +2940,7 @@
     "ja": "初雪",
     "reading": "はつゆき",
     "en": "first snow",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "初日",
@@ -3054,7 +3054,7 @@
     "ja": "沼",
     "reading": "ぬま",
     "en": "marsh",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "笑い",
@@ -3078,7 +3078,7 @@
     "ja": "象",
     "reading": "ぞう",
     "en": "elephant",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "上京",
@@ -3126,7 +3126,7 @@
     "ja": "植物",
     "reading": "しょくぶつ",
     "en": "plant",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "職人",
@@ -3157,7 +3157,7 @@
     "ja": "尻尾",
     "reading": "しっぽ",
     "en": "tail",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "寝坊",
@@ -3217,7 +3217,7 @@
     "ja": "森",
     "reading": "もり",
     "en": "forest",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "真っ二つ",
@@ -3333,25 +3333,25 @@
     "ja": "吹雪",
     "reading": "ふぶき",
     "en": "snow storm",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "水",
     "reading": "みず",
     "en": "water",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "水滴",
     "reading": "すいてき",
     "en": "drop of water",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "水平線",
     "reading": "すいへいせん",
     "en": "horizon",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "世界",
@@ -3387,19 +3387,19 @@
     "ja": "星",
     "reading": "ほし",
     "en": "star",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "星空",
     "reading": "ほしぞら",
     "en": "starry sky",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "星座",
     "reading": "せいざ",
     "en": "constellation",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "晴れ",
@@ -3423,7 +3423,7 @@
     "ja": "生き物",
     "reading": "いきもの",
     "en": "living thing",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "生徒",
@@ -3483,7 +3483,7 @@
     "ja": "石",
     "reading": "いし",
     "en": "stone",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "赤",
@@ -3507,13 +3507,13 @@
     "ja": "雪",
     "reading": "ゆき",
     "en": "snow",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "雪崩",
     "reading": "なだれ",
     "en": "avalanche",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "絶望",
@@ -3543,7 +3543,7 @@
     "ja": "川",
     "reading": "かわ",
     "en": "river",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "戦士",
@@ -3555,7 +3555,7 @@
     "ja": "泉",
     "reading": "いずみ",
     "en": "spring",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "潜水",
@@ -3628,7 +3628,7 @@
     "ja": "巣",
     "reading": "す",
     "en": "nest",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "相性",
@@ -3653,13 +3653,13 @@
     "ja": "草",
     "reading": "くさ",
     "en": "grass",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "霜",
     "reading": "しも",
     "en": "frost",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "騒ぎ",
@@ -3719,7 +3719,7 @@
     "ja": "村",
     "reading": "むら",
     "en": "village",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "他人",
@@ -3731,7 +3731,7 @@
     "ja": "太陽",
     "reading": "たいよう",
     "en": "Sun",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "打ち上げ",
@@ -3786,7 +3786,7 @@
     "ja": "台風",
     "reading": "たいふう",
     "en": "typhoon",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "大会",
@@ -3804,7 +3804,7 @@
     "ja": "大空",
     "reading": "おおぞら",
     "en": "wide open sky",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "大工",
@@ -3822,7 +3822,7 @@
     "ja": "大自然",
     "reading": "だいしぜん",
     "en": "nature",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "大集合",
@@ -3840,7 +3840,7 @@
     "ja": "大地",
     "reading": "だいち",
     "en": "earth",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "大統領",
@@ -3852,25 +3852,25 @@
     "ja": "大木",
     "reading": "たいぼく",
     "en": "large tree",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "大陸",
     "reading": "たいりく",
     "en": "continent",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "滝",
     "reading": "たき",
     "en": "waterfall",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "谷",
     "reading": "たに",
     "en": "valley",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "探検",
@@ -3907,19 +3907,19 @@
     "ja": "地下",
     "reading": "ちか",
     "en": "underground",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "地球",
     "reading": "ちきゅう",
     "en": "Earth",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "地震",
     "reading": "じしん",
     "en": "earthquake",
-    "kind": "phenomenon"
+    "kind": "moment"
   },
   {
     "ja": "地図",
@@ -3937,7 +3937,7 @@
     "ja": "池",
     "reading": "いけ",
     "en": "pond",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "遅刻",
@@ -3949,7 +3949,7 @@
     "ja": "竹",
     "reading": "たけ",
     "en": "bamboo",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "着物",
@@ -3997,7 +3997,7 @@
     "ja": "虫",
     "reading": "むし",
     "en": "insect",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "挑戦",
@@ -4022,43 +4022,43 @@
     "ja": "朝焼け",
     "reading": "あさやけ",
     "en": "morning glow",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "朝日",
     "reading": "あさひ",
     "en": "morning sun",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "潮",
     "reading": "しお",
     "en": "tide",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "町",
     "reading": "まち",
     "en": "town",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "蝶",
     "reading": "ちょう",
     "en": "butterfly",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "頂",
     "reading": "いただき",
     "en": "crown",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "鳥",
     "reading": "とり",
     "en": "bird",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "沈没",
@@ -4088,7 +4088,7 @@
     "ja": "鶴",
     "reading": "つる",
     "en": "crane",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "停電",
@@ -4124,7 +4124,7 @@
     "ja": "泥",
     "reading": "どろ",
     "en": "mud",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "泥棒",
@@ -4154,7 +4154,7 @@
     "ja": "天国",
     "reading": "てんごく",
     "en": "paradise",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "天才",
@@ -4196,7 +4196,7 @@
     "ja": "田んぼ",
     "reading": "たんぼ",
     "en": "rice field",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "電気",
@@ -4232,7 +4232,7 @@
     "ja": "渡り鳥",
     "reading": "わたりどり",
     "en": "migratory bird",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "登校",
@@ -4250,7 +4250,7 @@
     "ja": "都会",
     "reading": "とかい",
     "en": "city",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "努力",
@@ -4287,13 +4287,13 @@
     "ja": "島",
     "reading": "しま",
     "en": "island",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "湯気",
     "reading": "ゆげ",
     "en": "steam",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "灯台",
@@ -4323,7 +4323,7 @@
     "ja": "動物",
     "reading": "どうぶつ",
     "en": "animal",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "動物園",
@@ -4401,7 +4401,7 @@
     "ja": "虹",
     "reading": "にじ",
     "en": "rainbow",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "日の出",
@@ -4425,7 +4425,7 @@
     "ja": "日向",
     "reading": "ひなた",
     "en": "sunny place",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "日差し",
@@ -4437,7 +4437,7 @@
     "ja": "日食",
     "reading": "にっしょく",
     "en": "solar eclipse",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "入院",
@@ -4461,7 +4461,7 @@
     "ja": "猫",
     "reading": "ねこ",
     "en": "cat",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "熱",
@@ -4479,7 +4479,7 @@
     "ja": "年輪",
     "reading": "ねんりん",
     "en": "annual tree ring",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "農家",
@@ -4491,13 +4491,13 @@
     "ja": "波",
     "reading": "なみ",
     "en": "wave",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "馬",
     "reading": "うま",
     "en": "horse",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "俳優",
@@ -4527,7 +4527,7 @@
     "ja": "梅",
     "reading": "うめ",
     "en": "Japanese apricot",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "梅雨",
@@ -4677,7 +4677,7 @@
     "ja": "氷",
     "reading": "こおり",
     "en": "ice",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "病院",
@@ -4798,7 +4798,7 @@
     "ja": "噴火",
     "reading": "ふんか",
     "en": "eruption",
-    "kind": "phenomenon"
+    "kind": "moment"
   },
   {
     "ja": "粉々",
@@ -4920,7 +4920,7 @@
     "ja": "泡",
     "reading": "あわ",
     "en": "bubble",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "帽子",
@@ -5072,7 +5072,7 @@
     "ja": "岬",
     "reading": "みさき",
     "en": "cape",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "眠り",
@@ -5102,7 +5102,7 @@
     "ja": "霧",
     "reading": "きり",
     "en": "fog",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "娘",
@@ -5174,7 +5174,7 @@
     "ja": "木",
     "reading": "き",
     "en": "tree",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "目",
@@ -5288,19 +5288,19 @@
     "ja": "遊園地",
     "reading": "ゆうえんち",
     "en": "amusement park",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "夕焼け",
     "reading": "ゆうやけ",
     "en": "evening glow",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "夕日",
     "reading": "ゆうひ",
     "en": "setting sun",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "夕飯",
@@ -5319,7 +5319,7 @@
     "ja": "夕立",
     "reading": "ゆうだち",
     "en": "shower",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "妖怪",
@@ -5337,19 +5337,19 @@
     "ja": "溶岩",
     "reading": "ようがん",
     "en": "lava",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "羊",
     "reading": "ひつじ",
     "en": "sheep",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "葉",
     "reading": "は",
     "en": "leaf",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "踊り",
@@ -5367,7 +5367,7 @@
     "ja": "翼",
     "reading": "つばさ",
     "en": "wing",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "裸足",
@@ -5379,13 +5379,13 @@
     "ja": "雷",
     "reading": "かみなり",
     "en": "lightning",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "落ち葉",
     "reading": "おちば",
     "en": "fallen leaves",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "落とし物",
@@ -5409,7 +5409,7 @@
     "ja": "嵐",
     "reading": "あらし",
     "en": "storm",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "流れ",
@@ -5421,7 +5421,7 @@
     "ja": "流れ星",
     "reading": "ながれぼし",
     "en": "shooting star",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "流行",
@@ -5530,7 +5530,7 @@
     "ja": "露",
     "reading": "つゆ",
     "en": "dew",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "廊下",
@@ -5542,18 +5542,18 @@
     "ja": "狼",
     "reading": "おおかみ",
     "en": "wolf",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "惑星",
     "reading": "わくせい",
     "en": "planet",
-    "kind": "phenomenon"
+    "kind": "thing"
   },
   {
     "ja": "蜃気楼",
     "reading": "しんきろう",
     "en": "mirage",
-    "kind": "phenomenon"
+    "kind": "thing"
   }
 ]
