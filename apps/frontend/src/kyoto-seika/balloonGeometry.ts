@@ -303,6 +303,8 @@ const KISS = 0.3;
 const WORD_CLEAR_PX = 2;
 /** How much of a lobe's bulge counts toward a cloud's reach: lobes bulge their most only here and there. */
 const LOBE_REACH = 0.8;
+/** Starts a deal's clouds get at one fit before its type tightens. */
+const STARTS = 4;
 /** Rounds of pushing touching clouds together and overlapping ones apart, then of parting any outline from a word. */
 const RELAX = { rounds: 70, partRounds: 30, partPx: 1.5 };
 /** The trail's three bubbles, largest by its cloud, in px; a tightened deal draws them smaller. */
@@ -735,7 +737,13 @@ export function dealLayout(input: DealInput): DealLayout {
   const { width, top, bottom } = input;
   const space = bottom - top;
   const plan: SeatPlanName = width >= WIDE_DEAL_PX ? "3-over-2" : "2-1-2";
-  const lay = (fit: Fit) => cluster(PLANS[plan], fit, input);
+  const lay = (fit: Fit) => {
+    let deal = cluster(PLANS[plan], fit, input);
+    // From some starts the clouds settle with an outline still in a word: another start comes before tighter type.
+    for (let start = 1; start < STARTS && !deal.valid; start++)
+      deal = cluster(PLANS[plan], fit, { ...input, seed: mixSeed(input.seed, start) });
+    return deal;
+  };
   const fits = (deal: ReturnType<typeof lay>) =>
     deal.valid &&
     deal.box.minX >= SIDE_PX - 0.5 &&
