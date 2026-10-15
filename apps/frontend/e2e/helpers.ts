@@ -244,14 +244,29 @@ export async function openSealSheet(page: Page, language: Language) {
   return sheet;
 }
 
-/** The seal sheet's Seal, which seals. Resolves with the sealed card and the sticker's number. */
-export async function sealOnSheet(page: Page, language: Language) {
+/**
+ * The seal sheet's Seal, which seals. Resolves with the sealed card and the sticker's number. The seal
+ * ceremony is skipped once the sticker is sealed, as a person can, unless `watch`.
+ */
+export async function sealOnSheet(page: Page, language: Language, { watch = false } = {}) {
   await sealSheet(page)
     .getByRole("button", { name: say(stickerCreation.sealSheet.seal, language), exact: true })
     .click();
   const card = page.getByRole("dialog", {
     name: startsWith(say(stickerCreation.sealedCard.title, language)),
   });
+  if (!watch) {
+    // The card mounts with the server's answer, inert until its first key is up. While it is, Escape
+    // on `document`, where the ceremony listens, skips to the end; once it isn't, Escape is Back to
+    // My board. Checking and sending it in one page step leaves no gap for the keys to come up in.
+    const mounted = page.locator(".seal-ceremony:not(.is-leaving) .sealed-card");
+    await mounted.waitFor({ state: "attached" });
+    await mounted.evaluate((el) => {
+      if (el.hasAttribute("inert"))
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+  }
+  await expect(card).not.toHaveAttribute("inert");
   const finePrint = card.getByText(/No\.\d+/);
   await expect(finePrint).toBeVisible();
   const no = (await finePrint.textContent())?.match(/No\.\d+/)?.[0];
@@ -263,12 +278,12 @@ export async function sealOnSheet(page: Page, language: Language) {
 export async function drawAndSeal(
   page: Page,
   language: Language,
-  { nsfw = false, reach = 1 } = {},
+  { nsfw = false, reach = 1, watch = false } = {},
 ) {
   await drawStroke(page, language, reach);
   await openSealSheet(page, language);
   if (nsfw) await nsfwSwitch(page, language).check();
-  return sealOnSheet(page, language);
+  return sealOnSheet(page, language, { watch });
 }
 
 /**

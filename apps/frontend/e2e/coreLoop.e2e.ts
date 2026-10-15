@@ -10,7 +10,8 @@ test("the core loop: Draw, one stroke, seal, and the sticker lands on the board"
 }) => {
   await signIn(page, "smoke", language);
   await tapKey(page.getByRole("button", { name: drawKeyName(language, DAILY_TICKETS_PER_DAY) }));
-  const { card, no } = await drawAndSeal(page, language);
+  // Watches the seal ceremony end on its own, which the helpers skip otherwise.
+  const { card, no } = await drawAndSeal(page, language, { watch: true });
   await card.getByRole("button", { name: say(strings.ui.backToBoard, language) }).click();
   await expect(boardSticker(page, language, no)).toBeVisible();
   await expect(
