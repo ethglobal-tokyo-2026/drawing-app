@@ -25,6 +25,8 @@ export interface FoilFixtureOptions {
   x?: number;
   y?: number;
   turn?: number;
+  /** The point's angle around a sticker's band, in degrees; its grooves run along it unless `grating` turns them. */
+  polar?: number;
   grating?: number;
   style?: FoilStyle;
   room?: Room;
@@ -82,7 +84,7 @@ const programs = new Map<string, WebGLProgram>();
 const tiles = glslFloat(SCREENTONE.tilesAcross);
 function programForRoom(room: FoilRoom) {
   const fragment = `#extension GL_OES_standard_derivatives : enable
-precision highp float;varying vec2 uv;uniform mat3 frame;uniform vec2 turn;uniform vec2 grating;uniform float diagnostic;uniform float geometry;uniform float side;${roomFragment}${createFoilFragment(room)}
+precision highp float;varying vec2 uv;uniform mat3 frame;uniform vec2 turn;uniform vec2 grating;uniform float polar;uniform float diagnostic;uniform float geometry;uniform float side;${roomFragment}${createFoilFragment(room)}
 float display(float v){return v<=.0031308?v*12.92:1.055*pow(v,1./2.4)-.055;}
 void main(){
  vec3 localNormal=normalize(vec3(geometry>.5&&geometry<1.5?-.16:0.,0.,1.));
@@ -98,7 +100,7 @@ void main(){
  vec3 v=normalize(roomEye-vec3(side*p,0.));
  vec2 shojiPoint=roomPlane(normalize(2.*dot(v,n)*n-v));
  roomFootprint=max(length(dFdx(shojiPoint)),length(dFdy(shojiPoint)));
- vec3 c=shadeFoil(uv*${tiles},0.,n,v,t,${tiles}/side,0.);
+ vec3 c=shadeFoil(uv*${tiles},polar,n,v,t,${tiles}/side,0.);
  gl_FragColor=vec4(display(c.r),display(c.g),display(c.b),1.);
 }`;
   let program = programs.get(fragment);
@@ -132,7 +134,8 @@ function render(options: FoilFixtureOptions = {}) {
     x = 0,
     y = 0,
     turn = 0,
-    grating = 0,
+    polar = 0,
+    grating = polar,
     style = "holo",
     room: roomName = "source",
     grid = FOIL_ROOM.grid,
@@ -187,6 +190,7 @@ function render(options: FoilFixtureOptions = {}) {
     Math.cos((grating * Math.PI) / 180),
     Math.sin((grating * Math.PI) / 180),
   );
+  gpu.uniform1f(uniform("polar"), (polar * Math.PI) / 180);
   gpu.uniform1f(uniform("foilStyle"), FOIL_STYLES.indexOf(style));
   // The room as the renderer orients it for this pose, and its shoji and lamps as the foil's sources;
   // the diffraction reference integrates its own window, in the screen's axes.

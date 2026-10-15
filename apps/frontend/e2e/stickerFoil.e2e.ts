@@ -103,7 +103,7 @@ test("the window adds light, back views and a dark room render nothing", async (
   expect(result.dark).toEqual([0, 0, 0]);
 });
 
-test("displayed combined-source holo retains color without green hues across the device's poses", async ({
+test("displayed combined-source holo shows warm and cool hues without green across the device's poses", async ({
   page,
 }) => {
   await page.goto("/e2e/stickerFoil.html");
@@ -115,19 +115,49 @@ test("displayed combined-source holo retains color without green hues across the
       { beta: 55, gamma: -25 },
       { beta: 55, gamma: 25 },
     ];
+    // A band shows a pose at every point around it: about a sixth of a turn apart, offset so that
+    // each meets holo's hue sweep at another phase.
+    const polars = [0, 1, 2, 3, 4, 5].map((k) => k * 70);
+    const hue = (r: number, g: number, b: number) => {
+      const max = Math.max(r, g, b),
+        chroma = max - Math.min(r, g, b);
+      const sector =
+        max === r ? (g - b) / chroma : max === g ? (b - r) / chroma + 2 : (r - g) / chroma + 4;
+      return (sector * 60 + 360) % 360;
+    };
+    // A pixel takes the holo palette slot nearest its hue, from the design tokens the renderer reads.
+    const tokens = getComputedStyle(document.body);
+    const slots = (["pink", "peach", "lemon", "aqua", "sky", "lilac"] as const).map((name) => {
+      const hex = tokens.getPropertyValue(`--foil-${name}`).trim();
+      const [r, g, b] = [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16));
+      return { name, hue: hue(r, g, b) };
+    });
+    const away = (h: number, slot: (typeof slots)[number]) =>
+      Math.min(Math.abs(h - slot.hue), 360 - Math.abs(h - slot.hue));
+    const slotOf = (h: number) =>
+      slots.reduce((best, slot) => (away(h, slot) < away(h, best) ? slot : best)).name;
     return (["holo", "pink"] as const).flatMap((style) =>
       poses.map((pose) => {
-        const p = window.foilFixture.render({ style, ...pose });
         let green = 0,
-          color = 0;
-        for (let i = 0; i < p.length; i += 4) {
-          if (p[i + 1] > p[i] + 2 && p[i + 1] > p[i + 2] + 2) green++;
-          color = Math.max(
-            color,
-            (Math.max(p[i], p[i + 1], p[i + 2]) - Math.min(p[i], p[i + 1], p[i + 2])) / 255,
-          );
+          color = 0,
+          warm = 0,
+          cool = 0,
+          pixels = 0;
+        for (const polar of polars) {
+          const p = window.foilFixture.render({ style, ...pose, polar });
+          pixels += p.length / 4;
+          for (let i = 0; i < p.length; i += 4) {
+            if (p[i + 1] > p[i] + 2 && p[i + 1] > p[i + 2] + 2) green++;
+            const chroma = Math.max(p[i], p[i + 1], p[i + 2]) - Math.min(p[i], p[i + 1], p[i + 2]);
+            color = Math.max(color, chroma / 255);
+            // A hue counts where it is as colorful as the band's acceptance asks.
+            if (chroma < 24) continue;
+            const slot = slotOf(hue(p[i], p[i + 1], p[i + 2]));
+            if (slot === "peach" || slot === "lemon") warm++;
+            else if (slot === "aqua" || slot === "sky" || slot === "lilac") cool++;
+          }
         }
-        return { style, ...pose, green, color };
+        return { style, ...pose, green, color, warm: warm / pixels, cool: cool / pixels };
       }),
     );
   });
@@ -135,7 +165,11 @@ test("displayed combined-source holo retains color without green hues across the
     outputs.every((o) => o.green === 0),
     JSON.stringify(outputs),
   ).toBe(true);
+  const holo = outputs.filter((o) => o.style === "holo");
+  expect(Math.max(...holo.map((o) => o.color))).toBeGreaterThan(0.08);
+  // Peach or lemon beside aqua, sky or lilac, each on at least 1% of the band, at every pose.
   expect(
-    Math.max(...outputs.filter((o) => o.style === "holo").map((o) => o.color)),
-  ).toBeGreaterThan(0.08);
+    holo.filter((o) => o.warm < 0.01 || o.cool < 0.01),
+    JSON.stringify(holo),
+  ).toEqual([]);
 });
