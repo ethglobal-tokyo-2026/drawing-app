@@ -22,18 +22,15 @@ Proposal for review. Nothing is built.
 3. **A press of any length under 3 seconds picks the word as a tap does today.** A completed hold
    never picks.
 
-## Your call
+## Decided with ad0ll, 2026-10-15
 
-4. **Unmarking:** hold a marked word again for 3 seconds (recommended), or marks only go when the
-   word leaves the list.
-5. **The tag:** 「トル」, the proofreader's mark for "delete" that a manga editor writes in red
-   (recommended; "Cut" in English), or 「削除」. Its look goes through impeccable, mocked in both
+4. **Unmarking:** hold a marked word again for 3 seconds.
+5. **The tag:** 「トル」, the proofreader's mark for "delete" that a manga editor writes in red ("Cut"
+   in English). Its look goes through impeccable, mocked in both
    languages and in WebKit, before it's built.
-6. **During the hold:** nothing shows until the tag appears at 3 seconds, which tells you to let go
-   (recommended), or the cloud fills to show the hold's progress.
-7. **Taking words out:** when you ask, an agent reads the marks, removes those words from
-   `subjects.json`, and deploys (recommended). Marks of words no longer on the list stay as a record
-   and do nothing. The other way is a scheduled job, which isn't worth building for a hand-edited list.
+6. **During the hold:** nothing shows until the tag appears at 3 seconds, which tells you to let go.
+7. **Taking words out:** when ad0ll asks, an agent reads the marks, removes those words from
+   `subjects.json`, and deploys. Marks of words no longer on the list stay as a record and do nothing.
 
 ## Design
 
