@@ -55,7 +55,7 @@ function Harness() {
     dealtNow = deal;
   });
   const roll = () =>
-    setDeal((d) => rollDie(TEST_SUBJECTS, d, { recent: [], random: seededRandom(3) }) ?? d);
+    setDeal((d) => rollDie(TEST_SUBJECTS, d, { dealt: [], random: seededRandom(3) }) ?? d);
   const pick = (place: number) => setDeal((d) => togglePick(d, place) ?? d);
   return <SubjectBalloons deal={deal} layout={LAYOUT} onRoll={roll} onPick={pick} />;
 }

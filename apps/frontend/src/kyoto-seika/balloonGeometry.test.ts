@@ -39,7 +39,7 @@ const LARGE = { width: 500, top: 120, bottom: 760 };
 type Space = typeof TALL;
 
 /** A fresh deal from the list, by `seed`. */
-const dealOf = (seed: number) => firstDeal(SUBJECTS, { recent: [], random: seededRandom(seed) });
+const dealOf = (seed: number) => firstDeal(SUBJECTS, { dealt: [], random: seededRandom(seed) });
 const lay = (space: Space, deal: Deal, seed: number) =>
   dealLayout({ ...space, kinds: dealKinds(SUBJECTS, deal), list: SUBJECTS, seed });
 /** A few seeded deals per space, each dealt and seated differently, laid out once for every test. */
@@ -192,7 +192,7 @@ describe("the deal's thought cluster", () => {
   it("keeps every cloud where it sat through a roll, picked ones included", () => {
     const fresh = dealOf(13);
     const deal = togglePick(togglePick(fresh, 1) ?? fresh, 3) ?? fresh;
-    const rolled = rollDie(SUBJECTS, deal, { recent: [], random: seededRandom(14) });
+    const rolled = rollDie(SUBJECTS, deal, { dealt: [], random: seededRandom(14) });
     expect(rolled?.subjects).not.toEqual(deal.subjects);
     const centers = (d: Deal) => lay(TALL, d, 13).balloons.map((b) => b.center);
     expect(rolled && centers(rolled)).toEqual(centers(deal));

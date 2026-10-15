@@ -6,7 +6,7 @@ import {
   type SessionKeeper,
 } from "../sticker-creation/session/keptSession";
 import { fillDeal, firstDeal, pickedPair, rollDie, togglePick, type Deal } from "./deal";
-import { keepDealt, readDealtRecently } from "./dealtRecently";
+import { keepDealt, readDealtSubjects } from "./dealtSubjects";
 import { KINDS, loadSubjectList, type KyotoSeikaSubjectEntry } from "./subjectList";
 
 /** The subject list as the sheet has it: not asked for, on its way, in, or failed with a way to retry. */
@@ -45,7 +45,7 @@ export function useKyotoSeikaSheet({ userId, keeper }: Options) {
     setDeal(dealOf(next));
     setBegun(next.begun);
   };
-  const options = () => ({ recent: readDealtRecently(userId), random: Math.random });
+  const options = () => ({ dealt: readDealtSubjects(userId), random: Math.random });
 
   const load = (sheet: number) => {
     setList({ status: "loading" });

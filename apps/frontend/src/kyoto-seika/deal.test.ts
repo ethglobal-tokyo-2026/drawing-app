@@ -11,14 +11,24 @@ import {
   type DealOptions,
 } from "./deal";
 import { CHARRED_AT_ROLL } from "./dieMood";
-import { KINDS } from "./subjectList";
+import { KINDS, type KyotoSeikaSubjectEntry } from "./subjectList";
 import { REUNION, TEST_SUBJECTS, WIND } from "./testSubjects";
 
 const options = (over: Partial<DealOptions> = {}): DealOptions => ({
-  recent: [],
+  dealt: [],
   random: seededRandom(1),
   ...over,
 });
+/** A list of `perKind` words of each kind, no two sharing their English. */
+const listOf = (perKind: number): KyotoSeikaSubjectEntry[] =>
+  KINDS.flatMap((kind) =>
+    Array.from({ length: perKind }, (_, i) => ({
+      ja: `${kind}${i}`,
+      reading: "",
+      en: `${kind} ${i}`,
+      kind,
+    })),
+  );
 /** `n` first deals, one per seed. */
 const deals = (n: number) =>
   Array.from({ length: n }, (_, seed) =>
@@ -46,12 +56,22 @@ describe("dealing Kyoto Seika Subjects", () => {
     }
   });
 
-  it("skips the words dealt lately, unless nothing else is left", () => {
-    const lately = TEST_SUBJECTS.filter((s) => s.kind !== "people").map((s) => s.ja);
-    const deal = firstDeal(TEST_SUBJECTS, options({ recent: lately }));
-    const people = deal.subjects.find((s) => s.kind === "people");
-    expect(people && lately.includes(people.ja)).toBe(false);
-    expect(deal.subjects.filter((s) => lately.includes(s.ja))).toHaveLength(KINDS.length - 1);
+  it("deals every word of a kind before any comes back, then only the half dealt longest ago", () => {
+    const list = listOf(6);
+    const dealt: string[] = [];
+    for (let seed = 0; seed < 6; seed++) {
+      const deal = firstDeal(list, options({ dealt, random: seededRandom(seed) }));
+      dealt.push(...deal.subjects.map((s) => s.ja));
+    }
+    expect(new Set(dealt).size).toBe(list.length);
+    const kindOf = new Map(list.map((s) => [s.ja, s.kind]));
+    const longestAgo = new Set(
+      KINDS.flatMap((kind) => dealt.filter((word) => kindOf.get(word) === kind).slice(0, 3)),
+    );
+    for (let seed = 0; seed < 50; seed++) {
+      const again = firstDeal(list, options({ dealt, random: seededRandom(seed) }));
+      expect(again.subjects.filter((s) => !longestAgo.has(s.ja))).toEqual([]);
+    }
   });
 
   it("rolls every unpicked place to another word of its kind, and leaves the picks", () => {

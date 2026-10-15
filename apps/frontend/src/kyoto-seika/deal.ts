@@ -19,8 +19,8 @@ export interface Deal {
 }
 
 export interface DealOptions {
-  /** Words dealt on this phone lately, newest last. */
-  recent: readonly string[];
+  /** Every word dealt on this phone, each once, longest ago first. */
+  dealt: readonly string[];
   random: () => number;
 }
 
@@ -32,22 +32,27 @@ const kindOf = (list: List, subject: DealtSubject): SubjectKind | undefined =>
 
 /**
  * The one dealing rule: what a place of `kind` can be dealt beside what's on screen. Never a word on
- * screen, nor another's English; words dealt lately only when nothing else is left.
+ * screen, nor another's English. A word never dealt comes first, so a kind's every word is dealt
+ * before any comes back; after that, only the half of the kind dealt longest ago.
  */
 function poolFor(
   list: List,
   kind: SubjectKind,
   shown: readonly DealtSubject[],
-  { recent }: Pick<DealOptions, "recent">,
+  { dealt }: Pick<DealOptions, "dealt">,
 ): KyotoSeikaSubjectEntry[] {
   const onScreen = new Set(shown.map((s) => s.ja));
   const english = new Set(shown.map((s) => s.en.toLowerCase()));
   const allowed = list.filter(
     (s) => s.kind === kind && !onScreen.has(s.ja) && !english.has(s.en.toLowerCase()),
   );
-  const lately = new Set(recent);
-  const fresh = allowed.filter((s) => !lately.has(s.ja));
-  return fresh.length > 0 ? fresh : allowed;
+  const dealtAt = new Map(dealt.map((word, i) => [word, i]));
+  const fresh = allowed.filter((s) => !dealtAt.has(s.ja));
+  if (fresh.length > 0) return fresh;
+  const longestAgo = allowed.toSorted(
+    (a, b) => (dealtAt.get(a.ja) ?? 0) - (dealtAt.get(b.ja) ?? 0),
+  );
+  return longestAgo.slice(0, Math.ceil(longestAgo.length / 2));
 }
 
 /**
