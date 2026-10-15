@@ -144,6 +144,13 @@
     "kind": "thing"
   },
   {
+    "ja": "おやつ",
+    "reading": "",
+    "en": "between-meal snack",
+    "kind": "thing",
+    "tier": false
+  },
+  {
     "ja": "オリンピック",
     "reading": "",
     "en": "Olympics",
@@ -160,6 +167,13 @@
     "reading": "おかし",
     "en": "confections",
     "kind": "thing"
+  },
+  {
+    "ja": "お願い",
+    "reading": "おねがい",
+    "en": "request",
+    "kind": "moment",
+    "tier": false
   },
   {
     "ja": "お供",
@@ -372,6 +386,13 @@
     "kind": "loanword"
   },
   {
+    "ja": "ごちそう",
+    "reading": "",
+    "en": "treat",
+    "kind": "thing",
+    "tier": false
+  },
+  {
     "ja": "コンサート",
     "reading": "",
     "en": "concert",
@@ -556,6 +577,13 @@
     "reading": "",
     "en": "date",
     "kind": "loanword"
+  },
+  {
+    "ja": "デザート",
+    "reading": "",
+    "en": "dessert",
+    "kind": "loanword",
+    "tier": false
   },
   {
     "ja": "デッサン",
@@ -972,6 +1000,13 @@
     "kind": "moment"
   },
   {
+    "ja": "挨拶",
+    "reading": "あいさつ",
+    "en": "greeting",
+    "kind": "moment",
+    "tier": false
+  },
+  {
     "ja": "悪者",
     "reading": "わるもの",
     "en": "bad guy",
@@ -988,6 +1023,13 @@
     "reading": "あくしゅ",
     "en": "handshake",
     "kind": "moment"
+  },
+  {
+    "ja": "安心",
+    "reading": "あんしん",
+    "en": "peace of mind",
+    "kind": "moment",
+    "tier": false
   },
   {
     "ja": "闇",
@@ -1072,6 +1114,13 @@
     "reading": "うず",
     "en": "whirlpool",
     "kind": "phenomenon"
+  },
+  {
+    "ja": "運",
+    "reading": "うん",
+    "en": "fortune",
+    "kind": "moment",
+    "tier": false
   },
   {
     "ja": "運転手",
@@ -1254,6 +1303,13 @@
     "kind": "thing"
   },
   {
+    "ja": "下手",
+    "reading": "へた",
+    "en": "unskillful",
+    "kind": "moment",
+    "tier": false
+  },
+  {
     "ja": "下町",
     "reading": "したまち",
     "en": "low-lying part of a city",
@@ -1318,6 +1374,13 @@
     "reading": "かがくしゃ",
     "en": "scientist",
     "kind": "people"
+  },
+  {
+    "ja": "暇",
+    "reading": "ひま",
+    "en": "spare time",
+    "kind": "moment",
+    "tier": false
   },
   {
     "ja": "果物",
@@ -1428,6 +1491,13 @@
     "kind": "phenomenon"
   },
   {
+    "ja": "会話",
+    "reading": "かいわ",
+    "en": "conversation",
+    "kind": "moment",
+    "tier": false
+  },
+  {
     "ja": "回り道",
     "reading": "まわりみち",
     "en": "detour",
@@ -1518,6 +1588,13 @@
     "kind": "thing"
   },
   {
+    "ja": "拡散",
+    "reading": "かくさん",
+    "en": "spreading",
+    "kind": "moment",
+    "tier": false
+  },
+  {
     "ja": "覚悟",
     "reading": "かくご",
     "en": "readiness",
@@ -1534,6 +1611,13 @@
     "reading": "がっこう",
     "en": "school",
     "kind": "thing"
+  },
+  {
+    "ja": "楽しみ",
+    "reading": "たのしみ",
+    "en": "enjoyment",
+    "kind": "moment",
+    "tier": false
   },
   {
     "ja": "楽器",
@@ -1558,6 +1642,13 @@
     "reading": "かんじゃ",
     "en": "patient",
     "kind": "people"
+  },
+  {
+    "ja": "感情",
+    "reading": "かんじょう",
+    "en": "emotion",
+    "kind": "moment",
+    "tier": false
   },
   {
     "ja": "感動",
@@ -1668,6 +1759,13 @@
     "kind": "thing"
   },
   {
+    "ja": "機嫌",
+    "reading": "きげん",
+    "en": "mood",
+    "kind": "moment",
+    "tier": false
+  },
+  {
     "ja": "帰り道",
     "reading": "かえりみち",
     "en": "the way back",
@@ -1684,6 +1782,13 @@
     "reading": "きまぐれ",
     "en": "whim",
     "kind": "moment"
+  },
+  {
+    "ja": "気持ち",
+    "reading": "きもち",
+    "en": "feeling",
+    "kind": "moment",
+    "tier": false
   },
   {
     "ja": "祈り",
@@ -1788,6 +1893,13 @@
     "kind": "moment"
   },
   {
+    "ja": "給食",
+    "reading": "きゅうしょく",
+    "en": "school lunch",
+    "kind": "thing",
+    "tier": true
+  },
+  {
     "ja": "居場所",
     "reading": "いばしょ",
     "en": "whereabouts",
@@ -1858,6 +1970,13 @@
     "reading": "はし",
     "en": "bridge",
     "kind": "thing"
+  },
+  {
+    "ja": "興奮",
+    "reading": "こうふん",
+    "en": "excitement",
+    "kind": "moment",
+    "tier": false
   },
   {
     "ja": "鏡",
@@ -2190,10 +2309,24 @@
     "kind": "moment"
   },
   {
+    "ja": "好き嫌い",
+    "reading": "すききらい",
+    "en": "likes and dislikes",
+    "kind": "moment",
+    "tier": false
+  },
+  {
     "ja": "好奇心",
     "reading": "こうきしん",
     "en": "curiosity",
     "kind": "moment"
+  },
+  {
+    "ja": "孝行",
+    "reading": "こうこう",
+    "en": "filial piety",
+    "kind": "moment",
+    "tier": false
   },
   {
     "ja": "幸運",
@@ -2592,6 +2725,13 @@
     "kind": "thing"
   },
   {
+    "ja": "自慢",
+    "reading": "じまん",
+    "en": "boast",
+    "kind": "moment",
+    "tier": false
+  },
+  {
     "ja": "自由",
     "reading": "じゆう",
     "en": "freedom",
@@ -2614,6 +2754,13 @@
     "reading": "しっぱい",
     "en": "failure",
     "kind": "moment"
+  },
+  {
+    "ja": "失望",
+    "reading": "しつぼう",
+    "en": "disappointment",
+    "kind": "moment",
+    "tier": false
   },
   {
     "ja": "失恋",
@@ -3000,6 +3147,13 @@
     "kind": "thing"
   },
   {
+    "ja": "食事",
+    "reading": "しょくじ",
+    "en": "meal",
+    "kind": "thing",
+    "tier": false
+  },
+  {
     "ja": "尻尾",
     "reading": "しっぽ",
     "en": "tail",
@@ -3072,6 +3226,13 @@
     "kind": "moment"
   },
   {
+    "ja": "真似",
+    "reading": "まね",
+    "en": "imitating",
+    "kind": "moment",
+    "tier": false
+  },
+  {
     "ja": "真夜中",
     "reading": "まよなか",
     "en": "dead of night",
@@ -3130,6 +3291,13 @@
     "reading": "にんげん",
     "en": "human being",
     "kind": "people"
+  },
+  {
+    "ja": "人気",
+    "reading": "にんき",
+    "en": "popularity",
+    "kind": "moment",
+    "tier": false
   },
   {
     "ja": "人魚",
@@ -3450,10 +3618,24 @@
     "kind": "moment"
   },
   {
+    "ja": "早口",
+    "reading": "はやくち",
+    "en": "fast-talking",
+    "kind": "moment",
+    "tier": false
+  },
+  {
     "ja": "巣",
     "reading": "す",
     "en": "nest",
     "kind": "phenomenon"
+  },
+  {
+    "ja": "相性",
+    "reading": "あいしょう",
+    "en": "affinity",
+    "kind": "moment",
+    "tier": false
   },
   {
     "ja": "相棒",
@@ -3556,6 +3738,13 @@
     "reading": "うちあげ",
     "en": "launch",
     "kind": "moment"
+  },
+  {
+    "ja": "駄菓子",
+    "reading": "だがし",
+    "en": "penny candy",
+    "kind": "thing",
+    "tier": true
   },
   {
     "ja": "体",
@@ -3696,6 +3885,13 @@
     "kind": "people"
   },
   {
+    "ja": "短気",
+    "reading": "たんき",
+    "en": "short temper",
+    "kind": "moment",
+    "tier": false
+  },
+  {
     "ja": "誕生",
     "reading": "たんじょう",
     "en": "birth",
@@ -3814,6 +4010,13 @@
     "reading": "あさ",
     "en": "morning",
     "kind": "moment"
+  },
+  {
+    "ja": "朝ごはん",
+    "reading": "あさごはん",
+    "en": "breakfast",
+    "kind": "thing",
+    "tier": false
   },
   {
     "ja": "朝焼け",
@@ -4048,6 +4251,13 @@
     "reading": "とかい",
     "en": "city",
     "kind": "phenomenon"
+  },
+  {
+    "ja": "努力",
+    "reading": "どりょく",
+    "en": "effort",
+    "kind": "moment",
+    "tier": false
   },
   {
     "ja": "怒り",
@@ -4500,6 +4710,13 @@
     "kind": "moment"
   },
   {
+    "ja": "不満",
+    "reading": "ふまん",
+    "en": "dissatisfaction",
+    "kind": "moment",
+    "tier": false
+  },
+  {
     "ja": "夫",
     "reading": "おっと",
     "en": "husband",
@@ -4626,6 +4843,13 @@
     "kind": "moment"
   },
   {
+    "ja": "片言",
+    "reading": "かたこと",
+    "en": "prattle",
+    "kind": "moment",
+    "tier": false
+  },
+  {
     "ja": "片思い",
     "reading": "かたおもい",
     "en": "unrequited love",
@@ -4642,6 +4866,13 @@
     "reading": "べんごし",
     "en": "lawyer",
     "kind": "people"
+  },
+  {
+    "ja": "弁当",
+    "reading": "べんとう",
+    "en": "bento",
+    "kind": "thing",
+    "tier": true
   },
   {
     "ja": "母親",
@@ -4800,6 +5031,13 @@
     "kind": "moment"
   },
   {
+    "ja": "満足",
+    "reading": "まんぞく",
+    "en": "satisfaction",
+    "kind": "moment",
+    "tier": false
+  },
+  {
     "ja": "漫画",
     "reading": "まんが",
     "en": "cartoon",
@@ -4822,6 +5060,13 @@
     "reading": "みらい",
     "en": "future",
     "kind": "moment"
+  },
+  {
+    "ja": "魅力",
+    "reading": "みりょく",
+    "en": "charm",
+    "kind": "moment",
+    "tier": false
   },
   {
     "ja": "岬",
@@ -5058,6 +5303,13 @@
     "kind": "phenomenon"
   },
   {
+    "ja": "夕飯",
+    "reading": "ゆうはん",
+    "en": "evening meal",
+    "kind": "thing",
+    "tier": false
+  },
+  {
     "ja": "夕暮れ",
     "reading": "ゆうぐれ",
     "en": "evening",
@@ -5170,6 +5422,13 @@
     "reading": "ながれぼし",
     "en": "shooting star",
     "kind": "phenomenon"
+  },
+  {
+    "ja": "流行",
+    "reading": "りゅうこう",
+    "en": "trend",
+    "kind": "moment",
+    "tier": false
   },
   {
     "ja": "留学",
