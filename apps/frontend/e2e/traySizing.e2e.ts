@@ -1,6 +1,6 @@
 import { expect, type Locator } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
-import { boardSticker, say, sealFromBoard, signIn, startsWith, test } from "./helpers.ts";
+import { boardSticker, say, sealIntoTray, signIn, startsWith, test } from "./helpers.ts";
 import { ipad } from "./ipad.ts";
 
 const { stickerBoard } = strings;
@@ -29,13 +29,7 @@ test("the iPad tray enlarges sticker previews by a quarter in both orientations 
   await page.setViewportSize(phone);
   await signIn(page, "traysize", language);
   const nos: string[] = [];
-  for (const reach of [0.6, 1.2]) {
-    const no = await sealFromBoard(page, language, { reach });
-    nos.push(no);
-    await boardSticker(page, language, no).click();
-    await page.getByRole("button", { name: say(stickerBoard.toolbar.remove, language) }).click();
-    await expect(boardSticker(page, language, no)).toHaveCount(0);
-  }
+  for (const reach of [0.6, 1.2]) nos.push(await sealIntoTray(page, language, { reach }));
   const zipper = page.getByRole("button", {
     name: startsWith(say(stickerBoard.tray.zipper, language)),
   });

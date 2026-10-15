@@ -336,6 +336,18 @@ export async function sealFromBoard(page: Page, language: Language, { reach = 1 
   return no;
 }
 
+/**
+ * Seals a one-stroke sticker from the board and removes it into the sticker tray. Resolves with its
+ * number. Remove opens a shut tray for the sticker's ride and zips it shut again once it lands.
+ */
+export async function sealIntoTray(page: Page, language: Language, { reach = 1 } = {}) {
+  const no = await sealFromBoard(page, language, { reach });
+  await clickOnCut(boardSticker(page, language, no));
+  await page.getByRole("button", { name: say(stickerBoard.toolbar.remove, language) }).click();
+  await expect(boardSticker(page, language, no)).toHaveCount(0);
+  return no;
+}
+
 /** Spends someone new's daily tickets through the app: a sticker sealed on each. */
 export async function spendEveryDailyTicket(page: Page, language: Language) {
   for (let left = DAILY_TICKETS_PER_DAY; left > 0; left--) {
