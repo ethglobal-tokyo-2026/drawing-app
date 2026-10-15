@@ -15,6 +15,7 @@ import {
   type LightMode,
   type RotationInput,
 } from "./lightMode";
+import { screenAngleOf } from "./screenAngle";
 
 export type { DevicePose } from "./lightMode";
 
@@ -217,10 +218,13 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     kept.seenRotation = true;
     rotation = "usable";
     refresh();
-    const angle = win.screen.orientation?.angle ?? Reflect.get(win, "orientation");
-    const screenAngle = typeof angle === "number" && Number.isFinite(angle) ? angle : 0;
+    const screenAngle = screenAngleOf(win, e.beta, e.gamma);
+    // The browser's own values beside the angle read from them, so a device's report shows which it gave.
     if (isPerformanceRecorderOn())
-      notePerformance("orientation", `beta=${e.beta}, gamma=${e.gamma}, screen=${screenAngle}`);
+      notePerformance(
+        "orientation",
+        `beta=${e.beta}, gamma=${e.gamma}, screen=${screenAngle}; window.orientation=${String(Reflect.get(win, "orientation"))}, screen.orientation=${win.screen.orientation?.type} ${win.screen.orientation?.angle}`,
+      );
     aim({ beta: e.beta, gamma: e.gamma, screenAngle });
   };
 
