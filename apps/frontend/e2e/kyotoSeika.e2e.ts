@@ -427,9 +427,13 @@ test("Kyoto Seika Practice Mode: a tap that selects its sticker peeks at the pai
   await expect(sticker).toHaveAttribute("aria-pressed", "true");
   await expect(thought).toBeVisible();
   for (const word of words) await expect(thought).toContainText(word);
-  // Wait for the arrival transforms before measuring where the trails meet the sticker.
-  await page.waitForTimeout(PEEK.wordAfterMs + PEEK.cloudStaggerMs + PEEK.wordMs);
-  const gaps = await sticker.evaluate((selected) => {
+  const gaps = await sticker.evaluate(async (selected) => {
+    // Where the trails meet the sticker once their bubbles have popped in, however late that began.
+    await Promise.all(
+      [...document.querySelectorAll(".thought-layer .subject-trail g")].flatMap((bead) =>
+        bead.getAnimations().map((motion) => motion.finished),
+      ),
+    );
     const stage = selected.parentElement?.getBoundingClientRect();
     if (!stage) throw new Error("The selected sticker has no board stage");
     const style = getComputedStyle(selected);
