@@ -7,12 +7,17 @@ LINE sends this message when someone adds Croquis's official account as a friend
 Paste it as one text bubble, exactly:
 
 ```text
-お絵かきアプリ「クロッキー」です。5分でかいた絵が、シールになります。ボードにはるのも、友だちにあげるのも自由。下のメニューからクロッキーをひらいてください。
+お絵かきアプリ「クロッキー」です。友だち追加ありがとうございます！
+5分でかいた絵が、シールになります。シールボードにはるのも、友だちに贈るのも自由。
+下のメニューからクロッキーをひらいてください。
 
-This is Croquis, a drawing app. Draw for five minutes, and your drawing becomes a sticker to keep on your board or give to a friend. Open Croquis from the menu below.
+This is Croquis, a drawing app. Thanks for adding us!
+Draw for five minutes, and your drawing becomes a sticker to keep on your sticker board or give to a friend.
+Open Croquis from the menu below.
 ```
 
-- It names the app first, since the chat comes from the account, whose name in LINE isn't the app's. Then it says what you do in it and where to tap, in the app's own words.
+- It names the app and thanks people first, as LINE's own greetings do, then says what you do in it and where to tap, in the app's words (`apps/frontend/src/i18n/glossary.md`).
+- The account's name in LINE is クロッキー: a LINE Official Account has one name, not one per language, and a new name can't change again for seven days.
 - It names the drawing clock's length (`MAX_TIME_USED_S`): when the clock changes, change it here and in the Manager.
 - It sends people to the default chat menu that new people see under it (`images/default.png`), whose bar says クロッキー Croquis. If the menu's words change, check that this still matches them.
 - It doesn't use `{Nickname}`: LINE may not deliver a message that carries it to some people.
