@@ -109,13 +109,20 @@ test.beforeEach(({ page }) =>
 
 /**
  * The light glides to the device's absolute pose and comes to rest on the reading, within the light's
- * half-degree tremor step: a glide a pause cut short stays there when the same reading comes again.
+ * half-degree tremor step. A pause, such as a remounted sticker letting go of the light, drops an
+ * unfinished glide, so each look delivers the reading again, as a real sensor keeps doing.
  */
 const expectLanded = async (page: Page, [beta, gamma]: number[]) => {
   let previous = "";
   await expect
     .poll(async () => {
-      const pose = await page.evaluate(() => window.laminateFixture.getPose());
+      const pose = await page.evaluate(
+        ([beta, gamma]) => {
+          window.laminateFixture.tilt(beta, gamma);
+          return window.laminateFixture.getPose();
+        },
+        [beta, gamma],
+      );
       const now = JSON.stringify(pose);
       const resting = now === previous;
       previous = now;

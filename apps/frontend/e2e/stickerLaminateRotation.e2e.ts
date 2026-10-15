@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { ipad } from "./ipad.ts";
-import { readAt } from "../src/stickers/lightMode.ts";
+import { about, compose, sendReading } from "./deviceRotation.ts";
 
 test.use(ipad);
 
@@ -90,7 +90,7 @@ async function landed(page: Page) {
     .toBe(true);
 }
 
-test("turning a flat iPad about gravity leaves the reflection where it is, with no unattended wave", async ({
+test("turning a flat iPad about gravity turns the room on screen, then holds with no unattended wave", async ({
   page,
 }) => {
   await holdScreen(page, 0);
@@ -100,20 +100,16 @@ test("turning a flat iPad about gravity leaves the reflection where it is, with 
   await expect(paper).toHaveAttribute("data-state", "ready");
   await expect(foil).toHaveAttribute("data-state", "ready");
   await tiltTo(page, 0, 0, 123);
-  const paperBefore = await snapshot(paper);
   const foilBefore = await snapshot(foil);
-  // Only the compass heading changes: the room is fixed to gravity, which hasn't moved.
+  // Only the compass heading changes, a turn about the screen's normal: the room holds still in
+  // the world while the iPad turns under it.
   await page.evaluate(() => window.laminateFixture.tilt(0, 0, 133));
-  await page.waitForTimeout(1000);
-  expect(await page.evaluate(() => window.laminateFixture.getPose())).toEqual({
+  await landed(page);
+  expect(await page.evaluate(() => window.laminateFixture.getPose())).toMatchObject({
     beta: 0,
     gamma: 0,
     screenAngle: 0,
   });
-  expect(await snapshot(paper)).toBe(paperBefore);
-  expect(await snapshot(foil)).toBe(foilBefore);
-  // A tilt against gravity does move it, so the held pixels above aren't blind to the room.
-  await tiltTo(page, 10, 0, 133);
   await expect.poll(() => snapshot(foil)).not.toBe(foilBefore);
   const held = { paper: await snapshot(paper), foil: await snapshot(foil) };
   await page.waitForTimeout(1000);
@@ -122,11 +118,15 @@ test("turning a flat iPad about gravity leaves the reflection where it is, with 
 
 /**
  * Delivers the reading a device turned to `screenAngle` reports when its displayed screen is held
- * `held` degrees up from flat and rolled `roll` degrees about the displayed vertical.
+ * `held` degrees up from flat and rolled `roll` degrees about the displayed vertical. The whole
+ * attitude, heading included: on its side, a roll about the displayed vertical turns the device's
+ * alpha too, and the room holds still in the world, so a reading that kept alpha would also turn it.
  */
 async function holdDisplayed(page: Page, screenAngle: number, held: number, roll: number) {
-  const { beta, gamma } = readAt({ beta: held, gamma: roll, screenAngle: 0 }, screenAngle);
-  await page.evaluate(([b, g]) => window.laminateFixture.tilt(b, g, 123), [beta, gamma]);
+  await sendReading(
+    page,
+    compose(about.z(123), about.x(held), about.y(roll), about.z(screenAngle)),
+  );
   await landed(page);
 }
 
@@ -147,13 +147,16 @@ for (const [name, angle, held] of [
     const neutral = await reflection(paper);
     const foilNeutral = await snapshot(foil);
     for (const sign of [-1, 1]) {
-      // A wrist turn delivers coupled beta and gamma changes, not independent Euler sliders.
-      await holdDisplayed(page, angle, held + 0.5 * sign, 2 * sign);
+      // A wrist turn delivers coupled beta and gamma changes, not independent Euler sliders. The
+      // paper sits inside the glare, where its brightness barely shifts; a turn of a few degrees
+      // carries the glare's side edge onto it, at a mirror's rate, and stays inside the release.
+      await holdDisplayed(page, angle, held + (4 / 3) * sign, 4 * sign);
       const after = await reflection(paper);
       await expect.poll(() => snapshot(foil)).not.toBe(foilNeutral);
-      // The glare crosses the displayed screen the same way whichever way the screen is turned.
+      // With the eye and room still, rolling the displayed right edge away carries the glare toward
+      // the left edge, which comes toward the eye, whichever way the screen is turned.
       expect(
-        (after.x - neutral.x) * sign,
+        (neutral.x - after.x) * sign,
         "The laminate must travel with the foil under the same reading",
       ).toBeGreaterThan(0.05);
     }

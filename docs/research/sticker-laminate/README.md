@@ -4,19 +4,19 @@ The live laminate covers the sticker's full cut, including blank line-art interi
 
 `apps/frontend/src/stickers/stickerShader.ts` composes paper, ink, and neutral dielectric reflection in linear light using exact Fresnel. Every material on screen reflects one room from one viewpoint (`sharedRoom.ts`, `roomShader.ts`):
 
-- **The light:** a shoji screen above and behind the viewer, a little left, with a crisp frame and kumiko lattice, so its reflection reads on near-white paper.
+- **The light:** a shoji screen above and behind the viewer, a little left, with a frame and kumiko lattice, so its reflection reads on near-white paper. Each coat blurs it by its own lobe, and a soft halo around it, for the wall it lights and the eye's veiling glare, brightens before its reflection arrives and fades after it leaves. Its still glare sits in the screen's upper third.
 - **The bounce:** a ceiling, the wall the shoji lights, other walls and a floor.
-- **The viewpoint:** one eye in front of the screen's center, moving toward the bottom edge as the device lies flat. A sticker's reflection depends on where it sits on screen.
+- **The viewpoint:** one viewer in front of the screen's center, toward its bottom edge when the device lies flat. The room and the viewer stay put in the world while the hand turns the device; once the device turns past a release, the viewer glides back in front of it. A sticker's reflection depends on where it sits on screen.
 - **Paper's highlights** roll off above a shoulder, so the print never clips.
 
 Gloss and matte use different angular filter widths. The separable filter matches nine positive tent-weighted samples. Raw crease slopes supply geometric normals; raised plateaus stay flat. Glitter and prism (`laminateShader.ts`) build on the same coat: glitter adds flakes that mirror the foil's room and flash where they meet the overhead window; prism lays palette facets over the print that slide and turn with the coat's normal. Scene and appearance constants are declared assumptions, not measured laminate parameters.
 
 ## Runtime
 
-The light publishes the device's absolute pose, beta and gamma from DeviceOrientation plus the screen angle, smoothed by a finite glide (`light.ts`, `lightMode.ts`):
+The light publishes the device's pose, beta and gamma from DeviceOrientation plus the screen angle, and the turn since the attitude the viewer is centered on, smoothed by a finite glide (`light.ts`, `lightMode.ts`):
 
-- **Orientation:** gravity orients the room, and heading is ignored. A turned screen turns the room with the content at once.
-- **The still pose:** before any reading the room is lit at the usual reading angle (β 55°), and the first reading glides from it.
+- **Orientation:** alpha, beta and gamma give the device's attitude; without alpha, each change in gravity is the smallest turn that explains it. A restarted listener keeps the heading the device was lit at. A turned screen turns the room with the content at once.
+- **The still pose:** before any reading the room is lit at the usual reading angle, and the first reading glides from it, with the viewer centered on that reading.
 - **Pauses:** release, a hidden page, reduced motion or revoked permission hold the last pose.
 - **Redraws:** coating and foil receive the same pose each display frame. A surface that moves on screen redraws as it moves: a drag, a landing, a scroll once it stops, a resize.
 - **Creases** are lit from the static top left, as the drop shadows are, and don't follow tilt. Mobile, unknown, denied, blocked, and silent sensor states remain stationary; only positively classified devices without rotation input qualify for timed fallback motion. The static foil span supplies only the fallback and registered cast; complete material rendering replaces the former live CSS effects.

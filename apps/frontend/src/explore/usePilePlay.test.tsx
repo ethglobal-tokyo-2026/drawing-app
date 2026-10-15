@@ -3,6 +3,7 @@ import { act, useRef, type CSSProperties } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DevicePose } from "../stickers/light";
+import { STILL_POSE } from "../stickers/lightMode";
 import type { PiledSticker } from "./pileLayout";
 import { usePilePlay, type PlayDay } from "./usePilePlay";
 
@@ -10,7 +11,7 @@ const motion = vi.hoisted(() => ({
   reduced: false,
   device: "phone-or-tablet" as "phone-or-tablet" | "desktop" | "unknown",
   permission: "granted" as "granted" | "denied" | "unasked" | "not-needed",
-  pose: { beta: 55, gamma: 0, screenAngle: 0 } as DevicePose,
+  pose: { beta: 47, gamma: 0, screenAngle: 0 } as DevicePose,
   lightListeners: new Set<(pose: DevicePose) => void>(),
   permissionListeners: new Set<() => void>(),
   useLight: vi.fn(),
@@ -149,7 +150,7 @@ function swipe(id: string, x: number, y: number, by: number) {
 /** Shares a device pose that leans the pile all the way: -1, 0 or 1 across, and 0 or -1 up. */
 const publish = (x: -1 | 0 | 1, y: -1 | 0) =>
   act(() => {
-    motion.pose = { beta: y ? 15 : 55, gamma: 60 * x, screenAngle: 0 };
+    motion.pose = { beta: y ? 15 : STILL_POSE.beta, gamma: 60 * x, screenAngle: 0 };
     for (const listener of motion.lightListeners) listener(motion.pose);
   });
 
@@ -166,7 +167,7 @@ beforeEach(() => {
   motion.reduced = false;
   motion.device = "phone-or-tablet";
   motion.permission = "granted";
-  motion.pose = { beta: 55, gamma: 0, screenAngle: 0 };
+  motion.pose = { ...STILL_POSE };
   motion.useLight.mockClear();
   opened.mockClear();
   vi.stubGlobal(

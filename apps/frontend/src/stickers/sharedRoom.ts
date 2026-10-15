@@ -1,40 +1,45 @@
 import { createFoilSourceSamples } from "./foilMaterial";
 import { currentLight, type DevicePose } from "./light";
-import { upOnScreen } from "./lightMode";
+import { IDENTITY, inverse, rotate, STILL_POSE, upOnScreen } from "./lightMode";
 import { OVERHEAD_WINDOW, type OverheadWindow } from "./overheadWindow";
 
-/** One room fixed to gravity, seen from one eye in front of the screen; the light's pose orients it. */
+/** One room fixed in the world, seen from one eye that stays put while the hand turns the device. */
 
 /** A room lamp: azimuth from straight ahead (beyond the device) toward the viewer's left, elevation, power. */
 type RoomLamp = readonly [azimuth: number, elevation: number, power: number];
 
 /**
  * The room. The eye's distance in CSS px (an unverified guess for about 32 cm), and its elevation
- * above the bottom edge once the device lies flat. The shoji screen's elevation and azimuth to the
- * viewer's left, in degrees; its extent and frame feather on the plane one unit along it (x toward
- * the viewer's right, y down), its kumiko grid, with more rows than columns as a real shoji has, its
- * bottom rail's height above the frame's lower edge as a share of a row (so the phone's narrow still
- * glare holds a horizontal bar), each bar's share of a column's width, and how dark the bars and the
- * washi's edges are. The bounce off the ceiling, the wall the shoji lights, the other walls and the
- * floor, which gloss and foil each mirror, and how far the lit wall fades toward the ceiling. Lamps
- * at fixed points in the room, which only foil's diffraction sees.
+ * above the bottom edge once the device lies flat. The shoji screen's elevation, 13° above the still
+ * pose's screen normal so its still glare sits in the screen's upper third, and its azimuth to the
+ * viewer's left, in degrees; its extent and its frame's own edge blur, a logistic scale that every
+ * coat's lobe widens, on the plane one unit along it (x toward the viewer's right, y down); its halo,
+ * the wall and ceiling it lights, the coat's haze and the eye's veiling glare, as the frame blurred
+ * at a wide logistic scale, at a level against the washi; its kumiko grid, with more rows than columns as a
+ * real shoji has, its bottom rail's height above the frame's lower edge as a share of a row (so the
+ * phone's narrow still glare holds a horizontal bar), each bar's share of a column's width, and how
+ * dark the bars and the washi's edges are. The bounce off the ceiling, the wall the shoji lights, the
+ * other walls and the floor, which gloss and foil each mirror, and how far the lit wall fades toward
+ * the ceiling. Lamps at fixed points in the room, which only foil's diffraction sees.
  */
 export const ROOM = {
   eyeDistance: 1900,
   flatEyeElevation: 55,
-  elevation: 48,
+  elevation: 90 - STILL_POSE.beta + 13,
   azimuth: 6,
   shoji: {
     x: 0,
     y: 0,
-    halfWidth: 0.13,
-    halfHeight: 0.16,
-    feather: 0.004,
+    halfWidth: 0.14,
+    halfHeight: 0.18,
+    feather: 0.0022,
+    haloLevel: 0.1,
+    haloScale: 0.09,
     radiance: 1.5 * OVERHEAD_WINDOW.radiance,
     columns: 4,
     rows: 7,
     rail: 0.18,
-    bar: 0.07,
+    bar: 0.1,
     barShade: 0.9,
     glow: 0.3,
   } satisfies OverheadWindow & Record<string, number>,
@@ -84,10 +89,23 @@ const toward = (ahead: Vec3, left: Vec3, up: Vec3, azimuth: number, elevation: n
 /**
  * The room's frame in the shader's screen axes (x right, y down, z toward the viewer): up, toward the
  * viewer, the shoji's direction and its across (viewer's right) and down axes, and the eye in CSS px
- * from the screen's center.
+ * from the screen's center. The eye and room are placed for the attitude the viewer is centered on,
+ * then carried into the device's axes by the pose's turn, so they hold still in the world.
  */
 export function roomFrame(pose: DevicePose = currentLight()) {
-  const up: Vec3 = upOnScreen(pose);
+  const turn = pose.turn ?? IDENTITY;
+  const a = pose.screenAngle * RAD;
+  const toScreen = (v: Vec3): Vec3 => [
+    v[0] * Math.cos(a) - v[1] * Math.sin(a),
+    v[0] * Math.sin(a) + v[1] * Math.cos(a),
+    v[2],
+  ];
+  const toDevice = (v: Vec3): Vec3 => [
+    v[0] * Math.cos(a) + v[1] * Math.sin(a),
+    -v[0] * Math.sin(a) + v[1] * Math.cos(a),
+    v[2],
+  ];
+  const up: Vec3 = toScreen(rotate(inverse(turn), toDevice(upOnScreen(pose))));
   // The eye sits on the screen's axis from about 45° up; as the device lies flat it moves toward the
   // bottom edge, where people look from, at the same distance.
   const flat = smoothstep(Math.SQRT1_2, 1, up[2]);
@@ -106,7 +124,11 @@ export function roomFrame(pose: DevicePose = currentLight()) {
     direction: toward(ahead, left, up, azimuth, elevation),
     power,
   }));
-  const flip = (v: Vec3): Vec3 => [v[0], -v[1], v[2]];
+  // Carried into the device's axes now, with y turned down for the shader.
+  const flip = (v: Vec3): Vec3 => {
+    const [x, y, z] = toScreen(rotate(turn, toDevice(v)));
+    return [x, -y, z];
+  };
   return {
     up: flip(up),
     toward: flip(h),
