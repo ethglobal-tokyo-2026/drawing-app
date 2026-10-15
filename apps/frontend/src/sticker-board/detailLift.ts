@@ -4,7 +4,14 @@ import { holdFoilCoverageMask } from "../stickers/acquireFoilCoverage";
 import { mountStickerCopy, stickerFoilCoverage, turnSticker } from "../stickers/stickerRenderer";
 import { pauseStickerMaterial, refreshHiddenMaterials } from "../stickers/stickerMaterialHandoff";
 import { playStick } from "../stickers/stick";
-import { EASE_OUT, EASE_PEEL_POINTS, splitEasing, T_PEEL_MS, T_STICK_MS } from "../ui/easing";
+import {
+  EASE_FALL,
+  EASE_OUT,
+  EASE_PEEL_POINTS,
+  splitEasing,
+  T_PEEL_MS,
+  T_STICK_MS,
+} from "../ui/easing";
 import "./detail-lift.css";
 
 /** On its way the sticker rises and turns toward you, most at this share of the flight's time. */
@@ -13,6 +20,15 @@ const LIFT = { at: 0.35, rise: -8, turnY: -11, perspective: 900 };
 const GIVEN_FADE = 0.4;
 /** Under reduced motion the view and what it lifts off crossfade; so does a ghost moving spots. */
 const CROSSFADE_MS = 150;
+/** A toss carries the sticker on at the finger's speed for this long, and this far at most, in px. */
+const TOSS_CARRY_S = 0.16;
+const TOSS_CARRY_PX = 240;
+/** It turns a whole way round for each this many px/s it's thrown at, this many times at most. */
+const TOSS_TURN_SPEED = 1500;
+const TOSS_TURNS = 2;
+/** Out along the throw, then down onto its spot as it drops, over this long; it turns back here. */
+const TOSS_MS = 620;
+const TOSS_APEX = 0.36;
 
 /** Where a sticker sits before it lifts: its lift on the board, its spot in Explore's pile. */
 export interface LiftOrigin {
@@ -37,6 +53,13 @@ export interface LiftView {
   ghost?: number;
 }
 
+/** A sticker thrown out of the view by a finger: its speed in px/s, and the turn it was dragged to. */
+export interface Toss {
+  vx: number;
+  vy: number;
+  turn: number;
+}
+
 /** A box on screen by its center, with its size before any turn. */
 interface Spot {
   x: number;
@@ -49,13 +72,17 @@ interface Spot {
 interface Flight {
   animations: Animation[];
   release?: () => void;
-  track?: () => void;
+  /** Turns the flyer's live material as `motion` moves it, the flight's own movement by default. */
+  track?: (motion?: Animation) => void;
   destination?: HTMLElement;
   abort?: AbortController;
   /** The copy of the view's sticker that flies, over the view and what it lifts off. */
   flyer: HTMLElement | null;
   /** The sticker's spot while it's away: empty, or down to its ghost. */
   away: { el: HTMLElement; fade: Animation } | null;
+  /** The flyer's movement, and where it goes between: the sticker's spot and its place in the view. */
+  movement?: Animation;
+  path?: { from: Spot; to: Spot; turn: number };
 }
 
 const spotOf = (el: HTMLElement): Spot => {
@@ -115,6 +142,43 @@ function flightFrames(from: Spot, to: Spot, turn: number): Keyframe[] {
     { transform: at(LIFT_EASING.progress, 1), offset: LIFT.at, easing: LIFT_EASING.after },
     { transform: at(1, 0) },
   ];
+}
+
+/**
+ * The flyer's frames for a toss, from its place in the view at the turn it was dragged to: out along
+ * the throw, turning, then down onto its spot at its turn there, whole turns on.
+ */
+export function tossFrames(
+  { from, to, turn }: NonNullable<Flight["path"]>,
+  { vx, vy, turn: dragged }: Toss,
+): Keyframe[] {
+  const speed = Math.hypot(vx, vy);
+  const carry = speed ? Math.min(TOSS_CARRY_PX, speed * TOSS_CARRY_S) / speed : 0;
+  const lands =
+    turn + (Math.sign(vx) || 1) * 360 * Math.min(TOSS_TURNS, Math.round(speed / TOSS_TURN_SPEED));
+  const f = (n: number) => n.toFixed(2);
+  return [
+    { transform: `translate(0px, 0px) rotate(${f(dragged)}deg) scale(1, 1)`, easing: EASE_OUT },
+    {
+      transform: `translate(${f(vx * carry)}px, ${f(vy * carry)}px) rotate(${f((dragged + lands) / 2)}deg) scale(1.08, 1.08)`,
+      offset: TOSS_APEX,
+      easing: EASE_FALL,
+    },
+    {
+      transform: `translate(${f(from.x - to.x)}px, ${f(from.y - to.y)}px) rotate(${f(lands)}deg) scale(${f(from.w / to.w)}, ${f(from.h / to.h)})`,
+    },
+  ];
+}
+
+/** The flight back, tossed: the flyer leaves along the throw instead, and drops onto the spot. */
+function tossOut(back: Flight, toss: Toss): Animation | null {
+  const { flyer, movement, path, away } = back;
+  // Only a sticker that leaves its spot drops back onto it; a given one stays as its silhouette.
+  if (!flyer || !movement || !path || !away) return null;
+  movement.cancel();
+  const tossed = flyer.animate(tossFrames(path, toss), { duration: TOSS_MS, fill: "both" });
+  back.animations[back.animations.indexOf(movement)] = tossed;
+  return tossed;
 }
 
 const cloneFigure = (figure: HTMLElement) => {
@@ -330,11 +394,17 @@ function takeOff(
   });
   const hidden = figure.animate([{ opacity: 0 }, { opacity: 0 }], { duration: T_PEEL_MS, fill });
   animations.push(movement, hidden);
-  let live: Partial<Flight> = {};
+  let live: Partial<Flight> = { movement, path: { from, to, turn: origin.turn } };
   if (owner) {
     const { release, abort, track } = owner;
     track(movement, hidden);
-    live = { release, abort, track: () => track(movement, hidden), destination: figure };
+    live = {
+      ...live,
+      release,
+      abort,
+      track: (motion = movement) => track(motion, hidden),
+      destination: figure,
+    };
   }
   if (!leaves) {
     animations.push(
@@ -368,8 +438,9 @@ interface Options {
 /**
  * A view lifts its sticker off where it sits: a copy flies from the sticker's spot and turn to its
  * place in the view, while the rest of the view comes in around it. Returns the view's close, which
- * plays that backward to wherever the shown sticker sits, sticks it down there, then calls `onClose`.
- * A sticker that isn't shown anywhere just fades. The view takes input throughout.
+ * plays that backward to wherever the shown sticker sits, sticks it down there, then calls `onClose`;
+ * given a toss, the copy leaves along the throw instead and drops back onto the spot. A sticker that
+ * isn't shown anywhere just fades. The view takes input throughout.
  */
 export function useDetailLift({ root, shownId, originOf, into, reduced, onClose }: Options) {
   /** The opening while it plays, then the closing. */
@@ -444,7 +515,7 @@ export function useDetailLift({ root, shownId, originOf, into, reduced, onClose 
     moveGhost(was?.el ?? null, shownId);
   }, [shownId]);
 
-  return () => {
+  return (toss?: Toss) => {
     const view = root.current;
     if (closing.current) return;
     closing.current = true;
@@ -455,14 +526,18 @@ export function useDetailLift({ root, shownId, originOf, into, reduced, onClose 
     }
     // A tap during the flight back reaches what it's uncovering.
     view.style.setProperty("pointer-events", "none");
+    // A sticker still flying in goes back the way it came, even when thrown.
+    const landed = !flight.current;
     const back = flight.current ?? takeOffFrom(view);
     flight.current = back;
+    const tossed = toss && landed && !reduced ? tossOut(back, toss) : null;
     // The flight back is the opening played backward, in a stick's time rather than a peel's.
     for (const a of back.animations) {
+      if (a === tossed) continue;
       a.updatePlaybackRate(reduced ? 1 : T_PEEL_MS / T_STICK_MS);
       a.reverse();
     }
-    back.track?.();
+    back.track?.(tossed ?? undefined);
     void settled(back.animations).then(async () => {
       if (flight.current !== back) return;
       await refreshDestination(back, back.away?.el ?? null);

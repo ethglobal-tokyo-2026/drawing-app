@@ -15,6 +15,8 @@ export const EASE_PEEL_POINTS: Bezier = [0.2, 0.7, 0.2, 1];
 export const EASE_OUT = cubicBezier(EASE_OUT_POINTS);
 export const EASE_PEEL = cubicBezier(EASE_PEEL_POINTS);
 export const EASE_SPRING = cubicBezier([0.34, 1.7, 0.5, 1]);
+/** Gravity: slow off the top, fastest as it lands. */
+export const EASE_FALL = cubicBezier([0.55, 0, 1, 0.45]);
 /** --t-peel */
 export const T_PEEL_MS = 280;
 /** --t-stick */

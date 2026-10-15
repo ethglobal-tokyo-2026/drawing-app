@@ -22,7 +22,7 @@ import { formatNo, handleOf } from "../stickers/format";
 import { useMyNsfwOptIn, veiledFor } from "../stickers/nsfw";
 import "../stickers/nsfw-img.css";
 import { PhotoSticker } from "../ui/PhotoSticker";
-import { EASE_PEEL } from "../ui/easing";
+import { EASE_FALL, EASE_PEEL } from "../ui/easing";
 import { ErrorLine } from "../ui/ErrorLine";
 import { REVEAL, revealOnLoad } from "../ui/reveal";
 import { Skeleton } from "../ui/Skeleton";
@@ -53,8 +53,6 @@ const FALL_MS = 620;
 const LAND_MS = 280;
 /** Each sticker drops this long after the one before. */
 const FALL_GAP_MS = 55;
-/** Gravity: slow off the top, fastest as it lands. */
-const EASE_FALL = "cubic-bezier(0.55, 0, 1, 0.45)";
 /** It spins this far into its turn as it falls. */
 const SPIN_DEG = 24;
 /** Reduced motion: the pile fades in instead. */

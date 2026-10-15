@@ -51,14 +51,20 @@
   flex: none;
 }
 
-/* Only a vertical pan goes to the sheet; a sideways swipe lifts the next or previous sticker. */
+/* A sideways swipe lifts the next or previous sticker, and one up or down throws it back onto the
+   pile, so a short sheet scrolls from below the sticker rather than from it. */
 .lifted-sticker__stage {
   position: relative;
   flex: none;
   align-self: stretch;
   height: 228px;
-  touch-action: pan-y;
+  touch-action: none;
   cursor: grab;
+}
+
+/* A sticker being thrown leaves the sheet, which would clip it. */
+.lifted-sticker__sheet:has(> .lifted-sticker__stage[data-throwing]) {
+  overflow: visible;
 }
 
 /* On a layer of its own, so a swipe moves the figure without repainting it. */

@@ -95,7 +95,7 @@ const nameOf = (person: Person) => handleOf(toPerson(person));
  * artist, its fine print and the way to their sticker board. A sideways swipe, the arrows or the arrow
  * keys lift the next or previous one; Put back, the scrim, the perforation, Escape and LINE's Back
  * fly it back onto its spot, and so does a swipe down the artist and fine print on a large screen,
- * where the sheet is a card in the middle.
+ * where the sheet is a card in the middle. Thrown up or down, it leaves the sheet and drops back on.
  */
 export function LiftedSticker({
   stickers,
@@ -137,6 +137,7 @@ export function LiftedSticker({
     count,
     reduced,
     onPage: onIndexChange,
+    onThrow: close,
   });
   if (!entry) return null;
 
@@ -161,13 +162,13 @@ export function LiftedSticker({
         else if (e.key === "ArrowLeft") page(shown - 1);
       }}
     >
-      <div className="lifted-sticker__scrim" aria-hidden="true" onClick={close} />
+      <div className="lifted-sticker__scrim" aria-hidden="true" onClick={() => close()} />
       <div className="lifted-sticker__sheet" style={large ? drag.style : undefined}>
         <button
           type="button"
           className="perf"
           aria-label={t(($) => $.ui.sheet.close, { label })}
-          onClick={close}
+          onClick={() => close()}
         />
         <div className="lifted-sticker__stage" {...stage}>
           <div ref={slide} className="lifted-sticker__slide">
@@ -246,7 +247,7 @@ export function LiftedSticker({
               ? t(($) => $.ui.backToBoard)
               : t(($) => $.explore.lifted.goToBoard, { artist: nameOf(artist) })}
           </LabelButton>
-          <QuietLink onClick={close}>{t(($) => $.explore.lifted.putBack)}</QuietLink>
+          <QuietLink onClick={() => close()}>{t(($) => $.explore.lifted.putBack)}</QuietLink>
         </div>
       </div>
     </div>

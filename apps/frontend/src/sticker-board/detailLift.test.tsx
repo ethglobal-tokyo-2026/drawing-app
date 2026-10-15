@@ -1,10 +1,10 @@
 // @vitest-environment happy-dom
 import { act, useRef } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { stickerMaterialActive } from "../stickers/stickerMaterialHandoff";
 import { mountSticker, mountStickerCopy } from "../stickers/stickerRenderer";
-import { useDetailLift } from "./detailLift";
+import { tossFrames, useDetailLift } from "./detailLift";
 
 vi.mock("../stickers/stickerRenderer", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../stickers/stickerRenderer")>();
@@ -107,4 +107,36 @@ it("flies the still copy and lets the view's material go when copying its materi
     expect.stringContaining("Copying sticker a's material"),
     expect.any(Error),
   );
+});
+
+describe("a toss off the view", () => {
+  /** A keyframe's transform, as tossFrames writes it: where, turned how far, at what size. */
+  function poseOf(frame: Keyframe | undefined) {
+    const parts =
+      String(frame?.transform)
+        .match(/-?[\d.]+/g)
+        ?.map(Number) ?? [];
+    const [x = NaN, y = NaN, turn = NaN, w = NaN, h = NaN] = parts;
+    return { x, y, turn, w, h };
+  }
+  /** From a 60px spot on the pile, turned 12°, into a 120px place in the view below and to the right. */
+  const path = {
+    from: { x: 100, y: 50, w: 60, h: 60 },
+    to: { x: 200, y: 400, w: 120, h: 120 },
+    turn: 12,
+  };
+
+  it("leaves from where it was dragged, along the throw, and lands on its spot at its turn there", () => {
+    for (const toss of [
+      { vx: 0, vy: -1500, turn: 4 },
+      { vx: 900, vy: 400, turn: -6 },
+      { vx: -300, vy: -100, turn: 0 },
+    ]) {
+      const [start, apex, end] = tossFrames(path, toss).map(poseOf);
+      expect(start).toMatchObject({ x: 0, y: 0, turn: toss.turn, w: 1, h: 1 });
+      expect(Math.atan2(apex.y, apex.x)).toBeCloseTo(Math.atan2(toss.vy, toss.vx), 1);
+      expect(end).toMatchObject({ x: -100, y: -350, w: 0.5, h: 0.5 });
+      expect((((end.turn - path.turn) % 360) + 360) % 360).toBeCloseTo(0);
+    }
+  });
 });

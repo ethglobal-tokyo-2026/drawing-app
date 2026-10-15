@@ -87,6 +87,8 @@ const key = (name: string) =>
   });
 /** Waits out the flight back onto the pile. */
 const landed = () => act(() => new Promise((resolve) => setTimeout(resolve, 400)));
+/** The sticker's stage in the sheet, where swipes page and throws toss it. */
+const stage = () => document.querySelector(".lifted-sticker__stage");
 
 describe("LiftedSticker", () => {
   it("pages by the arrows and the arrow keys, not past either end", () => {
@@ -151,6 +153,24 @@ describe("LiftedSticker", () => {
     await landed();
     expect(sheet()).toBeNull();
     expect(document.activeElement).toBe(buttonOf(pile[1]?.sticker.id ?? ""));
+  });
+
+  it("puts the sticker back when it's thrown up or down, and not at a short drag", async () => {
+    lift(1);
+    dragBy(stage(), [0, -20]);
+    await landed();
+    expect(shown()).toBe("No.0133 by @ken");
+    expect(document.querySelector<HTMLElement>(".lifted-sticker__slide")?.style.transform).toBe("");
+    dragBy(stage(), [0, -40], [0, -120]);
+    await landed();
+    expect(sheet()).toBeNull();
+    expect(document.activeElement).toBe(buttonOf(pile[1]?.sticker.id ?? ""));
+  });
+
+  it("pages at a sideways swipe across the sticker, rather than throwing it", () => {
+    lift(1);
+    dragBy(stage(), [-30, 0], [-120, 0]);
+    expect(shown()).toBe("No.0117 by @you");
   });
 
   it("on an iPad puts the sticker back at a swipe down the card's head", async () => {
