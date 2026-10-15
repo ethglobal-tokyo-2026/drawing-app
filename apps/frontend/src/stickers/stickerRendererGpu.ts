@@ -678,6 +678,7 @@ export class StickerRenderer {
       for (const surface of surfaces) surface.finishCreaseReveal();
       return;
     }
+    const drawnAt = isPerformanceRecorderOn() ? performance.now() : 0;
     // A standalone canvas wears its overflow before its first snapshot, so every draw measures it through
     // the same transform: WebKit resolves the transform's percentages against a pixel-snapped box.
     for (const surface of this.surfaces)
@@ -808,6 +809,7 @@ export class StickerRenderer {
       row = Math.max(row, even(job.h));
     }
     flush();
+    const laidOutMs = drawnAt ? performance.now() - drawnAt : 0;
     const requested = new Set(surfaces);
     // A revealing crease's flat snapshot takes its sticker's own tile, in a batch of its own drawn first,
     // so a reveal moves no tile. WebKit still gives a tile slightly different pixels at another place in
@@ -838,9 +840,10 @@ export class StickerRenderer {
       for (const batch of draws) for (const { surface } of batch) surface.failed(String(error));
       return;
     }
-    for (const batch of draws) {
+    for (const [index, batch] of draws.entries()) {
       try {
-        this.drawTiles(batch);
+        // The draw reads every surface's layout once, so its first batch's note carries that time.
+        this.drawTiles(batch, index === 0 ? laidOutMs : 0);
       } catch (error) {
         for (const { surface } of batch) surface.failed(String(error));
       }
@@ -866,6 +869,7 @@ export class StickerRenderer {
       screenY: number;
       screenScale: number;
     }[],
+    laidOutMs = 0,
   ) {
     const recording = isPerformanceRecorderOn();
     const submittedAt = recording ? performance.now() : 0;
@@ -1021,10 +1025,12 @@ export class StickerRenderer {
     }
     const submittedMs = recording ? performance.now() - submittedAt : 0;
     let firstCopyMs = 0;
-    let remainingCopiesMs = 0;
+    let copiesMs = 0;
+    let afterCopiesMs = 0;
     let copied = 0;
     // Finish every crop before the next batch overwrites the shared GL source. Native browsers
     // can reuse its unchanged snapshot; an extra full-size 2D atlas adds another copy and allocation.
+    // The first copy takes that snapshot, so on WebKit it also waits for the GPU to draw the batch.
     for (const { surface, x, y, w, h, target } of tiles) {
       const copyStartedAt = recording ? performance.now() : 0;
       const canvas = target ?? surface.flatSnapshot();
@@ -1040,10 +1046,10 @@ export class StickerRenderer {
         );
       context.globalCompositeOperation = "copy";
       context.drawImage(this.canvas, x, y, w, h, 0, 0, w, h);
+      const copiedAt = recording ? performance.now() : 0;
       if (recording) {
-        const elapsed = performance.now() - copyStartedAt;
-        if (copied === 0) firstCopyMs = elapsed;
-        else remainingCopiesMs += elapsed;
+        if (copied === 0) firstCopyMs = copiedAt - copyStartedAt;
+        copiesMs += copiedAt - copyStartedAt;
       }
       copied++;
       if (canvas === surface.canvas) {
@@ -1090,11 +1096,12 @@ export class StickerRenderer {
         } else surface.showCreaseProgress(1);
         surface.settleWaiters();
       }
+      if (recording) afterCopiesMs += performance.now() - copiedAt;
     }
     if (recording)
       notePerformance(
         "laminate-batch",
-        `${tiles.length} ${tiles.length === 1 ? "tile" : "tiles"}; GL ${this.canvas.width}x${this.canvas.height}; used ${width}x${height}; submit ${submittedMs.toFixed(1)}ms; first copy ${firstCopyMs.toFixed(1)}ms; remaining copies ${remainingCopiesMs.toFixed(1)}ms`,
+        `${tiles.length} ${tiles.length === 1 ? "tile" : "tiles"}; GL ${this.canvas.width}x${this.canvas.height}; used ${width}x${height}; layout ${laidOutMs.toFixed(1)}ms; submit ${submittedMs.toFixed(1)}ms; copies ${copiesMs.toFixed(1)}ms, first ${firstCopyMs.toFixed(1)}ms; after copies ${afterCopiesMs.toFixed(1)}ms`,
       );
   }
 

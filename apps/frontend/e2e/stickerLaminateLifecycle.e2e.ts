@@ -731,7 +731,7 @@ test("material batch copy notes appear only while the performance recorder is on
   expect(details.length).toBeGreaterThan(0);
   for (const detail of details)
     expect(detail).toMatch(
-      /^1 tile; GL \d+x\d+; used \d+x\d+; submit \d+(?:\.\d+)?ms; first copy \d+(?:\.\d+)?ms; remaining copies \d+(?:\.\d+)?ms$/,
+      /^1 tile; GL \d+x\d+; used \d+x\d+; layout \d+(?:\.\d+)?ms; submit \d+(?:\.\d+)?ms; copies \d+(?:\.\d+)?ms, first \d+(?:\.\d+)?ms; after copies \d+(?:\.\d+)?ms$/,
     );
 });
 
