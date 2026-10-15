@@ -87,11 +87,15 @@ vec3 foilDiffraction(vec3 n,vec3 view,vec3 tangent,float footprint,float shift){
 // The room's bounce meets the grooves from every side, so each stretch of band sends some first order
 // to the eye with no lamp in line with it. That floor keeps holo colored at any pose. Its hues sweep
 // around the band and travel round it as the reflection moves through the room, up or across.
+// It reads the second order from aqua through sky, lilac and pink to lemon, taking only the hue, so the
+// slots the eye's sensitivity dims in the lamps' orders still show. Its spread is the lookup's
+// narrowest, or aqua and sky blur into the first order's red tail. The sweep rests on aqua instead of
+// crossing the gray bridge and green below it, and aqua is lifted so the lamps' lilac doesn't drown it.
 vec3 foilRoomOrders(vec3 r,float polar,float footprint){
- float sigma=clamp(sqrt(.08*.08+footprint*footprint),.035,.22);
- float u=.62+.26*sin(3.*polar+3.*(dot(r,roomUp)+dot(r,roomAcross)));
+ float sigma=clamp(sqrt(.035*.035+footprint*footprint),.035,.22);
+ float u=max(.62,.85+.27*sin(3.*polar+3.*(dot(r,roomUp)+dot(r,roomAcross))));
  vec3 hue=texture2D(foilLookup,(vec2((u+2.)*.25,(sigma-.035)/.185)*vec2(511.,31.)+.5)/vec2(512.,32.)).rgb;
- return hue/max(foilY(hue),.000001)*${f(HOLO_ROOM_ORDERS * level)};
+ return hue/max(foilY(hue),.000001)*${f(HOLO_ROOM_ORDERS * level)}*(1.5-.5*smoothstep(.62,.665,u));
 }
 vec3 shadeFoil(vec2 print,float polar,vec3 n,vec3 view,vec3 tangent,float printFootprint,float angularFootprint){
  float cosine=dot(n,view);
