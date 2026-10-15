@@ -571,8 +571,7 @@ function cluster(
   const turned = whites.map((white, slot) => white.map((p) => rotate(p, specs[slot].tilt)));
   // Whether b's outline reaches into a's word area, its reading included.
   const intrudes = (a: number, b: number) =>
-    turned[b].some((p, i) => {
-      if (i % 3) return false;
+    turned[b].some((p) => {
       const local = rotate(sub(add(p, centers[b]), centers[a]), -specs[a].tilt);
       return (
         Math.abs(local.x) < specs[a].w / 2 + WORD_CLEAR_PX &&
