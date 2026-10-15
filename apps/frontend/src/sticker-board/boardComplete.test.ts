@@ -188,7 +188,7 @@ describe("the board's first assembly", () => {
         board: "board",
         id: job.id,
         key: job.key,
-        crease: { base: image, rise: image, normal: image },
+        crease: { base: image, normal: image },
         timings: { decode: 0, draw: 0, shade: 0, encode: 0, total: 0 },
       }),
     );

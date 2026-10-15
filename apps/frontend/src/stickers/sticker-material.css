@@ -3,7 +3,7 @@
   inset: 0;
   pointer-events: none;
   isolation: isolate;
-  filter: var(--sticker-cut) var(--sticker-cast);
+  filter: var(--sticker-cut) var(--sticker-ambient);
 }
 
 .sticker-material,

@@ -47,7 +47,27 @@ const mirrored = (pose: DevicePose) => {
   return [dot(mirror, side), dot(mirror, frame.up), dot(mirror, frame.toward)];
 };
 
+/** Where a point on a flat screen, in CSS px from its center, mirrors the shoji, in its own axes. */
+const shojiAt = (frame: ReturnType<typeof roomFrame>, x: number, y: number) => {
+  const view = unit([frame.eye[0] - x, frame.eye[1] - y, frame.eye[2]]);
+  const r = [-view[0], -view[1], view[2]];
+  return [dot(r, frame.across), dot(r, frame.down)].map((v) => v / dot(r, frame.light));
+};
+
 describe("roomFrame", () => {
+  it("squares the shoji so its rails read level and its bars plumb at the still pose", () => {
+    const frame = roomFrame(turnedBy(attitudeOf(0, 0, 0)));
+    const step = 60;
+    const [acrossX, downX] = [0, 1].map(
+      (i) => shojiAt(frame, step, 0)[i] - shojiAt(frame, -step, 0)[i],
+    );
+    const [acrossY, downY] = [0, 1].map(
+      (i) => shojiAt(frame, 0, step)[i] - shojiAt(frame, 0, -step)[i],
+    );
+    expect(Math.abs(Math.atan2(downX, acrossX) / RAD)).toBeLessThan(0.5);
+    expect(Math.abs(Math.atan2(acrossY, downY) / RAD)).toBeLessThan(0.5);
+  });
+
   it("turns the reflection twice as far as a forward tilt, up the screen's vertical plane", () => {
     const still = mirrored(turnedBy(attitudeOf(0, 0, 0)));
     for (const tilt of [-12, 6, 15]) {

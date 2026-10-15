@@ -2,6 +2,7 @@ import { memo, useCallback, useMemo, useRef, useState, type CSSProperties, type 
 import { useTranslation } from "../i18n/react";
 import type { CreaseImage, CreaseBounds } from "./crease";
 import { setCreaseRevealSize } from "./creaseRevealSize";
+import { keyShadowLayer } from "./keyShadow";
 import { StickerMaterial } from "./StickerMaterial";
 import type { LaminateFinish } from "./laminate";
 import { madeFoil } from "./madeFoil";
@@ -16,8 +17,8 @@ import "./nsfw-mark.css";
 import "./sticker-figure.css";
 
 /**
- * A sticker's crease, baked: its base and its rise lit from the one light, and its geometric normal
- * data for the laminate reflection.
+ * A sticker's crease, baked: its base, and its geometric normal data, which the sticker material
+ * lights and reflects.
  */
 export type Crease = Record<CreaseImage, string> & { normalBounds?: CreaseBounds };
 
@@ -48,7 +49,7 @@ interface Props {
   stuck?: boolean;
   /** Held back, every layer, until its image has loaded, then faded in. */
   reveal?: boolean;
-  /** Where it lies over other stickers' edges: the baked crease, lit from the one light. */
+  /** Where it lies over other stickers' edges: the baked crease, lit by the room. */
   crease?: Crease;
   /** Only a crease accepted for an explicit placement may press in. */
   canRevealCrease?: (normal: string) => boolean;
@@ -135,6 +136,7 @@ export const StickerFigure = memo(function StickerFigure({
   const style: CSSProperties = {
     "--ar": (width / height).toFixed(4),
     "--m": cssUrl(mask),
+    "--sticker-turn": `${turn}deg`,
   };
   const classes = [
     "sticker-figure",
@@ -146,6 +148,10 @@ export const StickerFigure = memo(function StickerFigure({
   ].filter(Boolean);
   return (
     <span ref={ref} className={classes.join(" ")} style={style}>
+      {/* The shoji's key shadow, beneath everything; a foil's band throws its own. */}
+      {!foilMaterial && (
+        <span ref={keyShadowLayer} className="sticker-key-shadow" aria-hidden="true" />
+      )}
       {foilMaterial && <StickerFoil material={foilMaterial} cut={mask} active={laminateActive} />}
       {/* A foil's band casts for it. */}
       {stuck && !foilSize && <span className="sticker-figure__cast" aria-hidden="true" />}
@@ -168,7 +174,7 @@ export const StickerFigure = memo(function StickerFigure({
       {nsfw && <span className="sticker-figure__gloss" aria-hidden="true" />}
       {/* A rebaked crease waits for its matching laminate before both press in together. */}
       {crease && (
-        <StickerCrease key={crease.rise} ref={creaseEl} crease={crease} onReady={creaseReady} />
+        <StickerCrease key={crease.base} ref={creaseEl} crease={crease} onReady={creaseReady} />
       )}
       {veiled && (
         <span className="sticker-figure__veil">

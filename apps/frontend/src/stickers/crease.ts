@@ -1,23 +1,17 @@
 /**
  * A sticker's crease. A sticker is a stiff sheet: it can't follow a sharp step, so beside the edge of
- * a sticker beneath it lifts off and ramps down to the lower level, catching the one light on the side
- * that faces it and falling into shade on the side that doesn't. A sticker shows only the edges
+ * a sticker beneath it lifts off and ramps down to the lower level. The sticker shader shades its
+ * slopes by the room's light; the bake adds the shoulder and foot. A sticker shows only the edges
  * directly beneath it: one pressed over others hides theirs. Pure functions over pixel arrays; the
  * crease worker draws the stickers underneath and hands their silhouettes here. Heights are in
  * sticker thicknesses.
  */
 
 /**
- * Toward the one light at the top left, on screen, where every drop shadow falls from. Tilt never
- * moves it, so a crease is baked lit from it once.
+ * A crease's images: its base, the shoulder and foot, which no light moves; and geometric normals,
+ * which the sticker shader lights and reflects.
  */
-export const CREASE_LIGHT = unit(-0.5, -0.7);
-
-/**
- * A crease's images: its base, the shoulder and foot; its rise, lit from the one light; and geometric
- * normals for the laminate reflection.
- */
-export type CreaseImage = "base" | "rise" | "normal";
+export type CreaseImage = "base" | "normal";
 
 /** A rectangle in the raster or normalized source frame, as its caller specifies. */
 export interface CreaseBounds {
@@ -50,13 +44,9 @@ const bridgeRadiusAt = (scale: number) => ROUNDED_REACH * scale + 1;
  * scales it, then FLOOR takes its share and MOST caps it, so a part shows less than its value here.
  */
 const CREASE_TONE = {
-  /** The rise that faces the light. */
-  lit: 0.42,
-  /** The rise that faces away. */
-  shade: 0.24,
-  /** The shoulder at the top of the rise. */
+  /** The shoulder at the top of the ramp. */
   shoulder: 0.14,
-  /** The foot of the rise. */
+  /** The foot of the ramp. */
   foot: 0.2,
 };
 
@@ -74,19 +64,6 @@ const STRENGTH = 0.56;
 
 /** Rises as `v` does, easing into `most` rather than piling up where edges cross. */
 const ease = (v: number, most: number) => most * (1 - Math.exp(-v / most));
-
-function unit(x: number, y: number): [number, number] {
-  const l = Math.hypot(x, y) || 1;
-  return [x / l, y / l];
-}
-
-/** The one light turned into the frame of a sticker turned `deg` clockwise on screen. */
-export function lightIn(deg: number): [number, number] {
-  const t = (-deg * Math.PI) / 180;
-  const [c, s] = [Math.cos(t), Math.sin(t)];
-  const [x, y] = CREASE_LIGHT;
-  return [x * c - y * s, x * s + y * c];
-}
 
 /** Rows or columns: how many lines, how long each is, and the index steps along and between them. */
 const linesOf = (width: number, height: number, across: boolean) =>
@@ -401,6 +378,35 @@ function stepResponse(scale: number): StepResponse {
   return response;
 }
 
+/**
+ * The surface slope R and G hold at their extremes: one sticker's steepest step at full scale, so a
+ * crease's slope spans every level and the shader's shading has no visible steps.
+ */
+export const NORMAL_SLOPE = stepResponse(1).slope * STICKER_THICKNESS;
+
+/** How many NORMAL_SLOPEs a slope may reach, where steps stack, before it clips. */
+export const NORMAL_RANGE = 6;
+
+/** B's levels per NORMAL_SLOPE of range beyond the first. */
+export const NORMAL_RANGE_LEVELS = 255 / (NORMAL_RANGE - 1);
+
+/**
+ * Packs the surface's slope (height per CSS px, rightward and downward) at byte `q`. R and G hold the
+ * normal's sideways part in NORMAL_SLOPEs divided by B's range, which grows only where steps stack, so
+ * every channel stays continuous under the GPU's filtering. Flat is 128, 128, 255.
+ */
+function encodeNormal(out: Uint8ClampedArray, q: number, dx: number, dy: number) {
+  const sx = dx / NORMAL_SLOPE;
+  const sy = dy / NORMAL_SLOPE;
+  const steepest = Math.min(NORMAL_RANGE, Math.max(1, Math.abs(sx), Math.abs(sy)));
+  const b = Math.round(255 - (steepest - 1) * NORMAL_RANGE_LEVELS);
+  const range = 1 + (255 - b) / NORMAL_RANGE_LEVELS;
+  out[q] = Math.round(128 - (127 * sx) / range);
+  out[q + 1] = Math.round(128 - (127 * sy) / range);
+  out[q + 2] = b;
+  out[q + 3] = 255;
+}
+
 export interface CreaseInput {
   width: number;
   height: number;
@@ -410,15 +416,13 @@ export interface CreaseInput {
   own: Float32Array;
   /** Pixels per CSS px. */
   scale: number;
-  /** Toward the one light, in this sticker's frame (lightIn). */
-  light: readonly [number, number];
   /** Expanded geometry can retain a bend independently of painted coverage. */
   normalRegion?: CreaseBounds;
 }
 
 /**
- * The crease's images, as RGBA, not premultiplied: white where the laminate catches the light, ink
- * where it falls into shade. Normal RGB describes the raw draped surface independently of the cut.
+ * The crease's images, as RGBA, not premultiplied: the base white on the shoulder and ink at the foot.
+ * Normal RGB describes the raw draped surface independently of the cut, as encodeNormal packs it.
  */
 export type CreasePixels = Record<CreaseImage, Uint8ClampedArray<ArrayBuffer>>;
 
@@ -429,7 +433,6 @@ export function creasePixels({
   surface,
   own,
   scale,
-  light,
   normalRegion,
 }: CreaseInput): CreasePixels | null {
   const field = drape(surface, width, height, scale);
@@ -445,7 +448,6 @@ export function creasePixels({
   const unitStep = stepResponse(scale);
   const image = () => new Uint8ClampedArray(width * height * 4);
   const base = image();
-  const rise = image();
   const normal = image();
   let any = false;
   /** Shades pixel `q` of `out` by `tone`, lit above zero and shaded below. */
@@ -473,12 +475,8 @@ export function creasePixels({
       const dy = bends
         ? ((field[i + width] - field[i - width]) * scale * STICKER_THICKNESS) / 2
         : 0;
-      const length = Math.hypot(dx, dy, 1);
       const q = i * 4;
-      normal[q] = Math.round(128 - (127 * dx) / length);
-      normal[q + 1] = Math.round(128 - (127 * dy) / length);
-      normal[q + 2] = Math.round(128 + 127 / length);
-      normal[q + 3] = 255;
+      encodeNormal(normal, q, dx, dy);
       if (
         normalRegion &&
         x >= normalRegion.x &&
@@ -493,17 +491,11 @@ export function creasePixels({
       // A flat raised plane still supplies normal data without inventing a visible crease.
       if (h > 0.004 && Math.round((h / (h + 1)) * o * 255) > 0) any = true;
       if (!bends) continue;
-      const gx = (field[i + 1] - field[i - 1]) / 2 / unitStep.slope;
-      const gy = (field[i + width] - field[i - width]) / 2 / unitStep.slope;
       const bend =
         (field[i + 1] + field[i - 1] + field[i + width] + field[i - width] - 4 * h) / unitStep.bend;
       const ridge =
         Math.max(0, -bend) * CREASE_TONE.shoulder - Math.max(0, bend) * CREASE_TONE.foot;
       shade(base, q, ridge * o * STRENGTH);
-      // Rising toward the light's far side faces the light.
-      const facing = -(gx * light[0] + gy * light[1]);
-      const tone = Math.max(0, facing) * CREASE_TONE.lit - Math.max(0, -facing) * CREASE_TONE.shade;
-      shade(rise, q, tone * o * STRENGTH);
     }
   }
   if (!any) return null;
@@ -514,5 +506,5 @@ export function creasePixels({
       const q = (y * width + x) * 4;
       normal.set([128, 128, 255, 255], q);
     }
-  return { base, rise, normal };
+  return { base, normal };
 }

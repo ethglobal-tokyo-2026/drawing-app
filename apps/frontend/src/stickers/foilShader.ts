@@ -1,6 +1,7 @@
 import { FOIL_ROOM, type FoilRoom } from "./foilMaterial";
 import { glslFloat as f } from "./glsl";
 import { SCREENTONE } from "./screentone";
+import { ROOM } from "./sharedRoom";
 
 /** Holo's colored floor, the room's bounce diffracted, relative to the room's light level. */
 const HOLO_ROOM_ORDERS = 0.6;
@@ -9,9 +10,9 @@ const HOLO_ROOM_ORDERS = 0.6;
  * Lookup RGBA8: RGB is linear chromaticity / max channel; A²×8 is integrated Y.
  * Coordinates: u in [−2,2], sigma in [.035,.22], texel-center mapped to 512×32.
  * The room's window, light level and quadrature grid are compiled in.
- * foilSources[16]: createFoilSourceSamples for the same room: the window's grid² quadrature samples
- * (unit incident xyz, solid angle), then room lamps (unit incident xyz, solid angle × radiance
- * relative to the room level). Unused entries are zero.
+ * foilSources[16]: the window's grid² quadrature samples (unit incident xyz, solid angle), then the
+ * room's round lights and lamps (unit incident xyz, solid angle × radiance relative to the room
+ * level), from roomFoilSources or createFoilSourceSamples. Unused entries are zero.
  * foilStyle is the style's index in FOIL_STYLES: holo and pink, the chromatic styles, come first, then
  * Kyoto Seika, whose screentone the shader prints. Tint and ink are linear RGB.
  * shadeFoil receives print coordinates in screentone tiles, shared oriented normal/view/groove
@@ -48,7 +49,8 @@ float foilRoom(vec3 r){
  vec2 q=roomPlane(r);
  return roomFoil(r)+.6*foilPanel(q,vec2(-.46,-.34),vec2(.17,.1))+.45*foilPanel(q,vec2(.55,.04),vec2(.1,.26));
 }
-float foilWindowLight(vec3 r){return roomShoji(r,.045);}
+// Every source the room holds, relative to the shoji's radiance, which foil sets as the window's.
+float foilWindowLight(vec3 r){return roomSources(r,.045)/${f(ROOM.shoji.radiance)};}
 float foilCoat(float cosine){
  float transmitted=sqrt(1.-(1.-cosine*cosine)/2.25);
  float a=(cosine-1.5*transmitted)/(cosine+1.5*transmitted);

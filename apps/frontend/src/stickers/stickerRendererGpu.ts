@@ -1,4 +1,5 @@
 import { createFoilLookup, FOIL_STYLES, type Rgb } from "./foilMaterial";
+import { roomIrradianceSources } from "./roomIrradiance";
 import { roomFoilSources, roomFrame } from "./sharedRoom";
 import {
   acquireFoilCoverage,
@@ -201,6 +202,8 @@ export class StickerRenderer {
         "roomLight",
         "roomAcross",
         "roomDown",
+        "irradianceSources[0]",
+        "roomLights[0]",
       ])
         this.uniforms.set(name, gl.getUniformLocation(program, name));
       gl.useProgram(program);
@@ -894,6 +897,11 @@ export class StickerRenderer {
     gl.uniform3fv(this.uniforms.get("roomLight") ?? null, room.light);
     gl.uniform3fv(this.uniforms.get("roomAcross") ?? null, room.across);
     gl.uniform3fv(this.uniforms.get("roomDown") ?? null, room.down);
+    gl.uniform4fv(this.uniforms.get("irradianceSources[0]") ?? null, roomIrradianceSources(room));
+    gl.uniform3fv(
+      this.uniforms.get("roomLights[0]") ?? null,
+      room.lights.flatMap((source) => source.direction),
+    );
     const foilSources = roomFoilSources(room);
     const normalTransform = this.normalTransform;
     const writeNormalColumn = (column: number, x: number, y: number, z: number) => {

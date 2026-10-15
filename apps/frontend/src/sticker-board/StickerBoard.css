@@ -142,10 +142,13 @@
   transform: scale(1.045);
 }
 
-/* Its silhouette casts the lifted shadow, or a foil sticker's band does. */
+/* In hand, it lifts well off the board: its key shadow throws further and softer. */
+.placed-sticker.is-dragging .sticker-figure {
+  --sticker-elevation: 14px;
+}
+
 .placed-sticker.is-dragging :is(.sticker-figure__cast, .sticker-foil__cast) {
-  filter: var(--sticker-cut) drop-shadow(3px 8px 6px rgba(28, 24, 36, 0.18))
-    drop-shadow(8px 20px 20px rgba(28, 24, 36, 0.15));
+  filter: var(--sticker-cut) var(--sticker-ambient);
 }
 
 .placed-sticker.is-landing {

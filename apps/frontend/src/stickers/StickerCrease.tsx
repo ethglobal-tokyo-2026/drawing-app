@@ -8,8 +8,8 @@ const creaseStyle = (url: string) => ({ "--crease": `url("${url}")` });
 const CREASE_DECODE_TIMEOUT_MS = 20_000;
 
 /**
- * A sticker's crease where it lies over other stickers' edges: its base, the shoulder and foot, and over
- * it its rise, lit from the one light in the top left, where every drop shadow falls from.
+ * A sticker's crease where it lies over other stickers' edges: its base, the shoulder and foot. The
+ * room's light on its slopes is the sticker material's, from the crease's normal.
  */
 export function StickerCrease({
   crease,
@@ -20,13 +20,13 @@ export function StickerCrease({
   ref?: RefObject<HTMLSpanElement | null>;
   onReady?: () => void;
 }) {
-  const { base, rise, normal } = crease;
+  const { base, normal } = crease;
   const local = useRef<HTMLSpanElement>(null);
   const el = ref ?? local;
   useEffect(() => {
     if (!onReady) return;
     let current = true;
-    const urls = [crease.base, crease.rise];
+    const urls = [crease.base];
     const images = urls.map((url) => {
       const image = new Image();
       image.src = url;
@@ -76,7 +76,6 @@ export function StickerCrease({
       <span className="crease-reveal-content">
         <span ref={el} className="sticker-crease" data-normal={normal}>
           <i style={creaseStyle(base)} />
-          <i style={creaseStyle(rise)} />
         </span>
       </span>
     </span>

@@ -35,7 +35,20 @@
   visibility: inherit;
 }
 .sticker-foil__cast {
-  filter: var(--sticker-cut) var(--sticker-cast);
+  filter: var(--sticker-cut) var(--sticker-ambient);
+}
+/* A foil sticker's key shadow falls from its band. */
+.sticker-foil .sticker-key-shadow {
+  inset: auto;
+  left: var(--foil-left, 0%);
+  top: var(--foil-top, 0%);
+  width: var(--foil-width, 100%);
+  height: var(--foil-height, 100%);
+  --key-shadow-mask: var(--foil-coverage);
+  visibility: hidden;
+}
+.sticker-foil[data-state="ready"] .sticker-key-shadow {
+  visibility: inherit;
 }
 .sticker-foil__cast::before,
 .sticker-foil__band {

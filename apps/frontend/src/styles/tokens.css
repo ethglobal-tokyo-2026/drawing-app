@@ -85,9 +85,11 @@
   /* A thin sticker: a short, tight cast */
   --sticker-cast: drop-shadow(0.5px 1px 1px rgba(28, 24, 36, 0.16))
     drop-shadow(1px 3px 4px rgba(28, 24, 36, 0.08));
-  /* A sticker stuck to a board, close to it: a contact line and a short, faint throw */
-  --sticker-cast-board: drop-shadow(0.25px 0.5px 0.75px rgba(28, 24, 36, 0.18))
-    drop-shadow(0.5px 1.25px 2px rgba(28, 24, 36, 0.06));
+  /* A sticker's own shadows (StickerFigure): the room's even light, occluded straight beneath it, and
+     the shoji's key shadow, a layer that follows the light (stickers/keyShadow.ts), in this ink */
+  --sticker-ambient: drop-shadow(0 0 1px rgba(28, 24, 36, 0.14));
+  --sticker-ambient-board: drop-shadow(0 0 0.6px rgba(28, 24, 36, 0.16));
+  --key-shadow-ink: rgba(28, 24, 36, 0.2);
 
   /* Motion beyond the contract */
   --t-turn: 500ms;

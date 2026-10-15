@@ -10,7 +10,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { isPerformanceRecorderOn, notePerformance } from "../performance/performanceRecorder";
-import { lightIn, type CreaseImage } from "../stickers/crease";
+import type { CreaseImage } from "../stickers/crease";
 import type {
   Affine,
   CreaseBatch,
@@ -95,7 +95,6 @@ function overlaps(a: Box, b: Box, reach: number) {
 /** A value for each of a crease's images. */
 const byImage = <T>(of: (image: CreaseImage) => T): Record<CreaseImage, T> => ({
   base: of("base"),
-  rise: of("rise"),
   normal: of("normal"),
 });
 
@@ -164,14 +163,10 @@ export function creaseJobs<S extends CreaseSticker>(
       return [{ ...outlines[j], w: r2(a.w), h: r2(a.h), at: roundAffine(steps.reduce(mul)) }];
     });
     if (!under.length) return;
-    // The light is on screen; the bake is in the sticker's frame, which its turn moves.
-    const [lx, ly] = lightIn(b.r);
-    const light: [number, number] = [r2(lx), r2(ly)];
     const shape = {
       width: Math.ceil(b.w * scale),
       height: Math.ceil(b.h * scale),
       scale,
-      light,
       own: outlines[i],
       under,
     };

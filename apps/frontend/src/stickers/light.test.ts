@@ -3,9 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   acquireLight,
   currentLight,
-  GLIDE_MS,
   installLight,
-  STEP_DEGREES,
+  MAX_PUBLISHES_PER_SECOND,
+  RECENTER_MS,
+  reflectionPx,
   subscribeLight,
   type DevicePose,
 } from "./light";
@@ -14,12 +15,14 @@ import {
   attitudeOf,
   FALLBACK_PERIOD_MS,
   IDENTITY,
+  multiply,
   inverse,
   rotate,
   STILL_POSE,
   upOnScreen,
 } from "./lightMode";
 import { roomFrame } from "./sharedRoom";
+import traces from "./lightTraces.json";
 import * as motionPermission from "../ui/motionPermission";
 
 const browserDocument = globalThis.document;
@@ -36,8 +39,8 @@ let stopRecording = () => {};
 
 /** A sensor's frame. */
 const FRAME_MS = 16;
-/** Long enough for any glide to land. */
-const settle = () => vi.advanceTimersByTime(10 * GLIDE_MS);
+/** Long enough for the light to land on a held reading, and for the viewer to re-center. */
+const settle = () => vi.advanceTimersByTime(2 * RECENTER_MS);
 /** A pointer moved to (x, y): a mouse unless it says it's a pen or a finger. */
 const pointAt = (x: number, y: number, pointerType = "mouse", type = "pointermove") =>
   window.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, pointerType }));
@@ -169,7 +172,7 @@ describe("the shared light", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("glides from the still pose to the device's real pose on the first reading, and lands", () => {
+  it("moves from the still pose to the device's real pose on the first reading, and lands", () => {
     uninstall = installLight(root);
     showScreen();
     tiltTo(30, 10);
@@ -185,30 +188,6 @@ describe("the shared light", () => {
       expect(published[i].beta).toBeLessThan(published[i - 1].beta);
   });
 
-  it("publishes every display frame while it glides, then stops where it landed", () => {
-    landAt(40, 0);
-    const frames: { at: number; pose: DevicePose }[] = [];
-    const stop = subscribeLight((pose) => frames.push({ at: performance.now(), pose }));
-    try {
-      tiltTo(48, -6);
-      vi.advanceTimersByTime(256);
-      expect(frames.length).toBeGreaterThanOrEqual(12);
-      for (let i = 1; i < frames.length; i++) {
-        expect(frames[i].at - frames[i - 1].at).toBeLessThanOrEqual(20);
-        expect(frames[i].pose.beta).toBeGreaterThan(frames[i - 1].pose.beta);
-        expect(frames[i].pose.gamma).toBeLessThan(frames[i - 1].pose.gamma);
-      }
-      settle();
-      expect(angles(currentLight())).toEqual(pose(48, -6));
-      const count = frames.length;
-      vi.advanceTimersByTime(22000);
-      expect(frames).toHaveLength(count);
-      expect(vi.getTimerCount()).toBe(0);
-    } finally {
-      stop();
-    }
-  });
-
   it("combines sensor readings within one display frame toward the latest", () => {
     landAt(40, 0);
     const before = published.length;
@@ -220,14 +199,6 @@ describe("the shared light", () => {
     expect(currentLight().gamma).toBeLessThan(0);
     settle();
     expect(angles(currentLight())).toEqual(pose(40, -30));
-  });
-
-  it("keeps still for the hand's tremor", () => {
-    landAt(40, 16);
-    const before = published.length;
-    tiltTo(40.2, 16.2);
-    vi.advanceTimersByTime(100);
-    expect(published).toHaveLength(before);
   });
 
   it("takes the short way round when the device turns face down past upside down", () => {
@@ -251,7 +222,13 @@ describe("the shared light", () => {
     // In landscape, the device's own axes are turned: this reading is the still pose on screen.
     tiltTo(0, -STILL_POSE.beta);
     settle();
-    expect(published).toHaveLength(0);
+    // Any redraw shows the still pose's light, from the reading's own angles.
+    const still = roomFrame(STILL_POSE);
+    for (const shown of published) {
+      const frame = roomFrame(shown);
+      for (const key of ["up", "light", "eye"] as const)
+        frame[key].forEach((v, i) => expect(v).toBeCloseTo(still[key][i], 6));
+    }
     tiltTo(0, -30);
     settle();
     expect(angles(currentLight())).toEqual(pose(0, -30, 90));
@@ -262,7 +239,10 @@ describe("the shared light", () => {
     screenAt(90);
     tiltTo(40, 0);
     vi.advanceTimersByTime(FRAME_MS);
-    expect(angles(currentLight())).toEqual(pose(40, 0, 90));
+    const turned = currentLight();
+    expect(turned.screenAngle).toBe(90);
+    expect(turned.beta).toBeCloseTo(40, 9);
+    expect(turned.gamma).toBeCloseTo(0, 9);
   });
 
   it.each([
@@ -346,15 +326,17 @@ describe("the shared light", () => {
   });
 
   it.each(["release", "hide", "reduce", "deny"])(
-    "holds where it was, mid-glide, on %s, whatever the device does after",
+    "holds where it was, mid-turn, on %s, whatever the device does after",
     (pause) => {
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
       vi.spyOn(window, "matchMedia").mockReturnValue(reduced);
       const permission = permissionStore();
       usePermission(permission);
       const close = landAt(40, 0);
-      tiltTo(70, 30);
-      vi.advanceTimersByTime(64);
+      for (let i = 1; i <= 10; i++) {
+        tiltTo(40 + 3 * i, 3 * i);
+        vi.advanceTimersByTime(FRAME_MS);
+      }
       const mid = currentLight();
       expect(mid.beta).toBeGreaterThan(40);
       expect(mid.beta).toBeLessThan(70);
@@ -562,28 +544,33 @@ describe("the viewer", () => {
     expect(turned()).toBeLessThan(0.01);
   });
 
-  it("re-centers on a device held past the release, then holds still", () => {
+  it("re-centers on a device held past the release in a fixed time, then holds still", () => {
     landAt(STILL_POSE.beta, 0);
+    const before = published.length;
     tiltTo(STILL_POSE.beta, 0, 60);
-    settle();
-    const centered = roomFrame(angles(currentLight()));
-    const distance = () => {
-      const frame = roomFrame();
-      return Math.max(...frame.light.map((v, i) => Math.abs(v - centered.light[i])));
-    };
-    const away = distance();
-    const steps = published.length;
-    vi.advanceTimersByTime(20000);
+    vi.advanceTimersByTime(4 * FRAME_MS);
+    expect(turned()).toBeGreaterThan(55);
+    const eased: { at: number; turn: number }[] = [];
+    const stop = subscribeLight(() => eased.push({ at: performance.now(), turn: turned() }));
+    try {
+      settle();
+    } finally {
+      stop();
+    }
     expect(turned()).toBeLessThan(1e-6);
-    expect(distance()).toBeLessThan(away / 4);
-    // With the light landed, each redraw but the landing is a step the hand's tremor would not make.
-    const turns = published.slice(steps - 1).map((p) => p.turn ?? IDENTITY);
-    for (let i = 1; i < turns.length - 1; i++)
-      expect(angleBetween(turns[i - 1], turns[i])).toBeGreaterThanOrEqual(STEP_DEGREES / 2);
+    // It lands within the ease's time, never backs off, and each redraw but the landing moves the
+    // reflection visibly.
+    expect(eased[eased.length - 1].at - eased[0].at).toBeLessThanOrEqual(RECENTER_MS);
+    for (let i = 1; i < eased.length; i++) {
+      expect(eased[i].turn).toBeLessThan(eased[i - 1].turn);
+      if (i < eased.length - 1)
+        expect(reflectionPx(eased[i - 1].turn - eased[i].turn)).toBeGreaterThanOrEqual(0.5);
+    }
+    expect(published.length - before).toBeLessThan(RECENTER_MS / FRAME_MS + 8);
     const held = currentLight();
     const count = published.length;
     for (let i = 0; i < 50; i++) {
-      tiltTo(STILL_POSE.beta + (i % 2) * 0.2, 0, 60);
+      tiltTo(STILL_POSE.beta, 0, 60);
       vi.advanceTimersByTime(200);
     }
     expect(currentLight()).toEqual(held);
@@ -594,16 +581,17 @@ describe("the viewer", () => {
   it("goes on re-centering after a pause, on a device lying still", () => {
     const close = landAt(STILL_POSE.beta, 0);
     tiltTo(STILL_POSE.beta, 0, 60);
-    settle();
-    const mid = turned();
-    expect(mid).toBeGreaterThan(10);
+    vi.advanceTimersByTime(RECENTER_MS / 2);
+    expect(turned()).toBeGreaterThan(10);
     close();
+    vi.advanceTimersByTime(5000);
+    expect(turned()).toBeGreaterThan(10);
     showScreen();
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 20; i++) {
       tiltTo(STILL_POSE.beta, 0, 60);
       vi.advanceTimersByTime(200);
     }
-    expect(turned()).toBeLessThan(10);
+    expect(turned()).toBeLessThan(1e-3);
   });
 
   it("settles on the same frame for one pose, whichever side the device turned to it from", () => {
@@ -643,5 +631,149 @@ describe("the viewer", () => {
     settle();
     expect(turned()).toBeLessThan(1e-6);
     expect(frame.up).not.toEqual(roomFrame().up);
+  });
+});
+
+describe("following the hand", () => {
+  /** A deviceorientation reading at `t` ms: alpha, beta and gamma in degrees. */
+  type Reading = readonly [t: number, alpha: number, beta: number, gamma: number];
+  type Frame = { at: number; redrew: boolean; reading: Reading; shown: DevicePose };
+  /** How far the reflection moves, in CSS px, between two readings, or two poses the light showed. */
+  const readingPx = (a: Reading, b: Reading) =>
+    reflectionPx(angleBetween(attitudeOf(a[1], a[2], a[3]), attitudeOf(b[1], b[2], b[3])));
+  const shownPx = (a: DevicePose, b: DevicePose) =>
+    reflectionPx(
+      angleBetween(
+        multiply(attitudeOf(0, a.beta, a.gamma), a.turn ?? IDENTITY),
+        multiply(attitudeOf(0, b.beta, b.gamma), b.turn ?? IDENTITY),
+      ),
+    );
+  const rms = (xs: number[]) => Math.sqrt(xs.reduce((sum, x) => sum + x * x, 0) / xs.length);
+
+  /**
+   * Plays `readings` at their times, on a screen that draws a frame every `frameMs`, and returns each
+   * display frame the light ran: its time, whether it redrew, the reading it had and the pose it showed.
+   */
+  const replay = (readings: readonly Reading[], frameMs = FRAME_MS) => {
+    uninstall = installLight(root);
+    showScreen();
+    const frames: Frame[] = [];
+    let latest = readings[0];
+    const raf = (run: (now: number) => void) =>
+      window.setTimeout(() => run(performance.now()), frameMs - (performance.now() % frameMs));
+    vi.spyOn(window, "cancelAnimationFrame").mockImplementation((id) => window.clearTimeout(id));
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((run) =>
+      raf((now) => {
+        const before = published.length;
+        run(now);
+        frames.push({
+          at: now,
+          redrew: published.length > before,
+          reading: latest,
+          shown: currentLight(),
+        });
+      }),
+    );
+    const start = performance.now() - readings[0][0];
+    for (const reading of readings) {
+      vi.advanceTimersByTime(Math.max(0, start + reading[0] - performance.now()));
+      latest = reading;
+      tiltTo(reading[2], reading[3], reading[1]);
+    }
+    vi.advanceTimersByTime(FRAME_MS);
+    return frames;
+  };
+  /** Frames from `fromMs` into the replay, while readings still arrived. */
+  const during = (frames: Frame[], fromMs: number) =>
+    frames.filter(
+      (f) => f.at - frames[0].at >= fromMs && f.reading !== frames[frames.length - 1].reading,
+    );
+  /** Redraws per second over `frames`. */
+  const redrawRate = (frames: Frame[]) =>
+    frames.filter((f) => f.redrew).length / ((frames[frames.length - 1].at - frames[0].at) / 1000);
+  /** A seeded normal distribution, so a synthetic hand is the same on every run. */
+  const normal = (seed: number) => {
+    const next = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+    return () => Math.sqrt(-2 * Math.log(next() + 1e-12)) * Math.cos(2 * Math.PI * next());
+  };
+  /**
+   * Readings every `everyMs` for `seconds`: tremor of `tremor`° rms on each angle from four tones in
+   * the hand's 6–11 Hz band, sensor noise of `noise`° rms, and a tilt of `degreesPerSecond`.
+   */
+  const hand = ({
+    seconds = 3,
+    everyMs = 1000 / 60,
+    tremor = 0,
+    noise = 0,
+    degreesPerSecond = 0,
+  }) => {
+    const gauss = normal(7);
+    const tones = [6.5, 8.3, 9.7, 11.2].map(() => [gauss(), gauss(), gauss()]);
+    const wobble = (axis: number, s: number) =>
+      [6.5, 8.3, 9.7, 11.2].reduce(
+        (sum, hz, k) => sum + Math.sin(2 * Math.PI * hz * s + Math.PI * tones[k][axis]),
+        0,
+      ) *
+      (tremor / Math.sqrt(2));
+    const readings: Reading[] = [];
+    for (let t = 0; t <= seconds * 1000; t += everyMs) {
+      const s = t / 1000;
+      readings.push([
+        Math.round(t),
+        20 + wobble(0, s) + noise * gauss(),
+        STILL_POSE.beta + degreesPerSecond * s + wobble(1, s) + noise * gauss(),
+        wobble(2, s) + noise * gauss(),
+      ]);
+    }
+    return readings;
+  };
+
+  it("redraws on every frame in which a recorded hand moved the reflection a pixel", () => {
+    screenAt(90);
+    for (const trace of traces.traces.map((rows) =>
+      rows.map(([t, a, b, g]): Reading => [t, a, b, g]),
+    )) {
+      const frames = replay(trace);
+      const moving = frames.filter(
+        (f, i) => i > 0 && readingPx(frames[i - 1].reading, f.reading) >= 1,
+      );
+      expect(moving.length).toBeGreaterThan(0);
+      expect(moving.filter((f) => !f.redrew).map((f) => f.at)).toEqual([]);
+      uninstall();
+      uninstall = () => {};
+    }
+  });
+
+  it("shows the hand's tremor", () => {
+    const frames = during(replay(hand({ tremor: 0.025, noise: 0.003 })), 500);
+    const shown = frames.slice(1).map((f, i) => shownPx(frames[i].shown, f.shown));
+    const real = frames.slice(1).map((f, i) => readingPx(frames[i].reading, f.reading));
+    expect(rms(shown) / rms(real)).toBeGreaterThan(0.5);
+  });
+
+  it("stops redrawing for a device held still", () => {
+    expect(redrawRate(during(replay(hand({ noise: 0.003 })), 1000))).toBeLessThan(1);
+    // Once the readings stop, it lands on the last one and stops.
+    vi.advanceTimersByTime(1000);
+    const count = published.length;
+    vi.advanceTimersByTime(5000);
+    expect(published).toHaveLength(count);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("redraws a hand's tremor at most at the cap on a fast screen", () => {
+    const frames = during(replay(hand({ tremor: 0.025, noise: 0.003 }), FRAME_MS / 2), 500);
+    // Every other frame of a 125 Hz screen, the nearest it comes to the cap.
+    expect(redrawRate(frames)).toBeLessThan(MAX_PUBLISHES_PER_SECOND * 1.1);
+    expect(redrawRate(frames)).toBeGreaterThan(MAX_PUBLISHES_PER_SECOND / 2);
+  });
+
+  it("advances on every frame of a slow tilt", () => {
+    const frames = during(
+      replay(hand({ everyMs: FRAME_MS, degreesPerSecond: 1, seconds: 2 })),
+      250,
+    );
+    expect(frames.length).toBeGreaterThan(80);
+    expect(frames.filter((f) => !f.redrew).map((f) => f.at)).toEqual([]);
   });
 });

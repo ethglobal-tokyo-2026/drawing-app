@@ -8,7 +8,6 @@ const job = (id: string, key: string): CreaseJob => ({
   width: 1,
   height: 1,
   scale: 1,
-  light: [0, 0],
   own: { url: "mask.png", grow: 0 },
   under: [],
 });

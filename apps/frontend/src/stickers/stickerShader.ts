@@ -1,9 +1,16 @@
+import { NORMAL_RANGE_LEVELS, NORMAL_SLOPE } from "./crease";
 import { foilFragment } from "./foilShader";
 import { glslFloat as f } from "./glsl";
 import { laminateFragment } from "./laminateShader";
+import { roomIrradianceFragment } from "./roomIrradiance";
 import { roomFragment } from "./roomShader";
-import { ROOM } from "./sharedRoom";
 import { SCREENTONE } from "./screentone";
+
+/**
+ * How strongly the room's light shades a crease's slopes: 1 is physical, the change in the light
+ * falling on the slope against the flat paper's.
+ */
+export const CREASE_SHADING = 1;
 
 /** Shared shader: air/film Fresnel, one eye in front of the screen, and the shared room. */
 export const stickerVertex = `
@@ -33,9 +40,10 @@ uniform float opaquePaper;
 uniform vec2 screenCenter;
 uniform float screenScale;
 ${roomFragment}
+${roomIrradianceFragment}
 ${foilFragment}
 float environment(vec3 r) {
-  return roomGloss(r)+${f(ROOM.shoji.radiance)}*roomShoji(r,roughness);
+  return roomGloss(r)+roomSources(r,roughness);
 }
 float linear(float v) { return v<=.04045?v/12.92:pow((v+.055)/1.055,2.4); }
 float display(float v) { return v<=.0031308?v*12.92:1.055*pow(v,1./2.4)-.055; }
@@ -46,8 +54,14 @@ void main() {
   vec3 base=mix(vec3(1.),art.rgb,art.a);
   // Frame-constant rotations are composed on the CPU, rather than at every covered fragment.
   // Flat and bent snapshots share the print and light; their diagonal reveal is composited afterward.
-  vec3 surfaceNormal=(texture2D(normalImage,(sourceUv-normalBounds.xy)/normalBounds.zw).rgb*255.-128.)/127.;
+  // The crease's slope, as crease.ts packs it: R and G in NORMAL_SLOPEs, divided by B's range.
+  vec3 encoded=texture2D(normalImage,(sourceUv-normalBounds.xy)/normalBounds.zw).rgb*255.;
+  vec2 slope=(encoded.rg-128.)/127.*(1.+(255.-encoded.b)/${f(NORMAL_RANGE_LEVELS)})*${f(NORMAL_SLOPE)};
+  vec3 surfaceNormal=normalize(vec3(slope,1.));
   vec3 n=normalize(normalTransform*surfaceNormal);
+  // The room's light on the slope against the flat paper's shades the crease; flat, it is exactly 1.
+  float flatLight=roomIrradiance(normalize(normalTransform*vec3(0.,0.,1.)));
+  float creaseLight=1.+${f(CREASE_SHADING)}*(roomIrradiance(n)-flatLight)/flatLight;
   vec2 localPoint=(sourceUv-.5)*size/min(size.x,size.y);
   vec2 point=vec2(pointTurn.x*localPoint.x-pointTurn.y*localPoint.y,
     pointTurn.y*localPoint.x+pointTurn.x*localPoint.y);
@@ -67,7 +81,7 @@ void main() {
   vec3 reflected=normalize(2.*dot(view,n)*n-view);
   vec2 shojiPoint=roomPlane(reflected);
   roomFootprint=max(length(dFdx(shojiPoint)),length(dFdy(shojiPoint)));
-  vec3 coat=laminateCoat(vec3(linear(base.r),linear(base.g),linear(base.b))*.9*(1.-fresnel)+fresnel*environment(reflected),
+  vec3 coat=laminateCoat(vec3(linear(base.r),linear(base.g),linear(base.b))*creaseLight*.9*(1.-fresnel)+fresnel*environment(reflected),
     sourceUv*size,printFootprint*tile,surfaceNormal,view);
   // Paper never clips: the brightest reflection rolls off, so it keeps its gradation over the print.
   vec3 result=clamp(highlightShoulder(coat,.88),0.,1.);
@@ -82,7 +96,7 @@ void main() {
   if(foilAlpha>0.) {
     // Concentric grooves disperse outward from the center, so each stretch of band takes another light.
     vec3 radial=normalTransform*vec3(localPoint/max(length(localPoint),.0001),0.);
-    vec3 metal=shadeFoil(printCoordinate,atan(localPoint.y,localPoint.x),n,view,radial,printFootprint,angularFootprint);
+    vec3 metal=shadeFoil(printCoordinate,atan(localPoint.y,localPoint.x),n,view,radial,printFootprint,angularFootprint)*creaseLight;
     color+=vec3(display(metal.r),display(metal.g),display(metal.b))*foilAlpha;
   }
   float alpha=paperAlpha+foilAlpha;

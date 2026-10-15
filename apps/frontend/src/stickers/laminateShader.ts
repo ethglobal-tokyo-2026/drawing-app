@@ -1,7 +1,6 @@
 import { FOIL_ROOM } from "./foilMaterial";
 import { glslFloat as f } from "./glsl";
 import { LAMINATE_FINISHES } from "./laminate";
-import { ROOM } from "./sharedRoom";
 
 /**
  * Glitter's flakes. A first-lattice cell's side in CSS px, the same at every sticker size, so a
@@ -96,8 +95,9 @@ vec3 laminateHue(float t){
  return foilAllowedHue(mix(c,laminatePalette[5],step(5.,t)));
 }
 // Flakes fixed in the coat, one cell at most each, every flake a tiny mirror at its own tilt: it shows
-// its hue lit by the room it reflects, and flashes white where that reflection meets the overhead
-// window, so a tilt changes which flakes flash. The coat's own reflection stays over it. Linear RGB.
+// its hue lit by the room it reflects, and flashes white where that reflection meets one of the
+// room's sources, so a tilt changes which flakes flash. The coat's own reflection stays over it.
+// Linear RGB.
 vec3 laminateGlitter(vec3 coat,vec2 cellPoint,float footprint,float scale,vec3 surfaceNormal,vec3 view){
  vec2 cell=floor(cellPoint);
  vec4 place=laminateHash(cell);
@@ -109,10 +109,10 @@ vec3 laminateGlitter(vec3 coat,vec2 cellPoint,float footprint,float scale,vec3 s
  vec4 facet=laminateHash(cell+71.);
  vec3 n=normalize(normalTransform*normalize(surfaceNormal+vec3((facet.xy-.5)*${f(GLITTER.tilt)},0.)));
  vec3 r=normalize(2.*dot(view,n)*n-view);
- float flash=roomShoji(r,${f(GLITTER.lobe)});
+ float flash=roomSources(r,${f(GLITTER.lobe)});
  vec3 hue=laminateHue(facet.z);
  vec3 tint=mix(vec3(1.),vec3(linear(hue.r),linear(hue.g),linear(hue.b)),${f(GLITTER.tint)});
- vec3 mirror=tint*foilRoom(r)*${f(FOIL_ROOM.level)}+flash*${f(ROOM.shoji.radiance)};
+ vec3 mirror=tint*foilRoom(r)*${f(FOIL_ROOM.level)}+flash;
  vec3 coatNormal=normalize(normalTransform*surfaceNormal);
  float cosine=clamp(dot(coatNormal,view),0.,1.);
  float sheen=foilCoat(cosine);

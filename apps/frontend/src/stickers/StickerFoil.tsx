@@ -1,4 +1,5 @@
 import { useContext, useLayoutEffect, useRef } from "react";
+import { keyShadowLayer } from "./keyShadow";
 import { LaminateActiveContext } from "./laminateActiveContext";
 import type { StickerFoilMaterial } from "./stickerFoilMaterial";
 import { prepareStickerFoil } from "./prepareStickerFoil";
@@ -28,6 +29,7 @@ export function StickerFoil({
       className={`sticker-foil sticker-foil--${material.size} sticker-foil--${material.style}`}
       aria-hidden="true"
     >
+      <span ref={keyShadowLayer} className="sticker-key-shadow" />
       <span className="sticker-foil__cast" />
       <span className="sticker-foil__band" />
     </span>

@@ -1,10 +1,63 @@
-/* A sticker as material, filling its box. The kiss-cut and the cast shadow are drop shadows, so the
-   silhouette casts them rather than the box. */
+/* A sticker as material, filling its box. The kiss-cut and the ambient shadow are drop shadows, so the
+   silhouette casts them rather than the box. Its elevation is a design height: the real one is sub-pixel. */
 .sticker-figure {
   position: relative;
   display: block;
   width: 100%;
   height: 100%;
+  --sticker-elevation: 6px;
+}
+
+/* Written on each key shadow layer every publish and read only by its transform: not inherited, so
+   its blurred halves are never restyled for a move. */
+@property --key-shadow-x {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --key-shadow-y {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0.25;
+}
+
+/* The shoji's key shadow (keyShadow.ts): the silhouette pre-blurred sharp and soft in its own layer,
+   moved with the light through transform, so a move recomposites it and never repaints a blur. */
+.sticker-key-shadow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  --key-shadow-mask: var(--m);
+  /* Turned back to the screen's axes, where the light is, so a turned sticker's shadow falls the same way. */
+  transform: rotate(calc(-1 * var(--sticker-turn)))
+    translate(
+      calc(var(--key-shadow-x) * var(--sticker-elevation)),
+      calc(var(--key-shadow-y) * var(--sticker-elevation))
+    )
+    rotate(var(--sticker-turn));
+  will-change: transform;
+}
+
+.sticker-key-shadow::before,
+.sticker-key-shadow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  -webkit-mask: var(--key-shadow-mask) 0 0 / 100% 100% no-repeat;
+  mask: var(--key-shadow-mask) 0 0 / 100% 100% no-repeat;
+  background: var(--key-shadow-ink);
+}
+
+/* The penumbra head-on, and upright, where the shoji grazes the screen and spreads it most. */
+.sticker-key-shadow::before {
+  filter: blur(calc(var(--sticker-elevation) * 0.36));
+  opacity: var(--key-shadow-sharp, 1);
+}
+
+.sticker-key-shadow::after {
+  filter: blur(calc(var(--sticker-elevation) * 1.16));
+  opacity: var(--key-shadow-soft, 0);
 }
 
 .sticker-figure__img {
@@ -15,15 +68,19 @@
   height: 100%;
   max-width: none;
   pointer-events: none;
-  filter: var(--sticker-cut) var(--sticker-cast);
+  filter: var(--sticker-cut) var(--sticker-ambient);
   -webkit-user-select: none;
   user-select: none;
   -webkit-user-drag: none;
 }
 
 /* Stuck to a board, a sticker sits close to it. Its image shows only inside its cut, leaving out the
-   cast baked round it, and a still copy of its silhouette casts the kiss-cut and the board's short
-   cast, as a foil band does. */
+   cast baked round it, and a still copy of its silhouette casts the kiss-cut and the board's ambient
+   shadow, as a foil band does. */
+.sticker-figure.is-stuck {
+  --sticker-elevation: 2px;
+}
+
 .sticker-figure.is-stuck .sticker-figure__img {
   -webkit-mask: var(--m) 0 0 / 100% 100% no-repeat;
   mask: var(--m) 0 0 / 100% 100% no-repeat;
@@ -34,7 +91,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  filter: var(--sticker-cut) var(--sticker-cast-board);
+  filter: var(--sticker-cut) var(--sticker-ambient-board);
 }
 
 .sticker-figure__cast::before {
@@ -47,7 +104,7 @@
 }
 
 .sticker-figure.is-stuck .sticker-foil__cast {
-  filter: var(--sticker-cut) var(--sticker-cast-board);
+  filter: var(--sticker-cut) var(--sticker-ambient-board);
 }
 
 /* An NSFW sticker's pink gloss: a faint pink sheen over the image, inside its cut. */

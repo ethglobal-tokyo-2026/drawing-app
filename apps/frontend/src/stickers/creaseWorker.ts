@@ -29,8 +29,6 @@ export interface CreaseJob {
   height: number;
   /** Pixels per CSS px. */
   scale: number;
-  /** Toward the one light, in its frame. */
-  light: [number, number];
   /** Its own silhouette. */
   own: Silhouette;
   /**
@@ -71,7 +69,7 @@ export interface CreaseTimings {
   total: number;
 }
 
-/** A baked crease, its base, its rise and geometric normals; null when nothing rises. */
+/** A baked crease, its base and geometric normals; null when nothing rises. */
 export type CreaseReply =
   | {
       ok: true;
@@ -218,12 +216,10 @@ async function bake(board: string, job: CreaseJob): Promise<CreaseReply> {
       surface: stackedSurface(layers, job.width, job.height),
       own: ownAlpha,
       scale: job.scale,
-      light: job.light,
     });
     const t3 = performance.now();
     const crease = pixels && {
       base: await pngOf(canvas, pixels.base),
-      rise: await pngOf(canvas, pixels.rise),
       normal: await pngOf(canvas, pixels.normal),
     };
     const t4 = performance.now();
@@ -327,7 +323,6 @@ async function bakeExpanded(
       width,
       height,
       scale: job.scale,
-      light: job.light,
       surface: stackedSurface(layers, width, height, {
         x: -originX,
         y: -originY,
@@ -350,7 +345,7 @@ async function bakeExpanded(
     if (pixels) {
       const paint = async (name: CreaseImage) =>
         pngOf(encoded, crop(pixels[name], -originX, -originY, job.width, job.height));
-      const painted = { base: await paint("base"), rise: await paint("rise") };
+      const painted = { base: await paint("base") };
       encoded.width = output.width;
       encoded.height = output.height;
       crease = {

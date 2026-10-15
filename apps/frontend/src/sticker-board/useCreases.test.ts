@@ -1,6 +1,5 @@
 import { MAX_SCALE } from "@drawing-app/api/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CREASE_LIGHT } from "../stickers/crease";
 import type { Affine, CreaseJob, CreaseReply } from "../stickers/creaseWorker";
 import { FOIL_BAND_WIDTH, kyotoSeikaBandWidth } from "../stickers/foilBand";
 import type { FoilTone } from "../stickers/foilMaterial";
@@ -93,16 +92,6 @@ describe("creaseJobs", () => {
     },
   );
 
-  it("lights a turned sticker's crease from the one light on screen, turned into its frame", () => {
-    const r = 30;
-    const [job] = jobsFor([sticker("lower", { x: 0.4 }), sticker("top", { x: 0.6, r })]);
-
-    // Turned back by the sticker's own turn, the light on screen lies in the sticker's frame.
-    const [x, y] = clockwise(-r, CREASE_LIGHT);
-    expect(job.light[0]).toBeCloseTo(x, 2);
-    expect(job.light[1]).toBeCloseTo(y, 2);
-  });
-
   it("gives no job to stickers that don't touch", () => {
     const apart = [sticker("a", { x: 0.15, y: 0.2 }), sticker("b", { x: 0.85, y: 0.8 })];
     expect(jobsFor(apart)).toEqual([]);
@@ -189,7 +178,6 @@ describe("CreaseStore", () => {
     crease: made
       ? {
           base: new Blob(["base"]),
-          rise: new Blob(["rise"]),
           normal: new Blob(["normal"]),
         }
       : null,
@@ -445,7 +433,7 @@ describe("CreaseStore", () => {
     expect(store.creaseOf(job.id)).toBeUndefined();
 
     store.land(bake(job));
-    expect(Object.keys(store.creaseOf(job.id) ?? {}).sort()).toEqual(["base", "normal", "rise"]);
+    expect(Object.keys(store.creaseOf(job.id) ?? {}).sort()).toEqual(["base", "normal"]);
     expect(changed).toHaveBeenCalledTimes(1);
 
     const restacked = { ...job, key: "another stack" };

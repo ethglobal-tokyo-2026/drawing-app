@@ -8,11 +8,18 @@ const cell = `vec2(${f((2 * s.halfWidth) / s.columns)},${f((2 * s.halfHeight) / 
 const barHalf = `vec2(${f(s.bar / 2)},${f((s.bar / 2) * (s.halfWidth / s.columns / (s.halfHeight / s.rows)))})`;
 const bounce = (levels: (typeof ROOM)["glossBounce" | "foilBounce"]) =>
   `vec4(${f(levels.ceiling)},${f(levels.litWall)},${f(levels.walls)},${f(levels.floor)}),${f(levels.litWallFade)}`;
+const lights = ROOM.lights
+  .map(
+    (l, i) =>
+      `+roomRound(r,roomLights[${i}],${f(l.radius)},${f(l.feather)},${f(l.radiance)},${f(l.core)},${f(l.coreRadiance)},${f(l.haloLevel)},${f(l.haloScale)},spread)`,
+  )
+  .join("");
 
 /**
  * The one room every material mirrors, fixed in the world (prototype). roomUp, roomToward (the viewer,
- * level), roomLight and the shoji's roomAcross (viewer's right) and roomDown axes are in screen
- * axes, y down, from roomFrame; roomEye is in CSS px from the screen's center. A direction's shoji
+ * level), roomLight and the shoji's roomAcross (viewer's right) and roomDown axes, and roomLights,
+ * the round lights' directions in ROOM.lights' order, are in screen axes, y down, from roomFrame;
+ * roomEye is in CSS px from the screen's center. A direction's shoji
  * coordinates are on the plane one unit along the light. roomFootprint is the reflection's change
  * across one pixel on that plane, which main sets before any branch.
  */
@@ -23,6 +30,7 @@ uniform vec3 roomLight;
 uniform vec3 roomAcross;
 uniform vec3 roomDown;
 uniform vec3 roomEye;
+uniform vec3 roomLights[${ROOM.lights.length}];
 float roomFootprint;
 vec2 roomPlane(vec3 r){
  float z=dot(r,roomLight);
@@ -73,6 +81,20 @@ float roomBounce(vec3 r,vec4 levels,float litFade){
  float upper=mix(wall,levels.x,smoothstep(.72,.95,rise));
  return mix(levels.w,upper,smoothstep(-.14,.08,rise));
 }
+// A round light seen through a coat whose lobe is spread wide: its body's edge blurs as the shoji's
+// does; its core spreads into the lobe keeping its power, so a rough coat dims it rather than
+// widening a white disk; and its halo lights the surfaces around it.
+float roomRound(vec3 r,vec3 at,float radius,float feather,float radiance,float core,float coreRadiance,float haloLevel,float haloScale,float spread){
+ float d=acos(clamp(dot(r,at),-1.,1.));
+ float blur=sqrt(feather*feather+${f(0.4 * 0.4)}*spread*spread);
+ float body=1./(1.+exp(clamp((d-radius)/blur,-40.,40.)))+haloLevel*exp(-d*d/(haloScale*haloScale));
+ // The lobe's deviation from the logistic scale its blur uses.
+ float lobe=${f(0.4 * (Math.PI / Math.sqrt(3)))}*spread;
+ float spreadCore=core*core+lobe*lobe;
+ return radiance*body+coreRadiance*core*core/spreadCore*exp(-.5*d*d/spreadCore);
+}
+// Every source the room's coats mirror: the shoji and the round lights, at their radiance.
+float roomSources(vec3 r,float spread){return ${f(ROOM.shoji.radiance)}*roomShoji(r,spread)${lights};}
 float roomGloss(vec3 r){return roomBounce(r,${bounce(ROOM.glossBounce)});}
 float roomFoil(vec3 r){return roomBounce(r,${bounce(ROOM.foilBounce)});}
 `;

@@ -1,4 +1,4 @@
-import { createFoilSourceSamples } from "./foilMaterial";
+import { createFoilSourceSamples, FOIL_ROOM } from "./foilMaterial";
 import { currentLight, type DevicePose } from "./light";
 import { IDENTITY, inverse, rotate, STILL_POSE, upOnScreen } from "./lightMode";
 import { OVERHEAD_WINDOW, type OverheadWindow } from "./overheadWindow";
@@ -7,6 +7,28 @@ import { OVERHEAD_WINDOW, type OverheadWindow } from "./overheadWindow";
 
 /** A room lamp: azimuth from straight ahead (beyond the device) toward the viewer's left, elevation, power. */
 type RoomLamp = readonly [azimuth: number, elevation: number, power: number];
+
+/**
+ * A round light in the room, which every material mirrors. Its azimuth from straight ahead (beyond
+ * the device) toward the viewer's left and its elevation, in degrees; its body's angular radius and
+ * edge blur in radians, at a radiance relative to the room's light level; a small core at the
+ * middle, a Gaussian of angular deviation `core`, at its own radiance, so a light can clip gloss
+ * near white over a small spot without flooding the ink under its body; and its
+ * halo on the surfaces around it, a Gaussian of angular scale `haloScale` at a share of the body.
+ */
+export interface RoomLight {
+  readonly azimuth: number;
+  readonly elevation: number;
+  readonly radius: number;
+  readonly feather: number;
+  readonly radiance: number;
+  readonly core: number;
+  readonly coreRadiance: number;
+  readonly haloLevel: number;
+  readonly haloScale: number;
+}
+
+const SHOJI_RADIANCE = 1.5 * OVERHEAD_WINDOW.radiance;
 
 /**
  * The room. The eye's distance in CSS px (an unverified guess for about 32 cm), and its elevation
@@ -18,9 +40,12 @@ type RoomLamp = readonly [azimuth: number, elevation: number, power: number];
  * at a wide logistic scale, at a level against the washi; its kumiko grid, with more rows than columns as a
  * real shoji has, its bottom rail's height above the frame's lower edge as a share of a row (so the
  * phone's narrow still glare holds a horizontal bar), each bar's share of a column's width, and how
- * dark the bars and the washi's edges are. The bounce off the ceiling, the wall the shoji lights, the
- * other walls and the floor, which gloss and foil each mirror, and how far the lit wall fades toward
- * the ceiling. Lamps at fixed points in the room, which only foil's diffraction sees.
+ * dark the bars and the washi's edges are, softened as a real gloss softens them. The round lights:
+ * a ceiling lamp beyond the device, so a device lying back mirrors a light, and a marumado behind the
+ * viewer, above their head as a seated person's window is, so upright poses mirror it. The
+ * bounce off the ceiling, the wall the shoji lights, the other walls and the floor, which gloss and
+ * foil each mirror, and how far the lit wall fades toward the ceiling. Lamps at fixed points in the
+ * room, which only foil's diffraction sees.
  */
 export const ROOM = {
   eyeDistance: 1900,
@@ -31,28 +56,51 @@ export const ROOM = {
     x: 0,
     y: 0,
     halfWidth: 0.14,
-    halfHeight: 0.18,
-    feather: 0.0022,
+    halfHeight: 0.25,
+    feather: 0.008,
     haloLevel: 0.1,
     haloScale: 0.09,
-    radiance: 1.5 * OVERHEAD_WINDOW.radiance,
+    radiance: SHOJI_RADIANCE,
     columns: 4,
     rows: 7,
     rail: 0.18,
     bar: 0.1,
-    barShade: 0.9,
+    barShade: 0.45,
     glow: 0.3,
   } satisfies OverheadWindow & Record<string, number>,
-  glossBounce: { ceiling: 0.36, litWall: 0.34, walls: 0.2, floor: 0.06, litWallFade: 0.7 },
+  lights: [
+    {
+      azimuth: 0,
+      elevation: 66,
+      radius: 0.12,
+      feather: 0.01,
+      radiance: 1.1 * OVERHEAD_WINDOW.radiance,
+      core: 0.012,
+      coreRadiance: 8 * SHOJI_RADIANCE,
+      haloLevel: 0.12,
+      haloScale: 0.3,
+    },
+    {
+      azimuth: 180,
+      elevation: 20,
+      radius: 0.12,
+      feather: 0.05,
+      radiance: 0.9 * OVERHEAD_WINDOW.radiance,
+      core: 0.035,
+      coreRadiance: SHOJI_RADIANCE,
+      haloLevel: 0.1,
+      haloScale: 0.4,
+    },
+  ] satisfies readonly RoomLight[],
+  glossBounce: { ceiling: 0.62, litWall: 0.56, walls: 0.36, floor: 0.08, litWallFade: 0.35 },
   foilBounce: { ceiling: 0.95, litWall: 1.15, walls: 0.62, floor: 0.34, litWallFade: 0 },
+  // The ceiling lamp and the marumado stand in for the lamps once here ahead and behind the viewer.
   lamps: [
-    [0, 70, 0.16],
     [32, 60, 0.14],
     [-30, 62, 0.14],
     [150, 10, 0.15],
     [40, 30, 0.13],
     [180, 18, 0.13],
-    [-150, 10, 0.15],
   ] satisfies readonly RoomLamp[],
 } as const;
 
@@ -117,12 +165,24 @@ export function roomFrame(pose: DevicePose = currentLight()) {
   const h = unit(level);
   const left = cross(h, up);
   const light = toward(h, left, up, ROOM.azimuth, ROOM.elevation);
-  const across = unit(add(scale(left, -1), scale(light, dot(left, light))));
-  const down = unit(add(scale(up, -1), scale(light, dot(up, light))));
+  // The shoji squared to the view: rails along the level line and bars along the screen's own down
+  // across that line, each seen on the plane across the light, then split evenly to a right angle,
+  // so at the still pose the rails read level and the bars plumb in the mirror.
+  const onShoji = (v: Vec3) => unit(add(v, scale(light, -dot(v, light))));
+  const rails = onShoji(scale(left, -1));
+  const bars = onShoji(cross(scale(left, -1), [0, 0, 1]));
+  const skew = dot(rails, bars);
+  const split = Math.abs(skew) > 1e-9 ? (1 - Math.sqrt(1 - skew * skew)) / skew : 0;
+  const across = unit(add(rails, scale(bars, -split)));
+  const down = unit(add(bars, scale(rails, -split)));
   const ahead = scale(h, -1);
   const lamps = ROOM.lamps.map(([azimuth, elevation, power]) => ({
     direction: toward(ahead, left, up, azimuth, elevation),
     power,
+  }));
+  const lights = ROOM.lights.map((source) => ({
+    ...source,
+    direction: toward(ahead, left, up, source.azimuth, source.elevation),
   }));
   // Carried into the device's axes now, with y turned down for the shader.
   const flip = (v: Vec3): Vec3 => {
@@ -137,6 +197,7 @@ export function roomFrame(pose: DevicePose = currentLight()) {
     down: flip(down),
     eye: scale(flip(eye), ROOM.eyeDistance),
     lamps: lamps.map((lamp) => ({ ...lamp, direction: flip(lamp.direction) })),
+    lights: lights.map((source) => ({ ...source, direction: flip(source.direction) })),
   };
 }
 
@@ -149,7 +210,18 @@ const shojiSources = createFoilSourceSamples({
   lamps: [],
 });
 
-/** The foil's shoji quadrature, laid out around the light, then the room's lamps, in screen axes. */
+/**
+ * A round light's power, its solid angle times radiance for the body and the core. The halo is the
+ * room it lights, which the bounce already holds.
+ */
+export const lightPower = ({ radius, radiance, core, coreRadiance }: RoomLight) =>
+  2 * Math.PI * (1 - Math.cos(radius)) * radiance + 2 * Math.PI * core * core * coreRadiance;
+
+/**
+ * The foil's sources in screen axes: the shoji's quadrature, laid out around the light, then the
+ * round lights, then the room's lamps. Foil sees every source at the share of gloss's radiance it
+ * sees the shoji at.
+ */
 export function roomFoilSources(frame: RoomFrame) {
   const out = new Float32Array(64);
   for (let i = 0; i < 36; i += 4) {
@@ -158,6 +230,13 @@ export function roomFoilSources(frame: RoomFrame) {
       out[i + c] = x * frame.across[c] + y * frame.down[c] + z * frame.light[c];
     out[i + 3] = w;
   }
-  frame.lamps.forEach(({ direction, power }, k) => out.set([...direction, power], 36 + 4 * k));
+  const foilShare = FOIL_ROOM.window.radiance / ROOM.shoji.radiance;
+  const points = [
+    ...frame.lights.map((source) => ({ ...source, power: foilShare * lightPower(source) })),
+    ...frame.lamps,
+  ];
+  if (9 + points.length > 16)
+    throw new Error(`The shoji and ${points.length} lights exceed foil's sixteen sources`);
+  points.forEach(({ direction, power }, k) => out.set([...direction, power], 36 + 4 * k));
   return out;
 }

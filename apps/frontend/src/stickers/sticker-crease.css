@@ -1,6 +1,5 @@
 /* A sticker's crease where it lies over another's edge, pressed in as it's shown: its base, the shoulder
-   and foot, and over it its rise, lit from the one light in the top left, where every drop shadow falls
-   from. Tilt never moves it: only reflections follow the room. */
+   and foot, which no light moves. The sticker material shades its slopes by the room's light. */
 .sticker-crease {
   position: absolute;
   inset: 0;
