@@ -791,7 +791,7 @@ export class StickerRenderer {
       x = y = row = 0;
     };
     // The shaders' derivatives come from 2×2 pixel quads, so a tile's pixels change with the parity
-    // of where it lands. Even origins give a sticker the same quads, and pixels, in any batch.
+    // of where it lands. Even origins give a sticker the same quads in any batch.
     const even = (size: number) => size + (size & 1);
     // Put tall tiles first so short stickers do not leave gaps beside later rows.
     jobs.sort((a, b) => b.h - a.h || b.w - a.w);
@@ -810,9 +810,9 @@ export class StickerRenderer {
     }
     flush();
     const requested = new Set(surfaces);
-    // A revealing crease's flat snapshot takes its sticker's own tile, in a batch of its own drawn first.
-    // The GPU rounds a tile's pixels a little differently elsewhere in the atlas, so the sticker keeps
-    // the tile, and the exact pixels, that every other draw gives it.
+    // A revealing crease's flat snapshot takes its sticker's own tile, in a batch of its own drawn first,
+    // so a reveal moves no tile. WebKit still gives a tile slightly different pixels at another place in
+    // the atlas, even an even one, and a revealed sticker would keep pixels its next draw doesn't match.
     const draws = batches.flatMap((batch) => {
       const drawn = batch.filter(
         ({ surface }) =>
