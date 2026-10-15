@@ -745,12 +745,11 @@ test("attribute complete 21-sticker motion and fenced GL work", async ({ page },
             interval: number;
             elapsed: number;
             inputMs: number;
-            x: number;
-            y: number;
-            rotationDegrees: number;
             alpha: number;
             beta: number;
             gamma: number;
+            /** The pose the light published by this frame, gliding toward the reading. */
+            published: { beta: number; gamma: number; screenAngle: number };
           }[];
           copies: { frame: number; kind: string; sticker?: string; milliseconds: number }[];
           batches: number;
@@ -907,7 +906,7 @@ test("attribute complete 21-sticker motion and fenced GL work", async ({ page },
               alpha,
               beta,
               gamma,
-              ...fixture.getPose(),
+              published: fixture.getPose(),
             });
             last = now;
           }

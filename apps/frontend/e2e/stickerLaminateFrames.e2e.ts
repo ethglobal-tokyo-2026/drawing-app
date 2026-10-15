@@ -361,9 +361,9 @@ test("a board of stickers retains complete paper during a sustained small tilt",
       sampledPublications = publications.length;
       const pose = fixture.getPose();
       if (
-        pose.x !== lastPose.x ||
-        pose.y !== lastPose.y ||
-        pose.rotationDegrees !== lastPose.rotationDegrees
+        pose.beta !== lastPose.beta ||
+        pose.gamma !== lastPose.gamma ||
+        pose.screenAngle !== lastPose.screenAngle
       )
         changedFrames++;
       lastPose = pose;

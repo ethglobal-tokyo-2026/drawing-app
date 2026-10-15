@@ -122,6 +122,8 @@ for (const detailSide of [360, 700]) {
     await page.addInitScript(() => {
       if (typeof DeviceMotionEvent === "function")
         Object.defineProperty(DeviceMotionEvent, "requestPermission", { value: undefined });
+      // WebKit can report a turned screen for this portrait page; the readings below mean portrait.
+      Object.defineProperty(screen.orientation, "angle", { configurable: true, get: () => 0 });
     });
     await emptyLaminatePage(page);
     await page.route("**/scene-capacity-*.svg", (route) =>
@@ -240,6 +242,7 @@ for (const detailSide of [360, 700]) {
         const detailAllocation = allocation();
         const detailStageAllocation = stageAllocation();
         allocations.length = 0;
+        const coveredPose = currentLight();
         for (const [alpha, beta, gamma] of [
           [0, 60, 0],
           [12, 65, 5],
@@ -276,8 +279,11 @@ for (const detailSide of [360, 700]) {
           coveredRetained,
           restoredAllocation: allocation(),
           restoredStageAllocation: stageAllocation(),
+          // The absolute pose left where the board was covered, so its retained pixels are stale.
           poseMoved:
-            Math.abs(heldPose.x) + Math.abs(heldPose.y) + Math.abs(heldPose.rotationDegrees) > 0.01,
+            Math.abs(heldPose.beta - coveredPose.beta) +
+              Math.abs(heldPose.gamma - coveredPose.gamma) >
+            0.01,
           poseHeld: JSON.stringify(currentLight()) === JSON.stringify(heldPose),
           reexposedChanged: exposed.some((pixels, index) => pixels !== initial[index]),
           ready: board.every((canvas) => canvas.dataset.state === "ready"),

@@ -101,6 +101,39 @@ async function bakeSupports(page: Page, gap: number | null) {
   }, gap);
 }
 
+// The tilts below mean a portrait screen, which WebKit reports turned; a turned screen turns the room.
+test.beforeEach(({ page }) =>
+  page.addInitScript(() => {
+    if (typeof ScreenOrientation === "function")
+      Object.defineProperty(ScreenOrientation.prototype, "angle", {
+        get: () => 0,
+        configurable: true,
+      });
+  }),
+);
+
+/**
+ * The light glides to the device's absolute pose and comes to rest on the reading, within the light's
+ * half-degree tremor step: a glide a pause cut short stays there when the same reading comes again.
+ */
+const expectLanded = async (page: Page, [beta, gamma]: number[]) => {
+  let previous = "";
+  await expect
+    .poll(async () => {
+      const pose = await page.evaluate(() => window.laminateFixture.getPose());
+      const now = JSON.stringify(pose);
+      const resting = now === previous;
+      previous = now;
+      return (
+        resting &&
+        Math.abs(pose.beta - beta) < 0.5 &&
+        Math.abs(pose.gamma - gamma) < 0.5 &&
+        pose.screenAngle === 0
+      );
+    })
+    .toBe(true);
+};
+
 /** The actual laminate canvas over the support seam, away from the sticker's cut. */
 const laminatePixels = (page: Page, box = { left: 0.35, top: 0.3, width: 0.3, height: 0.4 }) =>
   page.locator("[data-reload] canvas.sticker-material").evaluate((canvas, box) => {
@@ -136,14 +169,7 @@ test("touching and nearby separate supports produce flat crease images and tilte
         window.laminateFixture.update({ normal: undefined });
         window.laminateFixture.tilt(pose[0], pose[1]);
       }, pose);
-      await expect
-        .poll(async () => {
-          const before = await page.evaluate(() => window.laminateFixture.getPose());
-          await page.waitForTimeout(300);
-          const after = await page.evaluate(() => window.laminateFixture.getPose());
-          return before.x === after.x && before.y === after.y;
-        })
-        .toBe(true);
+      await expectLanded(page, pose);
       await expect(coat).toHaveAttribute("data-state", "ready");
       const heldPose = await page.evaluate(() => window.laminateFixture.getPose());
       const flat = await laminatePixels(page);
@@ -400,14 +426,7 @@ test.describe("finite supports on an iPad-sized board", () => {
           window.laminateFixture.update({ normal: undefined, turn: -11 });
           window.laminateFixture.tilt(pose[0], pose[1]);
         }, pose);
-        await expect
-          .poll(async () => {
-            const before = await page.evaluate(() => window.laminateFixture.getPose());
-            await page.waitForTimeout(300);
-            const after = await page.evaluate(() => window.laminateFixture.getPose());
-            return before.x === after.x && before.y === after.y;
-          })
-          .toBe(true);
+        await expectLanded(page, pose);
         await expect(coat).toHaveAttribute("data-state", "ready");
         const heldPose = await page.evaluate(() => window.laminateFixture.getPose());
         const center = { left: 0.44, top: 0.44, width: 0.12, height: 0.12 };

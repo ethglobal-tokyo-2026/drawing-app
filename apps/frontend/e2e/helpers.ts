@@ -477,7 +477,8 @@ export async function openExplore(page: Page, language: Language) {
 export async function openTheirBoard(page: Page, language: Language, handle: string) {
   await openExplore(page, language);
   await page.getByRole("searchbox", { name: say(explore.search.label, language) }).fill(handle);
-  await page.getByRole("button", { name: handle }).click();
+  // The pile behind the results also names artists on its stickers, so only a result row will do.
+  await page.locator("ul.search-results").getByRole("button", { name: handle }).click();
 }
 
 /** ReceiveGiftDialog, once its preview names the giver. */

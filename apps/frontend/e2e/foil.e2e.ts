@@ -3,7 +3,6 @@ import { expect, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
 import { drawAndSeal, drawKeyName, openDetail, say, signIn, test } from "./helpers.ts";
 import { ipad } from "./ipad.ts";
-import { tiltScreen } from "./screenTilt.ts";
 
 const { ui } = strings;
 const language = "en";
@@ -30,16 +29,40 @@ async function bandPixels(page: Page, foil: Locator) {
   return page.screenshot({ clip: box });
 }
 
-/** Shares a device tilt with the app, and waits for the light to reach it and land. */
-async function tiltLight(page: Page, gamma: number, lx: string) {
-  await tiltScreen(page, 40, gamma);
+/**
+ * Shares a device reading that holds the screen at `beta` and `gamma` in its displayed axes,
+ * whichever way the screen is turned, and waits for the light to reach that pose and land.
+ */
+async function tiltLight(page: Page, beta: number, gamma: number) {
+  await page.evaluate(
+    async ({ beta, gamma }) => {
+      const { readAt } = await import("../src/stickers/lightMode.ts");
+      const reported = screen.orientation?.angle ?? Reflect.get(window, "orientation");
+      const angle = typeof reported === "number" && Number.isFinite(reported) ? reported : 0;
+      const reading = readAt({ beta, gamma, screenAngle: 0 }, angle);
+      window.dispatchEvent(
+        Object.assign(new Event("deviceorientation"), {
+          alpha: 0,
+          beta: reading.beta,
+          gamma: reading.gamma,
+        }),
+      );
+    },
+    { beta, gamma },
+  );
   await expect
-    .poll(async () =>
-      page.evaluate(async () =>
-        (await import("../src/stickers/light.ts")).currentLight().x.toFixed(3),
+    .poll(() =>
+      page.evaluate(
+        async ({ beta, gamma }) => {
+          const { currentLight } = await import("../src/stickers/light.ts");
+          const { upOnScreen } = await import("../src/stickers/lightMode.ts");
+          const aim = upOnScreen({ beta, gamma, screenAngle: 0 });
+          return upOnScreen(currentLight()).every((v, i) => Math.abs(v - aim[i]) < 1e-6);
+        },
+        { beta, gamma },
       ),
     )
-    .toBe(lx);
+    .toBe(true);
   await lightAtRest(page);
 }
 
@@ -88,18 +111,24 @@ test("a foil follows only device tilt, holding still through mouse and Apple Pen
   // A copy of the sticker flies from the board to its place in the detail, over it, until it lands.
   await expect(page.locator(".detail-lift__flyer")).toHaveCount(0);
 
-  // Before the sensor shares a tilt, the foil holds its default light.
+  // Before the sensor shares a tilt, the foil holds the still pose's light.
   await lightAtRest(page);
+  expect(
+    await page.evaluate(async () => (await import("../src/stickers/light.ts")).currentLight()),
+  ).toEqual({ beta: 55, gamma: 0, screenAngle: 0 });
   const still = await bandPixels(page, foil);
   await page.waitForTimeout(500);
   expect((await bandPixels(page, foil)).equals(still)).toBe(true);
   await ignorePointers(page, foil, still);
 
+  // The first reading moves the light to where the device really is, not to a neutral reference.
+  await tiltLight(page, 40, 0);
+  expect((await bandPixels(page, foil)).equals(still)).toBe(false);
+
   // Device tilt swings the light across the screen, and the complete reflection follows it.
-  await tiltScreen(page, 40, 0);
-  await tiltLight(page, -32, "-1.000");
+  await tiltLight(page, 40, -25);
   const left = await bandPixels(page, foil);
-  await tiltLight(page, 32, "1.000");
+  await tiltLight(page, 40, 25);
   const right = await bandPixels(page, foil);
   expect(right.equals(left)).toBe(false);
   await ignorePointers(page, foil, right);

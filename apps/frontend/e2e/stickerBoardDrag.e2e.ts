@@ -357,8 +357,12 @@ test("21 distinct large creased stickers follow diagonal tilt and retain a stati
       configurable: true,
     });
     Object.defineProperty(navigator, "maxTouchPoints", { value: 5, configurable: true });
-    if (window.screen.orientation)
-      Object.defineProperty(window.screen.orientation, "angle", { value: 0, configurable: true });
+    // WebKit reports a portrait page's screen turned, and a turned screen turns the room.
+    if (typeof ScreenOrientation === "function")
+      Object.defineProperty(ScreenOrientation.prototype, "angle", {
+        get: () => 0,
+        configurable: true,
+      });
     Object.defineProperty(window, "orientation", { value: 0, configurable: true });
     if (typeof window.DeviceMotionEvent !== "function")
       throw new Error("The motion permission stand-in requires DeviceMotionEvent");
@@ -427,9 +431,9 @@ test("21 distinct large creased stickers follow diagonal tilt and retain a stati
       const samples: {
         elapsed: number;
         inputMs: number;
-        x: number;
-        y: number;
-        rotationDegrees: number;
+        beta: number;
+        gamma: number;
+        screenAngle: number;
       }[] = [];
       const started = performance.now();
       fixture.setPhase("steady-tilt");
@@ -450,9 +454,9 @@ test("21 distinct large creased stickers follow diagonal tilt and retain a stati
         const previous = samples[index - 1];
         return (
           previous &&
-          (pose.x !== previous.x ||
-            pose.y !== previous.y ||
-            pose.rotationDegrees !== previous.rotationDegrees)
+          (pose.beta !== previous.beta ||
+            pose.gamma !== previous.gamma ||
+            pose.screenAngle !== previous.screenAngle)
         );
       }).length;
       return { samples, changedFrames, elapsed: performance.now() - started };
@@ -585,14 +589,17 @@ test("21 distinct large creased stickers follow diagonal tilt and retain a stati
     expect(result.missingSnapshots).toEqual([]);
     expect(result.incompleteBoards).toEqual([]);
     expect(Object.values(result.normals).some((normal) => normal !== null)).toBe(true);
+    // The input sweeps ±5° in each axis; the glide may soften the sweep, never flatten it.
+    for (const axis of ["beta", "gamma"] as const)
+      expect(
+        Math.max(...motion.samples.map((sample) => sample[axis])) -
+          Math.min(...motion.samples.map((sample) => sample[axis])),
+        `The published ${axis} must follow the diagonal tilt`,
+      ).toBeGreaterThan(3);
     expect(
-      Math.max(...motion.samples.map((sample) => sample.x)) -
-        Math.min(...motion.samples.map((sample) => sample.x)),
-    ).toBeGreaterThan(0.15);
-    expect(
-      Math.max(...motion.samples.map((sample) => sample.y)) -
-        Math.min(...motion.samples.map((sample) => sample.y)),
-    ).toBeGreaterThan(0.15);
+      hold.pose,
+      "The held light is the device's absolute pose, with no first-reading reference",
+    ).toEqual({ beta: 45, gamma: 5, screenAngle: 0 });
     expect(errors, "The large board motion pipeline must not silently fail").toEqual([]);
     const screenshot = info.outputPath("large-board-held-diagonal-tilt.png");
     await page.screenshot({ path: screenshot });

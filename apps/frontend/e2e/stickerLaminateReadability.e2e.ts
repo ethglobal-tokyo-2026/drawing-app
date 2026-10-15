@@ -11,9 +11,11 @@ test.use({
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, "maxTouchPoints", { value: 5, configurable: true });
-    if (window.screen.orientation)
-      Object.defineProperty(window.screen.orientation, "angle", {
-        value: 0,
+    // WebKit can report a turned screen for a portrait page; every reading here means portrait.
+    // Pinned on the prototype, so the renderer can still listen for orientation changes.
+    if (typeof ScreenOrientation === "function")
+      Object.defineProperty(ScreenOrientation.prototype, "angle", {
+        get: () => 0,
         configurable: true,
       });
     Object.defineProperty(window, "orientation", { value: 0, configurable: true });
@@ -176,36 +178,95 @@ async function inkContrast(paper: Locator, print: Locator) {
   return (luminance(white) + 0.05) / (luminance(black) + 0.05);
 }
 
-test("the first iPad sensor reading retains the already visible neutral laminate", async ({
+/** Holds the device at `beta`, `gamma` until the light lands there and the material has drawn it. */
+async function holdPose(page: Page, beta: number, gamma: number) {
+  await page.evaluate(
+    async ([beta, gamma]) => {
+      const frame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      window.laminateFixture.tilt(beta, gamma);
+      const deadline = performance.now() + 5000;
+      for (;;) {
+        await frame();
+        const pose = window.laminateFixture.getPose();
+        if (pose.beta === beta && pose.gamma === gamma) break;
+        if (performance.now() > deadline)
+          throw new Error(`The light never landed at beta ${beta}, gamma ${gamma}`);
+      }
+      await frame();
+      await frame();
+    },
+    [beta, gamma] as const,
+  );
+}
+
+/** The reflection's step across the paper's interior, and how much of it the bright side covers. */
+const reflectionOn = (paper: Locator) =>
+  paper.evaluate(async (element) => {
+    if (!(element instanceof HTMLCanvasElement)) throw new Error("The paper canvas is missing");
+    const context = element.getContext("2d");
+    if (!context) throw new Error("The paper snapshot context is unavailable");
+    const pixels = context.getImageData(
+      Math.floor(element.width * 0.05),
+      Math.floor(element.height * 0.05),
+      Math.floor(element.width * 0.9),
+      Math.floor(element.height * 0.9),
+    ).data;
+    const { paperReadability } = await import("./paperSnapshot.ts");
+    const { span, brightFraction } = paperReadability(pixels);
+    return { span, brightFraction };
+  });
+
+test("the first iPad sensor reading glides the laminate to the device's pose, and the shoji's edge reads where it crosses the paper", async ({
   page,
 }) => {
   await page.goto("/e2e/stickerLaminate.html");
   const paper = page.locator("[data-white] canvas.sticker-material");
   await expect(paper).toHaveAttribute("data-state", "ready");
-  const initial = await settledPaper(page, paper);
-  const held = await page.evaluate(() => window.laminateFixture.getPose());
+  const still = await settledPaper(page, paper);
+  expect(await page.evaluate(() => window.laminateFixture.getPose())).toEqual({
+    beta: 55,
+    gamma: 0,
+    screenAngle: 0,
+  });
 
+  // The first pose the light writes after the reading, which lies on its way rather than at it.
   const first = await page.evaluate(async () => {
     window.laminateFixture.tilt(40, 0);
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    return window.laminateFixture.getPose();
+    for (let frame = 0; frame < 60; frame++) {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      const pose = window.laminateFixture.getPose();
+      if (pose.beta !== 55) return pose;
+    }
+    throw new Error("The light never left the still pose after a reading");
   });
-  expect(first, "Sensor acquisition must calibrate from the displayed held pose").toEqual(held);
-  await unchangedPaper(
-    initial,
-    await settledPaper(page, paper),
-    "Sensor acquisition must not flash the paper",
-  );
+  expect(first.beta, "The first reading glides rather than jumping").toBeGreaterThan(40);
+  expect(first.beta, "The first reading glides rather than jumping").toBeLessThan(55);
+  const landed = await settledPaper(page, paper);
+  expect(await page.evaluate(() => window.laminateFixture.getPose())).toEqual({
+    beta: 40,
+    gamma: 0,
+    screenAngle: 0,
+  });
   expect(
-    (await readablePaper(initial)).span,
-    "Neutral paper needs a localized reflection even when the ink is absent",
-  ).toBeGreaterThanOrEqual(12);
+    (await paperChange(still, landed)).mean,
+    "The device's real pose moves the reflection from the still pose's",
+  ).toBeGreaterThanOrEqual(1.5);
+
+  // One eye sees the shoji at one place on screen: tilt until its edge crosses this sticker.
+  let crossing: number | null = null;
+  for (let beta = 40; beta <= 80 && crossing === null; beta += 0.5) {
+    await holdPose(page, beta, 0);
+    const { span, brightFraction } = await reflectionOn(paper);
+    if (span >= 12 && brightFraction >= 0.1 && brightFraction <= 0.45) crossing = beta;
+  }
+  expect(crossing, "Some tilt must carry the shoji's edge across the paper").not.toBeNull();
+  await readablePaper(await settledPaper(page, paper));
   expect(await glossEdge(paper), "Gloss should reveal a short source boundary").toBeLessThanOrEqual(
     0.15,
   );
 });
 
-test("a five-degree iPad tilt visibly moves full-cut gloss while preserving the ink", async ({
+test("a tilt sweep carries the shoji's reflection across full-cut gloss while preserving the ink", async ({
   page,
 }, info) => {
   await page.goto("/e2e/stickerLaminate.html");
@@ -213,48 +274,36 @@ test("a five-degree iPad tilt visibly moves full-cut gloss while preserving the 
   const print = page.locator('[data-sticker="0"] canvas.sticker-material');
   await expect(paper).toHaveAttribute("data-state", "ready");
   await expect(print).toHaveAttribute("data-state", "ready");
-  await page.evaluate(() => window.laminateFixture.tilt(40, 0));
-  const neutral = await settledPaper(page, paper);
-  expect((await readablePaper(neutral)).span).toBeGreaterThanOrEqual(12);
-  expect(await glossEdge(paper)).toBeLessThanOrEqual(0.15);
-  expect(await inkContrast(paper, print)).toBeGreaterThanOrEqual(5);
-  await info.attach("neutral-laminate", {
-    body: await page.screenshot({ path: info.outputPath("neutral.png") }),
-    contentType: "image/png",
-  });
 
-  for (const [name, beta, gamma] of [
-    ["right", 40, 5],
-    ["left", 40, -5],
-    ["forward", 45, 0],
-    ["backward", 35, 0],
-  ] as const) {
-    await page.evaluate(() => window.laminateFixture.tilt(40, 0));
-    await unchangedPaper(
-      neutral,
-      await settledPaper(page, paper),
-      `${name}: returning to neutral must restore the held reflection`,
-    );
-    await page.evaluate(([b, g]) => window.laminateFixture.tilt(b, g), [beta, gamma]);
-    const tilted = await settledPaper(page, paper);
-    if (name === "right")
-      await info.attach("five-degree-laminate", {
-        body: await page.screenshot({ path: info.outputPath("five-degree.png") }),
-        contentType: "image/png",
-      });
-    await readablePaper(tilted);
-    const change = await paperChange(neutral, tilted);
-    expect(
-      change.mean,
-      `${name}: small tilt must move a readable reflection`,
-    ).toBeGreaterThanOrEqual(1.5);
-    expect(
-      change.visibleFraction,
-      `${name}: the reflection must move across blank paper, beyond an isolated glint`,
-    ).toBeGreaterThanOrEqual(0.25);
+  // Five-degree steps from upright-ish to flat-ish: the reflection enters this sticker and leaves it.
+  const spans: number[] = [];
+  let moved = 0;
+  let previous: PaperSnapshot | null = null;
+  for (let beta = 30; beta <= 90; beta += 5) {
+    await holdPose(page, beta, 0);
+    const pixels = await paperPixels(paper);
+    spans.push((await reflectionOn(paper)).span);
+    if (previous) {
+      const change = await paperChange(previous, pixels);
+      if (change.mean >= 1.5 && change.visibleFraction >= 0.25) moved++;
+    }
     expect(
       await inkContrast(paper, print),
-      `${name}: ink should remain distinct`,
+      `beta ${beta}: ink should remain distinct`,
     ).toBeGreaterThanOrEqual(5);
+    previous = pixels;
   }
+  await info.attach("reflection-spans", {
+    body: JSON.stringify(spans),
+    contentType: "application/json",
+  });
+  expect(Math.max(...spans), "Some tilt must put the reflection on the sticker").toBeGreaterThan(1);
+  expect(
+    Math.min(...spans),
+    "Away from the reflection, the paper must show none of it",
+  ).toBeLessThanOrEqual(1);
+  expect(
+    moved,
+    "A five-degree tilt must move the reflection across blank paper, beyond an isolated glint",
+  ).toBeGreaterThan(0);
 });

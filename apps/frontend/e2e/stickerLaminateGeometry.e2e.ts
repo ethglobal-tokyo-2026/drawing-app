@@ -1,214 +1,276 @@
-import { expect, test } from "@playwright/test";
-import {
-  coatField,
-  compositePrint,
-  MATERIAL_GLOSS,
-  MATERIAL_MATTE,
-  normalFromHeight,
-  orientNormal,
-  screenPoint,
-} from "../../../docs/research/sticker-laminate/material-reference.ts";
-import { holdRoute, solidSvg, waitTwoFrames } from "./stickerMaterialFixture";
+import { expect, test, type JSHandle, type Locator } from "@playwright/test";
+import { emptyLaminatePage, holdRoute, solidSvg } from "./stickerMaterialFixture";
+
+/** Plain gray paper the fixture's size: a quarter turn moves no print, only the reflection can change. */
+const GRAY_PRINT = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><rect width="240" height="240" fill="#888"/></svg>')}`;
+
+/** A square material canvas's pixels. */
+const pixelsOf = (canvas: Locator) =>
+  canvas.evaluateHandle((el) => {
+    if (!(el instanceof HTMLCanvasElement))
+      throw new Error("The material snapshot is not a canvas");
+    const context = el.getContext("2d");
+    if (!context) throw new Error("The material snapshot context is missing");
+    if (el.width !== el.height) throw new Error("A quarter turn needs a square material canvas");
+    return context.getImageData(0, 0, el.width, el.height);
+  });
+
+/**
+ * Against `before`, turned a quarter turn clockwise on screen: whether the canvas changed, how far each
+ * opaque pixel is from what `before` showed at the same place on screen, and how far `before` is from
+ * a quarter turn of itself, which is what a reflection that turned with the sticker would show.
+ */
+const againstQuarterTurn = (canvas: Locator, before: JSHandle<ImageData>) =>
+  canvas.evaluate((el, before) => {
+    if (!(el instanceof HTMLCanvasElement))
+      throw new Error("The material snapshot is not a canvas");
+    const context = el.getContext("2d");
+    if (!context) throw new Error("The material snapshot context is missing");
+    const side = el.width;
+    const now = context.getImageData(0, 0, side, side).data,
+      was = before.data;
+    let changed = false,
+      onScreen = 0,
+      turnedWithIt = 0;
+    for (let y = 0; y < side; y++)
+      for (let x = 0; x < side; x++) {
+        const i = (y * side + x) * 4,
+          // The pixel a quarter turn clockwise brings to (x, y).
+          j = (x * side + side - 1 - y) * 4;
+        if (now[i + 3] !== 255 || was[i + 3] !== 255 || was[j + 3] !== 255) continue;
+        for (let c = 0; c < 3; c++) {
+          if (now[i + c] !== was[i + c]) changed = true;
+          onScreen = Math.max(onScreen, Math.abs(now[i + c] - was[j + c]));
+          turnedWithIt = Math.max(turnedWithIt, Math.abs(was[i + c] - was[j + c]));
+        }
+      }
+    return { changed, onScreen, turnedWithIt };
+  }, before);
 
 test("a turn-only React update redraws the held reflection in the sticker's new axes", async ({
   page,
 }) => {
-  await page.goto("/e2e/stickerLaminate.html?reload=1");
+  // Alone at the top of the page, the reload sticker reaches across the still glare's lower edge.
+  await page.goto("/e2e/stickerLaminate.html?reload=1&board=1&count=0&side=300");
   const coat = page.locator("[data-reload] canvas.sticker-material");
   await expect(coat).toHaveAttribute("data-state", "ready");
-  const pose = await page.evaluate(() => window.laminateFixture.getPose());
-  const before = await coat.evaluate((el) => {
-    if (!(el instanceof HTMLCanvasElement))
-      throw new Error("The material snapshot is not a canvas");
-    return el.toDataURL();
-  });
-  await page.evaluate(() => window.laminateFixture.update({ turn: 90 }));
-  await expect(coat).toHaveAttribute("data-state", "ready");
-  // A retained ready snapshot redraws on the shared frame queue; readiness alone is not a new frame.
+  await page.evaluate((print) => window.laminateFixture.update({ print }), GRAY_PRINT);
+  // The diagnostic print's black ink is gone once the gray print has drawn.
   await expect
     .poll(() =>
       coat.evaluate((el) => {
         if (!(el instanceof HTMLCanvasElement))
           throw new Error("The material snapshot is not a canvas");
-        return el.toDataURL();
+        const context = el.getContext("2d");
+        if (!context) throw new Error("The material snapshot context is missing");
+        return context.getImageData(Math.floor(0.24 * el.width), Math.floor(0.83 * el.height), 1, 1)
+          .data[0];
       }),
     )
-    .not.toBe(before);
-  const sample = await coat.evaluate((el) => {
-    if (!(el instanceof HTMLCanvasElement))
-      throw new Error("The material snapshot is not a canvas");
-    const context = el.getContext("2d");
-    if (!context) throw new Error("The material snapshot context is missing");
-    return {
-      image: el.toDataURL(),
-      points: [0.1, 0.5, 0.9].map((u) => {
-        const x = Math.floor(u * el.width),
-          y = Math.floor(0.58 * el.height);
-        return {
-          uv: [(x + 0.5) / el.width, (y + 0.5) / el.height],
-          rgba: [...context.getImageData(x, y, 1, 1).data],
-        };
-      }),
-    };
-  });
-  expect(sample.image).not.toBe(before);
+    .toBeGreaterThan(100);
+  const pose = await page.evaluate(() => window.laminateFixture.getPose());
+  const before = await pixelsOf(coat);
+  await page.evaluate(() => window.laminateFixture.update({ turn: 90 }));
+  await expect(coat).toHaveAttribute("data-state", "ready");
+  // A retained ready snapshot redraws on the shared frame queue; readiness alone is not a new frame.
+  await expect.poll(async () => (await againstQuarterTurn(coat, before)).changed).toBe(true);
+  const turned = await againstQuarterTurn(coat, before);
   expect(await page.evaluate(() => window.laminateFixture.getPose())).toEqual(pose);
-  for (const point of sample.points) {
-    // These sample positions fall on white paper or the gray ash region in the diagnostic print.
-    const print =
-      point.uv[0] > 0.14 && point.uv[0] < 0.86
-        ? ([136 / 255, 136 / 255, 136 / 255] as const)
-        : ([1, 1, 1] as const);
-    const expected = compositePrint(
-      print,
-      coatField({
-        point: screenPoint(point.uv[0], point.uv[1], 240, 240, 90 + pose.rotationDegrees),
-        normal: orientNormal([0, 0, 1], 90, pose),
-        material: MATERIAL_GLOSS,
-      }),
-    );
-    for (let c = 0; c < 3; c++)
-      expect(Math.abs(point.rgba[c] - expected[c] * 255)).toBeLessThanOrEqual(2);
-  }
+  // The room stays put on screen while the sticker turns under it.
+  expect(turned.turnedWithIt, "The held reflection has a direction to turn").toBeGreaterThan(8);
+  expect(turned.onScreen).toBeLessThanOrEqual(2);
 });
 
 test("a tilted flight reflects in the same axes as its turned sticker", async ({ page }) => {
-  await page.goto("/e2e/stickerLaminate.html?turn=90");
-  const coat = page.locator('[data-sticker="0"] canvas.sticker-material');
-  await expect(coat).toHaveAttribute("data-state", "ready");
-  const pose = await page.evaluate(() => window.laminateFixture.getPose());
-  await page.evaluate(() => window.laminateFixture.flight(30, 12));
-  await waitTwoFrames(page);
-  const points = await coat.evaluate((el) => {
-    if (!(el instanceof HTMLCanvasElement)) throw new Error("The flight snapshot is not a canvas");
-    const context = el.getContext("2d");
-    if (!context) throw new Error("The flight snapshot context is missing");
-    return [
-      [0.1, 0.5],
-      [0.5, 0.55],
-      [0.2, 0.825],
-    ].map(([u, v]) => {
-      const x = Math.floor(u * el.width),
-        y = Math.floor(v * el.height);
-      return {
-        uv: [(x + 0.5) / el.width, (y + 0.5) / el.height],
-        rgba: [...context.getImageData(x, y, 1, 1).data],
-      };
+  await emptyLaminatePage(page);
+  await page.goto("/e2e/stickerLaminate.html");
+  const result = await page.evaluate(async () => {
+    const { required, solidPng, twoFrames } = await import("./stickerMaterialFixture.ts");
+    const api = await import("../src/stickers/stickerRenderer.ts");
+    const host = document.createElement("div");
+    host.className = "sticker-material-surface";
+    host.style.cssText =
+      "position:absolute;left:60px;top:170px;width:240px;height:240px;rotate:90deg";
+    const c = document.createElement("canvas");
+    c.className = "sticker-material";
+    host.append(c);
+    document.body.append(host);
+    // Gray paper across the still glare's lower edge, which a slight tip moves one way or another.
+    const release = api.mountSticker(c, {
+      print: solidPng(240, 240, "#888"),
+      cut: solidPng(240, 240, "white"),
+      finish: "gloss",
+      turn: 90,
     });
+    const read = () => required(c.getContext("2d")).getImageData(0, 0, c.width, c.height).data;
+    try {
+      await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
+      const level = read();
+      // Turned a quarter turn and tipped about its own x axis, it faces where an unturned sticker
+      // tipped about its y axis faces, from the same box on screen.
+      host.style.transform = "rotateX(2deg)";
+      api.turnSticker(c, 90, 2, 0);
+      await twoFrames();
+      const turned = read();
+      host.style.rotate = "0deg";
+      host.style.transform = "rotateY(2deg)";
+      api.turnSticker(c, 0, 0, 2);
+      await twoFrames();
+      const unturned = read();
+      const side = c.width;
+      let tipped = 0,
+        difference = 0;
+      for (let y = 0; y < side; y++)
+        for (let x = 0; x < side; x++) {
+          const i = (y * side + x) * 4,
+            j = (x * side + side - 1 - y) * 4;
+          if (turned[i + 3] !== 255 || unturned[j + 3] !== 255) continue;
+          for (let channel = 0; channel < 3; channel++) {
+            tipped = Math.max(tipped, Math.abs(turned[i + channel] - level[i + channel]));
+            difference = Math.max(
+              difference,
+              Math.abs(turned[i + channel] - unturned[j + channel]),
+            );
+          }
+        }
+      return { square: c.width === c.height, tipped, difference };
+    } finally {
+      release();
+      host.remove();
+    }
   });
-  const print = [
-    [1, 1, 1],
-    [136 / 255, 136 / 255, 136 / 255],
-    [0, 0, 0],
-  ] as const;
-  for (let i = 0; i < points.length; i++) {
-    const reference = compositePrint(
-      print[i],
-      coatField({
-        point: screenPoint(points[i].uv[0], points[i].uv[1], 240, 240, 90 + pose.rotationDegrees),
-        normal: orientNormal([0, 0, 1], 90, pose, { x: 30, y: 12 }),
-        material: MATERIAL_GLOSS,
-      }),
-    );
-    for (let c = 0; c < 3; c++)
-      expect(Math.abs(points[i].rgba[c] - reference[c] * 255)).toBeLessThanOrEqual(2);
-  }
+  expect(result.square).toBe(true);
+  expect(result.tipped, "The flight's tip turns the reflection").toBeGreaterThan(8);
+  expect(result.difference).toBeLessThanOrEqual(2);
 });
 
 test("the draped ramp changes reflection by slope while raised plateaus stay flat", async ({
   page,
 }) => {
-  await page.goto("/e2e/stickerLaminate.html?ramp=1");
-  const ramp = page.locator("[data-ramp] canvas.sticker-material");
-  await expect(ramp).toHaveAttribute("data-state", "ready");
-  await expect(page.locator("[data-white] canvas.sticker-material")).toHaveAttribute(
-    "data-state",
-    "ready",
-  );
-  await page.evaluate(() => window.laminateFixture.tilt(40, 0));
-  // Keep the localized source edge over the diagnostic ramp rather than outside the cut.
-  await page.evaluate(() => window.laminateFixture.tilt(40, 2));
-  await page.waitForTimeout(1000);
-  const pose = await page.evaluate(() => window.laminateFixture.getPose());
-  const sample = await ramp.evaluate((el) => {
-    if (!(el instanceof HTMLCanvasElement)) throw new Error("The ramp snapshot is not a canvas");
-    const context = el.getContext("2d");
-    const flat = document.querySelector("[data-white] canvas");
-    if (!context || !(flat instanceof HTMLCanvasElement))
-      throw new Error("The ramp comparison is missing");
-    const paper = flat.getContext("2d");
-    if (!paper) throw new Error("The flat comparison context is missing");
-    const points = [40, 110, 114, 118, 122, 126, 200].map((x) => {
-      const u = (x + 0.5) / 240,
-        v = 100.5 / 240;
-      const px = Math.floor(u * el.width),
-        py = Math.floor(v * el.height);
-      return {
-        x,
-        uv: [(px + 0.5) / el.width, (py + 0.5) / el.height],
-        color: context.getImageData(px, py, 1, 1).data[0],
-        flat: paper.getImageData(px, py, 1, 1).data[0],
-      };
-    });
-    return { points, height: window.laminateFixture.rampHeight };
-  });
-  for (const point of sample.points) {
-    const reference = compositePrint(
-      [1, 1, 1],
-      coatField({
-        point: screenPoint(point.uv[0], point.uv[1], 240, 240, pose.rotationDegrees),
-        normal: orientNormal(
-          normalFromHeight(new Float32Array(sample.height), 240, 240, point.x, 100),
-          0,
-          pose,
-        ),
-        material: MATERIAL_GLOSS,
+  await emptyLaminatePage(page);
+  await page.goto("/e2e/stickerLaminate.html");
+  const sample = await page.evaluate(async () => {
+    const { required, solidPng, twoFrames } = await import("./stickerMaterialFixture.ts");
+    const api = await import("../src/stickers/stickerRenderer.ts");
+    const { CREASE_SIDES, creasePixels } = await import("../src/stickers/crease.ts");
+    // A step down at the middle, which the drape turns into a ramp between two plateaus.
+    const field = new Float32Array(240 * 240);
+    for (let y = 0; y < 240; y++) field.fill(2, y * 240, y * 240 + 120);
+    const ramp = required(
+      creasePixels({
+        width: 240,
+        height: 240,
+        surface: field,
+        own: new Float32Array(240 * 240).fill(1),
+        scale: 1,
+        lights: CREASE_SIDES,
       }),
     );
-    expect(Math.abs(point.color - reference[0] * 255)).toBeLessThanOrEqual(3);
-  }
-  expect(sample.points[0].color).toBe(sample.points[0].flat);
-  expect(sample.points[sample.points.length - 1].color).toBe(
-    sample.points[sample.points.length - 1].flat,
+    const image = document.createElement("canvas");
+    image.width = image.height = 240;
+    required(image.getContext("2d")).putImageData(new ImageData(ramp.normal, 240, 240), 0, 0);
+    const normal = image.toDataURL();
+    // Gray paper inside the still glare, where the shoji's lattice shows any change in slope.
+    const host = document.createElement("div");
+    host.className = "sticker-material-surface";
+    host.style.cssText = "position:absolute;left:40px;top:20px;width:240px;height:240px";
+    const c = document.createElement("canvas");
+    c.className = "sticker-material";
+    host.append(c);
+    document.body.append(host);
+    const gray = solidPng(240, 240, "#888");
+    const material = { print: gray, cut: solidPng(240, 240, "white"), finish: "gloss" as const };
+    const release = api.mountSticker(c, { ...material, normal, turn: 0 });
+    const row = () => {
+      const data = required(c.getContext("2d")).getImageData(
+        0,
+        Math.floor((100.5 / 240) * c.height),
+        c.width,
+        1,
+      ).data;
+      return [40, 110, 114, 118, 122, 126, 200].map(
+        (x) => data[Math.floor(((x + 0.5) / 240) * c.width) * 4],
+      );
+    };
+    try {
+      await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
+      await twoFrames();
+      const draped = row();
+      // The same paper, flat, in the same place on screen, so the same view of the room.
+      api.updateSticker(c, material);
+      await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
+      await twoFrames();
+      const flat = row();
+      return draped.map((color, i) => ({ color, flat: flat[i] }));
+    } finally {
+      release();
+      host.remove();
+    }
+  });
+  // The plateaus either side of the ramp, raised and not, face the room as flat paper does.
+  expect(sample[0].color, JSON.stringify(sample)).toBe(sample[0].flat);
+  expect(sample[sample.length - 1].color, JSON.stringify(sample)).toBe(
+    sample[sample.length - 1].flat,
   );
   expect(
-    sample.points.some((p) => Math.abs(p.color - p.flat) > 2),
-    JSON.stringify(sample.points),
+    sample.some((p) => Math.abs(p.color - p.flat) > 2),
+    JSON.stringify(sample),
   ).toBe(true);
 });
 
-test("Shop matte uses the same held light and broadens the white-paper reflection", async ({
+test("Shop matte uses the same held light and broadens the shoji's reflection", async ({
   page,
 }) => {
   await page.goto("/e2e/stickerLaminate.html");
   const matte = page.locator("[data-matte] canvas.sticker-material");
   await expect(matte).toHaveAttribute("data-state", "ready");
-  const pose = await page.evaluate(() => window.laminateFixture.getPose());
-  const points = await matte.evaluate((el) => {
-    if (!(el instanceof HTMLCanvasElement)) throw new Error("The matte snapshot is not a canvas");
-    const context = el.getContext("2d");
-    if (!context) throw new Error("The matte snapshot context is missing");
-    return [0.2, 0.5, 0.8].map((u) => {
-      const x = Math.floor(u * el.width),
-        y = Math.floor(0.1 * el.height);
-      return {
-        uv: [(x + 0.5) / el.width, (y + 0.5) / el.height],
-        rgba: [...context.getImageData(x, y, 1, 1).data],
-      };
-    });
-  });
-  let differs = false;
-  for (const point of points) {
-    const input = {
-      point: screenPoint(point.uv[0], point.uv[1], 240, 240, -4 + pose.rotationDegrees),
-      normal: orientNormal([0, 0, 1], -4, pose),
+  const profile = await page.evaluate(async () => {
+    const { required, solidPng, twoFrames } = await import("./stickerMaterialFixture.ts");
+    const api = await import("../src/stickers/stickerRenderer.ts");
+    // Gray paper across the still glare's lower edge, in gloss and then matte, in one place.
+    const host = document.createElement("div");
+    host.className = "sticker-material-surface";
+    host.style.cssText = "position:absolute;left:75px;top:160px;width:240px;height:240px";
+    const c = document.createElement("canvas");
+    c.className = "sticker-material";
+    host.append(c);
+    document.body.append(host);
+    const material = {
+      print: solidPng(240, 240, "#888"),
+      cut: solidPng(240, 240, "white"),
+      turn: 0,
     };
-    const expected = compositePrint([1, 1, 1], coatField({ ...input, material: MATERIAL_MATTE }));
-    const gloss = compositePrint([1, 1, 1], coatField({ ...input, material: MATERIAL_GLOSS }));
-    expect(Math.abs(point.rgba[0] - expected[0] * 255)).toBeLessThanOrEqual(2);
-    if (Math.abs(expected[0] - gloss[0]) * 255 > 1) differs = true;
-  }
-  expect(differs).toBe(true);
+    const release = api.mountSticker(c, { ...material, finish: "gloss" });
+    /** The column down the middle: its brightest and darkest, and its steepest step. */
+    const column = () => {
+      const data = required(c.getContext("2d")).getImageData(c.width >> 1, 0, 1, c.height).data;
+      let step = 0,
+        low = 255,
+        high = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        low = Math.min(low, data[i]);
+        high = Math.max(high, data[i]);
+        if (i) step = Math.max(step, Math.abs(data[i] - data[i - 4]));
+      }
+      return { range: high - low, step };
+    };
+    try {
+      await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
+      const gloss = column();
+      api.updateSticker(c, { ...material, finish: "matte" });
+      await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
+      await twoFrames();
+      return { gloss, matte: column() };
+    } finally {
+      release();
+      host.remove();
+    }
+  });
+  expect(profile.gloss.range, "Gloss shows the glare's edge").toBeGreaterThan(20);
+  expect(profile.matte.range, "Matte still shows the glare").toBeGreaterThan(10);
+  expect(profile.matte.step, "Matte spreads the edge gloss keeps crisp").toBeLessThan(
+    profile.gloss.step / 2,
+  );
   const image = () =>
     matte.evaluate((el) => {
       if (!(el instanceof HTMLCanvasElement)) throw new Error("The matte snapshot is not a canvas");

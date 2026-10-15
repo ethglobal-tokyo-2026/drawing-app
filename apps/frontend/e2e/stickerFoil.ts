@@ -7,6 +7,9 @@ import {
   type FoilStyle,
 } from "../src/stickers/foilMaterial";
 import { createFoilFragment } from "../src/stickers/foilShader";
+import { STILL_POSE } from "../src/stickers/lightMode";
+import { roomFragment } from "../src/stickers/roomShader";
+import { roomFoilSources, roomFrame } from "../src/stickers/sharedRoom";
 import { stickerFoilColors } from "../src/stickers/stickerFoilMaterial";
 import { glslFloat } from "../src/stickers/glsl";
 import { SCREENTONE } from "../src/stickers/screentone";
@@ -15,6 +18,10 @@ import { orientNormal } from "../../../docs/research/sticker-laminate/material-r
 import "../src/styles/tokens.css";
 type Room = "source" | "removed" | "dark" | "broad";
 export interface FoilFixtureOptions {
+  /** The device's pose against gravity, which turns the room; the still pose without one. */
+  beta?: number;
+  gamma?: number;
+  /** The foil's own turn out of the screen, as a flight turns it; normals otherwise stay put. */
   x?: number;
   y?: number;
   turn?: number;
@@ -39,7 +46,10 @@ function present<T>(value: T | null | undefined): T {
   return value;
 }
 const overhead = FOIL_ROOM.window;
-/** The renderer's room, then the same room with its window off, all dark, or with a window twice the size. */
+/**
+ * The renderer's room, then the same room with its window off, all dark, or, for the diffraction
+ * reference only, with a window twice the size.
+ */
 const rooms: Record<Room, FoilRoom> = {
   source: FOIL_ROOM,
   removed: { ...FOIL_ROOM, window: { ...overhead, radiance: 0 } },
@@ -53,6 +63,8 @@ const canvas = present(document.querySelector<HTMLCanvasElement>("#foil"));
 const gl = canvas.getContext("webgl", { preserveDrawingBuffer: true, antialias: false });
 if (!gl) throw new Error("Foil fixture could not acquire WebGL");
 const gpu = gl;
+if (!gpu.getExtension("OES_standard_derivatives"))
+  throw new Error("Foil fixture needs standard derivatives, as the renderer does");
 function shader(program: WebGLProgram, type: number, source: string) {
   const shader = present(gpu.createShader(type));
   gpu.shaderSource(shader, source);
@@ -69,18 +81,23 @@ const programs = new Map<string, WebGLProgram>();
 /** A fixture side spans as many screentone tiles as a sticker's short side. */
 const tiles = glslFloat(SCREENTONE.tilesAcross);
 function programForRoom(room: FoilRoom) {
-  const fragment = `precision highp float;varying vec2 uv;uniform mat3 frame;uniform vec2 turn;uniform vec2 grating;uniform float diagnostic;uniform float geometry;uniform float side;${createFoilFragment(room)}
+  const fragment = `#extension GL_OES_standard_derivatives : enable
+precision highp float;varying vec2 uv;uniform mat3 frame;uniform vec2 turn;uniform vec2 grating;uniform float diagnostic;uniform float geometry;uniform float side;${roomFragment}${createFoilFragment(room)}
 float display(float v){return v<=.0031308?v*12.92:1.055*pow(v,1./2.4)-.055;}
 void main(){
  vec3 localNormal=normalize(vec3(geometry>.5&&geometry<1.5?-.16:0.,0.,1.));
  vec3 n=normalize(frame*localNormal),t=frame*vec3(grating,0.);
  vec2 p=uv-.5;p=vec2(turn.x*p.x-turn.y*p.y,turn.y*p.x+turn.x*p.y);
- vec3 v=normalize(vec3(-p,2.4));
  if(diagnostic>.5){
- float value=foilY(foilDiffraction(n,v,t,0.,0.));
+ // The independent reference integrates the window as seen from its own eye, 2.4 sides out.
+ float value=foilY(foilDiffraction(n,normalize(vec3(-p,2.4)),t,0.,0.));
  float encoded=floor(clamp((log2(max(value,exp2(-30.)))+30.)/34.,0.,1.)*65535.+.5);
  gl_FragColor=vec4(floor(encoded/256.)/255.,mod(encoded,256.)/255.,0.,1.);return;
  }
+ // The renderer's one eye, with the sample's center at the screen's center and its side in CSS px.
+ vec3 v=normalize(roomEye-vec3(side*p,0.));
+ vec2 shojiPoint=roomPlane(normalize(2.*dot(v,n)*n-v));
+ roomFootprint=max(length(dFdx(shojiPoint)),length(dFdy(shojiPoint)));
  vec3 c=shadeFoil(uv*${tiles},0.,n,v,t,${tiles}/side,0.);
  gl_FragColor=vec4(display(c.r),display(c.g),display(c.b),1.);
 }`;
@@ -110,6 +127,8 @@ let lastStyle: FoilStyle | undefined;
 function render(options: FoilFixtureOptions = {}) {
   const start = performance.now();
   const {
+    beta = STILL_POSE.beta,
+    gamma = STILL_POSE.gamma,
     x = 0,
     y = 0,
     turn = 0,
@@ -169,7 +188,22 @@ function render(options: FoilFixtureOptions = {}) {
     Math.sin((grating * Math.PI) / 180),
   );
   gpu.uniform1f(uniform("foilStyle"), FOIL_STYLES.indexOf(style));
-  gpu.uniform4fv(uniform("foilSources"), createFoilSourceSamples(room));
+  // The room as the renderer orients it for this pose, and its shoji and lamps as the foil's sources;
+  // the diffraction reference integrates its own window, in the screen's axes.
+  const frame = roomFrame({ beta, gamma, screenAngle: 0 });
+  for (const [name, value] of [
+    ["roomUp", frame.up],
+    ["roomToward", frame.toward],
+    ["roomLight", frame.light],
+    ["roomAcross", frame.across],
+    ["roomDown", frame.down],
+    ["roomEye", frame.eye],
+  ] as const)
+    gpu.uniform3fv(uniform(name), value);
+  gpu.uniform4fv(
+    uniform("foilSources"),
+    diagnostic ? createFoilSourceSamples(room) : roomFoilSources(frame),
+  );
   gpu.uniform3fv(uniform("foilInk"), colors.ink);
   gpu.uniform1f(uniform("diagnostic"), diagnostic ? 1 : 0);
   gpu.uniform1f(uniform("geometry"), ["flat", "ramp", "plateau"].indexOf(geometry));
@@ -196,11 +230,13 @@ function render(options: FoilFixtureOptions = {}) {
 window.foilFixture = { render, stages: {} };
 const pose = present(document.querySelector<HTMLSelectElement>("#pose")),
   room = present(document.querySelector<HTMLSelectElement>("#room"));
+/** Tilted back and to the side from the still pose. */
+const tilted = { beta: 80, gamma: 20 };
 const update = () => {
   const value = room.value;
   if (value !== "source" && value !== "removed" && value !== "dark" && value !== "broad")
     throw new Error("Unknown fixture room");
-  render({ x: pose.value === "paired" ? 0.6 : 0, room: value });
+  render({ ...(pose.value === "tilted" ? tilted : {}), room: value });
 };
 pose.addEventListener("change", update);
 room.addEventListener("change", update);

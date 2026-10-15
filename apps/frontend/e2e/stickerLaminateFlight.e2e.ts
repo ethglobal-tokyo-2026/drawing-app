@@ -57,6 +57,28 @@ declare global {
 test.use(ipad);
 test.beforeEach(async ({ page }) => observeStickerHardware(page));
 
+/** WebKit can report a turned screen for this portrait page; the readings these tests send mean portrait. */
+const pinPortraitScreen = (page: Page) =>
+  page.addInitScript(() =>
+    Object.defineProperty(screen.orientation, "angle", { configurable: true, get: () => 0 }),
+  );
+
+/** Tilts the fixture and waits for the light to land on the reading; each step redraws exposed material. */
+const tiltUntilLanded = async (page: Page, beta: number, gamma: number) => {
+  await page.evaluate(([b, g]) => window.laminateFixture.tilt(b, g), [beta, gamma]);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        ([b, g]) => {
+          const pose = window.laminateFixture.getPose();
+          return Math.abs(pose.beta - b) < 1e-9 && Math.abs(pose.gamma - g) < 1e-9;
+        },
+        [beta, gamma],
+      ),
+    )
+    .toBe(true);
+};
+
 /** A figure's foil cast, and what its finish's committed descriptor says the cast should show. */
 const castAndCommitted = (figure: Locator) =>
   figure.evaluate(async (root) => {
@@ -199,6 +221,7 @@ test("a closing sticker keeps its rendered laminate pixels during the flight", a
 test("foil outside paper stays live through reversed lifts and source concealment removes the whole flyer", async ({
   page,
 }) => {
+  await pinPortraitScreen(page);
   await holdFlights(page, "detail-lift__flyer");
   await page.goto("/e2e/stickerLaminate.html?lift=1&foil=1&side=300");
   await page.evaluate(() => window.laminateFixture.tilt(40, 0, 123));
@@ -250,6 +273,7 @@ test("foil outside paper stays live through reversed lifts and source concealmen
 test("a covered board destination has the held pose before its first visible return frame", async ({
   page,
 }) => {
+  await pinPortraitScreen(page);
   await holdFlights(page, "detail-lift__flyer");
   // The origin's hide ends by canceling its animation: that frame is the first one uncovered.
   await page.addInitScript(() => {
@@ -274,7 +298,8 @@ test("a covered board destination has the held pose before its first visible ret
   await page.goto("/e2e/stickerLaminate.html?lift=1&foil=1");
   const board = page.locator("[data-lift-origin] canvas.sticker-material");
   await expect(board).toHaveAttribute("data-state", "ready");
-  await page.evaluate(() => window.laminateFixture.tilt(40, 0, 123));
+  // The pose is absolute, so the first reading moves the light: the exposed board draws where it lands.
+  await tiltUntilLanded(page, 40, 0);
   const before = await board.evaluate((canvas) => {
     if (!(canvas instanceof HTMLCanvasElement))
       throw new Error("The retained board material is missing");
@@ -282,21 +307,8 @@ test("a covered board destination has the held pose before its first visible ret
   });
   await page.getByRole("button", { name: "Open fixture", exact: true }).click();
   await expect(page.locator(".detail-lift__flyer")).toHaveCount(1);
-  await page.evaluate(() => window.laminateFixture.tilt(46, 12, 130));
-  await expect.poll(() => page.evaluate(() => window.laminateFixture.getPose().x)).not.toBe(0);
-  // Wait for the shared published pose to stop; no fresh sensor event accompanies the return.
-  await page.evaluate(async () => {
-    let previous = "";
-    let still = 0;
-    const deadline = performance.now() + 5000;
-    while (still < 5) {
-      if (performance.now() > deadline) throw new Error("The held return pose did not settle");
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      const next = JSON.stringify(window.laminateFixture.getPose());
-      still = next === previous ? still + 1 : 0;
-      previous = next;
-    }
-  });
+  // The light lands while the board is covered; no fresh sensor event accompanies the return.
+  await tiltUntilLanded(page, 46, 12);
   expect(
     await board.evaluate((canvas) => {
       if (!(canvas instanceof HTMLCanvasElement))
@@ -315,6 +327,13 @@ test("a covered board destination has the held pose before its first visible ret
     return result;
   });
   expect(exposed).not.toBe(before);
+  // The return sticks the board down, and its reflection follows that motion; at rest it's back at
+  // the spot and the held pose its first visible frame was drawn for.
+  await board.evaluate(async (canvas) => {
+    const origin = canvas.closest("[data-lift-origin]");
+    if (!origin) throw new Error("The returned board sticker is missing");
+    await Promise.allSettled(origin.getAnimations({ subtree: true }).map((a) => a.finished));
+  });
   await waitTwoFrames(page);
   expect(
     await board.evaluate((canvas) => {
@@ -373,6 +392,7 @@ for (const action of ["Page fixture", "Cancel fixture"] as const) {
 test("pink foil stays live outside paper while a tray sticker curls, peels, and returns", async ({
   page,
 }) => {
+  await pinPortraitScreen(page);
   const slot = await preparedPinkTray(page);
   const box = await slot.boundingBox();
   if (!box) throw new Error("The foil tray slot is missing");

@@ -31,7 +31,11 @@ async function heldPose(
 ) {
   await page.evaluate(
     ({ angle, beta, gamma, alpha }) => {
-      Object.defineProperty(screen, "orientation", { configurable: true, value: { angle } });
+      // Pinned on the prototype, so the renderer can still listen for orientation changes.
+      Object.defineProperty(ScreenOrientation.prototype, "angle", {
+        configurable: true,
+        get: () => angle,
+      });
       window.laminateFixture.tilt(beta, gamma, alpha);
     },
     { angle, beta, gamma, alpha },

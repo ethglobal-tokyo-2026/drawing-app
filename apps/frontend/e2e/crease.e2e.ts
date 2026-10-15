@@ -31,7 +31,7 @@ async function stuck(page: Page, no: string) {
   return { sticker, id };
 }
 
-test("a sticker over another shows the crease of the edge beneath, lit as the one light falls, on your board and to a visitor, none while it's in hand", async ({
+test("a sticker over another shows the crease of the edge beneath, lit from the top left through any tilt, on your board and to a visitor, none while it's in hand", async ({
   page,
   friend,
 }) => {
@@ -59,19 +59,24 @@ test("a sticker over another shows the crease of the edge beneath, lit as the on
   await page.mouse.up();
   await expect(creaseOf(page, over.id)).toHaveCount(1);
 
-  // Device tilt moves the one light, and the crease's lit side follows it: with the light at the
-  // screen's top left, the side it rests on; swung to the bottom right, the opposite side.
+  // The crease is lit from the top left, where every drop shadow falls from. A device tilt turns
+  // the room the sticker reflects, but the crease's lit side stays where it is.
   const crease = creaseOf(page, over.id);
-  await tiltScreen(page, 40, 0);
-  await tiltScreen(page, 8, -32);
-  await expect(crease).toHaveCSS("--lx", "-1.000");
-  await expect(crease).toHaveCSS("--ly", "-1.000");
+  const sides = () =>
+    Promise.all(
+      (["topLeft", "bottomRight", "topRight", "bottomLeft"] as const).map((side) =>
+        opacityOf(crease, side),
+      ),
+    );
   await expect.poll(() => opacityOf(crease, "topLeft")).toBeCloseTo(1, 1);
   await expect.poll(() => opacityOf(crease, "bottomRight")).toBe(0);
+  const atRest = await sides();
+  const lightPose = () =>
+    page.evaluate(async () => (await import("../src/stickers/light.ts")).currentLight());
+  const still = await lightPose();
   await tiltScreen(page, 72, 32);
-  await expect(crease).toHaveCSS("--ly", "1.000");
-  await expect.poll(() => opacityOf(crease, "bottomRight")).toBeGreaterThan(0.3);
-  await expect.poll(() => opacityOf(crease, "topLeft")).toBeLessThan(0.3);
+  await expect.poll(lightPose, "The tilt reaches the one light").not.toEqual(still);
+  expect(await sides()).toEqual(atRest);
 
   // Someone else looking at the board sees the same crease.
   await signIn(friend, "visitor", language);

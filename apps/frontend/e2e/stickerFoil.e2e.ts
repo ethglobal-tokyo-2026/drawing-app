@@ -5,7 +5,7 @@ import {
 } from "../../../docs/research/sticker-foil/material-reference";
 import { expect, test } from "@playwright/test";
 
-test("foil follows light, returns to its held pose, and goes dark with its room", async ({
+test("foil follows the room as the device turns, returns to its held pose, and goes dark with its room", async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -13,10 +13,10 @@ test("foil follows light, returns to its held pose, and goes dark with its room"
   await page.goto("/e2e/stickerFoil.html");
   await expect(page.locator("canvas")).toHaveAttribute("data-ready", "true");
   const a = await page.locator("canvas").screenshot();
-  await page.locator("#pose").selectOption("paired");
+  await page.locator("#pose").selectOption("tilted");
   const b = await page.locator("canvas").screenshot();
   expect(b.equals(a)).toBe(false);
-  await page.locator("#pose").selectOption("initial");
+  await page.locator("#pose").selectOption("still");
   expect((await page.locator("canvas").screenshot()).equals(a)).toBe(true);
   await page.locator("#room").selectOption("dark");
   const dark = await page.evaluate(() =>
@@ -104,28 +104,32 @@ test("the window adds light, back views and a dark room render nothing", async (
   expect(result.dark).toEqual([0, 0, 0]);
 });
 
-test("displayed combined-source holo retains color without green hues", async ({ page }) => {
+test("displayed combined-source holo retains color without green hues across the device's poses", async ({
+  page,
+}) => {
   await page.goto("/e2e/stickerFoil.html");
   await expect(page.locator("#foil")).toHaveAttribute("data-ready", "true");
   const outputs = await page.evaluate(() => {
-    return ["holo", "pink"].flatMap((style) =>
-      [0.3, 0.45, 0.6].flatMap((x) =>
-        ["source", "broad"].map((room) => {
-          if ((style !== "holo" && style !== "pink") || (room !== "source" && room !== "broad"))
-            throw new Error("Unknown color fixture");
-          const p = window.foilFixture.render({ style, room, x });
-          let green = 0,
-            color = 0;
-          for (let i = 0; i < p.length; i += 4) {
-            if (p[i + 1] > p[i] + 2 && p[i + 1] > p[i + 2] + 2) green++;
-            color = Math.max(
-              color,
-              (Math.max(p[i], p[i + 1], p[i + 2]) - Math.min(p[i], p[i + 1], p[i + 2])) / 255,
-            );
-          }
-          return { style, room, x, green, color };
-        }),
-      ),
+    // Upright to tilted past upright, and turned either way at the usual reading angle.
+    const poses = [
+      ...[0, 30, 55, 75, 90, 110].map((beta) => ({ beta, gamma: 0 })),
+      { beta: 55, gamma: -25 },
+      { beta: 55, gamma: 25 },
+    ];
+    return (["holo", "pink"] as const).flatMap((style) =>
+      poses.map((pose) => {
+        const p = window.foilFixture.render({ style, ...pose });
+        let green = 0,
+          color = 0;
+        for (let i = 0; i < p.length; i += 4) {
+          if (p[i + 1] > p[i] + 2 && p[i + 1] > p[i + 2] + 2) green++;
+          color = Math.max(
+            color,
+            (Math.max(p[i], p[i + 1], p[i + 2]) - Math.min(p[i], p[i + 1], p[i + 2])) / 255,
+          );
+        }
+        return { style, ...pose, green, color };
+      }),
     );
   });
   expect(

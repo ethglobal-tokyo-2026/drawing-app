@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import { StickerFigure, type Crease } from "../src/stickers/StickerFigure";
 import { creasePixels, CREASE_SIDES, type CreaseImage } from "../src/stickers/crease";
 import { acquireLight, currentLight, installLight } from "../src/stickers/light";
+import { readAt } from "../src/stickers/lightMode";
 import { refreshSticker, whenStickerSettled } from "../src/stickers/stickerRenderer";
 import "../src/styles/tokens.css";
 
@@ -196,8 +197,22 @@ window.creaseRevealFixture = {
     if (!(canvas instanceof HTMLCanvasElement)) throw new Error("The fixture laminate is missing");
     refreshSticker(canvas);
   },
-  tilt: (beta, gamma) =>
-    window.dispatchEvent(Object.assign(new Event("deviceorientation"), { alpha: 0, beta, gamma })),
+  // The pose is the displayed screen's: desktop WebKit reports a turned screen, and the reading
+  // turns with it so the room, and the reflection the crease bends, match in both engines.
+  tilt: (beta, gamma) => {
+    const angle = screen.orientation?.angle ?? Reflect.get(window, "orientation");
+    const reading = readAt(
+      { beta, gamma, screenAngle: 0 },
+      typeof angle === "number" && Number.isFinite(angle) ? angle : 0,
+    );
+    window.dispatchEvent(
+      Object.assign(new Event("deviceorientation"), {
+        alpha: 0,
+        beta: reading.beta,
+        gamma: reading.gamma,
+      }),
+    );
+  },
   pose: currentLight,
 };
 render();

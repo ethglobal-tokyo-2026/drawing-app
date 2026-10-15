@@ -417,8 +417,12 @@ async function openContinuousBoard(page: Page) {
       "Registered band input frame",
       JSON.stringify({ priorScreenAngle: screen.orientation?.angle, requestedScreenAngle: 0 }),
     );
-    // WebKit can replace its orientation object after viewport setup. Pin the declared fixture frame.
-    Object.defineProperty(screen, "orientation", { configurable: true, value: { angle: 0 } });
+    // WebKit can replace its orientation object after viewport setup. Pin the declared fixture frame
+    // on the prototype, so the renderer can still listen for orientation changes.
+    Object.defineProperty(ScreenOrientation.prototype, "angle", {
+      configurable: true,
+      get: () => 0,
+    });
   });
 }
 
@@ -556,7 +560,7 @@ test("actual worker registered narrow bands show color without green through the
       expect(row.samples.every((sample) => sample.outside > 0 && sample.outsideBent > 0)).toBe(
         true,
       );
-      for (const axis of ["x", "y"])
+      for (const axis of ["beta", "gamma"])
         expect(
           row.samples.some((sample) => sample.axis === axis && sample.outsideDifference > 0),
         ).toBe(true);

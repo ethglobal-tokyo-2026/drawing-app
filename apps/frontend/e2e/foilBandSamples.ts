@@ -1,5 +1,6 @@
 import { stickerFoilCoverage, stickerTurn } from "../src/stickers/stickerRenderer";
 import { currentLight } from "../src/stickers/light";
+import { STILL_POSE } from "../src/stickers/lightMode";
 import { getMotionPermission } from "../src/ui/motionPermission";
 import { registeredPaperAlpha, required } from "./stickerMaterialFixture";
 
@@ -28,7 +29,22 @@ export function actualFoilTargets() {
 export async function sampleFoilBands() {
   const fixture = window.stickerBoardDragFixture;
   await fixture.askForMotion();
-  fixture.tilt(0, 0);
+  /** The device's pose as the sensor gives it, once the light has landed there and redrawn. */
+  const settle = async (beta: number, gamma: number) => {
+    fixture.tilt(beta, gamma);
+    const deadline = performance.now() + 2000;
+    while (currentLight().beta !== beta || currentLight().gamma !== gamma) {
+      if (performance.now() > deadline)
+        throw new Error(
+          `Shared pose did not settle at beta ${beta}, gamma ${gamma}: ${JSON.stringify({ pose: currentLight(), permission: getMotionPermission(), visibility: document.visibilityState, reduced: matchMedia("(prefers-reduced-motion: reduce)").matches, ua: navigator.userAgent })}`,
+        );
+      await new Promise<number>(requestAnimationFrame);
+    }
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+  };
+  await settle(STILL_POSE.beta, STILL_POSE.gamma);
   const rows = await Promise.all(
     actualFoilTargets().map(async (canvas) => {
       const id = required(canvas.closest<HTMLElement>(".placed-sticker")?.dataset.stickerId);
@@ -147,29 +163,13 @@ export async function sampleFoilBands() {
       };
     }),
   );
-  const angle = (pose: number) => {
-    let low = -1,
-      high = 1;
-    for (let i = 0; i < 50; i++) {
-      const mid = (low + high) / 2;
-      if (1.5 * mid - 0.5 * mid ** 3 < pose) low = mid;
-      else high = mid;
-    }
-    return (32 * (low + high)) / 2;
-  };
-  for (const axis of ["x", "y"] as const)
-    for (const target of [0, 0.6, -0.6, 0]) {
-      fixture.tilt(axis === "y" ? angle(target) : 0, axis === "x" ? angle(target) : 0);
-      const deadline = performance.now() + 2000;
-      while (Math.abs(currentLight()[axis] - target) > 1e-6) {
-        if (performance.now() > deadline)
-          throw new Error(
-            `Shared ${axis} pose did not settle at ${target}: ${JSON.stringify({ pose: currentLight(), fixturePose: fixture.getPose(), permission: getMotionPermission(), visibility: document.visibilityState, reduced: matchMedia("(prefers-reduced-motion: reduce)").matches, ua: navigator.userAgent })}`,
-          );
-        await new Promise<number>(requestAnimationFrame);
-      }
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+  // Tilted back and forward, then turned either way, from the still pose and back to it.
+  for (const axis of ["beta", "gamma"] as const)
+    for (const offset of [0, 15, -15, 0]) {
+      const target = STILL_POSE[axis] + offset;
+      await settle(
+        axis === "beta" ? target : STILL_POSE.beta,
+        axis === "gamma" ? target : STILL_POSE.gamma,
       );
       for (const row of rows) {
         const pixels = row.context.getImageData(0, 0, row.canvas.width, row.canvas.height).data;

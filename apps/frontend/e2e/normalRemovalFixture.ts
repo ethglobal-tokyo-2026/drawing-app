@@ -108,7 +108,7 @@ export async function unchangedRemoval() {
 export async function compareCopy() {
   const { canvas, before, description } = current();
   const restore = matchResizeAtlasSlot(canvas);
-  const copy = output("normal-removal-copy", 110, required(canvas.parentElement).clientWidth);
+  const copy = output("normal-removal-copy", 15, required(canvas.parentElement).clientWidth);
   const dispose = mountStickerCopy(copy, canvas, () => true);
   try {
     await settled(copy);
@@ -131,7 +131,7 @@ export async function compareFlat(unchanged = false) {
   const { canvas, initial, target } = current();
   const host = required(canvas.parentElement);
   const restore = matchResizeAtlasSlot(canvas);
-  const reference = output("normal-removal-reference", 205, host.clientWidth);
+  const reference = output("normal-removal-reference", 15, host.clientWidth);
   const material = unchanged ? { ...initial, normal: undefined } : target;
   const dispose = mountSticker(reference, { ...material, turn: 0 });
   try {
@@ -166,7 +166,7 @@ function matchResizeAtlasSlot(canvas: HTMLCanvasElement) {
  * accepted source frame and normal, providing exact A pixels at the new displayed dimensions. */
 export async function resizePending() {
   const owner = current();
-  const copy = output("normal-removal-resize-copy", 110);
+  const copy = output("normal-removal-resize-copy", 15);
   const dispose = mountStickerCopy(copy, owner.canvas, () => true);
   try {
     await settled(copy);
