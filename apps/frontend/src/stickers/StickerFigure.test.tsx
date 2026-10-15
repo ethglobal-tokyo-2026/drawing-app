@@ -61,10 +61,7 @@ describe("StickerFigure's laminate", () => {
           base: "base.png",
           normal: "normal.png",
           normalBounds: { x: -0.1, y: 0, width: 1.1, height: 1 },
-          topLeft: "top-left.png",
-          bottomRight: "bottom-right.png",
-          topRight: "top-right.png",
-          bottomLeft: "bottom-left.png",
+          rise: "rise.png",
         }}
       />,
     );
@@ -77,7 +74,11 @@ describe("StickerFigure's laminate", () => {
     expect(rendered.host.querySelector(".sticker-figure__img")?.getAttribute("src")).toBe(
       testStickerUrls("s").png,
     );
-    expect(rendered.host.querySelectorAll(".sticker-crease > i")).toHaveLength(5);
+    const layers = [...rendered.host.querySelectorAll<HTMLElement>(".sticker-crease > i")];
+    expect(layers.map((layer) => layer.style.getPropertyValue("--crease"))).toEqual([
+      'url("base.png")',
+      'url("rise.png")',
+    ]);
   });
 });
 

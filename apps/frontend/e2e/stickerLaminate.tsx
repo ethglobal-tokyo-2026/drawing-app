@@ -5,7 +5,7 @@ import { acquireLight, currentLight, installLight, subscribeLight } from "../src
 import { FinishPreview } from "../src/shop/FinishPreview";
 import { StickerMaterial } from "../src/stickers/StickerMaterial";
 import { turnSticker } from "../src/stickers/stickerRenderer";
-import { creasePixels, CREASE_SIDES, drape } from "../src/stickers/crease";
+import { creasePixels, CREASE_LIGHT, drape } from "../src/stickers/crease";
 import "../src/styles/tokens.css";
 import "../src/shop/ShopScreen.css";
 
@@ -63,7 +63,7 @@ const rampPixels = creasePixels({
   surface: field,
   own: ownPaper,
   scale: 1,
-  lights: CREASE_SIDES,
+  light: CREASE_LIGHT,
 });
 const rampCanvas = document.createElement("canvas");
 rampCanvas.width = rampCanvas.height = 240;
@@ -78,10 +78,7 @@ const creaseImage = (pixels: Uint8ClampedArray<ArrayBuffer>) => {
 const creaseFoil = {
   normal: rampNormal,
   base: creaseImage(rampPixels.base),
-  topLeft: creaseImage(rampPixels.topLeft),
-  topRight: creaseImage(rampPixels.topRight),
-  bottomLeft: creaseImage(rampPixels.bottomLeft),
-  bottomRight: creaseImage(rampPixels.bottomRight),
+  rise: creaseImage(rampPixels.rise),
 };
 const reload = new URLSearchParams(location.search).has("reload");
 const replacement: { print: string; normal?: string; turn: number; veiled: boolean } = {

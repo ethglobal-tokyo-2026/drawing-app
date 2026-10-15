@@ -1,19 +1,7 @@
 /* A sticker's crease where it lies over another's edge, pressed in as it's shown: its base, the shoulder
-   and foot that show under any light, and over it an image of its rise lit from each side, blended for
-   the light at rest in the top left (--crease-ux, --crease-uy), where every drop shadow falls from.
-   Tilt never moves it: only reflections follow the room. */
+   and foot, and over it its rise, lit from the one light in the top left, where every drop shadow falls
+   from. Tilt never moves it: only reflections follow the room. */
 .sticker-crease {
-  /* Never stronger than a unit light, so a side shows at most fully. */
-  --crease-len: max(1, hypot(var(--crease-ux), var(--crease-uy)));
-  /* Along the light at rest, and across it toward the top right. */
-  --crease-a: calc(
-    (var(--crease-ux) * var(--crease-ux) + var(--crease-uy) * var(--crease-uy)) / var(--crease-len)
-  );
-  --crease-b: calc(
-    (var(--crease-ux) * -1 * var(--crease-uy) + var(--crease-uy) * var(--crease-ux)) /
-      var(--crease-len)
-  );
-
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -24,30 +12,6 @@
   position: absolute;
   inset: 0;
   background: var(--crease) 0 0 / 100% 100% no-repeat;
-}
-
-/* Without hypot() the blend can't be worked out, and every side would show: there it's the crease at
-   rest. :where() keeps this under the blend below. */
-.sticker-crease > i:where([data-side]):not([data-side="topLeft"]) {
-  opacity: 0;
-}
-
-@supports (opacity: hypot(1, 1)) {
-  .sticker-crease > i[data-side="topLeft"] {
-    opacity: clamp(0, var(--crease-a), 1);
-  }
-
-  .sticker-crease > i[data-side="bottomRight"] {
-    opacity: clamp(0, calc(-1 * var(--crease-a)), 1);
-  }
-
-  .sticker-crease > i[data-side="topRight"] {
-    opacity: clamp(0, var(--crease-b), 1);
-  }
-
-  .sticker-crease > i[data-side="bottomLeft"] {
-    opacity: clamp(0, calc(-1 * var(--crease-b)), 1);
-  }
 }
 
 /* Lifted in a hand, it clears the stickers it lay over. */

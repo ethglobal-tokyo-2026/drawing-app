@@ -7,17 +7,17 @@
  * sticker thicknesses.
  */
 
-/** Toward the one light at the top left, as the baked gloss has it, on screen. */
+/**
+ * Toward the one light at the top left, on screen, where every drop shadow falls from. Tilt never
+ * moves it, so a crease is baked lit from it once.
+ */
 export const CREASE_LIGHT = unit(-0.5, -0.7);
 
-/** The sides a crease is baked lit from: the one light at rest, its opposite, and the two across. */
-export type CreaseSide = "topLeft" | "bottomRight" | "topRight" | "bottomLeft";
-
 /**
- * A crease's images: its rise lit from each side, its base, and geometric normals for the laminate
- * reflection. The base's shoulder and foot show however the light falls.
+ * A crease's images: its base, the shoulder and foot; its rise, lit from the one light; and geometric
+ * normals for the laminate reflection.
  */
-export type CreaseImage = CreaseSide | "base" | "normal";
+export type CreaseImage = "base" | "rise" | "normal";
 
 /** A rectangle in the raster or normalized source frame, as its caller specifies. */
 export interface CreaseBounds {
@@ -29,17 +29,6 @@ export interface CreaseBounds {
 
 /** The illustrative paper and film thickness, in CSS px, used only for geometric normals. */
 export const STICKER_THICKNESS = 0.35;
-
-/**
- * Toward each side's light, on screen. The board blends the four by where the one light is, so the
- * crease follows the tilt without being baked again.
- */
-export const CREASE_SIDES: Record<CreaseSide, readonly [number, number]> = {
-  topLeft: CREASE_LIGHT,
-  bottomRight: [-CREASE_LIGHT[0], -CREASE_LIGHT[1]],
-  topRight: [-CREASE_LIGHT[1], CREASE_LIGHT[0]],
-  bottomLeft: [CREASE_LIGHT[1], -CREASE_LIGHT[0]],
-};
 
 /** How far a sticker's ramp reaches beside a step one sticker high, in CSS px. */
 export const RAMP = 12;
@@ -91,11 +80,12 @@ function unit(x: number, y: number): [number, number] {
   return [x / l, y / l];
 }
 
-/** `light` turned into the frame of a sticker turned `deg` clockwise on screen. */
-export function lightIn(deg: number, light = CREASE_LIGHT): [number, number] {
+/** The one light turned into the frame of a sticker turned `deg` clockwise on screen. */
+export function lightIn(deg: number): [number, number] {
   const t = (-deg * Math.PI) / 180;
   const [c, s] = [Math.cos(t), Math.sin(t)];
-  return [light[0] * c - light[1] * s, light[0] * s + light[1] * c];
+  const [x, y] = CREASE_LIGHT;
+  return [x * c - y * s, x * s + y * c];
 }
 
 /** Rows or columns: how many lines, how long each is, and the index steps along and between them. */
@@ -420,8 +410,8 @@ export interface CreaseInput {
   own: Float32Array;
   /** Pixels per CSS px. */
   scale: number;
-  /** Toward each side's light, in this sticker's frame (lightIn of CREASE_SIDES). */
-  lights: Record<CreaseSide, readonly [number, number]>;
+  /** Toward the one light, in this sticker's frame (lightIn). */
+  light: readonly [number, number];
   /** Expanded geometry can retain a bend independently of painted coverage. */
   normalRegion?: CreaseBounds;
 }
@@ -432,13 +422,6 @@ export interface CreaseInput {
  */
 export type CreasePixels = Record<CreaseImage, Uint8ClampedArray<ArrayBuffer>>;
 
-const SIDES = [
-  "topLeft",
-  "bottomRight",
-  "topRight",
-  "bottomLeft",
-] as const satisfies readonly CreaseSide[];
-
 /** The crease and geometric normals over `surface`, or null when nothing rises. */
 export function creasePixels({
   width,
@@ -446,7 +429,7 @@ export function creasePixels({
   surface,
   own,
   scale,
-  lights,
+  light,
   normalRegion,
 }: CreaseInput): CreasePixels | null {
   const field = drape(surface, width, height, scale);
@@ -462,8 +445,8 @@ export function creasePixels({
   const unitStep = stepResponse(scale);
   const image = () => new Uint8ClampedArray(width * height * 4);
   const base = image();
+  const rise = image();
   const normal = image();
-  const bakes = SIDES.map((side) => ({ light: lights[side], out: image() }));
   let any = false;
   /** Shades pixel `q` of `out` by `tone`, lit above zero and shaded below. */
   const shade = (out: Uint8ClampedArray, q: number, tone: number) => {
@@ -517,17 +500,13 @@ export function creasePixels({
       const ridge =
         Math.max(0, -bend) * CREASE_TONE.shoulder - Math.max(0, bend) * CREASE_TONE.foot;
       shade(base, q, ridge * o * STRENGTH);
-      for (const { light, out } of bakes) {
-        // Rising toward the light's far side faces the light.
-        const facing = -(gx * light[0] + gy * light[1]);
-        const rise =
-          Math.max(0, facing) * CREASE_TONE.lit - Math.max(0, -facing) * CREASE_TONE.shade;
-        shade(out, q, rise * o * STRENGTH);
-      }
+      // Rising toward the light's far side faces the light.
+      const facing = -(gx * light[0] + gy * light[1]);
+      const tone = Math.max(0, facing) * CREASE_TONE.lit - Math.max(0, -facing) * CREASE_TONE.shade;
+      shade(rise, q, tone * o * STRENGTH);
     }
   }
   if (!any) return null;
-  const [topLeft, bottomRight, topRight, bottomLeft] = bakes.map(({ out }) => out);
   // The outer sampling row stays a flat plane rather than an uninitialized curved edge.
   for (let y = 0; y < height; y++)
     for (let x = 0; x < width; x++) {
@@ -535,5 +514,5 @@ export function creasePixels({
       const q = (y * width + x) * 4;
       normal.set([128, 128, 255, 255], q);
     }
-  return { base, normal, topLeft, bottomRight, topRight, bottomLeft };
+  return { base, rise, normal };
 }

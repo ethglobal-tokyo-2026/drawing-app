@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  CREASE_SIDES,
+  CREASE_LIGHT,
   RAMP,
   creasePixels,
   drape,
@@ -20,21 +20,27 @@ const field = (value: (x: number, y: number) => number, width = W, height = H) =
 const everywhere = field(() => 1);
 
 /** The finished crease images over separate supports, including the laminate's normal. */
-function pixelsOver(layers: Float32Array[], scale = 1, width = W, height = H) {
+function pixelsOver(
+  layers: Float32Array[],
+  scale = 1,
+  width = W,
+  height = H,
+  light: readonly [number, number] = CREASE_LIGHT,
+) {
   const pixels = creasePixels({
     width,
     height,
     surface: stackedSurface(layers, width, height),
     own: width === W && height === H ? everywhere : new Float32Array(width * height).fill(1),
     scale,
-    lights: CREASE_SIDES,
+    light,
   });
   if (!pixels) throw new Error("The supported sticker lost its material geometry");
   return pixels;
 }
 
-/** The crease's image lit from one side, or its base or normal. */
-const creaseOver = (layers: Float32Array[], image: CreaseImage = "topLeft") =>
+/** One of the crease's images: its rise, its base or its normal. */
+const creaseOver = (layers: Float32Array[], image: CreaseImage = "rise") =>
   pixelsOver(layers)[image];
 
 /** The strongest painted highlight or shadow over a column interval. */
@@ -47,9 +53,9 @@ function peakTone(
   width = W,
 ) {
   let peak = 0;
-  for (const side of ["base", "topLeft", "bottomRight", "topRight", "bottomLeft"] as const)
+  for (const image of ["base", "rise"] as const)
     for (let y = y0; y < y1; y++)
-      for (let x = x0; x < x1; x++) peak = Math.max(peak, pixels[side][(y * width + x) * 4 + 3]);
+      for (let x = x0; x < x1; x++) peak = Math.max(peak, pixels[image][(y * width + x) * 4 + 3]);
   return peak;
 }
 
@@ -77,7 +83,7 @@ function highlightBands(pixels: ReturnType<typeof pixelsOver>) {
   let previous = false;
   for (let x = 0; x < W; x++) {
     const q = ((H / 2) * W + x) * 4;
-    const lit = pixels.topLeft[q] === 255 && pixels.topLeft[q + 3] > 0;
+    const lit = pixels.rise[q] === 255 && pixels.rise[q + 3] > 0;
     if (lit && !previous) bands++;
     previous = lit;
   }
@@ -106,7 +112,7 @@ describe("crease", () => {
       surface: everywhere,
       own: field((x) => (x < 90 ? 1 : 0.25)),
       scale: 1,
-      lights: CREASE_SIDES,
+      light: CREASE_LIGHT,
     });
     if (!pixels) throw new Error("The raised plane must retain its geometry");
     const center = ((H / 2) * W + W / 2) * 4;
@@ -122,7 +128,7 @@ describe("crease", () => {
       surface: field((x) => (x < W / 2 ? 1 : 0)),
       own: everywhere,
       scale: 1,
-      lights: CREASE_SIDES,
+      light: CREASE_LIGHT,
     });
     if (!pixels) throw new Error("The overlap ramp must retain its geometry");
     const center = ((H / 2) * W + W / 2) * 4;
@@ -140,19 +146,12 @@ describe("crease", () => {
       surface: stackedSurface([everywhere], W, H),
       own,
       scale: 1,
-      lights: CREASE_SIDES,
+      light: CREASE_LIGHT,
     });
     expect(pixels).not.toBeNull();
     if (!pixels) throw new Error("The raised sticker lost its material geometry");
     const center = ((H / 2) * W + W / 2) * 4;
-    expect(Object.keys(pixels).sort()).toEqual([
-      "base",
-      "bottomLeft",
-      "bottomRight",
-      "normal",
-      "topLeft",
-      "topRight",
-    ]);
+    expect(Object.keys(pixels).sort()).toEqual(["base", "normal", "rise"]);
     expect([...pixels.normal.slice(center, center + 4)]).toEqual([128, 128, 255, 255]);
     const twiceAsHigh = creasePixels({
       width: W,
@@ -160,12 +159,11 @@ describe("crease", () => {
       surface: stackedSurface([everywhere, everywhere], W, H),
       own,
       scale: 1,
-      lights: CREASE_SIDES,
+      light: CREASE_LIGHT,
     });
     expect(twiceAsHigh).not.toBeNull();
     expect(twiceAsHigh?.normal).toEqual(pixels?.normal);
-    for (const image of ["base", "topLeft", "bottomRight", "topRight", "bottomLeft"] as const)
-      expect(pixels?.[image][center + 3]).toBe(0);
+    for (const image of ["base", "rise"] as const) expect(pixels?.[image][center + 3]).toBe(0);
   });
 
   it("bridges nearby supports and dips into a clearly separated gap", () => {
@@ -290,7 +288,7 @@ describe("crease", () => {
       expect(highlightBands(pixels)).toBe(bands);
       for (const x of [32, 32 + spacing]) {
         const q = ((H / 2) * W + x) * 4;
-        expect(pixels.topLeft[q + 3]).toBeGreaterThan(0);
+        expect(pixels.rise[q + 3]).toBeGreaterThan(0);
         expect(pixels.normal[q]).toBeLessThan(128);
       }
       const middle = 32 + spacing / 2;
@@ -305,7 +303,7 @@ describe("crease", () => {
       surface: field((x) => (x < 48 ? 1 : x < 72 ? 0 : 2)),
       own: everywhere,
       scale: 1,
-      lights: CREASE_SIDES,
+      light: CREASE_LIGHT,
     });
     if (!pixels) throw new Error("The taller support lost its material geometry");
     expect(peakTone(pixels, 36, 50)).toBe(0);
@@ -389,15 +387,14 @@ describe("crease", () => {
       for (let x = 42; x < 78; x++) {
         const q = (y * W + x) * 4;
         expect([...pixels.normal.slice(q, q + 3)]).toEqual([128, 128, 255]);
-        for (const image of ["base", "topLeft", "bottomRight", "topRight", "bottomLeft"] as const)
-          expect(pixels[image][q + 3]).toBe(0);
+        for (const image of ["base", "rise"] as const) expect(pixels[image][q + 3]).toBe(0);
       }
     }
     expect(peakTone(pixels, 80, 100)).toBeGreaterThan(0);
     expect(bends(pixels, 80, 100)).toBe(true);
   });
 
-  it("lights the side of a step that faces the light and shades the far side, and swaps them for the opposite light", () => {
+  it("lights the rise that faces the light and shades the far one, and swaps them for a sticker turned half round", () => {
     const [x0, x1, y0, y1] = [40, 80, 20, 40];
     const card = [field((x, y) => (x >= x0 && x < x1 && y >= y0 && y < y1 ? 1 : 0))];
     const reach = RAMP + 2;
@@ -408,13 +405,14 @@ describe("crease", () => {
       top: tones(crease, x0 + 5, x1 - 5, y0 - reach, y0),
       bottom: tones(crease, x0 + 5, x1 - 5, y1, y1 + reach),
     });
-    const atRest = ramps(creaseOver(card, "topLeft"));
-    const opposite = ramps(creaseOver(card, "bottomRight"));
+    const upright = ramps(creaseOver(card));
+    // In the frame of a sticker turned half round, the one light comes from the bottom right.
+    const turned = ramps(pixelsOver(card, 1, W, H, [-CREASE_LIGHT[0], -CREASE_LIGHT[1]]).rise);
     for (const [lit, shaded] of [
-      [atRest.left, atRest.right],
-      [atRest.top, atRest.bottom],
-      [opposite.right, opposite.left],
-      [opposite.bottom, opposite.top],
+      [upright.left, upright.right],
+      [upright.top, upright.bottom],
+      [turned.right, turned.left],
+      [turned.bottom, turned.top],
     ]) {
       expect(lit.lit).toBeGreaterThan(lit.shade);
       expect(shaded.shade).toBeGreaterThan(shaded.lit);
@@ -428,7 +426,7 @@ describe("crease", () => {
     expect(ramp.shade).toBeGreaterThan(0);
   });
 
-  it("leaves what doesn't slope out of each side's image: a ridge's level crest shows only in the base", () => {
+  it("leaves what doesn't slope out of the rise: a ridge's level crest shows only in the base", () => {
     // A strip beneath, one column either side of the middle, so the crest over it is level.
     const middle = W / 2;
     const strip = field((x) => (Math.abs(x - middle) <= 1 ? 1 : 0));
@@ -436,9 +434,7 @@ describe("crease", () => {
     const onCrest = (image: CreaseImage) =>
       creaseOver([strip], image)[((H / 2) * W + middle) * 4 + 3];
     expect(onCrest("base")).toBeGreaterThan(0);
-    for (const side of ["topLeft", "bottomRight", "topRight", "bottomLeft"] as const) {
-      expect(onCrest(side)).toBe(0);
-    }
+    expect(onCrest("rise")).toBe(0);
   });
 });
 
@@ -455,7 +451,7 @@ describe("registered crease support", () => {
       width: W,
       height: H,
       scale: 1,
-      lights: CREASE_SIDES,
+      light: CREASE_LIGHT,
       own: field(() => 0),
       surface: field((x) => (x < 60 ? 1 : 0)),
       normalRegion: { x: 45, y: 10, width: 30, height: 40 },

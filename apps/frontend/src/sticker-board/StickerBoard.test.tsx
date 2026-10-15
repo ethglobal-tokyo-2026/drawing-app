@@ -1217,14 +1217,7 @@ describe("StickerBoard's sticker tray", () => {
         board: "tray-handoff-test",
         id: job.id,
         key: job.key,
-        crease: {
-          base: image,
-          normal: image,
-          topLeft: image,
-          bottomRight: image,
-          topRight: image,
-          bottomLeft: image,
-        },
+        crease: { base: image, rise: image, normal: image },
         timings: { decode: 0, draw: 0, shade: 0, encode: 0, total: 0 },
       }),
     );

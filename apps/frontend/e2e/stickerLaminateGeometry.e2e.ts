@@ -152,7 +152,7 @@ test("the draped ramp changes reflection by slope while raised plateaus stay fla
   const sample = await page.evaluate(async () => {
     const { required, solidPng, twoFrames } = await import("./stickerMaterialFixture.ts");
     const api = await import("../src/stickers/stickerRenderer.ts");
-    const { CREASE_SIDES, creasePixels } = await import("../src/stickers/crease.ts");
+    const { CREASE_LIGHT, creasePixels } = await import("../src/stickers/crease.ts");
     // A step down at the middle, which the drape turns into a ramp between two plateaus.
     const field = new Float32Array(240 * 240);
     for (let y = 0; y < 240; y++) field.fill(2, y * 240, y * 240 + 120);
@@ -163,7 +163,7 @@ test("the draped ramp changes reflection by slope while raised plateaus stay fla
         surface: field,
         own: new Float32Array(240 * 240).fill(1),
         scale: 1,
-        lights: CREASE_SIDES,
+        light: CREASE_LIGHT,
       }),
     );
     const image = document.createElement("canvas");

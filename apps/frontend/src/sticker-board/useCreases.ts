@@ -10,7 +10,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { isPerformanceRecorderOn, notePerformance } from "../performance/performanceRecorder";
-import { CREASE_SIDES, lightIn, type CreaseImage, type CreaseSide } from "../stickers/crease";
+import { lightIn, type CreaseImage } from "../stickers/crease";
 import type {
   Affine,
   CreaseBatch,
@@ -92,19 +92,11 @@ function overlaps(a: Box, b: Box, reach: number) {
   return true;
 }
 
-/** A value for each side a crease is baked lit from. */
-const bySide = <T>(of: (side: CreaseSide) => T): Record<CreaseSide, T> => ({
-  topLeft: of("topLeft"),
-  bottomRight: of("bottomRight"),
-  topRight: of("topRight"),
-  bottomLeft: of("bottomLeft"),
-});
-
 /** A value for each of a crease's images. */
 const byImage = <T>(of: (image: CreaseImage) => T): Record<CreaseImage, T> => ({
   base: of("base"),
+  rise: of("rise"),
   normal: of("normal"),
-  ...bySide(of),
 });
 
 const r2 = (v: number) => Math.round(v * 100) / 100;
@@ -172,16 +164,14 @@ export function creaseJobs<S extends CreaseSticker>(
       return [{ ...outlines[j], w: r2(a.w), h: r2(a.h), at: roundAffine(steps.reduce(mul)) }];
     });
     if (!under.length) return;
-    // Each side's light is on screen; the bake is in the sticker's frame, which its turn moves.
-    const lights = bySide((side): [number, number] => {
-      const [x, y] = lightIn(b.r, [...CREASE_SIDES[side]]);
-      return [r2(x), r2(y)];
-    });
+    // The light is on screen; the bake is in the sticker's frame, which its turn moves.
+    const [lx, ly] = lightIn(b.r);
+    const light: [number, number] = [r2(lx), r2(ly)];
     const shape = {
       width: Math.ceil(b.w * scale),
       height: Math.ceil(b.h * scale),
       scale,
-      lights,
+      light,
       own: outlines[i],
       under,
     };

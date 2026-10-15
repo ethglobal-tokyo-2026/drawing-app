@@ -1,6 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { StickerFigure, type Crease } from "../src/stickers/StickerFigure";
-import { creasePixels, CREASE_SIDES, type CreaseImage } from "../src/stickers/crease";
+import { creasePixels, CREASE_LIGHT, type CreaseImage } from "../src/stickers/crease";
 import { acquireLight, currentLight, installLight } from "../src/stickers/light";
 import { readAt } from "../src/stickers/lightMode";
 import { refreshSticker, whenStickerSettled } from "../src/stickers/stickerRenderer";
@@ -36,7 +36,7 @@ const pixels = creasePixels({
   surface,
   own,
   scale: 1,
-  lights: CREASE_SIDES,
+  light: CREASE_LIGHT,
 });
 if (!pixels) throw new Error("The finite supports did not produce crease geometry");
 const image = (name: CreaseImage) => {
@@ -47,14 +47,7 @@ const image = (name: CreaseImage) => {
   context.putImageData(new ImageData(pixels[name], side, side), 0, 0);
   return canvas.toDataURL();
 };
-const images: Crease = {
-  base: image("base"),
-  normal: image("normal"),
-  topLeft: image("topLeft"),
-  bottomRight: image("bottomRight"),
-  topRight: image("topRight"),
-  bottomLeft: image("bottomLeft"),
-};
+const images: Crease = { base: image("base"), rise: image("rise"), normal: image("normal") };
 document.body.style.cssText = "margin:0;padding:20px;background:#ddd";
 const uninstall = installLight(document.documentElement);
 const release = acquireLight();
@@ -77,14 +70,7 @@ const startedNormals: string[] = [];
 const nextCrease = (): Crease => {
   ++generation;
   const url = (name: CreaseImage) => `/e2e/crease-reveal-${name}.png?bake=${generation}`;
-  return {
-    base: url("base"),
-    topLeft: url("topLeft"),
-    bottomRight: url("bottomRight"),
-    topRight: url("topRight"),
-    bottomLeft: url("bottomLeft"),
-    normal: url("normal"),
-  };
+  return { base: url("base"), rise: url("rise"), normal: url("normal") };
 };
 const canRevealCrease = (normal: string) => placementIntents.has(normal);
 const startCreaseReveal = (normal: string) => {

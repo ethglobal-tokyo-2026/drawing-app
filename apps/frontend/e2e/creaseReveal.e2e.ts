@@ -116,39 +116,6 @@ async function awaitCurrentNormalSnapshot(page: Page) {
     .toBe(true);
   await readiness;
   if (failure) throw failure;
-  // The held side-light opacity transition uses the browser's animation clock, not the fake RAF.
-  // Its actual finish is the baseline for settled pixel agreement; reveal history stays observed.
-  settled = false;
-  failure = undefined;
-  const sideOpacity = page.locator("[data-reveal] .sticker-crease").evaluate(async (crease) => {
-    const transitions = [...crease.querySelectorAll("i[data-side]")].flatMap((side) => {
-      void getComputedStyle(side).opacity;
-      return side
-        .getAnimations()
-        .filter(
-          (animation) =>
-            animation instanceof CSSTransition && animation.transitionProperty === "opacity",
-        );
-    });
-    await Promise.all(transitions.map((animation) => animation.finished));
-  });
-  const opacityReadiness = sideOpacity.then(
-    () => {
-      settled = true;
-    },
-    (error: unknown) => {
-      failure = error;
-      settled = true;
-    },
-  );
-  await expect
-    .poll(() => settled, {
-      timeout: 5000,
-      message: "The remounted crease's finite side-light opacity transitions must finish",
-    })
-    .toBe(true);
-  await opacityReadiness;
-  if (failure) throw failure;
 }
 
 async function coatPixels(page: Page) {
@@ -233,7 +200,7 @@ async function openFixture(page: Page, query = "") {
 async function routeImages(page: Page, images: Crease, delay?: CreaseImage) {
   const pending: Route[] = [];
   let released = false;
-  const names = ["base", "normal", "topLeft", "bottomRight", "topRight", "bottomLeft"] as const;
+  const names = ["base", "rise", "normal"] as const;
   await page.route("**/e2e/crease-reveal-*.png?*", (route) => {
     const path = new URL(route.request().url()).pathname;
     const name = names.find((name) => path.endsWith(`crease-reveal-${name}.png`));

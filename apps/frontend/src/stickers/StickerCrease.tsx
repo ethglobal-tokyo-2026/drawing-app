@@ -1,5 +1,4 @@
 import { useEffect, useRef, type RefObject } from "react";
-import { CREASE_LIGHT } from "./crease";
 import type { Crease } from "./StickerFigure";
 import "./sticker-crease.css";
 import "./crease-reveal.css";
@@ -9,9 +8,8 @@ const creaseStyle = (url: string) => ({ "--crease": `url("${url}")` });
 const CREASE_DECODE_TIMEOUT_MS = 20_000;
 
 /**
- * A sticker's crease where it lies over other stickers' edges: its base, the shoulder and foot that show
- * under any light, and over it an image of its rise lit from each side, shown for the light at rest in
- * the top left, where every drop shadow falls from.
+ * A sticker's crease where it lies over other stickers' edges: its base, the shoulder and foot, and over
+ * it its rise, lit from the one light in the top left, where every drop shadow falls from.
  */
 export function StickerCrease({
   crease,
@@ -22,20 +20,13 @@ export function StickerCrease({
   ref?: RefObject<HTMLSpanElement | null>;
   onReady?: () => void;
 }) {
-  const { base, normal, topLeft, bottomRight, topRight, bottomLeft } = crease;
-  const sides = { topLeft, bottomRight, topRight, bottomLeft };
+  const { base, rise, normal } = crease;
   const local = useRef<HTMLSpanElement>(null);
   const el = ref ?? local;
   useEffect(() => {
     if (!onReady) return;
     let current = true;
-    const urls = [
-      crease.base,
-      crease.topLeft,
-      crease.bottomRight,
-      crease.topRight,
-      crease.bottomLeft,
-    ];
+    const urls = [crease.base, crease.rise];
     const images = urls.map((url) => {
       const image = new Image();
       image.src = url;
@@ -83,19 +74,9 @@ export function StickerCrease({
       aria-hidden="true"
     >
       <span className="crease-reveal-content">
-        <span
-          ref={el}
-          className="sticker-crease"
-          data-normal={normal}
-          style={{
-            "--crease-ux": CREASE_LIGHT[0],
-            "--crease-uy": CREASE_LIGHT[1],
-          }}
-        >
+        <span ref={el} className="sticker-crease" data-normal={normal}>
           <i style={creaseStyle(base)} />
-          {Object.entries(sides).map(([side, url]) => (
-            <i key={side} data-side={side} style={creaseStyle(url)} />
-          ))}
+          <i style={creaseStyle(rise)} />
         </span>
       </span>
     </span>

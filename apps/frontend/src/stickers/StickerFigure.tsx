@@ -16,8 +16,8 @@ import "./nsfw-mark.css";
 import "./sticker-figure.css";
 
 /**
- * A sticker's crease, baked: its base and rise lit from each side, which the one light blends between,
- * and its geometric normal data for the laminate reflection.
+ * A sticker's crease, baked: its base and its rise lit from the one light, and its geometric normal
+ * data for the laminate reflection.
  */
 export type Crease = Record<CreaseImage, string> & { normalBounds?: CreaseBounds };
 
@@ -48,7 +48,7 @@ interface Props {
   stuck?: boolean;
   /** Held back, every layer, until its image has loaded, then faded in. */
   reveal?: boolean;
-  /** Where it lies over other stickers' edges: the baked crease, its lit side following the one light. */
+  /** Where it lies over other stickers' edges: the baked crease, lit from the one light. */
   crease?: Crease;
   /** Only a crease accepted for an explicit placement may press in. */
   canRevealCrease?: (normal: string) => boolean;
@@ -168,7 +168,7 @@ export const StickerFigure = memo(function StickerFigure({
       {nsfw && <span className="sticker-figure__gloss" aria-hidden="true" />}
       {/* A rebaked crease waits for its matching laminate before both press in together. */}
       {crease && (
-        <StickerCrease key={crease.topLeft} ref={creaseEl} crease={crease} onReady={creaseReady} />
+        <StickerCrease key={crease.rise} ref={creaseEl} crease={crease} onReady={creaseReady} />
       )}
       {veiled && (
         <span className="sticker-figure__veil">

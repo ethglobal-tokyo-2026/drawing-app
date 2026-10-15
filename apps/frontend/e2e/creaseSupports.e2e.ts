@@ -30,12 +30,7 @@ async function bakeSupports(page: Page, gap: number | null) {
       height: side,
       scale: 1,
       own,
-      lights: {
-        topLeft: [-0.6, -0.8],
-        bottomRight: [0.6, 0.8],
-        topRight: [0.8, -0.6],
-        bottomLeft: [-0.8, 0.6],
-      },
+      light: [-0.6, -0.8],
       under: silhouettes.map((url) => ({
         url,
         grow: 0,
