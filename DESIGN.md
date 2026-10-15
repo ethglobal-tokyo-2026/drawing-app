@@ -1,6 +1,6 @@
 ---
 name: Croquis (クロッキー)
-description: A LINE drawing app where every three-minute drawing is sealed into a die-cut sticker you keep or give.
+description: A LINE drawing app where every five-minute drawing is sealed into a die-cut sticker you keep or give.
 colors:
   liner: "#F2F1F6"
   liner-deep: "#E5E3EC"
