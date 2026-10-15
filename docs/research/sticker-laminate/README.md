@@ -2,11 +2,24 @@
 
 The live laminate covers the sticker's full cut, including blank line-art interiors. Transparent artwork has white paper underneath. Ink affects composite color, never coating coverage or roughness. Sealed stickers use gloss; matte, glitter and prism are coming-soon Shop previews. Backing foil shares the complete output and registered geometry; sealed image data is unchanged.
 
-`apps/frontend/src/stickers/stickerShader.ts` composes paper, ink, and neutral dielectric reflection in linear light using exact Fresnel. A finite rectangular reflected source makes the highlight's boundary visible against near-white paper. Gloss and matte use different angular filter widths. The separable filter matches nine positive tent-weighted samples. Raw crease slopes supply geometric normals; raised plateaus stay flat. Glitter and prism (`laminateShader.ts`) build on the same coat: glitter adds flakes that mirror the foil's room and flash where they meet the overhead window; prism lays palette facets over the print that slide and turn with the coat's normal. Scene and appearance constants are declared assumptions, not measured laminate parameters.
+`apps/frontend/src/stickers/stickerShader.ts` composes paper, ink, and neutral dielectric reflection in linear light using exact Fresnel. Every material on screen reflects one room from one viewpoint (`sharedRoom.ts`, `roomShader.ts`):
+
+- **The light:** a shoji screen above and behind the viewer, a little left, with a crisp frame and kumiko lattice, so its reflection reads on near-white paper.
+- **The bounce:** a ceiling, the wall the shoji lights, other walls and a floor.
+- **The viewpoint:** one eye in front of the screen's center, moving toward the bottom edge as the device lies flat. A sticker's reflection depends on where it sits on screen.
+- **Paper's highlights** roll off above a shoulder, so the print never clips.
+
+Gloss and matte use different angular filter widths. The separable filter matches nine positive tent-weighted samples. Raw crease slopes supply geometric normals; raised plateaus stay flat. Glitter and prism (`laminateShader.ts`) build on the same coat: glitter adds flakes that mirror the foil's room and flash where they meet the overhead window; prism lays palette facets over the print that slide and turn with the coat's normal. Scene and appearance constants are declared assumptions, not measured laminate parameters.
 
 ## Runtime
 
-Device rotation changes a persistent reflection through finite smoothing. Both tilt axes and rotation around the screen normal survive sticker turns. Sensor acquisition and newly available heading establish the reference from the displayed pose. Screen rotation transforms that fixed reference into the current displayed axes without recalibrating it, so orientation round trips restore the same reflection. Heading wrap follows the shortest angle. Coating and foil receive the same pose each display frame without another foil transition or publication throttle. Crease shading updates after settling. Mobile, unknown, denied, blocked, and silent sensor states remain stationary; only positively classified devices without rotation input qualify for timed fallback motion. The static foil span supplies only the fallback and registered cast; complete material rendering replaces the former live CSS effects.
+The light publishes the device's absolute pose, beta and gamma from DeviceOrientation plus the screen angle, smoothed by a finite glide (`light.ts`, `lightMode.ts`):
+
+- **Orientation:** gravity orients the room, and heading is ignored. A turned screen turns the room with the content at once.
+- **The still pose:** before any reading the room is lit at the usual reading angle (β 55°), and the first reading glides from it.
+- **Pauses:** release, a hidden page, reduced motion or revoked permission hold the last pose.
+- **Redraws:** coating and foil receive the same pose each display frame. A surface that moves on screen redraws as it moves: a drag, a landing, a scroll once it stops, a resize.
+- **Creases** are lit from the static top left, as the drop shadows are, and don't follow tilt. Mobile, unknown, denied, blocked, and silent sensor states remain stationary; only positively classified devices without rotation input qualify for timed fallback motion. The static foil span supplies only the fallback and registered cast; complete material rendering replaces the former live CSS effects.
 
 One WebGL context renders packed tiles. It requests `premultipliedAlpha: true`; the shader composes paper over foil and multiplies final display-space RGB by their combined alpha, leaving optical calculations and print uploads unchanged. Zero combined alpha produces zero RGBA. Each batch clears its used GL rectangle, submits its tile draws, then crops directly into retained sticker canvases with `copy`, including transparent pixels. All crops finish before the next batch overwrites the source. There is no second full-size 2D atlas.
 
@@ -72,7 +85,16 @@ The upload regressions exercise delayed readiness, exact replacement pixels, com
 
 ## Foil
 
-Foil renders in the same pass as paper and laminate, under the same light, pose, turn and crease normal (`foilShader.ts`). It mirrors a lit room of its own: a bright ceiling around the paper's overhead window, a darker floor, and two soft panels that tilting sweeps along the band. The window stays the brightest source, so paper and foil highlights line up. Holo adds diffraction from concentric grooves lit by that window and a few room lamps, plus an authored hue sweep around the sticker, so several palette hues show at once; no hue is green. Pink is candy-pink metal. Kyoto Seika Practice Mode foil prints fixed screentone over silver, 80 tiles across the short side and never under 3 CSS px. `apps/frontend/scripts/generateFoilLookup.ts` (`pnpm --filter frontend foil-lookup`) regenerates the diffraction lookup (`foilLookupBasis.json`) from `foilSpectrum.json` (D65 and the CIE 1931 photopic curve); its grating period, order weights and lobe width are authored, not measured stock.
+Foil renders in the same pass as paper and laminate, under the same light, pose, turn and crease normal (`foilShader.ts`). It mirrors the same shared room as paper, more strongly, as a metal does.
+
+Holo:
+
+- **Diffraction** comes from concentric grooves lit by the shoji and by lamps fixed in the room, eye-level ones among them.
+- **A floor:** the room's bounce adds a colored floor, so every band keeps color at every pose.
+- **Hue sweep:** an authored sweep sets the band's hues by its angle round the sticker, and the floor's hues travel with tilt and side tilt.
+- **No hue is green.**
+
+Pink is candy-pink metal, never dimmer than the room's level. Kyoto Seika Practice Mode foil prints fixed screentone over silver, 80 tiles across the short side and never under 3 CSS px. `apps/frontend/scripts/generateFoilLookup.ts` (`pnpm --filter frontend foil-lookup`) regenerates the diffraction lookup (`foilLookupBasis.json`) from `foilSpectrum.json` (D65 and the CIE 1931 photopic curve); its grating period, order weights and lobe width are authored, not measured stock.
 
 The band's coverage is prepared off the main thread: `foilCoverageWorker.ts` decodes the cut or the server's baked mask, grows the band and encodes the static band's mask. `acquireFoilCoverage.ts` shares one coverage per cut, style, mask, tile size and growth while anything holds it, and a copied cast holds the mask it shows. The static span (`StickerFoil`, `prepareStickerFoil`) supplies only the fallback band and the cast, registered to the coverage the renderer draws.
 
