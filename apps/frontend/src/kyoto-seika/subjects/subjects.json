@@ -12,6 +12,12 @@
     "kind": "loanword"
   },
   {
+    "ja": "SF",
+    "reading": "",
+    "en": "science fiction",
+    "kind": "loanword"
+  },
+  {
     "ja": "SNS",
     "reading": "",
     "en": "social networking service",
@@ -42,16 +48,46 @@
     "kind": "people"
   },
   {
+    "ja": "アウトドア",
+    "reading": "",
+    "en": "outdoors",
+    "kind": "loanword"
+  },
+  {
+    "ja": "アカペラ",
+    "reading": "",
+    "en": "a cappella",
+    "kind": "loanword"
+  },
+  {
+    "ja": "アクション",
+    "reading": "",
+    "en": "action",
+    "kind": "loanword"
+  },
+  {
     "ja": "あくび",
     "reading": "",
     "en": "yawn",
     "kind": "moment"
   },
   {
+    "ja": "アナウンサー",
+    "reading": "",
+    "en": "announcer",
+    "kind": "people"
+  },
+  {
     "ja": "アニメ",
     "reading": "",
     "en": "animation",
     "kind": "loanword"
+  },
+  {
+    "ja": "アニメーター",
+    "reading": "",
+    "en": "animator",
+    "kind": "people"
   },
   {
     "ja": "アルバイト",
@@ -64,6 +100,18 @@
     "reading": "",
     "en": "album",
     "kind": "thing"
+  },
+  {
+    "ja": "アンコール",
+    "reading": "",
+    "en": "encore",
+    "kind": "loanword"
+  },
+  {
+    "ja": "イースター",
+    "reading": "",
+    "en": "Easter",
+    "kind": "loanword"
   },
   {
     "ja": "イケメン",
@@ -84,10 +132,46 @@
     "kind": "people"
   },
   {
+    "ja": "イブ",
+    "reading": "",
+    "en": "eve",
+    "kind": "loanword"
+  },
+  {
+    "ja": "イメチェン",
+    "reading": "",
+    "en": "makeover",
+    "kind": "loanword"
+  },
+  {
+    "ja": "インタビュー",
+    "reading": "",
+    "en": "interview",
+    "kind": "loanword"
+  },
+  {
+    "ja": "インテリア",
+    "reading": "",
+    "en": "interior design",
+    "kind": "loanword"
+  },
+  {
     "ja": "ウイルス",
     "reading": "",
     "en": "virus",
     "kind": "thing"
+  },
+  {
+    "ja": "ウインク",
+    "reading": "",
+    "en": "wink",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ウェイトレス",
+    "reading": "",
+    "en": "waitress",
+    "kind": "people"
   },
   {
     "ja": "うさぎ",
@@ -114,10 +198,34 @@
     "kind": "moment"
   },
   {
+    "ja": "エール",
+    "reading": "",
+    "en": "cheering",
+    "kind": "loanword"
+  },
+  {
+    "ja": "エネルギー",
+    "reading": "",
+    "en": "energy",
+    "kind": "loanword"
+  },
+  {
     "ja": "エレベーター",
     "reading": "",
     "en": "elevator",
     "kind": "thing"
+  },
+  {
+    "ja": "オークション",
+    "reading": "",
+    "en": "auction",
+    "kind": "loanword"
+  },
+  {
+    "ja": "オーラ",
+    "reading": "",
+    "en": "aura",
+    "kind": "loanword"
   },
   {
     "ja": "オーロラ",
@@ -136,6 +244,12 @@
     "reading": "",
     "en": "otaku",
     "kind": "people"
+  },
+  {
+    "ja": "オペラ",
+    "reading": "",
+    "en": "opera",
+    "kind": "loanword"
   },
   {
     "ja": "おもちゃ",
@@ -236,10 +350,58 @@
     "kind": "people"
   },
   {
+    "ja": "お坊さん",
+    "reading": "おぼうさん",
+    "en": "monk",
+    "kind": "people"
+  },
+  {
     "ja": "お盆",
     "reading": "おぼん",
     "en": "Obon",
     "kind": "moment"
+  },
+  {
+    "ja": "ガーデニング",
+    "reading": "",
+    "en": "gardening",
+    "kind": "loanword"
+  },
+  {
+    "ja": "カードゲーム",
+    "reading": "",
+    "en": "card game",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ガードマン",
+    "reading": "",
+    "en": "security guard",
+    "kind": "people"
+  },
+  {
+    "ja": "カーニバル",
+    "reading": "",
+    "en": "carnival",
+    "kind": "loanword"
+  },
+  {
+    "ja": "カーリング",
+    "reading": "",
+    "en": "curling",
+    "kind": "loanword"
+  },
+  {
+    "ja": "カウボーイ",
+    "reading": "",
+    "en": "cowboy",
+    "kind": "people"
+  },
+  {
+    "ja": "カオス",
+    "reading": "",
+    "en": "chaos",
+    "kind": "loanword"
   },
   {
     "ja": "かくれんぼ",
@@ -258,6 +420,30 @@
     "reading": "",
     "en": "fragment",
     "kind": "thing"
+  },
+  {
+    "ja": "かすみ",
+    "reading": "",
+    "en": "haze",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "ガチャ",
+    "reading": "",
+    "en": "gacha",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ガッツポーズ",
+    "reading": "",
+    "en": "triumphant pose",
+    "kind": "loanword"
+  },
+  {
+    "ja": "カップル",
+    "reading": "",
+    "en": "couple",
+    "kind": "people"
   },
   {
     "ja": "カフェ",
@@ -302,6 +488,24 @@
     "kind": "thing"
   },
   {
+    "ja": "キメラ",
+    "reading": "",
+    "en": "chimera",
+    "kind": "people"
+  },
+  {
+    "ja": "ギャグ",
+    "reading": "",
+    "en": "gag",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ギャップ",
+    "reading": "",
+    "en": "discrepancy",
+    "kind": "loanword"
+  },
+  {
     "ja": "キャラクター",
     "reading": "",
     "en": "character",
@@ -332,10 +536,22 @@
     "kind": "loanword"
   },
   {
+    "ja": "クエスト",
+    "reading": "",
+    "en": "quest",
+    "kind": "loanword"
+  },
+  {
     "ja": "くじら",
     "reading": "",
     "en": "whale",
     "kind": "thing"
+  },
+  {
+    "ja": "クラシック",
+    "reading": "",
+    "en": "classical music",
+    "kind": "loanword"
   },
   {
     "ja": "クラス",
@@ -344,9 +560,33 @@
     "kind": "people"
   },
   {
+    "ja": "グランプリ",
+    "reading": "",
+    "en": "grand prize",
+    "kind": "loanword"
+  },
+  {
     "ja": "クリスマス",
     "reading": "",
     "en": "Christmas",
+    "kind": "loanword"
+  },
+  {
+    "ja": "クルーズ",
+    "reading": "",
+    "en": "cruise",
+    "kind": "loanword"
+  },
+  {
+    "ja": "グルメ",
+    "reading": "",
+    "en": "fine food",
+    "kind": "loanword"
+  },
+  {
+    "ja": "クローン",
+    "reading": "",
+    "en": "clone",
     "kind": "loanword"
   },
   {
@@ -354,6 +594,12 @@
     "reading": "",
     "en": "cake",
     "kind": "thing"
+  },
+  {
+    "ja": "ゲートボール",
+    "reading": "",
+    "en": "gateball",
+    "kind": "loanword"
   },
   {
     "ja": "ゲーム",
@@ -374,6 +620,12 @@
     "kind": "people"
   },
   {
+    "ja": "コーラス",
+    "reading": "",
+    "en": "chorus",
+    "kind": "loanword"
+  },
+  {
     "ja": "ゴール",
     "reading": "",
     "en": "goal",
@@ -386,11 +638,41 @@
     "kind": "loanword"
   },
   {
+    "ja": "こだま",
+    "reading": "",
+    "en": "echo",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "ごちそう",
     "reading": "",
     "en": "treat",
     "kind": "thing",
     "tier": false
+  },
+  {
+    "ja": "こびと",
+    "reading": "",
+    "en": "dwarf",
+    "kind": "people"
+  },
+  {
+    "ja": "コメディ",
+    "reading": "",
+    "en": "comedy",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ゴルフ",
+    "reading": "",
+    "en": "golf",
+    "kind": "loanword"
+  },
+  {
+    "ja": "コレクション",
+    "reading": "",
+    "en": "collecting",
+    "kind": "loanword"
   },
   {
     "ja": "コンサート",
@@ -405,6 +687,24 @@
     "kind": "loanword"
   },
   {
+    "ja": "コント",
+    "reading": "",
+    "en": "comedy sketch",
+    "kind": "loanword"
+  },
+  {
+    "ja": "コントラスト",
+    "reading": "",
+    "en": "contrast",
+    "kind": "loanword"
+  },
+  {
+    "ja": "コンビ",
+    "reading": "",
+    "en": "duo",
+    "kind": "people"
+  },
+  {
     "ja": "コンビニ",
     "reading": "",
     "en": "convenience store",
@@ -417,9 +717,69 @@
     "kind": "loanword"
   },
   {
+    "ja": "サーファー",
+    "reading": "",
+    "en": "surfer",
+    "kind": "people"
+  },
+  {
+    "ja": "サーフィン",
+    "reading": "",
+    "en": "surfing",
+    "kind": "loanword"
+  },
+  {
+    "ja": "サイクリング",
+    "reading": "",
+    "en": "cycling",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ささやき",
+    "reading": "",
+    "en": "whisper",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "サスペンス",
+    "reading": "",
+    "en": "suspense",
+    "kind": "loanword"
+  },
+  {
+    "ja": "サッカー",
+    "reading": "",
+    "en": "soccer",
+    "kind": "loanword"
+  },
+  {
+    "ja": "サバイバル",
+    "reading": "",
+    "en": "survival",
+    "kind": "loanword"
+  },
+  {
+    "ja": "サファリ",
+    "reading": "",
+    "en": "safari",
+    "kind": "loanword"
+  },
+  {
     "ja": "サブスク",
     "reading": "",
     "en": "subscription",
+    "kind": "loanword"
+  },
+  {
+    "ja": "サプライズ",
+    "reading": "",
+    "en": "surprise",
+    "kind": "loanword"
+  },
+  {
+    "ja": "サボり",
+    "reading": "",
+    "en": "cutting class",
     "kind": "loanword"
   },
   {
@@ -435,10 +795,22 @@
     "kind": "thing"
   },
   {
+    "ja": "ジェスチャー",
+    "reading": "",
+    "en": "gesture",
+    "kind": "loanword"
+  },
+  {
     "ja": "シャーマン",
     "reading": "",
     "en": "shaman",
     "kind": "people"
+  },
+  {
+    "ja": "ジャズ",
+    "reading": "",
+    "en": "jazz",
+    "kind": "loanword"
   },
   {
     "ja": "じゃんけん",
@@ -447,9 +819,45 @@
     "kind": "moment"
   },
   {
+    "ja": "ジャンプ",
+    "reading": "",
+    "en": "jump",
+    "kind": "loanword"
+  },
+  {
+    "ja": "シュート",
+    "reading": "",
+    "en": "shooting (a ball)",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ショー",
+    "reading": "",
+    "en": "show",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ジョギング",
+    "reading": "",
+    "en": "jogging",
+    "kind": "loanword"
+  },
+  {
     "ja": "ショック",
     "reading": "",
     "en": "shock",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ジレンマ",
+    "reading": "",
+    "en": "dilemma",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ジンクス",
+    "reading": "",
+    "en": "jinx",
     "kind": "loanword"
   },
   {
@@ -471,9 +879,33 @@
     "kind": "loanword"
   },
   {
+    "ja": "スキャンダル",
+    "reading": "",
+    "en": "scandal",
+    "kind": "loanword"
+  },
+  {
+    "ja": "スキンケア",
+    "reading": "",
+    "en": "skin care",
+    "kind": "loanword"
+  },
+  {
+    "ja": "スクープ",
+    "reading": "",
+    "en": "scoop",
+    "kind": "loanword"
+  },
+  {
     "ja": "スケート",
     "reading": "",
     "en": "skating",
+    "kind": "loanword"
+  },
+  {
+    "ja": "スケボー",
+    "reading": "",
+    "en": "skateboarding",
     "kind": "loanword"
   },
   {
@@ -481,6 +913,42 @@
     "reading": "",
     "en": "studio",
     "kind": "thing"
+  },
+  {
+    "ja": "ストレス",
+    "reading": "",
+    "en": "stress",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ストレッチ",
+    "reading": "",
+    "en": "stretching",
+    "kind": "loanword"
+  },
+  {
+    "ja": "スノーボード",
+    "reading": "",
+    "en": "snowboarding",
+    "kind": "loanword"
+  },
+  {
+    "ja": "スパイ",
+    "reading": "",
+    "en": "spy",
+    "kind": "people"
+  },
+  {
+    "ja": "スピーチ",
+    "reading": "",
+    "en": "speech",
+    "kind": "loanword"
+  },
+  {
+    "ja": "スフィンクス",
+    "reading": "",
+    "en": "sphinx",
+    "kind": "people"
   },
   {
     "ja": "ずぶ濡れ",
@@ -495,16 +963,70 @@
     "kind": "loanword"
   },
   {
+    "ja": "スマッシュ",
+    "reading": "",
+    "en": "smash",
+    "kind": "loanword"
+  },
+  {
     "ja": "スマホ",
     "reading": "",
     "en": "smartphone",
     "kind": "thing"
   },
   {
+    "ja": "スランプ",
+    "reading": "",
+    "en": "slump",
+    "kind": "loanword"
+  },
+  {
+    "ja": "スリル",
+    "reading": "",
+    "en": "thrill",
+    "kind": "loanword"
+  },
+  {
+    "ja": "セール",
+    "reading": "",
+    "en": "sale",
+    "kind": "loanword"
+  },
+  {
+    "ja": "セピア",
+    "reading": "",
+    "en": "sepia",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ソフトボール",
+    "reading": "",
+    "en": "softball",
+    "kind": "loanword"
+  },
+  {
+    "ja": "そよ風",
+    "reading": "そよかぜ",
+    "en": "gentle breeze",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "ソロ",
+    "reading": "",
+    "en": "solo",
+    "kind": "loanword"
+  },
+  {
     "ja": "ゾンビ",
     "reading": "",
     "en": "zombie",
     "kind": "people"
+  },
+  {
+    "ja": "ダイエット",
+    "reading": "",
+    "en": "diet",
+    "kind": "loanword"
   },
   {
     "ja": "タイムマシン",
@@ -525,10 +1047,28 @@
     "kind": "thing"
   },
   {
+    "ja": "ダッシュ",
+    "reading": "",
+    "en": "dash",
+    "kind": "loanword"
+  },
+  {
+    "ja": "タブー",
+    "reading": "",
+    "en": "taboo",
+    "kind": "loanword"
+  },
+  {
     "ja": "ため息",
     "reading": "ためいき",
     "en": "sigh",
     "kind": "moment"
+  },
+  {
+    "ja": "ダンサー",
+    "reading": "",
+    "en": "dancer",
+    "kind": "people"
   },
   {
     "ja": "ダンス",
@@ -537,15 +1077,39 @@
     "kind": "loanword"
   },
   {
+    "ja": "チアガール",
+    "reading": "",
+    "en": "cheerleader",
+    "kind": "people"
+  },
+  {
     "ja": "チーム",
     "reading": "",
     "en": "team",
     "kind": "people"
   },
   {
+    "ja": "チームワーク",
+    "reading": "",
+    "en": "teamwork",
+    "kind": "loanword"
+  },
+  {
+    "ja": "チェス",
+    "reading": "",
+    "en": "chess",
+    "kind": "loanword"
+  },
+  {
     "ja": "チャイム",
     "reading": "",
     "en": "chime",
+    "kind": "loanword"
+  },
+  {
+    "ja": "チャリティー",
+    "reading": "",
+    "en": "charity",
     "kind": "loanword"
   },
   {
@@ -567,10 +1131,34 @@
     "kind": "thing"
   },
   {
+    "ja": "ツアー",
+    "reading": "",
+    "en": "tour",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ツーリング",
+    "reading": "",
+    "en": "touring",
+    "kind": "loanword"
+  },
+  {
     "ja": "つぼみ",
     "reading": "",
     "en": "bud",
     "kind": "thing"
+  },
+  {
+    "ja": "つむじ風",
+    "reading": "つむじかぜ",
+    "en": "whirlwind",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "ディベート",
+    "reading": "",
+    "en": "debate",
+    "kind": "loanword"
   },
   {
     "ja": "デート",
@@ -586,9 +1174,27 @@
     "tier": false
   },
   {
+    "ja": "デザイナー",
+    "reading": "",
+    "en": "designer",
+    "kind": "people"
+  },
+  {
+    "ja": "デジャヴ",
+    "reading": "",
+    "en": "déjà vu",
+    "kind": "loanword"
+  },
+  {
     "ja": "デッサン",
     "reading": "",
     "en": "rough sketch",
+    "kind": "loanword"
+  },
+  {
+    "ja": "テニス",
+    "reading": "",
+    "en": "tennis",
     "kind": "loanword"
   },
   {
@@ -598,16 +1204,64 @@
     "kind": "loanword"
   },
   {
+    "ja": "デフォルメ",
+    "reading": "",
+    "en": "deformation",
+    "kind": "loanword"
+  },
+  {
+    "ja": "デュエット",
+    "reading": "",
+    "en": "duet",
+    "kind": "loanword"
+  },
+  {
+    "ja": "テレパシー",
+    "reading": "",
+    "en": "telepathy",
+    "kind": "loanword"
+  },
+  {
     "ja": "テレビ",
     "reading": "",
     "en": "television",
     "kind": "thing"
   },
   {
+    "ja": "テレワーク",
+    "reading": "",
+    "en": "remote work",
+    "kind": "loanword"
+  },
+  {
+    "ja": "トークショー",
+    "reading": "",
+    "en": "talk show",
+    "kind": "loanword"
+  },
+  {
     "ja": "とげ",
     "reading": "",
     "en": "thorn",
     "kind": "thing"
+  },
+  {
+    "ja": "ドッキリ",
+    "reading": "",
+    "en": "prank",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ドッジボール",
+    "reading": "",
+    "en": "dodgeball",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ドミノ",
+    "reading": "",
+    "en": "dominoes",
+    "kind": "loanword"
   },
   {
     "ja": "ドライブ",
@@ -622,16 +1276,46 @@
     "kind": "people"
   },
   {
+    "ja": "トラブル",
+    "reading": "",
+    "en": "trouble",
+    "kind": "loanword"
+  },
+  {
     "ja": "ドラマ",
     "reading": "",
     "en": "television series",
     "kind": "loanword"
   },
   {
+    "ja": "ドラマー",
+    "reading": "",
+    "en": "drummer",
+    "kind": "people"
+  },
+  {
     "ja": "トランプ",
     "reading": "",
     "en": "playing cards",
     "kind": "thing"
+  },
+  {
+    "ja": "トリック",
+    "reading": "",
+    "en": "trick",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ドリブル",
+    "reading": "",
+    "en": "dribbling",
+    "kind": "loanword"
+  },
+  {
+    "ja": "トレーニング",
+    "reading": "",
+    "en": "training",
+    "kind": "loanword"
   },
   {
     "ja": "ドレス",
@@ -646,15 +1330,45 @@
     "kind": "thing"
   },
   {
+    "ja": "ナイター",
+    "reading": "",
+    "en": "night game",
+    "kind": "loanword"
+  },
+  {
+    "ja": "にじみ",
+    "reading": "",
+    "en": "blur",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "ニュース",
     "reading": "",
     "en": "news",
     "kind": "loanword"
   },
   {
+    "ja": "ネイルアート",
+    "reading": "",
+    "en": "nail art",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ネタバレ",
+    "reading": "",
+    "en": "spoiler",
+    "kind": "loanword"
+  },
+  {
     "ja": "ネット",
     "reading": "",
     "en": "Internet",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ノスタルジー",
+    "reading": "",
+    "en": "nostalgia",
     "kind": "loanword"
   },
   {
@@ -676,16 +1390,82 @@
     "kind": "people"
   },
   {
+    "ja": "バーベキュー",
+    "reading": "",
+    "en": "barbecue",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ハーモニー",
+    "reading": "",
+    "en": "harmony",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ハイキング",
+    "reading": "",
+    "en": "hiking",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ハイタッチ",
+    "reading": "",
+    "en": "high five",
+    "kind": "loanword"
+  },
+  {
     "ja": "パイロット",
     "reading": "",
     "en": "pilot",
     "kind": "people"
   },
   {
+    "ja": "バカンス",
+    "reading": "",
+    "en": "vacation",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ハグ",
+    "reading": "",
+    "en": "hug",
+    "kind": "loanword"
+  },
+  {
+    "ja": "バグ",
+    "reading": "",
+    "en": "bug",
+    "kind": "loanword"
+  },
+  {
+    "ja": "バザー",
+    "reading": "",
+    "en": "bazaar",
+    "kind": "loanword"
+  },
+  {
     "ja": "バス",
     "reading": "",
     "en": "bus",
     "kind": "thing"
+  },
+  {
+    "ja": "バズ",
+    "reading": "",
+    "en": "buzz",
+    "kind": "loanword"
+  },
+  {
+    "ja": "バスガイド",
+    "reading": "",
+    "en": "bus tour guide",
+    "kind": "people"
+  },
+  {
+    "ja": "バスケ",
+    "reading": "",
+    "en": "basketball",
+    "kind": "loanword"
   },
   {
     "ja": "パスポート",
@@ -700,9 +1480,93 @@
     "kind": "thing"
   },
   {
+    "ja": "パティシエ",
+    "reading": "",
+    "en": "pastry chef",
+    "kind": "people"
+  },
+  {
+    "ja": "バドミントン",
+    "reading": "",
+    "en": "badminton",
+    "kind": "loanword"
+  },
+  {
+    "ja": "バトンタッチ",
+    "reading": "",
+    "en": "handing over",
+    "kind": "loanword"
+  },
+  {
+    "ja": "パニック",
+    "reading": "",
+    "en": "panic",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ハネムーン",
+    "reading": "",
+    "en": "honeymoon",
+    "kind": "loanword"
+  },
+  {
     "ja": "パパ",
     "reading": "",
     "en": "dad",
+    "kind": "people"
+  },
+  {
+    "ja": "ハプニング",
+    "reading": "",
+    "en": "unforeseen event",
+    "kind": "loanword"
+  },
+  {
+    "ja": "バラード",
+    "reading": "",
+    "en": "ballad",
+    "kind": "loanword"
+  },
+  {
+    "ja": "バラエティ",
+    "reading": "",
+    "en": "variety show",
+    "kind": "loanword"
+  },
+  {
+    "ja": "バランス",
+    "reading": "",
+    "en": "balance",
+    "kind": "loanword"
+  },
+  {
+    "ja": "バラ色",
+    "reading": "ばらいろ",
+    "en": "rose-color",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "バレエ",
+    "reading": "",
+    "en": "ballet",
+    "kind": "loanword"
+  },
+  {
+    "ja": "パレード",
+    "reading": "",
+    "en": "parade",
+    "kind": "loanword"
+  },
+  {
+    "ja": "バレーボール",
+    "reading": "",
+    "en": "volleyball",
+    "kind": "loanword"
+  },
+  {
+    "ja": "バレリーナ",
+    "reading": "",
+    "en": "ballerina",
     "kind": "people"
   },
   {
@@ -718,9 +1582,33 @@
     "kind": "loanword"
   },
   {
+    "ja": "パロディー",
+    "reading": "",
+    "en": "parody",
+    "kind": "loanword"
+  },
+  {
     "ja": "ハンター",
     "reading": "",
     "en": "hunter",
+    "kind": "people"
+  },
+  {
+    "ja": "パントマイム",
+    "reading": "",
+    "en": "mime",
+    "kind": "loanword"
+  },
+  {
+    "ja": "パン屋",
+    "reading": "ぱんや",
+    "en": "baker",
+    "kind": "people"
+  },
+  {
+    "ja": "ピアニスト",
+    "reading": "",
+    "en": "pianist",
     "kind": "people"
   },
   {
@@ -728,6 +1616,12 @@
     "reading": "",
     "en": "piano",
     "kind": "thing"
+  },
+  {
+    "ja": "ピースサイン",
+    "reading": "",
+    "en": "peace sign",
+    "kind": "loanword"
   },
   {
     "ja": "ビーチ",
@@ -742,9 +1636,27 @@
     "kind": "people"
   },
   {
+    "ja": "ピエロ",
+    "reading": "",
+    "en": "clown",
+    "kind": "people"
+  },
+  {
     "ja": "ピクニック",
     "reading": "",
     "en": "picnic",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ヒッチハイク",
+    "reading": "",
+    "en": "hitchhiking",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ヒップホップ",
+    "reading": "",
+    "en": "hip-hop",
     "kind": "loanword"
   },
   {
@@ -760,10 +1672,28 @@
     "kind": "loanword"
   },
   {
+    "ja": "ビリヤード",
+    "reading": "",
+    "en": "billiards",
+    "kind": "loanword"
+  },
+  {
     "ja": "ヒロイン",
     "reading": "",
     "en": "heroine",
     "kind": "people"
+  },
+  {
+    "ja": "ビンゴ",
+    "reading": "",
+    "en": "bingo",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ピンチ",
+    "reading": "",
+    "en": "tough spot",
+    "kind": "loanword"
   },
   {
     "ja": "ファッション",
@@ -778,16 +1708,94 @@
     "kind": "people"
   },
   {
+    "ja": "ファンタジー",
+    "reading": "",
+    "en": "fantasy",
+    "kind": "loanword"
+  },
+  {
     "ja": "プール",
     "reading": "",
     "en": "pool",
     "kind": "thing"
   },
   {
+    "ja": "フェアプレー",
+    "reading": "",
+    "en": "fair play",
+    "kind": "loanword"
+  },
+  {
+    "ja": "フェイク",
+    "reading": "",
+    "en": "fake",
+    "kind": "loanword"
+  },
+  {
+    "ja": "フェス",
+    "reading": "",
+    "en": "festival",
+    "kind": "loanword"
+  },
+  {
+    "ja": "フラッシュ",
+    "reading": "",
+    "en": "flash",
+    "kind": "loanword"
+  },
+  {
+    "ja": "フリマ",
+    "reading": "",
+    "en": "flea market",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ブルーライト",
+    "reading": "",
+    "en": "blue light",
+    "kind": "loanword"
+  },
+  {
+    "ja": "プレゼン",
+    "reading": "",
+    "en": "presentation",
+    "kind": "loanword"
+  },
+  {
     "ja": "プレゼント",
     "reading": "",
     "en": "present",
     "kind": "thing"
+  },
+  {
+    "ja": "プレッシャー",
+    "reading": "",
+    "en": "pressure",
+    "kind": "loanword"
+  },
+  {
+    "ja": "プロポーズ",
+    "reading": "",
+    "en": "marriage proposal",
+    "kind": "loanword"
+  },
+  {
+    "ja": "プロレス",
+    "reading": "",
+    "en": "professional wrestling",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ヘアスタイル",
+    "reading": "",
+    "en": "hairstyle",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ペアルック",
+    "reading": "",
+    "en": "matching clothing worn by couples",
+    "kind": "loanword"
   },
   {
     "ja": "ペット",
@@ -808,10 +1816,58 @@
     "kind": "thing"
   },
   {
+    "ja": "ボウリング",
+    "reading": "",
+    "en": "bowling",
+    "kind": "loanword"
+  },
+  {
     "ja": "ボート",
     "reading": "",
     "en": "boat",
     "kind": "thing"
+  },
+  {
+    "ja": "ボードゲーム",
+    "reading": "",
+    "en": "board game",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ホームシック",
+    "reading": "",
+    "en": "homesickness",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ホームステイ",
+    "reading": "",
+    "en": "homestay",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ホームラン",
+    "reading": "",
+    "en": "home run",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ホームルーム",
+    "reading": "",
+    "en": "homeroom",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ボクサー",
+    "reading": "",
+    "en": "boxer",
+    "kind": "people"
+  },
+  {
+    "ja": "ボクシング",
+    "reading": "",
+    "en": "boxing",
+    "kind": "loanword"
   },
   {
     "ja": "ボス",
@@ -832,16 +1888,64 @@
     "kind": "people"
   },
   {
+    "ja": "ホワイトデー",
+    "reading": "",
+    "en": "White Day",
+    "kind": "loanword"
+  },
+  {
     "ja": "マイク",
     "reading": "",
     "en": "mike",
     "kind": "thing"
   },
   {
+    "ja": "マイブーム",
+    "reading": "",
+    "en": "current obsession",
+    "kind": "loanword"
+  },
+  {
+    "ja": "マイペース",
+    "reading": "",
+    "en": "one's own pace",
+    "kind": "loanword"
+  },
+  {
+    "ja": "マイホーム",
+    "reading": "",
+    "en": "one's own home",
+    "kind": "loanword"
+  },
+  {
+    "ja": "マジシャン",
+    "reading": "",
+    "en": "magician",
+    "kind": "people"
+  },
+  {
     "ja": "マスク",
     "reading": "",
     "en": "mask",
     "kind": "thing"
+  },
+  {
+    "ja": "マスコミ",
+    "reading": "",
+    "en": "mass media",
+    "kind": "loanword"
+  },
+  {
+    "ja": "マナー",
+    "reading": "",
+    "en": "manners",
+    "kind": "loanword"
+  },
+  {
+    "ja": "マネージャー",
+    "reading": "",
+    "en": "manager",
+    "kind": "people"
   },
   {
     "ja": "マフラー",
@@ -862,15 +1966,51 @@
     "kind": "loanword"
   },
   {
+    "ja": "ミイラ",
+    "reading": "",
+    "en": "mummy",
+    "kind": "people"
+  },
+  {
     "ja": "ミステリー",
     "reading": "",
     "en": "mystery",
     "kind": "loanword"
   },
   {
+    "ja": "ミュージカル",
+    "reading": "",
+    "en": "musical",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ムード",
+    "reading": "",
+    "en": "mood",
+    "kind": "loanword"
+  },
+  {
+    "ja": "メイド",
+    "reading": "",
+    "en": "maid",
+    "kind": "people"
+  },
+  {
     "ja": "メール",
     "reading": "",
     "en": "email",
+    "kind": "loanword"
+  },
+  {
+    "ja": "メッセージ",
+    "reading": "",
+    "en": "message",
+    "kind": "loanword"
+  },
+  {
+    "ja": "メロディー",
+    "reading": "",
+    "en": "melody",
     "kind": "loanword"
   },
   {
@@ -884,6 +2024,30 @@
     "reading": "やるき",
     "en": "motivation",
     "kind": "moment"
+  },
+  {
+    "ja": "ヤンキー",
+    "reading": "",
+    "en": "delinquent",
+    "kind": "people"
+  },
+  {
+    "ja": "ユートピア",
+    "reading": "",
+    "en": "utopia",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ユニコーン",
+    "reading": "",
+    "en": "unicorn",
+    "kind": "people"
+  },
+  {
+    "ja": "ヨガ",
+    "reading": "",
+    "en": "yoga",
+    "kind": "loanword"
   },
   {
     "ja": "よそ見",
@@ -904,6 +2068,12 @@
     "kind": "people"
   },
   {
+    "ja": "ライトアップ",
+    "reading": "",
+    "en": "illumination",
+    "kind": "loanword"
+  },
+  {
     "ja": "ライバル",
     "reading": "",
     "en": "rival",
@@ -916,10 +2086,28 @@
     "kind": "loanword"
   },
   {
+    "ja": "ラグビー",
+    "reading": "",
+    "en": "rugby",
+    "kind": "loanword"
+  },
+  {
     "ja": "ラジオ",
     "reading": "",
     "en": "radio",
     "kind": "thing"
+  },
+  {
+    "ja": "ラッシュ",
+    "reading": "",
+    "en": "rush hour",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ラブコメ",
+    "reading": "",
+    "en": "romantic comedy",
+    "kind": "loanword"
   },
   {
     "ja": "ランドセル",
@@ -928,10 +2116,22 @@
     "kind": "thing"
   },
   {
+    "ja": "ランナー",
+    "reading": "",
+    "en": "runner",
+    "kind": "people"
+  },
+  {
     "ja": "ランプ",
     "reading": "",
     "en": "lamp",
     "kind": "thing"
+  },
+  {
+    "ja": "リアクション",
+    "reading": "",
+    "en": "reaction",
+    "kind": "loanword"
   },
   {
     "ja": "リーダー",
@@ -940,10 +2140,64 @@
     "kind": "people"
   },
   {
+    "ja": "リサイクル",
+    "reading": "",
+    "en": "recycling",
+    "kind": "loanword"
+  },
+  {
+    "ja": "リズム",
+    "reading": "",
+    "en": "rhythm",
+    "kind": "loanword"
+  },
+  {
+    "ja": "リハーサル",
+    "reading": "",
+    "en": "rehearsal",
+    "kind": "loanword"
+  },
+  {
+    "ja": "リハビリ",
+    "reading": "",
+    "en": "rehabilitation",
+    "kind": "loanword"
+  },
+  {
+    "ja": "リフォーム",
+    "reading": "",
+    "en": "renovation",
+    "kind": "loanword"
+  },
+  {
     "ja": "リボン",
     "reading": "",
     "en": "ribbon",
     "kind": "thing"
+  },
+  {
+    "ja": "リラックス",
+    "reading": "",
+    "en": "relaxation",
+    "kind": "loanword"
+  },
+  {
+    "ja": "リレー",
+    "reading": "",
+    "en": "relay",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ルーティン",
+    "reading": "",
+    "en": "routine",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ルームシェア",
+    "reading": "",
+    "en": "sharing a room",
+    "kind": "loanword"
   },
   {
     "ja": "レース",
@@ -958,16 +2212,46 @@
     "kind": "thing"
   },
   {
+    "ja": "レシピ",
+    "reading": "",
+    "en": "recipe",
+    "kind": "loanword"
+  },
+  {
     "ja": "レストラン",
     "reading": "",
     "en": "restaurant",
     "kind": "thing"
   },
   {
+    "ja": "レッスン",
+    "reading": "",
+    "en": "lesson",
+    "kind": "loanword"
+  },
+  {
+    "ja": "レトロ",
+    "reading": "",
+    "en": "retro",
+    "kind": "loanword"
+  },
+  {
+    "ja": "レベルアップ",
+    "reading": "",
+    "en": "leveling up",
+    "kind": "loanword"
+  },
+  {
     "ja": "ろうそく",
     "reading": "",
     "en": "candle",
     "kind": "thing"
+  },
+  {
+    "ja": "ロケ",
+    "reading": "",
+    "en": "location",
+    "kind": "loanword"
   },
   {
     "ja": "ロケット",
@@ -985,6 +2269,12 @@
     "ja": "ロマンス",
     "reading": "",
     "en": "romance",
+    "kind": "loanword"
+  },
+  {
+    "ja": "ワープ",
+    "reading": "",
+    "en": "warp",
     "kind": "loanword"
   },
   {
@@ -1013,6 +2303,12 @@
     "kind": "people"
   },
   {
+    "ja": "悪臭",
+    "reading": "あくしゅう",
+    "en": "stench",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "悪魔",
     "reading": "あくま",
     "en": "devil",
@@ -1038,6 +2334,12 @@
     "kind": "phenomenon"
   },
   {
+    "ja": "委員長",
+    "reading": "いいんちょう",
+    "en": "chairperson",
+    "kind": "people"
+  },
+  {
     "ja": "遺跡",
     "reading": "いせき",
     "en": "remains",
@@ -1050,10 +2352,22 @@
     "kind": "people"
   },
   {
+    "ja": "一人っ子",
+    "reading": "ひとりっこ",
+    "en": "only child",
+    "kind": "people"
+  },
+  {
     "ja": "一人旅",
     "reading": "ひとりたび",
     "en": "traveling alone",
     "kind": "moment"
+  },
+  {
+    "ja": "引きこもり",
+    "reading": "ひきこもり",
+    "en": "shut-in",
+    "kind": "people"
   },
   {
     "ja": "引っ越し",
@@ -1066,6 +2380,18 @@
     "reading": "のみもの",
     "en": "drink",
     "kind": "thing"
+  },
+  {
+    "ja": "陰り",
+    "reading": "かげり",
+    "en": "gloom",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "隠し味",
+    "reading": "かくしあじ",
+    "en": "secret ingredient",
+    "kind": "phenomenon"
   },
   {
     "ja": "隠れ家",
@@ -1102,6 +2428,12 @@
     "reading": "あめ",
     "en": "rain",
     "kind": "thing"
+  },
+  {
+    "ja": "雨音",
+    "reading": "あまおと",
+    "en": "sound of rainfall",
+    "kind": "phenomenon"
   },
   {
     "ja": "雨上がり",
@@ -1189,6 +2521,24 @@
     "kind": "thing"
   },
   {
+    "ja": "駅員",
+    "reading": "えきいん",
+    "en": "station attendant",
+    "kind": "people"
+  },
+  {
+    "ja": "駅長",
+    "reading": "えきちょう",
+    "en": "station master",
+    "kind": "people"
+  },
+  {
+    "ja": "園児",
+    "reading": "えんじ",
+    "en": "kindergartener",
+    "kind": "people"
+  },
+  {
     "ja": "演奏",
     "reading": "えんそう",
     "en": "musical performance",
@@ -1205,6 +2555,12 @@
     "reading": "えんじょう",
     "en": "going up in flames",
     "kind": "moment"
+  },
+  {
+    "ja": "炎天下",
+    "reading": "えんてんか",
+    "en": "under the blazing sun",
+    "kind": "phenomenon"
   },
   {
     "ja": "煙",
@@ -1231,10 +2587,28 @@
     "kind": "phenomenon"
   },
   {
+    "ja": "遠心力",
+    "reading": "えんしんりょく",
+    "en": "centrifugal force",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "遠足",
     "reading": "えんそく",
     "en": "school trip",
     "kind": "moment"
+  },
+  {
+    "ja": "奥",
+    "reading": "おく",
+    "en": "inner part",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "応援団",
+    "reading": "おうえんだん",
+    "en": "cheering squad",
+    "kind": "people"
   },
   {
     "ja": "王",
@@ -1279,6 +2653,12 @@
     "kind": "thing"
   },
   {
+    "ja": "恩師",
+    "reading": "おんし",
+    "en": "mentor",
+    "kind": "people"
+  },
+  {
     "ja": "温もり",
     "reading": "ぬくもり",
     "en": "warmth",
@@ -1301,6 +2681,12 @@
     "reading": "おんがく",
     "en": "music",
     "kind": "thing"
+  },
+  {
+    "ja": "音楽家",
+    "reading": "おんがくか",
+    "en": "musician",
+    "kind": "people"
   },
   {
     "ja": "下手",
@@ -1332,6 +2718,12 @@
     "reading": "かめん",
     "en": "mask",
     "kind": "thing"
+  },
+  {
+    "ja": "加速",
+    "reading": "かそく",
+    "en": "acceleration",
+    "kind": "phenomenon"
   },
   {
     "ja": "夏",
@@ -1383,6 +2775,12 @@
     "tier": false
   },
   {
+    "ja": "果て",
+    "reading": "はて",
+    "en": "extremity",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "果物",
     "reading": "くだもの",
     "en": "fruit",
@@ -1398,6 +2796,18 @@
     "ja": "歌手",
     "reading": "かしゅ",
     "en": "singer",
+    "kind": "people"
+  },
+  {
+    "ja": "歌声",
+    "reading": "うたごえ",
+    "en": "singing voice",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "河童",
+    "reading": "かっぱ",
+    "en": "kappa",
     "kind": "people"
   },
   {
@@ -1437,6 +2847,12 @@
     "kind": "thing"
   },
   {
+    "ja": "花屋",
+    "reading": "はなや",
+    "en": "florist",
+    "kind": "people"
+  },
+  {
     "ja": "花嫁",
     "reading": "はなよめ",
     "en": "bride",
@@ -1465,6 +2881,12 @@
     "reading": "はなたば",
     "en": "bouquet",
     "kind": "thing"
+  },
+  {
+    "ja": "花婿",
+    "reading": "はなむこ",
+    "en": "bridegroom",
+    "kind": "people"
   },
   {
     "ja": "荷物",
@@ -1502,6 +2924,12 @@
     "reading": "まわりみち",
     "en": "detour",
     "kind": "thing"
+  },
+  {
+    "ja": "回転",
+    "reading": "かいてん",
+    "en": "spin",
+    "kind": "phenomenon"
   },
   {
     "ja": "怪我",
@@ -1546,6 +2974,12 @@
     "kind": "thing"
   },
   {
+    "ja": "灰色",
+    "reading": "はいいろ",
+    "en": "gray",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "絵",
     "reading": "え",
     "en": "picture",
@@ -1588,6 +3022,12 @@
     "kind": "thing"
   },
   {
+    "ja": "街明かり",
+    "reading": "まちあかり",
+    "en": "city lights",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "拡散",
     "reading": "かくさん",
     "en": "spreading",
@@ -1626,6 +3066,24 @@
     "kind": "thing"
   },
   {
+    "ja": "楽団",
+    "reading": "がくだん",
+    "en": "orchestra",
+    "kind": "people"
+  },
+  {
+    "ja": "楽天家",
+    "reading": "らくてんか",
+    "en": "optimist",
+    "kind": "people"
+  },
+  {
+    "ja": "活気",
+    "reading": "かっき",
+    "en": "liveliness",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "冠",
     "reading": "かんむり",
     "en": "crown",
@@ -1635,6 +3093,12 @@
     "ja": "寒さ",
     "reading": "さむさ",
     "en": "coldness",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "寒波",
+    "reading": "かんぱ",
+    "en": "cold wave",
     "kind": "phenomenon"
   },
   {
@@ -1651,16 +3115,40 @@
     "tier": false
   },
   {
+    "ja": "感触",
+    "reading": "かんしょく",
+    "en": "sensation",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "感動",
     "reading": "かんどう",
     "en": "deep emotion",
     "kind": "moment"
   },
   {
+    "ja": "歓声",
+    "reading": "かんせい",
+    "en": "cheer",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "汗",
     "reading": "あせ",
     "en": "sweat",
     "kind": "thing"
+  },
+  {
+    "ja": "甘み",
+    "reading": "あまみ",
+    "en": "sweetness",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "監督",
+    "reading": "かんとく",
+    "en": "director",
+    "kind": "people"
   },
   {
     "ja": "看護師",
@@ -1753,6 +3241,12 @@
     "kind": "thing"
   },
   {
+    "ja": "棋士",
+    "reading": "きし",
+    "en": "professional shogi player",
+    "kind": "people"
+  },
+  {
     "ja": "機械",
     "reading": "きかい",
     "en": "machine",
@@ -1772,6 +3266,12 @@
     "kind": "thing"
   },
   {
+    "ja": "帰国子女",
+    "reading": "きこくしじょ",
+    "en": "returnee child",
+    "kind": "people"
+  },
+  {
     "ja": "気のせい",
     "reading": "きのせい",
     "en": "one's imagination",
@@ -1789,6 +3289,18 @@
     "en": "feeling",
     "kind": "moment",
     "tier": false
+  },
+  {
+    "ja": "気象予報士",
+    "reading": "きしょうよほうし",
+    "en": "weather forecaster",
+    "kind": "people"
+  },
+  {
+    "ja": "気配",
+    "reading": "けはい",
+    "en": "sign",
+    "kind": "phenomenon"
   },
   {
     "ja": "祈り",
@@ -1819,6 +3331,30 @@
     "reading": "きねんび",
     "en": "memorial day",
     "kind": "moment"
+  },
+  {
+    "ja": "貴族",
+    "reading": "きぞく",
+    "en": "nobility",
+    "kind": "people"
+  },
+  {
+    "ja": "軌跡",
+    "reading": "きせき",
+    "en": "path one has taken",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "軌道",
+    "reading": "きどう",
+    "en": "orbit",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "輝き",
+    "reading": "かがやき",
+    "en": "radiance",
+    "kind": "phenomenon"
   },
   {
     "ja": "騎士",
@@ -1863,10 +3399,28 @@
     "kind": "people"
   },
   {
+    "ja": "脚光",
+    "reading": "きゃっこう",
+    "en": "limelight",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "逆光",
+    "reading": "ぎゃっこう",
+    "en": "backlight",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "逆転勝ち",
     "reading": "ぎゃくてんがち",
     "en": "comeback victory",
     "kind": "moment"
+  },
+  {
+    "ja": "逆風",
+    "reading": "ぎゃくふう",
+    "en": "headwind",
+    "kind": "phenomenon"
   },
   {
     "ja": "丘",
@@ -1893,11 +3447,35 @@
     "kind": "moment"
   },
   {
+    "ja": "救世主",
+    "reading": "きゅうせいしゅ",
+    "en": "savior",
+    "kind": "people"
+  },
+  {
+    "ja": "泣き声",
+    "reading": "なきごえ",
+    "en": "sob",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "泣き虫",
+    "reading": "なきむし",
+    "en": "crybaby",
+    "kind": "people"
+  },
+  {
     "ja": "給食",
     "reading": "きゅうしょく",
     "en": "school lunch",
     "kind": "thing",
     "tier": true
+  },
+  {
+    "ja": "居候",
+    "reading": "いそうろう",
+    "en": "freeloader",
+    "kind": "people"
   },
   {
     "ja": "居場所",
@@ -1916,6 +3494,12 @@
     "reading": "きょじん",
     "en": "giant",
     "kind": "people"
+  },
+  {
+    "ja": "距離",
+    "reading": "きょり",
+    "en": "distance",
+    "kind": "phenomenon"
   },
   {
     "ja": "漁師",
@@ -1948,6 +3532,12 @@
     "kind": "thing"
   },
   {
+    "ja": "教え子",
+    "reading": "おしえご",
+    "en": "one's student",
+    "kind": "people"
+  },
+  {
     "ja": "教会",
     "reading": "きょうかい",
     "en": "church",
@@ -1963,6 +3553,12 @@
     "ja": "教授",
     "reading": "きょうじゅ",
     "en": "professor",
+    "kind": "people"
+  },
+  {
+    "ja": "教頭",
+    "reading": "きょうとう",
+    "en": "vice principal",
     "kind": "people"
   },
   {
@@ -1983,6 +3579,12 @@
     "reading": "かがみ",
     "en": "mirror",
     "kind": "thing"
+  },
+  {
+    "ja": "響き",
+    "reading": "ひびき",
+    "en": "reverberation",
+    "kind": "phenomenon"
   },
   {
     "ja": "驚き",
@@ -2009,10 +3611,28 @@
     "kind": "thing"
   },
   {
+    "ja": "金色",
+    "reading": "きんいろ",
+    "en": "gold",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "銀河",
     "reading": "ぎんが",
     "en": "Milky Way",
     "kind": "thing"
+  },
+  {
+    "ja": "銀色",
+    "reading": "ぎんいろ",
+    "en": "silver",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "苦み",
+    "reading": "にがみ",
+    "en": "bitterness",
+    "kind": "phenomenon"
   },
   {
     "ja": "空",
@@ -2042,6 +3662,18 @@
     "ja": "空中",
     "reading": "くうちゅう",
     "en": "the air",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "空白",
+    "reading": "くうはく",
+    "en": "blank",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "空模様",
+    "reading": "そらもよう",
+    "en": "look of the sky",
     "kind": "phenomenon"
   },
   {
@@ -2102,6 +3734,12 @@
     "ja": "芸人",
     "reading": "げいにん",
     "en": "comedian",
+    "kind": "people"
+  },
+  {
+    "ja": "劇団",
+    "reading": "げきだん",
+    "en": "troupe",
     "kind": "people"
   },
   {
@@ -2169,6 +3807,12 @@
     "reading": "けん",
     "en": "sword",
     "kind": "thing"
+  },
+  {
+    "ja": "剣士",
+    "reading": "けんし",
+    "en": "swordsman",
+    "kind": "people"
   },
   {
     "ja": "建築家",
@@ -2261,16 +3905,34 @@
     "kind": "moment"
   },
   {
+    "ja": "鼓動",
+    "reading": "こどう",
+    "en": "beat",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "後悔",
     "reading": "こうかい",
     "en": "regret",
     "kind": "moment"
   },
   {
+    "ja": "後光",
+    "reading": "ごこう",
+    "en": "halo",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "後輩",
     "reading": "こうはい",
     "en": "junior",
     "kind": "people"
+  },
+  {
+    "ja": "後味",
+    "reading": "あとあじ",
+    "en": "aftertaste",
+    "kind": "phenomenon"
   },
   {
     "ja": "交差点",
@@ -2295,6 +3957,18 @@
     "reading": "こうえん",
     "en": "park",
     "kind": "thing"
+  },
+  {
+    "ja": "効果音",
+    "reading": "こうかおん",
+    "en": "sound effect",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "口笛",
+    "reading": "くちぶえ",
+    "en": "whistle",
+    "kind": "phenomenon"
   },
   {
     "ja": "向こう",
@@ -2371,6 +4045,12 @@
     "kind": "people"
   },
   {
+    "ja": "紅白",
+    "reading": "こうはく",
+    "en": "red and white",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "紅葉",
     "reading": "こうよう",
     "en": "autumn leaves",
@@ -2389,6 +4069,12 @@
     "kind": "phenomenon"
   },
   {
+    "ja": "高さ",
+    "reading": "たかさ",
+    "en": "height",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "高校生",
     "reading": "こうこうせい",
     "en": "senior high school student",
@@ -2399,6 +4085,12 @@
     "reading": "ごうかく",
     "en": "passing",
     "kind": "moment"
+  },
+  {
+    "ja": "合唱団",
+    "reading": "がっしょうだん",
+    "en": "choir",
+    "kind": "people"
   },
   {
     "ja": "合図",
@@ -2431,6 +4123,12 @@
     "kind": "phenomenon"
   },
   {
+    "ja": "黒幕",
+    "reading": "くろまく",
+    "en": "mastermind",
+    "kind": "people"
+  },
+  {
     "ja": "骨",
     "reading": "ほね",
     "en": "bone",
@@ -2461,9 +4159,21 @@
     "kind": "thing"
   },
   {
+    "ja": "痕跡",
+    "reading": "こんせき",
+    "en": "trace",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "魂",
     "reading": "たましい",
     "en": "soul",
+    "kind": "people"
+  },
+  {
+    "ja": "差出人",
+    "reading": "さしだしにん",
+    "en": "sender",
     "kind": "people"
   },
   {
@@ -2489,6 +4199,12 @@
     "reading": "つま",
     "en": "wife",
     "kind": "people"
+  },
+  {
+    "ja": "彩り",
+    "reading": "いろどり",
+    "en": "coloring",
+    "kind": "phenomenon"
   },
   {
     "ja": "才能",
@@ -2533,6 +4249,12 @@
     "kind": "people"
   },
   {
+    "ja": "錯覚",
+    "reading": "さっかく",
+    "en": "illusion",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "桜",
     "reading": "さくら",
     "en": "cherry tree",
@@ -2549,6 +4271,12 @@
     "reading": "すれちがい",
     "en": "passing each other",
     "kind": "moment"
+  },
+  {
+    "ja": "雑踏",
+    "reading": "ざっとう",
+    "en": "hustle and bustle",
+    "kind": "phenomenon"
   },
   {
     "ja": "三日月",
@@ -2575,10 +4303,46 @@
     "kind": "moment"
   },
   {
+    "ja": "酸味",
+    "reading": "さんみ",
+    "en": "sourness",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "残り香",
+    "reading": "のこりが",
+    "en": "lingering scent",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "残暑",
+    "reading": "ざんしょ",
+    "en": "lingering summer heat",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "残像",
+    "reading": "ざんぞう",
+    "en": "afterimage",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "使命",
     "reading": "しめい",
     "en": "mission",
     "kind": "moment"
+  },
+  {
+    "ja": "司会者",
+    "reading": "しかいしゃ",
+    "en": "master of ceremonies",
+    "kind": "people"
+  },
+  {
+    "ja": "司書",
+    "reading": "ししょ",
+    "en": "librarian",
+    "kind": "people"
   },
   {
     "ja": "始まり",
@@ -2617,9 +4381,27 @@
     "kind": "moment"
   },
   {
+    "ja": "子孫",
+    "reading": "しそん",
+    "en": "descendant",
+    "kind": "people"
+  },
+  {
+    "ja": "子役",
+    "reading": "こやく",
+    "en": "child actor",
+    "kind": "people"
+  },
+  {
     "ja": "師匠",
     "reading": "ししょう",
     "en": "master",
+    "kind": "people"
+  },
+  {
+    "ja": "師弟",
+    "reading": "してい",
+    "en": "teacher and student",
     "kind": "people"
   },
   {
@@ -2647,6 +4429,12 @@
     "kind": "thing"
   },
   {
+    "ja": "死角",
+    "reading": "しかく",
+    "en": "blind spot",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "糸",
     "reading": "いと",
     "en": "thread",
@@ -2657,6 +4445,24 @@
     "reading": "かみ",
     "en": "paper",
     "kind": "thing"
+  },
+  {
+    "ja": "紫",
+    "reading": "むらさき",
+    "en": "purple",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "紫外線",
+    "reading": "しがいせん",
+    "en": "ultraviolet rays",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "視界",
+    "reading": "しかい",
+    "en": "field of vision",
+    "kind": "phenomenon"
   },
   {
     "ja": "視線",
@@ -2681,6 +4487,24 @@
     "reading": "しあい",
     "en": "match",
     "kind": "moment"
+  },
+  {
+    "ja": "飼い主",
+    "reading": "かいぬし",
+    "en": "pet owner",
+    "kind": "people"
+  },
+  {
+    "ja": "飼育員",
+    "reading": "しいくいん",
+    "en": "keeper",
+    "kind": "people"
+  },
+  {
+    "ja": "歯医者",
+    "reading": "はいしゃ",
+    "en": "dentist",
+    "kind": "people"
   },
   {
     "ja": "歯車",
@@ -2750,6 +4574,12 @@
     "kind": "moment"
   },
   {
+    "ja": "執事",
+    "reading": "しつじ",
+    "en": "butler",
+    "kind": "people"
+  },
+  {
     "ja": "失敗",
     "reading": "しっぱい",
     "en": "failure",
@@ -2773,6 +4603,12 @@
     "reading": "しっと",
     "en": "jealousy",
     "kind": "moment"
+  },
+  {
+    "ja": "湿気",
+    "reading": "しっけ",
+    "en": "humidity",
+    "kind": "phenomenon"
   },
   {
     "ja": "実家",
@@ -2811,6 +4647,12 @@
     "kind": "thing"
   },
   {
+    "ja": "車掌",
+    "reading": "しゃしょう",
+    "en": "train conductor",
+    "kind": "people"
+  },
+  {
     "ja": "蛇",
     "reading": "へび",
     "en": "snake",
@@ -2821,6 +4663,18 @@
     "reading": "さびしさ",
     "en": "loneliness",
     "kind": "moment"
+  },
+  {
+    "ja": "弱虫",
+    "reading": "よわむし",
+    "en": "coward",
+    "kind": "people"
+  },
+  {
+    "ja": "主人公",
+    "reading": "しゅじんこう",
+    "en": "protagonist",
+    "kind": "people"
   },
   {
     "ja": "主婦",
@@ -2835,10 +4689,22 @@
     "kind": "thing"
   },
   {
+    "ja": "手がかり",
+    "reading": "てがかり",
+    "en": "clue",
+    "kind": "moment"
+  },
+  {
     "ja": "手紙",
     "reading": "てがみ",
     "en": "letter",
     "kind": "thing"
+  },
+  {
+    "ja": "手触り",
+    "reading": "てざわり",
+    "en": "feel",
+    "kind": "phenomenon"
   },
   {
     "ja": "手遅れ",
@@ -2865,6 +4731,12 @@
     "kind": "moment"
   },
   {
+    "ja": "受験生",
+    "reading": "じゅけんせい",
+    "en": "test-taker",
+    "kind": "people"
+  },
+  {
     "ja": "収穫",
     "reading": "しゅうかく",
     "en": "harvest",
@@ -2877,16 +4749,64 @@
     "kind": "moment"
   },
   {
+    "ja": "秀才",
+    "reading": "しゅうさい",
+    "en": "bright person",
+    "kind": "people"
+  },
+  {
     "ja": "秋",
     "reading": "あき",
     "en": "autumn",
     "kind": "moment"
   },
   {
+    "ja": "秋晴れ",
+    "reading": "あきばれ",
+    "en": "clear autumnal weather",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "終電",
     "reading": "しゅうでん",
     "en": "last train",
     "kind": "moment"
+  },
+  {
+    "ja": "柔らかさ",
+    "reading": "やわらかさ",
+    "en": "softness",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "獣医",
+    "reading": "じゅうい",
+    "en": "veterinarian",
+    "kind": "people"
+  },
+  {
+    "ja": "重さ",
+    "reading": "おもさ",
+    "en": "weight",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "重力",
+    "reading": "じゅうりょく",
+    "en": "gravity",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "叔父",
+    "reading": "おじ",
+    "en": "uncle",
+    "kind": "people"
+  },
+  {
+    "ja": "叔母",
+    "reading": "おば",
+    "en": "aunt",
+    "kind": "people"
   },
   {
     "ja": "祝い",
@@ -2917,6 +4837,12 @@
     "reading": "はる",
     "en": "spring",
     "kind": "moment"
+  },
+  {
+    "ja": "春一番",
+    "reading": "はるいちばん",
+    "en": "first storm of spring",
+    "kind": "phenomenon"
   },
   {
     "ja": "春休み",
@@ -2959,6 +4885,12 @@
     "reading": "あつさ",
     "en": "heat",
     "kind": "phenomenon"
+  },
+  {
+    "ja": "助っ人",
+    "reading": "すけっと",
+    "en": "helper",
+    "kind": "people"
   },
   {
     "ja": "助手",
@@ -3057,6 +4989,12 @@
     "kind": "thing"
   },
   {
+    "ja": "消防士",
+    "reading": "しょうぼうし",
+    "en": "firefighter",
+    "kind": "people"
+  },
+  {
     "ja": "笑い",
     "reading": "わらい",
     "en": "laugh",
@@ -3067,6 +5005,12 @@
     "reading": "えがお",
     "en": "smiling face",
     "kind": "thing"
+  },
+  {
+    "ja": "衝撃",
+    "reading": "しょうげき",
+    "en": "impact",
+    "kind": "phenomenon"
   },
   {
     "ja": "衝突",
@@ -3093,6 +5037,12 @@
     "kind": "people"
   },
   {
+    "ja": "上昇",
+    "reading": "じょうしょう",
+    "en": "rising",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "乗り物",
     "reading": "のりもの",
     "en": "vehicle",
@@ -3117,6 +5067,12 @@
     "kind": "thing"
   },
   {
+    "ja": "常連",
+    "reading": "じょうれん",
+    "en": "regular customer",
+    "kind": "people"
+  },
+  {
     "ja": "情熱",
     "reading": "じょうねつ",
     "en": "passion",
@@ -3139,6 +5095,12 @@
     "reading": "いろ",
     "en": "color",
     "kind": "phenomenon"
+  },
+  {
+    "ja": "食いしん坊",
+    "reading": "くいしんぼう",
+    "en": "glutton",
+    "kind": "people"
   },
   {
     "ja": "食べ物",
@@ -3166,6 +5128,12 @@
     "kind": "moment"
   },
   {
+    "ja": "審判",
+    "reading": "しんぱん",
+    "en": "referee",
+    "kind": "people"
+  },
+  {
     "ja": "心",
     "reading": "こころ",
     "en": "mind",
@@ -3176,6 +5144,12 @@
     "reading": "しんぞう",
     "en": "heart",
     "kind": "thing"
+  },
+  {
+    "ja": "振動",
+    "reading": "しんどう",
+    "en": "vibration",
+    "kind": "phenomenon"
   },
   {
     "ja": "新月",
@@ -3220,6 +5194,12 @@
     "kind": "thing"
   },
   {
+    "ja": "深さ",
+    "reading": "ふかさ",
+    "en": "depth",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "真っ二つ",
     "reading": "まっぷたつ",
     "en": "two equal parts",
@@ -3249,6 +5229,18 @@
     "reading": "じんじゃ",
     "en": "Shinto shrine",
     "kind": "thing"
+  },
+  {
+    "ja": "神主",
+    "reading": "かんぬし",
+    "en": "Shinto priest",
+    "kind": "people"
+  },
+  {
+    "ja": "神父",
+    "reading": "しんぷ",
+    "en": "Catholic priest",
+    "kind": "people"
   },
   {
     "ja": "紳士",
@@ -3287,6 +5279,18 @@
     "kind": "moment"
   },
   {
+    "ja": "人ごみ",
+    "reading": "ひとごみ",
+    "en": "crowd of people",
+    "kind": "people"
+  },
+  {
+    "ja": "人影",
+    "reading": "ひとかげ",
+    "en": "figure of a person",
+    "kind": "people"
+  },
+  {
     "ja": "人間",
     "reading": "にんげん",
     "en": "human being",
@@ -3298,6 +5302,12 @@
     "en": "popularity",
     "kind": "moment",
     "tier": false
+  },
+  {
+    "ja": "人気者",
+    "reading": "にんきもの",
+    "en": "popular person",
+    "kind": "people"
   },
   {
     "ja": "人魚",
@@ -3342,6 +5352,18 @@
     "kind": "thing"
   },
   {
+    "ja": "水色",
+    "reading": "みずいろ",
+    "en": "light blue",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "水中",
+    "reading": "すいちゅう",
+    "en": "underwater",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "水滴",
     "reading": "すいてき",
     "en": "drop of water",
@@ -3364,6 +5386,12 @@
     "reading": "せいふく",
     "en": "uniform",
     "kind": "thing"
+  },
+  {
+    "ja": "勢い",
+    "reading": "いきおい",
+    "en": "momentum",
+    "kind": "phenomenon"
   },
   {
     "ja": "成功",
@@ -3402,9 +5430,21 @@
     "kind": "thing"
   },
   {
+    "ja": "星明かり",
+    "reading": "ほしあかり",
+    "en": "starlight",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "晴れ",
     "reading": "はれ",
     "en": "clear weather",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "晴れ間",
+    "reading": "はれま",
+    "en": "break in the weather",
     "kind": "phenomenon"
   },
   {
@@ -3432,10 +5472,22 @@
     "kind": "people"
   },
   {
+    "ja": "生徒会長",
+    "reading": "せいとかいちょう",
+    "en": "president of the student council",
+    "kind": "people"
+  },
+  {
     "ja": "声",
     "reading": "こえ",
     "en": "voice",
     "kind": "phenomenon"
+  },
+  {
+    "ja": "声優",
+    "reading": "せいゆう",
+    "en": "voice actor or actress",
+    "kind": "people"
   },
   {
     "ja": "西日",
@@ -3474,6 +5526,12 @@
     "kind": "moment"
   },
   {
+    "ja": "静電気",
+    "reading": "せいでんき",
+    "en": "static electricity",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "昔",
     "reading": "むかし",
     "en": "the old days",
@@ -3510,6 +5568,12 @@
     "kind": "thing"
   },
   {
+    "ja": "雪女",
+    "reading": "ゆきおんな",
+    "en": "snow woman",
+    "kind": "people"
+  },
+  {
     "ja": "雪崩",
     "reading": "なだれ",
     "en": "avalanche",
@@ -3528,15 +5592,33 @@
     "kind": "moment"
   },
   {
+    "ja": "仙人",
+    "reading": "せんにん",
+    "en": "immortal mountain wizard",
+    "kind": "people"
+  },
+  {
     "ja": "先生",
     "reading": "せんせい",
     "en": "teacher",
     "kind": "people"
   },
   {
+    "ja": "先祖",
+    "reading": "せんぞ",
+    "en": "ancestor",
+    "kind": "people"
+  },
+  {
     "ja": "先輩",
     "reading": "せんぱい",
     "en": "senior",
+    "kind": "people"
+  },
+  {
+    "ja": "占い師",
+    "reading": "うらないし",
+    "en": "fortune teller",
     "kind": "people"
   },
   {
@@ -3574,6 +5656,18 @@
     "reading": "ふね",
     "en": "ship",
     "kind": "thing"
+  },
+  {
+    "ja": "船員",
+    "reading": "せんいん",
+    "en": "sailor",
+    "kind": "people"
+  },
+  {
+    "ja": "船長",
+    "reading": "せんちょう",
+    "en": "ship's captain",
+    "kind": "people"
   },
   {
     "ja": "選手",
@@ -3668,6 +5762,12 @@
     "kind": "moment"
   },
   {
+    "ja": "騒音",
+    "reading": "そうおん",
+    "en": "din",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "像",
     "reading": "ぞう",
     "en": "statue",
@@ -3692,10 +5792,28 @@
     "kind": "phenomenon"
   },
   {
+    "ja": "足元",
+    "reading": "あしもと",
+    "en": "underfoot",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "足取り",
+    "reading": "あしどり",
+    "en": "gait",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "足跡",
     "reading": "あしあと",
     "en": "footprints",
     "kind": "thing"
+  },
+  {
+    "ja": "速さ",
+    "reading": "はやさ",
+    "en": "speed",
+    "kind": "phenomenon"
   },
   {
     "ja": "卒業",
@@ -3710,6 +5828,18 @@
     "kind": "moment"
   },
   {
+    "ja": "卒業生",
+    "reading": "そつぎょうせい",
+    "en": "graduate",
+    "kind": "people"
+  },
+  {
+    "ja": "存在感",
+    "reading": "そんざいかん",
+    "en": "presence",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "孫",
     "reading": "まご",
     "en": "grandchild",
@@ -3720,6 +5850,12 @@
     "reading": "むら",
     "en": "village",
     "kind": "thing"
+  },
+  {
+    "ja": "村人",
+    "reading": "むらびと",
+    "en": "villager",
+    "kind": "people"
   },
   {
     "ja": "他人",
@@ -3759,6 +5895,12 @@
     "kind": "moment"
   },
   {
+    "ja": "体温",
+    "reading": "たいおん",
+    "en": "body temperature",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "対決",
     "reading": "たいけつ",
     "en": "confrontation",
@@ -3769,6 +5911,12 @@
     "reading": "まちあわせ",
     "en": "appointment",
     "kind": "moment"
+  },
+  {
+    "ja": "怠け者",
+    "reading": "なまけもの",
+    "en": "lazy person",
+    "kind": "people"
   },
   {
     "ja": "退院",
@@ -3849,6 +5997,12 @@
     "kind": "people"
   },
   {
+    "ja": "大道芸人",
+    "reading": "だいどうげいにん",
+    "en": "street performer",
+    "kind": "people"
+  },
+  {
     "ja": "大木",
     "reading": "たいぼく",
     "en": "large tree",
@@ -3859,6 +6013,12 @@
     "reading": "たいりく",
     "en": "continent",
     "kind": "thing"
+  },
+  {
+    "ja": "第六感",
+    "reading": "だいろっかん",
+    "en": "the sixth sense",
+    "kind": "phenomenon"
   },
   {
     "ja": "滝",
@@ -3873,10 +6033,22 @@
     "kind": "thing"
   },
   {
+    "ja": "担任",
+    "reading": "たんにん",
+    "en": "homeroom teacher",
+    "kind": "people"
+  },
+  {
     "ja": "探検",
     "reading": "たんけん",
     "en": "exploration",
     "kind": "moment"
+  },
+  {
+    "ja": "探検隊",
+    "reading": "たんけんたい",
+    "en": "expedition team",
+    "kind": "people"
   },
   {
     "ja": "探偵",
@@ -3902,6 +6074,12 @@
     "reading": "たんじょうび",
     "en": "birthday",
     "kind": "moment"
+  },
+  {
+    "ja": "弾力",
+    "reading": "だんりょく",
+    "en": "elasticity",
+    "kind": "phenomenon"
   },
   {
     "ja": "地下",
@@ -3952,6 +6130,18 @@
     "kind": "thing"
   },
   {
+    "ja": "茶色",
+    "reading": "ちゃいろ",
+    "en": "brown",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "着地",
+    "reading": "ちゃくち",
+    "en": "landing",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "着物",
     "reading": "きもの",
     "en": "kimono",
@@ -4000,6 +6190,12 @@
     "kind": "thing"
   },
   {
+    "ja": "兆し",
+    "reading": "きざし",
+    "en": "omen",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "挑戦",
     "reading": "ちょうせん",
     "en": "challenge",
@@ -4037,6 +6233,12 @@
     "kind": "thing"
   },
   {
+    "ja": "潮風",
+    "reading": "しおかぜ",
+    "en": "sea breeze",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "町",
     "reading": "まち",
     "en": "town",
@@ -4047,6 +6249,24 @@
     "reading": "ちょう",
     "en": "butterfly",
     "kind": "thing"
+  },
+  {
+    "ja": "超音波",
+    "reading": "ちょうおんぱ",
+    "en": "ultrasound",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "超人",
+    "reading": "ちょうじん",
+    "en": "superman",
+    "kind": "people"
+  },
+  {
+    "ja": "長老",
+    "reading": "ちょうろう",
+    "en": "elder",
+    "kind": "people"
   },
   {
     "ja": "頂",
@@ -4073,10 +6293,22 @@
     "kind": "moment"
   },
   {
+    "ja": "追い風",
+    "reading": "おいかぜ",
+    "en": "tailwind",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "通学路",
     "reading": "つうがくろ",
     "en": "school route",
     "kind": "thing"
+  },
+  {
+    "ja": "通訳",
+    "reading": "つうやく",
+    "en": "interpreter",
+    "kind": "people"
   },
   {
     "ja": "釣り",
@@ -4095,6 +6327,12 @@
     "reading": "ていでん",
     "en": "power outage",
     "kind": "moment"
+  },
+  {
+    "ja": "底",
+    "reading": "そこ",
+    "en": "bottom",
+    "kind": "phenomenon"
   },
   {
     "ja": "庭",
@@ -4151,6 +6389,18 @@
     "kind": "phenomenon"
   },
   {
+    "ja": "天気雨",
+    "reading": "てんきあめ",
+    "en": "sun shower",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "天狗",
+    "reading": "てんぐ",
+    "en": "tengu",
+    "kind": "people"
+  },
+  {
     "ja": "天国",
     "reading": "てんごく",
     "en": "paradise",
@@ -4175,6 +6425,12 @@
     "kind": "moment"
   },
   {
+    "ja": "店員",
+    "reading": "てんいん",
+    "en": "shop assistant",
+    "kind": "people"
+  },
+  {
     "ja": "店長",
     "reading": "てんちょう",
     "en": "shop manager",
@@ -4185,6 +6441,18 @@
     "reading": "てんこう",
     "en": "changing schools",
     "kind": "moment"
+  },
+  {
+    "ja": "転校生",
+    "reading": "てんこうせい",
+    "en": "transfer student",
+    "kind": "people"
+  },
+  {
+    "ja": "点滅",
+    "reading": "てんめつ",
+    "en": "flashing",
+    "kind": "phenomenon"
   },
   {
     "ja": "伝説",
@@ -4314,6 +6582,30 @@
     "kind": "thing"
   },
   {
+    "ja": "透明",
+    "reading": "とうめい",
+    "en": "transparent",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "透明人間",
+    "reading": "とうめいにんげん",
+    "en": "invisible person",
+    "kind": "people"
+  },
+  {
+    "ja": "頭上",
+    "reading": "ずじょう",
+    "en": "overhead",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "働き者",
+    "reading": "はたらきもの",
+    "en": "hard worker",
+    "kind": "people"
+  },
+  {
     "ja": "動画",
     "reading": "どうが",
     "en": "video",
@@ -4374,6 +6666,12 @@
     "kind": "thing"
   },
   {
+    "ja": "突風",
+    "reading": "とっぷう",
+    "en": "gust",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "曇り",
     "reading": "くもり",
     "en": "cloudiness",
@@ -4404,6 +6702,12 @@
     "kind": "thing"
   },
   {
+    "ja": "虹色",
+    "reading": "にじいろ",
+    "en": "rainbow-colored",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "日の出",
     "reading": "ひので",
     "en": "sunrise",
@@ -4414,6 +6718,12 @@
     "reading": "ひのいり",
     "en": "sunset",
     "kind": "moment"
+  },
+  {
+    "ja": "日陰",
+    "reading": "ひかげ",
+    "en": "shade",
+    "kind": "phenomenon"
   },
   {
     "ja": "日記",
@@ -4470,6 +6780,24 @@
     "kind": "phenomenon"
   },
   {
+    "ja": "熱気",
+    "reading": "ねっき",
+    "en": "hot air",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "熱帯夜",
+    "reading": "ねったいや",
+    "en": "tropical night",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "年下",
+    "reading": "としした",
+    "en": "younger",
+    "kind": "people"
+  },
+  {
     "ja": "年上",
     "reading": "としうえ",
     "en": "older",
@@ -4494,6 +6822,12 @@
     "kind": "thing"
   },
   {
+    "ja": "波音",
+    "reading": "なみおと",
+    "en": "the sound of waves",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "馬",
     "reading": "うま",
     "en": "horse",
@@ -4512,6 +6846,12 @@
     "kind": "moment"
   },
   {
+    "ja": "背後",
+    "reading": "はいご",
+    "en": "rear",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "背中",
     "reading": "せなか",
     "en": "back",
@@ -4522,6 +6862,12 @@
     "reading": "はいしん",
     "en": "streaming",
     "kind": "moment"
+  },
+  {
+    "ja": "配信者",
+    "reading": "はいしんしゃ",
+    "en": "streamer",
+    "kind": "people"
   },
   {
     "ja": "梅",
@@ -4572,6 +6918,24 @@
     "kind": "phenomenon"
   },
   {
+    "ja": "白黒",
+    "reading": "しろくろ",
+    "en": "black and white",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "迫力",
+    "reading": "はくりょく",
+    "en": "intensity",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "爆音",
+    "reading": "ばくおん",
+    "en": "roar",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "爆笑",
     "reading": "ばくしょう",
     "en": "roar of laughter",
@@ -4588,6 +6952,12 @@
     "reading": "はこ",
     "en": "box",
     "kind": "thing"
+  },
+  {
+    "ja": "八百屋",
+    "reading": "やおや",
+    "en": "greengrocer",
+    "kind": "people"
   },
   {
     "ja": "発見",
@@ -4608,10 +6978,28 @@
     "kind": "moment"
   },
   {
+    "ja": "発明家",
+    "reading": "はつめいか",
+    "en": "inventor",
+    "kind": "people"
+  },
+  {
     "ja": "髪",
     "reading": "かみ",
     "en": "hair",
     "kind": "thing"
+  },
+  {
+    "ja": "反射",
+    "reading": "はんしゃ",
+    "en": "reflection",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "彼氏",
+    "reading": "かれし",
+    "en": "boyfriend",
+    "kind": "people"
   },
   {
     "ja": "悲しみ",
@@ -4626,10 +7014,22 @@
     "kind": "moment"
   },
   {
+    "ja": "悲鳴",
+    "reading": "ひめい",
+    "en": "scream",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "扉",
     "reading": "とびら",
     "en": "door",
     "kind": "thing"
+  },
+  {
+    "ja": "秘書",
+    "reading": "ひしょ",
+    "en": "secretary",
+    "kind": "people"
   },
   {
     "ja": "秘密",
@@ -4662,6 +7062,12 @@
     "kind": "thing"
   },
   {
+    "ja": "美人",
+    "reading": "びじん",
+    "en": "beautiful woman",
+    "kind": "people"
+  },
+  {
     "ja": "美容師",
     "reading": "びようし",
     "en": "beautician",
@@ -4678,6 +7084,18 @@
     "reading": "こおり",
     "en": "ice",
     "kind": "thing"
+  },
+  {
+    "ja": "氷点下",
+    "reading": "ひょうてんか",
+    "en": "below freezing",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "漂流",
+    "reading": "ひょうりゅう",
+    "en": "drifting",
+    "kind": "phenomenon"
   },
   {
     "ja": "病院",
@@ -4727,6 +7145,18 @@
     "reading": "ふうふ",
     "en": "married couple",
     "kind": "people"
+  },
+  {
+    "ja": "浮遊",
+    "reading": "ふゆう",
+    "en": "floating",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "浮力",
+    "reading": "ふりょく",
+    "en": "buoyancy",
+    "kind": "phenomenon"
   },
   {
     "ja": "父親",
@@ -4783,6 +7213,12 @@
     "kind": "thing"
   },
   {
+    "ja": "物陰",
+    "reading": "ものかげ",
+    "en": "place hidden from view",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "物音",
     "reading": "ものおと",
     "en": "noise",
@@ -4795,6 +7231,12 @@
     "kind": "thing"
   },
   {
+    "ja": "分身",
+    "reading": "ぶんしん",
+    "en": "alter ego",
+    "kind": "people"
+  },
+  {
     "ja": "噴火",
     "reading": "ふんか",
     "en": "eruption",
@@ -4805,6 +7247,12 @@
     "reading": "こなごな",
     "en": "in very small pieces",
     "kind": "moment"
+  },
+  {
+    "ja": "雰囲気",
+    "reading": "ふんいき",
+    "en": "atmosphere",
+    "kind": "phenomenon"
   },
   {
     "ja": "文化祭",
@@ -4843,6 +7291,12 @@
     "kind": "moment"
   },
   {
+    "ja": "変人",
+    "reading": "へんじん",
+    "en": "eccentric",
+    "kind": "people"
+  },
+  {
     "ja": "片言",
     "reading": "かたこと",
     "en": "prattle",
@@ -4873,6 +7327,18 @@
     "en": "bento",
     "kind": "thing",
     "tier": true
+  },
+  {
+    "ja": "保育士",
+    "reading": "ほいくし",
+    "en": "childcare worker",
+    "kind": "people"
+  },
+  {
+    "ja": "保護色",
+    "reading": "ほごしょく",
+    "en": "protective coloration",
+    "kind": "phenomenon"
   },
   {
     "ja": "母親",
@@ -4917,6 +7383,12 @@
     "kind": "moment"
   },
   {
+    "ja": "方向音痴",
+    "reading": "ほうこうおんち",
+    "en": "person with no sense of direction",
+    "kind": "people"
+  },
+  {
     "ja": "泡",
     "reading": "あわ",
     "en": "bubble",
@@ -4953,6 +7425,12 @@
     "kind": "moment"
   },
   {
+    "ja": "北風",
+    "reading": "きたかぜ",
+    "en": "north wind",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "本",
     "reading": "ほん",
     "en": "book",
@@ -4987,6 +7465,18 @@
     "reading": "ほんみょう",
     "en": "real name",
     "kind": "thing"
+  },
+  {
+    "ja": "凡人",
+    "reading": "ぼんじん",
+    "en": "ordinary person",
+    "kind": "people"
+  },
+  {
+    "ja": "摩擦",
+    "reading": "まさつ",
+    "en": "friction",
+    "kind": "phenomenon"
   },
   {
     "ja": "魔女",
@@ -5050,6 +7540,12 @@
     "kind": "people"
   },
   {
+    "ja": "味",
+    "reading": "あじ",
+    "en": "flavor",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "味方",
     "reading": "みかた",
     "en": "friend",
@@ -5091,6 +7587,12 @@
     "reading": "むちゅう",
     "en": "absorbed in",
     "kind": "moment"
+  },
+  {
+    "ja": "無限",
+    "reading": "むげん",
+    "en": "infinity",
+    "kind": "phenomenon"
   },
   {
     "ja": "無重量",
@@ -5135,6 +7637,18 @@
     "kind": "moment"
   },
   {
+    "ja": "明かり",
+    "reading": "あかり",
+    "en": "glow",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "明暗",
+    "reading": "めいあん",
+    "en": "light and shade",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "明日",
     "reading": "あした",
     "en": "tomorrow",
@@ -5159,10 +7673,22 @@
     "kind": "thing"
   },
   {
+    "ja": "鳴き声",
+    "reading": "なきごえ",
+    "en": "cry",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "滅亡",
     "reading": "めつぼう",
     "en": "downfall",
     "kind": "moment"
+  },
+  {
+    "ja": "面影",
+    "reading": "おもかげ",
+    "en": "vestige",
+    "kind": "phenomenon"
   },
   {
     "ja": "模様",
@@ -5175,6 +7701,18 @@
     "reading": "き",
     "en": "tree",
     "kind": "thing"
+  },
+  {
+    "ja": "木枯らし",
+    "reading": "こがらし",
+    "en": "cold wintry wind",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "木漏れ日",
+    "reading": "こもれび",
+    "en": "sunlight filtering through trees",
+    "kind": "phenomenon"
   },
   {
     "ja": "目",
@@ -5213,10 +7751,22 @@
     "kind": "moment"
   },
   {
+    "ja": "野球部",
+    "reading": "やきゅうぶ",
+    "en": "baseball club",
+    "kind": "people"
+  },
+  {
     "ja": "野菜",
     "reading": "やさい",
     "en": "vegetable",
     "kind": "thing"
+  },
+  {
+    "ja": "野次馬",
+    "reading": "やじうま",
+    "en": "curious onlookers",
+    "kind": "people"
   },
   {
     "ja": "野心",
@@ -5243,16 +7793,34 @@
     "kind": "thing"
   },
   {
+    "ja": "薬剤師",
+    "reading": "やくざいし",
+    "en": "pharmacist",
+    "kind": "people"
+  },
+  {
     "ja": "優勝",
     "reading": "ゆうしょう",
     "en": "overall victory",
     "kind": "moment"
   },
   {
+    "ja": "優等生",
+    "reading": "ゆうとうせい",
+    "en": "honor student",
+    "kind": "people"
+  },
+  {
     "ja": "勇気",
     "reading": "ゆうき",
     "en": "courage",
     "kind": "moment"
+  },
+  {
+    "ja": "勇者",
+    "reading": "ゆうしゃ",
+    "en": "the brave",
+    "kind": "people"
   },
   {
     "ja": "友情",
@@ -5322,6 +7890,18 @@
     "kind": "thing"
   },
   {
+    "ja": "余韻",
+    "reading": "よいん",
+    "en": "lingering memory",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "幼なじみ",
+    "reading": "おさななじみ",
+    "en": "childhood friend",
+    "kind": "people"
+  },
+  {
     "ja": "妖怪",
     "reading": "ようかい",
     "en": "ghost",
@@ -5332,6 +7912,18 @@
     "reading": "ようせい",
     "en": "fairy",
     "kind": "people"
+  },
+  {
+    "ja": "揺らぎ",
+    "reading": "ゆらぎ",
+    "en": "flutter",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "揺れ",
+    "reading": "ゆれ",
+    "en": "shaking",
+    "kind": "phenomenon"
   },
   {
     "ja": "溶岩",
@@ -5356,6 +7948,18 @@
     "reading": "おどり",
     "en": "dancing",
     "kind": "moment"
+  },
+  {
+    "ja": "陽炎",
+    "reading": "かげろう",
+    "en": "heat shimmer",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "欲張り",
+    "reading": "よくばり",
+    "en": "greedy person",
+    "kind": "people"
   },
   {
     "ja": "浴衣",
@@ -5394,6 +7998,18 @@
     "kind": "thing"
   },
   {
+    "ja": "落下",
+    "reading": "らっか",
+    "en": "fall",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "落語家",
+    "reading": "らくごか",
+    "en": "rakugo story teller",
+    "kind": "people"
+  },
+  {
     "ja": "落書き",
     "reading": "らくがき",
     "en": "scrawl",
@@ -5410,6 +8026,24 @@
     "reading": "あらし",
     "en": "storm",
     "kind": "thing"
+  },
+  {
+    "ja": "裏切り者",
+    "reading": "うらぎりもの",
+    "en": "traitor",
+    "kind": "people"
+  },
+  {
+    "ja": "裏側",
+    "reading": "うらがわ",
+    "en": "hidden side",
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "里親",
+    "reading": "さとおや",
+    "en": "foster parent",
+    "kind": "people"
   },
   {
     "ja": "流れ",
@@ -5479,10 +8113,34 @@
     "kind": "moment"
   },
   {
+    "ja": "料理人",
+    "reading": "りょうりにん",
+    "en": "cook",
+    "kind": "people"
+  },
+  {
+    "ja": "涼しさ",
+    "reading": "すずしさ",
+    "en": "coolness",
+    "kind": "phenomenon"
+  },
+  {
     "ja": "力",
     "reading": "ちから",
     "en": "force",
     "kind": "phenomenon"
+  },
+  {
+    "ja": "力士",
+    "reading": "りきし",
+    "en": "sumo wrestler",
+    "kind": "people"
+  },
+  {
+    "ja": "力持ち",
+    "reading": "ちからもち",
+    "en": "strong man",
+    "kind": "people"
   },
   {
     "ja": "緑",
@@ -5497,10 +8155,22 @@
     "kind": "phenomenon"
   },
   {
+    "ja": "隣人",
+    "reading": "りんじん",
+    "en": "neighbor",
+    "kind": "people"
+  },
+  {
     "ja": "涙",
     "reading": "なみだ",
     "en": "tear",
     "kind": "thing"
+  },
+  {
+    "ja": "冷気",
+    "reading": "れいき",
+    "en": "chill",
+    "kind": "phenomenon"
   },
   {
     "ja": "零点",
@@ -5527,6 +8197,12 @@
     "kind": "people"
   },
   {
+    "ja": "錬金術師",
+    "reading": "れんきんじゅつし",
+    "en": "alchemist",
+    "kind": "people"
+  },
+  {
     "ja": "露",
     "reading": "つゆ",
     "en": "dew",
@@ -5545,10 +8221,22 @@
     "kind": "thing"
   },
   {
+    "ja": "脇役",
+    "reading": "わきやく",
+    "en": "supporting role",
+    "kind": "people"
+  },
+  {
     "ja": "惑星",
     "reading": "わくせい",
     "en": "planet",
     "kind": "thing"
+  },
+  {
+    "ja": "巫女",
+    "reading": "みこ",
+    "en": "shrine maiden",
+    "kind": "people"
   },
   {
     "ja": "蜃気楼",
