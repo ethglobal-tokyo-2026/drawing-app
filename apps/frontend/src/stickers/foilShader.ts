@@ -2,6 +2,9 @@ import { FOIL_ROOM, type FoilRoom } from "./foilMaterial";
 import { glslFloat as f } from "./glsl";
 import { SCREENTONE } from "./screentone";
 
+/** Holo's colored floor, the room's bounce diffracted, relative to the room's light level. */
+const HOLO_ROOM_ORDERS = 0.6;
+
 /**
  * Lookup RGBA8: RGB is linear chromaticity / max channel; A²×8 is integrated Y.
  * Coordinates: u in [−2,2], sigma in [.035,.22], texel-center mapped to 512×32.
@@ -15,7 +18,6 @@ import { SCREENTONE } from "./screentone";
  * direction and pixel footprints.
  */
 export function createFoilFragment({ window, level, grid }: FoilRoom) {
-  const extent = `vec2(${f(window.halfWidth)},${f(window.halfHeight)})`;
   const dot = f(SCREENTONE.dotRadius);
   return `
 uniform sampler2D foilLookup;
@@ -29,31 +31,24 @@ vec3 foilAllowedHue(vec3 c){
  // Only a green clearly above both red and blue is grayed; aqua and sky carry green beside blue.
  return mix(c,vec3(foilY(c)),smoothstep(.02,.08,(c.g-max(c.r,c.b))/max(peak,.000001)));
 }
-vec3 foilShoulder(vec3 c){
- // Identity below the knee keeps room-lit metal bright; only highlights roll toward the display's peak.
+// Paper and metal both: identity below the knee keeps room-lit surfaces bright; only highlights roll
+// toward the display's peak. Paper's knee sits higher, so paper under the shoji rises above unlit paper.
+vec3 highlightShoulder(vec3 c,float knee){
  float peak=max(c.r,max(c.g,c.b));
- if(peak<=.75)return c;
- return c*(.75+.25*(1.-exp(-4.*(peak-.75))))/peak;
+ if(peak<=knee)return c;
+ return c*(knee+(1.-knee)*(1.-exp(-(peak-knee)/(1.-knee))))/peak;
 }
-vec2 foilWindow(vec2 p){return 1.-smoothstep(${extent}-${f(window.feather)},${extent}+${f(window.feather)},abs(p-vec2(${f(window.x)},${f(window.y)})));}
 float foilPanel(vec2 p,vec2 center,vec2 extent){
  vec2 d=abs(p-center)-extent;
  return 1.-smoothstep(-.07,.07,max(d.x,d.y));
 }
-// The lit room the foil mirrors, apart from the paper's: a bright ceiling around the overhead window,
-// a darker floor toward the viewer's body, and two soft panels that tilting sweeps across the band.
+// The shared room as the foil mirrors it: its bounce at metal's levels, and two soft panels beside
+// the shoji that tilting sweeps across the band.
 float foilRoom(vec3 r){
- float room=mix(.42,1.,smoothstep(.5,-.4,r.y));
- if(r.z<=.05)return room;
- vec2 p=r.xy/r.z;
- return room+.6*foilPanel(p,vec2(-.46,-.34),vec2(.17,.1))+.45*foilPanel(p,vec2(.55,.04),vec2(.1,.26));
+ vec2 q=roomPlane(r);
+ return roomFoil(r)+.6*foilPanel(q,vec2(-.46,-.34),vec2(.17,.1))+.45*foilPanel(q,vec2(.55,.04),vec2(.1,.26));
 }
-float foilWindowLight(vec3 r){
- if(r.z<=0.)return 0.;
- vec2 p=r.xy/r.z;
- vec2 f=(foilWindow(p-.045)+2.*foilWindow(p)+foilWindow(p+.045))*.25;
- return f.x*f.y;
-}
+float foilWindowLight(vec3 r){return roomShoji(r,.045);}
 float foilCoat(float cosine){
  float transmitted=sqrt(1.-(1.-cosine*cosine)/2.25);
  float a=(cosine-1.5*transmitted)/(cosine+1.5*transmitted);
@@ -89,6 +84,15 @@ vec3 foilDiffraction(vec3 n,vec3 view,vec3 tangent,float footprint,float shift){
  }
  return sum;
 }
+// The room's bounce meets the grooves from every side, so each stretch of band sends some first order
+// to the eye with no lamp in line with it. That floor keeps holo colored at any pose. Its hues sweep
+// around the band and travel round it as the reflection moves through the room, up or across.
+vec3 foilRoomOrders(vec3 r,float polar,float footprint){
+ float sigma=clamp(sqrt(.08*.08+footprint*footprint),.035,.22);
+ float u=.62+.26*sin(3.*polar+3.*(dot(r,roomUp)+dot(r,roomAcross)));
+ vec3 hue=texture2D(foilLookup,(vec2((u+2.)*.25,(sigma-.035)/.185)*vec2(511.,31.)+.5)/vec2(512.,32.)).rgb;
+ return hue/max(foilY(hue),.000001)*${f(HOLO_ROOM_ORDERS * level)};
+}
 vec3 shadeFoil(vec2 print,float polar,vec3 n,vec3 view,vec3 tangent,float printFootprint,float angularFootprint){
  float cosine=dot(n,view);
  if(cosine<=0.)return vec3(0.);
@@ -111,13 +115,17 @@ vec3 shadeFoil(vec2 print,float polar,vec3 n,vec3 view,vec3 tangent,float printF
   // Holo stock's hue bands sweep around the sticker on top of the optics, so the band shows
   // several palette hues at once and tilt still slides them; spreading the orders from their
   // mean keeps that color legible on a narrow band.
-  vec3 orders=foilDiffraction(n,view,tangent,angularFootprint,pink?0.:.14*sin(3.*polar));
+  vec3 orders=foilDiffraction(n,view,tangent,angularFootprint,pink?0.:.22*sin(3.*polar));
   if(!pink){
+   orders+=foilRoomOrders(reflected,polar,angularFootprint);
    float strength=foilY(orders);
    orders=max(vec3(strength)+2.2*(orders-vec3(strength)),0.);
    quiet=1./(1.+2.*strength);
   }
-  underlying=conductor*(tint*((pink?1.:.6)*room+.3*sources)*quiet+orders);
+  // Pink keeps a floor under the room it mirrors, so a dim wall or floor leaves it pink, not dusk;
+  // the floor follows the room's light level, so a dark room still goes dark.
+  float body=pink?max(room,${f(level)}):.6*room;
+  underlying=conductor*(tint*(body+.3*sources)*quiet+orders);
  }else{
   underlying=conductor*environment*foilTint;
  }
@@ -127,7 +135,7 @@ vec3 shadeFoil(vec2 print,float polar,vec3 n,vec3 view,vec3 tangent,float printF
  }
  vec3 layered=underlying*(1.-coat)*(1.-coat)+vec3(coat*environment*quiet);
  if(chromatic)layered=foilAllowedHue(layered);
- return foilShoulder(layered);
+ return highlightShoulder(layered,.75);
 }
 `;
 }

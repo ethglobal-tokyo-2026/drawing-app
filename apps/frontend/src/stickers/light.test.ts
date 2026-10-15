@@ -3,13 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   acquireLight,
   currentLight,
-  CREASE_SETTLE_MS,
   GLIDE_MS,
   installLight,
-  lightUp,
   subscribeLight,
-  type LightPose,
+  type DevicePose,
 } from "./light";
+import { FALLBACK_PERIOD_MS, STILL_POSE, upOnScreen } from "./lightMode";
 import * as motionPermission from "../ui/motionPermission";
 
 const browserDocument = globalThis.document;
@@ -21,40 +20,23 @@ const tiltListeners = new Set<EventListenerOrEventListenerObject>();
 /** The light's holds a test hasn't released, released after it. */
 const held = new Set<() => void>();
 /** The poses the light published to the sticker material during the test. */
-let published: LightPose[] = [];
+let published: DevicePose[] = [];
 let stopRecording = () => {};
 
-/** A crease shown on the page, which reads the light once it rests. */
-const addCrease = () => {
-  const crease = document.createElement("span");
-  crease.className = "sticker-crease";
-  document.body.append(crease);
-  return crease;
-};
 /** A sensor's frame. */
 const FRAME_MS = 16;
-/** The phone tilted sideways a degree per frame. */
-const tiltAcross = (from: number, to: number) => {
-  for (let gamma = from; gamma <= to; gamma++) {
-    tiltTo(gamma, 40);
-    vi.advanceTimersByTime(FRAME_MS);
-  }
-};
-const lightOn = (el: HTMLElement) => [
-  el.style.getPropertyValue("--lx"),
-  el.style.getPropertyValue("--ly"),
-];
-/** The last published pose, written as a crease takes it; blank before any. */
-const lightAt = () => {
-  const pose = published.at(-1);
-  const written = (v: number) => (Math.abs(v) < 0.0005 ? 0 : v).toFixed(3);
-  return pose ? [written(pose.x), written(pose.y)] : ["", ""];
-};
+/** Long enough for any glide to land. */
+const settle = () => vi.advanceTimersByTime(10 * GLIDE_MS);
 /** A pointer moved to (x, y): a mouse unless it says it's a pen or a finger. */
 const pointAt = (x: number, y: number, pointerType = "mouse", type = "pointermove") =>
   window.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, pointerType }));
-const tiltTo = (gamma: number | null, beta: number | null, alpha: number | null = 0) =>
-  window.dispatchEvent(Object.assign(new Event("deviceorientation"), { alpha, gamma, beta }));
+const tiltTo = (beta: number | null, gamma: number | null, alpha: number | null = 0) =>
+  window.dispatchEvent(Object.assign(new Event("deviceorientation"), { alpha, beta, gamma }));
+const pose = (beta: number, gamma: number, screenAngle = 0): DevicePose => ({
+  beta,
+  gamma,
+  screenAngle,
+});
 /** Happy DOM has no ScreenOrientation; supply its complete event-target interface. */
 const screenAt = (angle: number) => {
   const orientation = Object.assign(new EventTarget(), {
@@ -109,6 +91,15 @@ const showScreen = () => {
     release();
   };
 };
+/** The light installed with a screen showing it, tilted to `beta`, `gamma` and landed there. */
+const landAt = (beta: number, gamma: number) => {
+  uninstall = installLight(root);
+  const close = showScreen();
+  tiltTo(beta, gamma);
+  settle();
+  expect(currentLight()).toEqual(pose(beta, gamma));
+  return close;
+};
 
 beforeEach(() => {
   vi.useFakeTimers({
@@ -144,7 +135,6 @@ afterEach(() => {
   held.clear();
   uninstall();
   tiltListeners.clear();
-  document.body.replaceChildren();
   Reflect.deleteProperty(document, "permissionsPolicy");
   Reflect.deleteProperty(screen, "orientation");
   vi.restoreAllMocks();
@@ -153,172 +143,48 @@ afterEach(() => {
 });
 
 describe("the shared light", () => {
-  it("restores the reference after the reported direction changes captured on iPad", () => {
-    // Consecutive readings around the direction changes in the October 13 iPad report.
-    // The original acquisition was not retained; acquire the first sample here and add a return.
-    const readings = [
-      [90, 8.723049980578125, 5.249239614053194, 8.339420639645562],
-      [0, 8.421645327042885, 6.6965109773356355, 8.63661831165818],
-      [0, 356.19771239662595, 54.35496155877835, 11.075429321838536],
-      [90, 356.33701522983637, 54.11037737283471, 11.009159243068556],
-      [90, 250.01871502971437, -41.168456436411745, -1.7825381754617498],
-      [270, 249.89439278707968, -41.609994762136836, -1.9436789870680669],
-    ] as const;
-    const [angle, alpha, beta, gamma] = readings[0];
-    screenAt(angle);
+  it("holds the still pose until the device shares a reading", () => {
     uninstall = installLight(root);
     showScreen();
-    tiltTo(gamma, beta, alpha);
-    const first = currentLight();
-    for (const [direction, heading, forward, sideways] of readings.slice(1)) {
-      screenAt(direction);
-      tiltTo(sideways, forward, heading);
-      vi.advanceTimersByTime(2000);
-    }
-    screenAt(angle);
-    tiltTo(gamma, beta, alpha);
-    vi.advanceTimersByTime(2000);
-    expect(currentLight().x).toBeCloseTo(first.x, 10);
-    expect(currentLight().y).toBeCloseTo(first.y, 10);
-    const turn = ((currentLight().rotationDegrees - first.rotationDegrees) * Math.PI) / 180;
-    expect(Math.sin(turn)).toBeCloseTo(0, 10);
-    expect(Math.cos(turn)).toBeCloseTo(1, 10);
-  });
-
-  it("returns to the same reflection after repeated portrait and landscape round trips", () => {
-    screenAt(0);
-    uninstall = installLight(root);
-    showScreen();
-    tiltTo(0, 40, 123);
-    tiltTo(8, 44, 126);
-    vi.advanceTimersByTime(2000);
-    const first = currentLight();
-    for (let repeat = 0; repeat < 3; repeat++) {
-      screenAt(90);
-      tiltTo(16, 48, 130);
-      vi.advanceTimersByTime(2000);
-      tiltTo(-12, 36, 120);
-      vi.advanceTimersByTime(2000);
-      screenAt(0);
-      tiltTo(8, 44, 126);
-      vi.advanceTimersByTime(2000);
-      expect(currentLight().x).toBeCloseTo(first.x, 10);
-      expect(currentLight().y).toBeCloseTo(first.y, 10);
-      expect(currentLight().rotationDegrees).toBeCloseTo(first.rotationDegrees, 10);
-    }
-  });
-
-  it("acquires a delayed heading without rotating an already-held reflection", () => {
-    screenAt(0);
-    uninstall = installLight(root);
-    showScreen();
-    tiltTo(0, 40, null);
-    tiltTo(8, 40, null);
-    vi.advanceTimersByTime(2000);
-    const before = currentLight();
-    expect(before.x).toBeGreaterThan(0.1);
-    tiltTo(8, 40, 123);
-    vi.advanceTimersByTime(2000);
-    expect(currentLight()).toEqual(before);
-    tiltTo(8, 40, 124);
-    vi.advanceTimersByTime(2000);
-    expect(Math.abs(currentLight().rotationDegrees - before.rotationDegrees)).toBeLessThan(2);
-    expect(currentLight().rotationDegrees).not.toBe(before.rotationDegrees);
-  });
-
-  it("publishes and then holds a flat wrist rotation without inventing normal tilt", () => {
-    screenAt(0);
-    uninstall = installLight(root);
-    showScreen();
-    tiltTo(0, 0, 0);
-    const frames: ReturnType<typeof currentLight>[] = [];
-    const stop = subscribeLight((pose) => frames.push(pose));
-    try {
-      tiltTo(0, 0, 10);
-      vi.advanceTimersByTime(256);
-      expect(frames.length).toBeGreaterThanOrEqual(12);
-      vi.advanceTimersByTime(2000);
-      expect(currentLight()).toEqual({ x: 0, y: 0, rotationDegrees: -10 });
-      const count = frames.length;
-      vi.advanceTimersByTime(22000);
-      expect(frames).toHaveLength(count);
-      expect(vi.getTimerCount()).toBe(0);
-    } finally {
-      stop();
-    }
-  });
-
-  it("takes the short angular path through the sensor heading wrap", () => {
-    screenAt(0);
-    uninstall = installLight(root);
-    showScreen();
-    tiltTo(0, 0, 0);
-    tiltTo(0, 0, 359);
-    vi.advanceTimersByTime(2000);
-    expect(currentLight().rotationDegrees).toBeCloseTo(1, 8);
-    const rotations: number[] = [];
-    const stop = subscribeLight((pose) => rotations.push(pose.rotationDegrees));
-    try {
-      tiltTo(0, 0, 1);
-      vi.advanceTimersByTime(2000);
-      expect(currentLight().rotationDegrees).toBeCloseTo(-1, 8);
-      expect(rotations.length).toBeGreaterThan(2);
-      expect(rotations.every((rotation) => Math.abs(rotation) <= 1)).toBe(true);
-    } finally {
-      stop();
-    }
-  });
-
-  it("keeps the physical angular reference through screen rotation and controller reinstall", () => {
-    screenAt(0);
-    uninstall = installLight(root);
-    showScreen();
-    const initial = currentLight();
-    tiltTo(0, 0, 37);
-    vi.advanceTimersByTime(2000);
-    expect(currentLight()).toEqual(initial);
-    tiltTo(0, 0, 47);
-    vi.advanceTimersByTime(2000);
-    expect(currentLight().rotationDegrees).toBeCloseTo(-10, 8);
-    const before = currentLight();
-    screenAt(90);
-    tiltTo(0, 0, 47);
-    vi.advanceTimersByTime(2000);
-    expect(currentLight()).toEqual({ ...before, rotationDegrees: 80 });
-    uninstall();
-    uninstall = installLight(root);
-    tiltTo(0, 0, 47);
-    vi.advanceTimersByTime(2000);
-    expect(currentLight()).toEqual({ ...before, rotationDegrees: 80 });
-    screenAt(0);
-    tiltTo(0, 0, 47);
-    vi.advanceTimersByTime(2000);
-    expect(currentLight()).toEqual(before);
+    vi.advanceTimersByTime(22000);
+    expect(currentLight()).toEqual(STILL_POSE);
+    expect(published).toHaveLength(0);
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("publishes laminate and foil from the same pose on every moving display frame", () => {
-    screenAt(0);
+  it("glides from the still pose to the device's real pose on the first reading, and lands", () => {
     uninstall = installLight(root);
     showScreen();
-    tiltTo(0, 40);
-    vi.advanceTimersByTime(1000);
-    const frames: { at: number; x: number; y: number }[] = [];
-    const stop = subscribeLight((pose) => frames.push({ at: performance.now(), ...pose }));
+    tiltTo(30, 10);
+    vi.advanceTimersByTime(FRAME_MS);
+    const first = currentLight();
+    expect(first.beta).toBeGreaterThan(30);
+    expect(first.beta).toBeLessThan(STILL_POSE.beta);
+    expect(first.gamma).toBeGreaterThan(0);
+    expect(first.gamma).toBeLessThan(10);
+    settle();
+    expect(currentLight()).toEqual(pose(30, 10));
+    for (let i = 1; i < published.length; i++)
+      expect(published[i].beta).toBeLessThan(published[i - 1].beta);
+  });
+
+  it("publishes every display frame while it glides, then stops where it landed", () => {
+    landAt(40, 0);
+    const frames: { at: number; pose: DevicePose }[] = [];
+    const stop = subscribeLight((pose) => frames.push({ at: performance.now(), pose }));
     try {
-      tiltTo(8, 40);
+      tiltTo(48, -6);
       vi.advanceTimersByTime(256);
       expect(frames.length).toBeGreaterThanOrEqual(12);
       for (let i = 1; i < frames.length; i++) {
         expect(frames[i].at - frames[i - 1].at).toBeLessThanOrEqual(20);
-        expect(frames[i].x).toBeGreaterThan(frames[i - 1].x);
+        expect(frames[i].pose.beta).toBeGreaterThan(frames[i - 1].pose.beta);
+        expect(frames[i].pose.gamma).toBeLessThan(frames[i - 1].pose.gamma);
       }
-      expect(Number(lightAt()[0])).toBeGreaterThan(-0.6);
-      vi.advanceTimersByTime(2000);
-      const held = currentLight();
+      settle();
+      expect(currentLight()).toEqual(pose(48, -6));
       const count = frames.length;
       vi.advanceTimersByTime(22000);
-      expect(currentLight()).toEqual(held);
       expect(frames).toHaveLength(count);
       expect(vi.getTimerCount()).toBe(0);
     } finally {
@@ -326,167 +192,59 @@ describe("the shared light", () => {
     }
   });
 
-  it.each([
-    ["flat portrait", 0, 0, 0],
-    ["reading portrait", 0, 0, 40],
-    ["upright portrait", 0, 0, 80],
-    ["past upright portrait", 0, 0, 95],
-    ["flat landscape", 90, 0, 0],
-    ["upright landscape", 90, -80, 0],
-    ["upright reversed landscape", 270, 80, 0],
-  ] as const)(
-    "keeps the displayed laminate when the first reading arrives in %s",
-    (_name, angle, gamma, beta) => {
-      screenAt(angle);
-      uninstall = installLight(root);
-      showScreen();
-      const before = currentLight();
-      tiltTo(gamma, beta);
-      vi.advanceTimersByTime(2000);
-      expect(currentLight()).toEqual(before);
-      vi.advanceTimersByTime(22000);
-      expect(currentLight()).toEqual(before);
-      expect(vi.getTimerCount()).toBe(0);
-    },
-  );
+  it("combines sensor readings within one display frame toward the latest", () => {
+    landAt(40, 0);
+    const before = published.length;
+    tiltTo(40, 30);
+    tiltTo(40, -30);
+    expect(published).toHaveLength(before);
+    vi.advanceTimersByTime(FRAME_MS);
+    expect(published).toHaveLength(before + 1);
+    expect(currentLight().gamma).toBeLessThan(0);
+    settle();
+    expect(currentLight()).toEqual(pose(40, -30));
+  });
 
-  it.each([
-    {
-      name: "flat portrait",
-      angle: 0,
-      origin: [0, 0],
-      pitch: [
-        [0, 5],
-        [0, -5],
-      ],
-      roll: [
-        [5, 0],
-        [-5, 0],
-      ],
-    },
-    {
-      name: "upright portrait",
-      angle: 0,
-      origin: [0, 80],
-      pitch: [
-        [0, 85],
-        [0, 75],
-      ],
-      roll: [
-        [5, 80],
-        [-5, 80],
-      ],
-    },
-    {
-      name: "past upright portrait",
-      angle: 0,
-      origin: [0, 95],
-      pitch: [
-        [0, 100],
-        [0, 90],
-      ],
-      roll: [
-        [5, 95],
-        [-5, 95],
-      ],
-    },
-    {
-      name: "flat landscape",
-      angle: 90,
-      origin: [0, 0],
-      pitch: [
-        [-5, 0],
-        [5, 0],
-      ],
-      roll: [
-        [0, 5],
-        [0, -5],
-      ],
-    },
-    {
-      name: "upright landscape",
-      angle: 90,
-      origin: [-80, 0],
-      pitch: [
-        [-85, 0],
-        [-75, 0],
-      ],
-      roll: [
-        [-80, 5],
-        [-80, -5],
-      ],
-    },
-    {
-      name: "upright reversed landscape",
-      angle: 270,
-      origin: [80, 0],
-      pitch: [
-        [85, 0],
-        [75, 0],
-      ],
-      roll: [
-        [80, -5],
-        [80, 5],
-      ],
-    },
-  ] as const)(
-    "responds to five-degree pitch and roll in both directions from $name",
-    ({ angle, origin, pitch, roll }) => {
-      screenAt(angle);
-      uninstall = installLight(root);
-      showScreen();
-      tiltTo(origin[0], origin[1]);
-      vi.advanceTimersByTime(2000);
-      const originPose = currentLight();
-      for (const [axis, readings] of [
-        ["y", pitch],
-        ["x", roll],
-      ] as const) {
-        tiltTo(readings[0][0], readings[0][1]);
-        vi.advanceTimersByTime(2000);
-        expect(currentLight()[axis] - originPose[axis]).toBeGreaterThan(0.02);
-        tiltTo(readings[1][0], readings[1][1]);
-        vi.advanceTimersByTime(2000);
-        expect(currentLight()[axis] - originPose[axis]).toBeLessThan(-0.02);
-        tiltTo(origin[0], origin[1]);
-        vi.advanceTimersByTime(2000);
-        expect(currentLight()).toEqual(originPose);
-      }
-    },
-  );
+  it("keeps still for the hand's tremor", () => {
+    landAt(40, 16);
+    const before = published.length;
+    tiltTo(40.2, 16.2);
+    vi.advanceTimersByTime(100);
+    expect(published).toHaveLength(before);
+  });
 
-  it.each([
-    [90, 90],
-    [180, -180],
-    [270, -90],
-  ] as const)(
-    "passes the screen turn once to the material consumers at %s degrees",
-    (angle, rotation) => {
-      screenAt(0);
-      uninstall = installLight(root);
-      showScreen();
-      tiltTo(0, 40);
-      vi.advanceTimersByTime(1000);
-      tiltTo(8, 40);
-      vi.advanceTimersByTime(2000);
-      const before = currentLight();
-      screenAt(angle);
-      tiltTo(8, 40);
-      vi.advanceTimersByTime(2000);
-      expect(currentLight().x).toBeCloseTo(before.x, 10);
-      expect(currentLight().y).toBeCloseTo(before.y, 10);
-      expect(currentLight().rotationDegrees).toBeCloseTo(rotation, 10);
-      screenAt(0);
-      tiltTo(8, 40);
-      vi.advanceTimersByTime(2000);
-      expect(currentLight().x).toBeCloseTo(before.x, 10);
-      expect(currentLight().y).toBeCloseTo(before.y, 10);
-      expect(Math.sin((currentLight().rotationDegrees * Math.PI) / 180)).toBeCloseTo(0, 10);
-      expect(Math.cos((currentLight().rotationDegrees * Math.PI) / 180)).toBeCloseTo(1, 10);
-      vi.advanceTimersByTime(22000);
-      expect(vi.getTimerCount()).toBe(0);
-    },
-  );
+  it("takes the short way round when the device turns face down past upside down", () => {
+    landAt(175, 0);
+    tiltTo(-175, 0);
+    settle();
+    expect(published.slice(-3).every(({ beta }) => beta >= 175)).toBe(true);
+    const [x, y, z] = upOnScreen(currentLight());
+    const [ux, uy, uz] = upOnScreen(pose(-175, 0));
+    expect([x, y, z].map((v, i) => v - [ux, uy, uz][i]).every((d) => Math.abs(d) < 1e-9)).toBe(
+      true,
+    );
+  });
+
+  it("starts at the still pose's light when the first reading comes from a turned screen", () => {
+    screenAt(90);
+    uninstall = installLight(root);
+    showScreen();
+    // In landscape, the device's own axes are turned: this reading is the still pose on screen.
+    tiltTo(0, -STILL_POSE.beta);
+    settle();
+    expect(published).toHaveLength(0);
+    tiltTo(0, -30);
+    settle();
+    expect(currentLight()).toEqual(pose(0, -30, 90));
+  });
+
+  it("turns the room at once when the screen turns under a still device", () => {
+    landAt(40, 0);
+    screenAt(90);
+    tiltTo(40, 0);
+    vi.advanceTimersByTime(FRAME_MS);
+    expect(currentLight()).toEqual(pose(40, 0, 90));
+  });
 
   it.each([
     ["mouse", "pointermove"],
@@ -495,135 +253,20 @@ describe("the shared light", () => {
     ["pen", "pointerdown"],
     ["touch", "pointermove"],
     ["touch", "pointerdown"],
-  ])("ignores %s %s before and after device tilt lights the stickers", (pointerType, type) => {
-    const crease = addCrease();
+  ])("never moves for a %s %s, before or after the tilt", (pointerType, type) => {
     uninstall = installLight(root);
     showScreen();
     pointAt(window.innerWidth, 0, pointerType, type);
     vi.advanceTimersByTime(100);
-    expect(lightAt()).toEqual(["", ""]);
-    expect(lightOn(crease)).toEqual(["", ""]);
-
-    tiltTo(0, 40);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    tiltTo(32, 40);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    expect(lightAt()).toEqual(["1.000", "0.000"]);
-    expect(lightOn(crease)).toEqual(["1.000", "0.000"]);
-
+    expect(currentLight()).toEqual(STILL_POSE);
+    expect(published).toHaveLength(0);
+    tiltTo(40, 20);
+    settle();
+    const count = published.length;
     pointAt(0, window.innerHeight, pointerType, type);
     vi.advanceTimersByTime(100);
-    expect(lightAt()).toEqual(["1.000", "0.000"]);
-    expect(lightOn(crease)).toEqual(["1.000", "0.000"]);
-    expect(lightOn(root)).toEqual(["", ""]);
-
-    tiltTo(-32, 40);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    expect(lightAt()).toEqual(["-1.000", "0.000"]);
-    expect(lightOn(crease)).toEqual(["-1.000", "0.000"]);
-  });
-
-  it("combines sensor readings within one display frame toward the latest position", () => {
-    uninstall = installLight(root);
-    showScreen();
-    tiltTo(0, 40);
-    vi.advanceTimersByTime(16);
-    const before = published.length;
-    tiltTo(32, 40);
-    tiltTo(-32, 40);
-    expect(published).toHaveLength(before);
-    vi.advanceTimersByTime(16);
-    expect(published).toHaveLength(before + 1);
-    expect(Number(lightAt()[0])).toBeLessThan(0);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    expect(lightAt()).toEqual(["-1.000", "0.000"]);
-  });
-
-  it("lights a phone held upright and leaning sideways the same, whichever way the sensor writes it", () => {
-    uninstall = installLight(root);
-    showScreen();
-    tiltTo(0, 90, 0);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    // At beta 90°, alpha + gamma defines this orientation, so both complete readings are equal.
-    tiltTo(5, 90, 0);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    const before = lightAt();
-    expect(Number(before[0])).toBeGreaterThan(0.02);
-    expect(Number(before[0])).toBeLessThan(1);
-    tiltTo(-5, 90, 10);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    expect(lightAt()).toEqual(before);
-  });
-
-  it("retains the last yaw reading when a later sensor event temporarily omits alpha", () => {
-    uninstall = installLight(root);
-    showScreen();
-    tiltTo(0, 40, 123);
-    tiltTo(2, 42, 128);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    const before = currentLight();
-    window.dispatchEvent(
-      Object.assign(new Event("deviceorientation"), { alpha: null, beta: 42, gamma: 2 }),
-    );
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    expect(currentLight()).toEqual(before);
-  });
-
-  it("glides to a new tilt rather than jumping, and lands on it", () => {
-    uninstall = installLight(root);
-    showScreen();
-    tiltTo(0, 40);
-    vi.advanceTimersByTime(100);
-    tiltTo(32, 40);
-    vi.advanceTimersByTime(60);
-    const across = Number(lightAt()[0]);
-    expect(across).toBeGreaterThan(0);
-    expect(across).toBeLessThan(1);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    expect(lightAt()).toEqual(["1.000", "0.000"]);
-  });
-
-  it("keeps still for the hand's tremor", () => {
-    uninstall = installLight(root);
-    showScreen();
-    tiltTo(0, 40);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    tiltTo(16, 40);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    const before = published.length;
-    tiltTo(16.2, 40.2);
-    vi.advanceTimersByTime(100);
-    expect(published).toHaveLength(before);
-  });
-
-  it("starts a crease shown after the light moved where the light already is", () => {
-    uninstall = installLight(root);
-    showScreen();
-    tiltTo(0, 40);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    tiltTo(32, 40);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    // As a crease does when it mounts.
-    const later = addCrease();
-    lightUp(later);
-    expect(lightOn(later)).toEqual(["1.000", "0.000"]);
-  });
-
-  it("moves persistent light without launching a detached sweep after a large or slow tilt", () => {
-    uninstall = installLight(root);
-    showScreen();
-    tiltAcross(0, 12);
-    for (let t = 0; t <= 1400; t += FRAME_MS) {
-      tiltTo(12, 40);
-      vi.advanceTimersByTime(FRAME_MS);
-    }
-    tiltAcross(12, 24);
-    expect(Number(lightAt()[0])).toBeGreaterThan(0.5);
-    vi.advanceTimersByTime(2000);
-    const held = lightAt();
-    vi.advanceTimersByTime(22000);
-    expect(lightAt()).toEqual(held);
-    expect(vi.getTimerCount()).toBe(0);
+    expect(published).toHaveLength(count);
+    expect(currentLight()).toEqual(pose(40, 20));
   });
 
   it("follows the phone's tilt on a screen with stickers, even in a browser that can also ask", () => {
@@ -634,20 +277,14 @@ describe("the shared light", () => {
         static requestPermission = () => Promise.resolve("granted");
       },
     );
-    uninstall = installLight(root);
-    showScreen();
-    tiltTo(0, 40);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    tiltTo(32, 40);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    expect(lightAt()).toEqual(["1.000", "0.000"]);
+    landAt(40, 20);
   });
 
   it("leaves the motion sensor off while no screen shows stickers", () => {
     uninstall = installLight(root);
-    tiltTo(32, 40);
-    vi.advanceTimersByTime(16);
-    expect(lightAt()).toEqual(["", ""]);
+    tiltTo(40, 20);
+    vi.advanceTimersByTime(100);
+    expect(currentLight()).toEqual(STILL_POSE);
     expect(tiltListeners.size).toBe(0);
   });
 
@@ -657,102 +294,51 @@ describe("the shared light", () => {
     const closeDetail = showScreen();
     closeDetail();
     expect(tiltListeners.size).toBe(1);
-    tiltTo(0, 40);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    tiltTo(32, 40);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    expect(lightAt()).toEqual(["1.000", "0.000"]);
-
+    tiltTo(40, 20);
+    settle();
     closeBoard();
     expect(tiltListeners.size).toBe(0);
-    tiltTo(-32, 40);
+    tiltTo(70, -20);
     vi.advanceTimersByTime(100);
-    expect(lightAt()).toEqual(["1.000", "0.000"]);
+    expect(currentLight()).toEqual(pose(40, 20));
   });
 
-  it("keeps static sticker foil out of CSS light updates while the shared material pose advances", () => {
-    const element = document.createElement("span");
-    element.className = "sticker-foil";
-    const band = document.createElement("span");
-    band.className = "sticker-foil__band";
-    element.append(band);
-    document.body.append(element);
-    uninstall = installLight(root);
-    showScreen();
-    tiltTo(0, 40);
-    tiltTo(32, 40);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    lightUp(element);
-    expect(currentLight().x).toBe(1);
-    expect(lightOn(element)).toEqual(["", ""]);
-    expect(lightOn(band)).toEqual(["", ""]);
-  });
-
-  it("lights a crease only once the light rests, where it rests", () => {
-    const crease = addCrease();
-    uninstall = installLight(root);
-    showScreen();
-    tiltTo(0, 40);
-    vi.advanceTimersByTime(16);
-    // A device that keeps tilting, never resting as long as a crease waits.
-    for (const gamma of [-32, -16, 0, 16, 32]) {
-      tiltTo(gamma, 8);
-      vi.advanceTimersByTime(CREASE_SETTLE_MS / 2);
-      expect(lightOn(crease)).toEqual(["", ""]);
-    }
-
-    vi.advanceTimersByTime(10 * GLIDE_MS + CREASE_SETTLE_MS);
-    expect(lightAt()).toEqual(["1.000", "-1.000"]);
-    expect(lightOn(crease)).toEqual(lightAt());
-  });
-
-  it("holds its initial pose under reduced motion", () => {
+  it("starts still under reduced motion", () => {
     // A query that always matches stands in for the reduced-motion setting.
     vi.spyOn(window, "matchMedia").mockReturnValue(window.matchMedia("all"));
     uninstall = installLight(root);
     showScreen();
-    tiltTo(32, 8);
-    vi.advanceTimersByTime(100);
-    expect(lightAt()).toEqual(["", ""]);
+    tiltTo(30, 20);
+    vi.advanceTimersByTime(1000);
+    expect(currentLight()).toEqual(STILL_POSE);
+    expect(published).toHaveLength(0);
   });
 
-  it.each([90, 270, 180])("maps device tilt into displayed axes at %s degrees", (angle) => {
-    screenAt(angle);
+  it("stays at the still pose once motion permission is denied", () => {
+    const permission = permissionStore();
+    usePermission(permission);
+    permission.decline();
     uninstall = installLight(root);
     showScreen();
-    tiltTo(0, 0);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    const [gamma, beta] = angle === 90 ? [0, 32] : angle === 270 ? [0, -32] : [-32, 0];
-    tiltTo(gamma, beta);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    expect(lightAt()).toEqual(["1.000", "0.000"]);
-  });
-
-  it.each([90, 270])("keeps the reading pose centered in landscape at %s degrees", (angle) => {
-    screenAt(angle);
-    uninstall = installLight(root);
-    showScreen();
-    tiltTo(angle === 90 ? -40 : 40, 0);
-    vi.advanceTimersByTime(100);
-    expect(currentLight()).toMatchObject({ x: 0, y: 0 });
+    tiltTo(30, 20);
+    vi.advanceTimersByTime(1000);
+    expect(currentLight()).toEqual(STILL_POSE);
+    expect(published).toHaveLength(0);
   });
 
   it.each(["release", "hide", "reduce", "deny"])(
-    "cancels interpolation and crease settlement on %s",
+    "holds where it was, mid-glide, on %s, whatever the device does after",
     (pause) => {
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
       vi.spyOn(window, "matchMedia").mockReturnValue(reduced);
       const permission = permissionStore();
       usePermission(permission);
-      const crease = addCrease();
-      uninstall = installLight(root);
-      const close = showScreen();
-      tiltTo(0, 40);
-      vi.advanceTimersByTime(300);
-      tiltTo(32, 8);
+      const close = landAt(40, 0);
+      tiltTo(70, 30);
       vi.advanceTimersByTime(64);
-      const published = lightAt();
-      const creaseBefore = lightOn(crease);
+      const mid = currentLight();
+      expect(mid.beta).toBeGreaterThan(40);
+      expect(mid.beta).toBeLessThan(70);
       if (pause === "release") close();
       if (pause === "hide") {
         vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
@@ -763,33 +349,26 @@ describe("the shared light", () => {
         reduced.dispatchEvent(new Event("change"));
       }
       if (pause === "deny") permission.decline();
+      tiltTo(10, -40);
       vi.advanceTimersByTime(3000);
-      expect(lightAt()).toEqual(published);
-      expect(lightOn(crease)).toEqual(creaseBefore);
+      expect(currentLight()).toEqual(mid);
       expect(vi.getTimerCount()).toBe(0);
     },
   );
 
-  it("resumes rotation at the held pose until a fresh reading and initializes later material there", () => {
-    uninstall = installLight(root);
-    const close = showScreen();
-    tiltTo(0, 40);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    tiltTo(32, 40);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
+  it("resumes from where it held, waiting for a fresh reading", () => {
+    const close = landAt(40, 20);
     close();
     vi.advanceTimersByTime(1000);
     showScreen();
     vi.advanceTimersByTime(1000);
-    const later = addCrease();
-    lightUp(later);
-    expect(lightOn(later)).toEqual(["1.000", "0.000"]);
-    expect(lightAt()).toEqual(["1.000", "0.000"]);
-    tiltTo(-32, 40);
-    vi.advanceTimersByTime(64);
-    expect(Number(lightAt()[0])).toBeGreaterThan(-1);
-    vi.advanceTimersByTime(1600);
-    expect(lightAt()).toEqual(["-1.000", "0.000"]);
+    expect(currentLight()).toEqual(pose(40, 20));
+    tiltTo(60, -20);
+    vi.advanceTimersByTime(FRAME_MS);
+    expect(currentLight().beta).toBeGreaterThan(40);
+    expect(currentLight().beta).toBeLessThan(60);
+    settle();
+    expect(currentLight()).toEqual(pose(60, -20));
   });
 
   it.each([
@@ -819,31 +398,27 @@ describe("the shared light", () => {
     if (kind === "api-present") vi.stubGlobal("DeviceOrientationEvent", class {});
     uninstall = installLight(root);
     showScreen();
-    tiltTo(NaN, 40);
+    tiltTo(40, NaN);
     tiltTo(null, null);
     vi.advanceTimersByTime(22000);
-    expect(lightAt()).toEqual(["", ""]);
+    expect(currentLight()).toEqual(STILL_POSE);
+    expect(published).toHaveLength(0);
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("publishes one shared fallback pose to subscribed material, creases and late mounts", () => {
+  it("sweeps the desktop fallback around the still pose", () => {
     noRotationDesktop();
-    const crease = addCrease();
-    const poses: { x: number; y: number }[] = [];
-    const stop = subscribeLight((pose) => poses.push(pose));
     uninstall = installLight(root);
     showScreen();
-    vi.advanceTimersByTime(3500);
-    expect(poses.length).toBeGreaterThan(2);
-    expect(currentLight().x).toBeGreaterThan(0.3);
-    expect(lightOn(crease)).toEqual(lightAt());
-    const later = addCrease();
-    lightUp(later);
-    expect(lightOn(later)).toEqual(lightAt());
-    stop();
-    const count = poses.length;
-    vi.advanceTimersByTime(100);
-    expect(poses).toHaveLength(count);
+    vi.advanceTimersByTime(FALLBACK_PERIOD_MS);
+    const betas = published.map(({ beta }) => beta - STILL_POSE.beta);
+    const gammas = published.map(({ gamma }) => gamma);
+    expect(Math.max(...betas)).toBeGreaterThan(6);
+    expect(Math.min(...betas)).toBeLessThan(-6);
+    expect(Math.max(...gammas)).toBeGreaterThan(8);
+    expect(Math.min(...gammas)).toBeLessThan(-8);
+    expect(betas.every((beta) => Math.abs(beta) <= 8 + 1e-9)).toBe(true);
+    expect(gammas.every((gamma) => Math.abs(gamma) <= 10 + 1e-9)).toBe(true);
   });
 
   it("pauses the shared fallback phase while no screen owns it", () => {
@@ -858,25 +433,8 @@ describe("the shared light", () => {
     expect(vi.getTimerCount()).toBe(0);
     showScreen();
     vi.advanceTimersByTime(64);
-    expect(Math.abs(currentLight().x - before.x)).toBeLessThan(0.02);
-    expect(Math.abs(currentLight().y - before.y)).toBeLessThan(0.02);
-  });
-
-  it("permanently stops fallback on the first usable rotation and holds through later silence", () => {
-    noRotationDesktop();
-    uninstall = installLight(root);
-    showScreen();
-    vi.advanceTimersByTime(3500);
-    const before = currentLight();
-    const styles = lightAt();
-    tiltTo(32, 40);
-    vi.advanceTimersByTime(2000);
-    expect(currentLight()).toEqual(before);
-    expect(lightAt()).toEqual(styles);
-    vi.advanceTimersByTime(22000);
-    expect(currentLight()).toEqual(before);
-    expect(lightAt()).toEqual(styles);
-    expect(vi.getTimerCount()).toBe(0);
+    expect(Math.abs(currentLight().beta - before.beta)).toBeLessThan(0.5);
+    expect(Math.abs(currentLight().gamma - before.gamma)).toBeLessThan(0.5);
   });
 
   it("retains the fallback phase if a reinstalled controller pauses before its first frame", () => {
@@ -893,24 +451,33 @@ describe("the shared light", () => {
     expect(currentLight()).toEqual(before);
     showScreen();
     vi.advanceTimersByTime(64);
-    expect(Math.abs(currentLight().x - before.x)).toBeLessThan(0.02);
-    expect(Math.abs(currentLight().y - before.y)).toBeLessThan(0.02);
+    expect(Math.abs(currentLight().beta - before.beta)).toBeLessThan(0.5);
+    expect(Math.abs(currentLight().gamma - before.gamma)).toBeLessThan(0.5);
+  });
+
+  it("stops the fallback for good on the first reading, and moves to the device's pose", () => {
+    noRotationDesktop();
+    uninstall = installLight(root);
+    showScreen();
+    vi.advanceTimersByTime(3500);
+    tiltTo(30, 5);
+    settle();
+    expect(currentLight()).toEqual(pose(30, 5));
+    const count = published.length;
+    vi.advanceTimersByTime(22000);
+    expect(published).toHaveLength(count);
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("remembers usable rotation across controller reinstallations in the same document", () => {
     noRotationDesktop();
-    uninstall = installLight(root);
-    const close = showScreen();
-    tiltTo(0, 40);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    tiltTo(32, 40);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
+    const close = landAt(40, 20);
     close();
     uninstall();
     uninstall = installLight(root);
     showScreen();
     vi.advanceTimersByTime(22000);
-    expect(lightAt()).toEqual(["1.000", "0.000"]);
+    expect(currentLight()).toEqual(pose(40, 20));
     expect(vi.getTimerCount()).toBe(0);
   });
 
@@ -921,27 +488,23 @@ describe("the shared light", () => {
     vi.spyOn(reduced, "matches", "get").mockReturnValue(true);
     uninstall = installLight(root);
     showScreen();
-    tiltTo(32, 40);
+    tiltTo(30, 20);
     vi.advanceTimersByTime(1000);
     vi.spyOn(reduced, "matches", "get").mockReturnValue(false);
     reduced.dispatchEvent(new Event("change"));
     vi.advanceTimersByTime(22000);
-    expect(lightAt()).toEqual(["", ""]);
+    expect(currentLight()).toEqual(STILL_POSE);
     expect(vi.getTimerCount()).toBe(0);
-    tiltTo(-32, 40);
-    vi.advanceTimersByTime(10 * GLIDE_MS);
-    expect(lightAt()).toEqual(["-1.000", "0.000"]);
+    tiltTo(70, -20);
+    settle();
+    expect(currentLight()).toEqual(pose(70, -20));
   });
 
   it("keeps usable orientation moving when the devicemotion permission check becomes unasked", () => {
     usePermission(permissionStore("granted", true));
-    uninstall = installLight(root);
-    showScreen();
-    tiltTo(0, 40);
-    tiltTo(32, 40);
-    vi.advanceTimersByTime(1200);
-    tiltTo(-32, 40);
-    vi.advanceTimersByTime(2000);
-    expect(lightAt()).toEqual(["-1.000", "0.000"]);
+    landAt(40, 20);
+    tiltTo(60, -20);
+    settle();
+    expect(currentLight()).toEqual(pose(60, -20));
   });
 });

@@ -241,16 +241,17 @@ it("pauses the pile's tilt under an artist's board and resumes it with the loade
       }
     },
   );
-  let pose = { x: 0, y: 0, rotationDegrees: 0 };
-  const listeners = new Set<(pose: light.LightPose) => void>();
+  let pose: light.DevicePose = { beta: 55, gamma: 0, screenAngle: 0 };
+  const listeners = new Set<(pose: light.DevicePose) => void>();
   vi.spyOn(light, "currentLight").mockImplementation(() => ({ ...pose }));
   vi.spyOn(light, "subscribeLight").mockImplementation((listener) => {
     listeners.add(listener);
     return () => listeners.delete(listener);
   });
-  const publish = (x: number, y: number) =>
+  /** A device pose that leans Explore's pile all the way: -1 or 1 across, and down. */
+  const publish = (x: -1 | 1) =>
     act(() => {
-      pose = { x, y, rotationDegrees: 0 };
+      pose = { beta: 15, gamma: 60 * x, screenAngle: 0 };
       for (const listener of listeners) listener(pose);
     });
   const today = sticker({ sealedAt: "2026-09-26T11:00:00.000Z" });
@@ -289,14 +290,14 @@ it("pauses the pile's tilt under an artist's board and resumes it with the loade
   const heap = pile?.querySelector<HTMLElement>(".pile-day__heap");
   const olderNode = pile?.querySelector(`[data-pile-id="${older.id}"]`);
   if (!pile || !heap || !olderNode) throw new Error("Explore did not load its older pile page");
-  publish(1, 1);
-  expect(heap.style.translate).toBe("6px 4px");
+  publish(1);
+  expect(heap.style.translate).toBe("6px -4px");
 
   act(() => view.host.querySelector<HTMLButtonElement>(".explore-week .artist-row")?.click());
   await act(() => vi.dynamicImportSettled());
   await settle();
   expect(view.host.querySelector(".artist-board")).not.toBeNull();
-  publish(-1, -1);
+  publish(-1);
   expect(heap.style.translate).toBe("0px 0px");
 
   tapTab(view.host, "explore");
@@ -304,7 +305,7 @@ it("pauses the pile's tilt under an artist's board and resumes it with the loade
   expect(view.host.querySelector(".artist-board")).toBeNull();
   expect(view.host.querySelector(".sticker-pile")).toBe(pile);
   expect(pile.querySelector(`[data-pile-id="${older.id}"]`)).toBe(olderNode);
-  publish(-1, -1);
+  publish(-1);
   expect(heap.style.translate).toBe("-6px -4px");
 });
 

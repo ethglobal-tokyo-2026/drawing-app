@@ -1,20 +1,16 @@
 /* A sticker's crease where it lies over another's edge, pressed in as it's shown: its base, the shoulder
-   and foot that show under any light, and over it an image of its rise lit from each side, blended by
-   where the one light is (--lx, --ly), so its lit and shaded sides follow it. */
+   and foot that show under any light, and over it an image of its rise lit from each side, blended for
+   the light at rest in the top left (--crease-ux, --crease-uy), where every drop shadow falls from.
+   Tilt never moves it: only reflections follow the room. */
 .sticker-crease {
-  /* How far a full tilt swings the light: a full diagonal tilt reaches the opposite side. */
-  --crease-swing: 1.5;
-  /* Toward the light, on screen: the light at rest (--crease-ux, --crease-uy), swung by the tilt. */
-  --crease-x: calc(var(--crease-ux) + var(--crease-swing) * var(--lx, 0));
-  --crease-y: calc(var(--crease-uy) + var(--crease-swing) * var(--ly, 0));
-  /* Never stronger than at rest, so each side only fades as the light passes overhead, to the base. */
-  --crease-len: max(1, hypot(var(--crease-x), var(--crease-y)));
+  /* Never stronger than a unit light, so a side shows at most fully. */
+  --crease-len: max(1, hypot(var(--crease-ux), var(--crease-uy)));
   /* Along the light at rest, and across it toward the top right. */
   --crease-a: calc(
-    (var(--crease-x) * var(--crease-ux) + var(--crease-y) * var(--crease-uy)) / var(--crease-len)
+    (var(--crease-ux) * var(--crease-ux) + var(--crease-uy) * var(--crease-uy)) / var(--crease-len)
   );
   --crease-b: calc(
-    (var(--crease-x) * -1 * var(--crease-uy) + var(--crease-y) * var(--crease-ux)) /
+    (var(--crease-ux) * -1 * var(--crease-uy) + var(--crease-uy) * var(--crease-ux)) /
       var(--crease-len)
   );
 
@@ -28,11 +24,6 @@
   position: absolute;
   inset: 0;
   background: var(--crease) 0 0 / 100% 100% no-repeat;
-}
-
-/* The fade keeps each side's change on the compositor; without it WebKit repaints every side. */
-.sticker-crease > i[data-side] {
-  transition: opacity 280ms var(--ease-out);
 }
 
 /* Without hypot() the blend can't be worked out, and every side would show: there it's the crease at
@@ -63,10 +54,4 @@
 .placed-sticker:is(.is-dragging, .is-handling) .sticker-crease {
   opacity: 0;
   transition: opacity 90ms linear;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sticker-crease > i[data-side] {
-    transition: none;
-  }
 }

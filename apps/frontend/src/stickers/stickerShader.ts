@@ -1,11 +1,11 @@
 import { foilFragment } from "./foilShader";
 import { glslFloat as f } from "./glsl";
 import { laminateFragment } from "./laminateShader";
-import { OVERHEAD_WINDOW as overhead } from "./overheadWindow";
+import { roomFragment } from "./roomShader";
+import { ROOM } from "./sharedRoom";
 import { SCREENTONE } from "./screentone";
 
-const windowExtent = `vec2(${f(overhead.halfWidth)},${f(overhead.halfHeight)})`;
-/** Shared shader: air/film Fresnel, a finite camera, and a nine-tap neutral environment filter. */
+/** Shared shader: air/film Fresnel, one eye in front of the screen, and the shared room. */
 export const stickerVertex = `
 attribute vec2 position;
 varying vec2 uv;
@@ -29,17 +29,14 @@ uniform vec4 normalBounds;
 uniform vec2 amounts;
 uniform float hasFoil;
 uniform float opaquePaper;
+// Where the sticker's center sits on screen, in CSS px from the visual viewport's center (y down),
+// and how many CSS px on screen one of its short sides spans.
+uniform vec2 screenCenter;
+uniform float screenScale;
+${roomFragment}
 ${foilFragment}
-vec2 windowAxes(vec2 p) {
-  return 1.-smoothstep(${windowExtent}-${f(overhead.feather)},${windowExtent}+${f(overhead.feather)},abs(p-vec2(${f(overhead.x)},${f(overhead.y)})));
-}
 float environment(vec3 r) {
-  if(r.z<=0.) return .14;
-  vec2 p=r.xy/r.z;
-  // The rectangular source and 1:2:1 filter are separable: three axis samples
-  // give the same nine-tap reflection with fewer fragment calculations.
-  vec2 filtered=(windowAxes(p-roughness)+2.*windowAxes(p)+windowAxes(p+roughness))*.25;
-  return .14+${f(overhead.radiance)}*filtered.x*filtered.y;
+  return roomGloss(r)+${f(ROOM.shoji.radiance)}*roomShoji(r,roughness);
 }
 float linear(float v) { return v<=.04045?v/12.92:pow((v+.055)/1.055,2.4); }
 float display(float v) { return v<=.0031308?v*12.92:1.055*pow(v,1./2.4)-.055; }
@@ -56,7 +53,8 @@ void main() {
   vec2 localPoint=(sourceUv-.5)*size/min(size.x,size.y);
   vec2 point=vec2(pointTurn.x*localPoint.x-pointTurn.y*localPoint.y,
     pointTurn.y*localPoint.x+pointTurn.x*localPoint.y);
-  vec3 view=normalize(vec3(-point,2.4));
+  // One eye in front of the screen: each fragment sees it from where it sits on screen.
+  vec3 view=normalize(roomEye-vec3(screenCenter+screenScale*point,0.));
   // Derivatives are evaluated before material branches, including opaque paper fragments.
   float tile=max(${f(SCREENTONE.minPitch)},min(size.x,size.y)/${f(SCREENTONE.tilesAcross)});
   vec2 printCoordinate=sourceUv*size/tile;
@@ -69,13 +67,16 @@ void main() {
   float parallel=(1.5*cosine-transmitted)/(1.5*cosine+transmitted);
   float fresnel=(perpendicular*perpendicular+parallel*parallel)*.5;
   vec3 reflected=normalize(2.*dot(view,n)*n-view);
+  vec2 shojiPoint=roomPlane(reflected);
+  roomFootprint=max(length(dFdx(shojiPoint)),length(dFdy(shojiPoint)));
   vec3 coat=laminateCoat(vec3(linear(base.r),linear(base.g),linear(base.b))*.9*(1.-fresnel)+fresnel*environment(reflected),
     sourceUv*size,printFootprint*tile,surfaceNormal,view);
-  vec3 result=clamp(coat,0.,1.);
+  // Paper never clips: the brightest reflection rolls off, so it keeps its gradation over the print.
+  vec3 result=clamp(highlightShoulder(coat,.88),0.,1.);
   // Native canvas snapshots use premultiplied display colors; the optical math above stays linear.
   float inSource=step(0.,sourceUv.x)*step(sourceUv.x,1.)*step(0.,sourceUv.y)*step(sourceUv.y,1.);
   float cutAlpha=texture2D(cutImage,sourceUv).a*inSource;
-  vec3 paper=laminatePaper(vec3(display(result.r),display(result.g),display(result.b)),localPoint,reflected);
+  vec3 paper=laminatePaper(vec3(display(result.r),display(result.g),display(result.b)),localPoint,reflected,view);
   if(opaquePaper>.5&&cutAlpha<1.)discard;
   float paperAlpha=cutAlpha*amounts.y;
   float foilAlpha=(1.-opaquePaper)*(1.-cutAlpha)*texture2D(outerImage,uv).a*hasFoil*amounts.x;

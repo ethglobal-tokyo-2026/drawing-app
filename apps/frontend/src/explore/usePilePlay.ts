@@ -1,5 +1,6 @@
 import { useEffect, useRef, useSyncExternalStore, type RefObject } from "react";
 import { currentLight, subscribeLight, useLight } from "../stickers/light";
+import { screenLean } from "../stickers/lightMode";
 import { capturePointer } from "../ui/capturePointer";
 import { deviceForLight } from "../ui/deviceForLight";
 import { clamp, EASE_OUT, EASE_PEEL } from "../ui/easing";
@@ -120,7 +121,7 @@ export function usePilePlay(root: RefObject<HTMLDivElement | null>, { active, la
         neutral();
         return;
       }
-      const { x, y } = currentLight();
+      const { x, y } = screenLean(currentLight());
       translate(
         clamp(Number.isFinite(x) ? x : 0, -1, 1) * 6,
         clamp(Number.isFinite(y) ? y : 0, -1, 1) * 4,

@@ -2,22 +2,22 @@
 import { act, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { LightPose } from "../stickers/light";
+import type { DevicePose } from "../stickers/light";
 import { usePilePlay } from "./usePilePlay";
 
 const motion = vi.hoisted(() => ({
   reduced: false,
   device: "phone-or-tablet" as "phone-or-tablet" | "desktop" | "unknown",
   permission: "granted" as "granted" | "denied" | "unasked" | "not-needed",
-  pose: { x: 0, y: 0, rotationDegrees: 0 },
-  lightListeners: new Set<(pose: LightPose) => void>(),
+  pose: { beta: 55, gamma: 0, screenAngle: 0 } as DevicePose,
+  lightListeners: new Set<(pose: DevicePose) => void>(),
   permissionListeners: new Set<() => void>(),
   useLight: vi.fn(),
 }));
 vi.mock("../stickers/light", () => ({
   useLight: motion.useLight,
   currentLight: () => motion.pose,
-  subscribeLight: (listener: (pose: LightPose) => void) => {
+  subscribeLight: (listener: (pose: DevicePose) => void) => {
     motion.lightListeners.add(listener);
     return () => motion.lightListeners.delete(listener);
   },
@@ -100,9 +100,10 @@ const hold = () => {
   pointer("pointerdown");
   wait(320);
 };
-const publish = (x: number, y: number) =>
+/** Shares a device pose that leans the pile all the way: -1, 0 or 1 across, and 0 or -1 up. */
+const publish = (x: -1 | 0 | 1, y: -1 | 0) =>
   act(() => {
-    motion.pose = { x, y, rotationDegrees: 0 };
+    motion.pose = { beta: y ? 15 : 55, gamma: 60 * x, screenAngle: 0 };
     for (const listener of motion.lightListeners) listener(motion.pose);
   });
 const click = (detail = 1) =>
@@ -117,7 +118,7 @@ beforeEach(() => {
   motion.reduced = false;
   motion.device = "phone-or-tablet";
   motion.permission = "granted";
-  motion.pose = { x: 0, y: 0, rotationDegrees: 0 };
+  motion.pose = { beta: 55, gamma: 0, screenAngle: 0 };
   motion.useLight.mockClear();
   opened.mockClear();
   captured.mockClear();
@@ -323,7 +324,7 @@ describe("Explore's loose sticker play", () => {
     motion.reduced = true;
     show();
     expect(motion.useLight).toHaveBeenLastCalledWith(false);
-    publish(1, 1);
+    publish(1, -1);
     hold();
     pointer("pointermove", 45);
     expect(wrapper().style.transform).toBe("translate(45px, 0px)");
@@ -346,7 +347,7 @@ describe("Explore's loose sticker play", () => {
       motion.device = device;
       motion.permission = permission;
       show({ layout: {} });
-      publish(2, -2);
+      publish(1, -1);
       expect(motion.useLight).toHaveBeenLastCalledWith(expected !== "0px 0px");
       expect(heap().style.translate).toBe(expected);
     },
@@ -355,10 +356,10 @@ describe("Explore's loose sticker play", () => {
   it("freezes tilt through any touch, including one released outside the pile, then follows again", () => {
     publish(1, 0);
     pointer("pointerdown", 0, 0, 1, pile());
-    publish(-1, 1);
+    publish(-1, -1);
     expect(heap().style.translate).toBe("6px 0px");
     pointer("pointerup", 0, 0, 1, document);
-    expect(heap().style.translate).toBe("-6px 4px");
+    expect(heap().style.translate).toBe("-6px -4px");
   });
 
   it("freezes tilt while touching elsewhere on Explore and cancels pickup for a second touch there", () => {
@@ -381,11 +382,11 @@ describe("Explore's loose sticker play", () => {
   it("keeps a keyboard-focused sticker still and responds to permission changes", () => {
     vi.spyOn(button(), "matches").mockImplementation((selector) => selector === ":focus-visible");
     act(() => button().focus());
-    publish(1, 1);
+    publish(1, -1);
     expect(heap().style.translate).toBe("0px 0px");
     act(() => button().blur());
-    publish(1, 1);
-    expect(heap().style.translate).toBe("6px 4px");
+    publish(1, -1);
+    expect(heap().style.translate).toBe("6px -4px");
     motion.permission = "denied";
     act(() => {
       for (const listener of motion.permissionListeners) listener();

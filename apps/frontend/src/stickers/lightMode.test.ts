@@ -2,8 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   fallbackPose,
   lightMode,
-  relativeTiltPose,
+  nearestAngles,
+  readAt,
   rotationInputForLight,
+  screenLean,
+  STILL_POSE,
+  upOnScreen,
+  type DevicePose,
   type LightInputs,
 } from "./lightMode";
 
@@ -17,34 +22,60 @@ const desktop: LightInputs = {
   holders: 1,
 };
 
-describe("the complete relative rotation", () => {
-  const origin = {
-    alpha: 0,
-    beta: 0,
-    gamma: 0,
-    screenAngle: 0,
-    pose: { x: 0, y: 0, rotationDegrees: 0 },
-  };
+const pose = (beta: number, gamma: number, screenAngle = 0): DevicePose => ({
+  beta,
+  gamma,
+  screenAngle,
+});
+/** Two poses with the same up on screen. */
+const expectSameUp = (a: DevicePose, b: DevicePose) => {
+  const [ax, ay, az] = upOnScreen(a);
+  const [bx, by, bz] = upOnScreen(b);
+  expect(ax).toBeCloseTo(bx, 10);
+  expect(ay).toBeCloseTo(by, 10);
+  expect(az).toBeCloseTo(bz, 10);
+};
 
-  it("retains a pure in-plane rotation while its surface normal remains unchanged", () => {
-    expect(relativeTiltPose(10, 0, 0, origin)).toEqual({ x: 0, y: 0, rotationDegrees: -10 });
+describe("upOnScreen", () => {
+  it("leans gravity's up toward the screen's top as the device stands up", () => {
+    expect(upOnScreen(pose(0, 0))[2]).toBeCloseTo(1, 10);
+    expect(upOnScreen(pose(90, 0))[1]).toBeCloseTo(1, 10);
+    // Tipped to its right, up points toward the screen's left.
+    expect(upOnScreen(pose(30, 20))[0]).toBeLessThan(0);
   });
 
-  it("includes the coupled twist from Rz alpha, Rx beta, and Ry gamma", () => {
-    const rad = Math.PI / 180;
-    const pose = relativeTiltPose(10, 5, 5, origin);
-    const expected = 10 + (2 * Math.atan(Math.tan(2.5 * rad) ** 2)) / rad;
-    expect(pose.rotationDegrees).toBeCloseTo(-expected, 10);
-    expect(pose.x).toBeGreaterThan(0);
-    expect(pose.y).toBeGreaterThan(0);
+  it.each([90, 180, 270])("turns with the screen at %s degrees", (angle) => {
+    // The device turned under the screen by the same angle shows the portrait reading's up.
+    expectSameUp(readAt(pose(40, 15), angle), pose(40, 15));
+    expect(readAt(pose(40, 15), angle).screenAngle).toBe(angle);
+  });
+});
+
+describe("nearestAngles", () => {
+  it("wraps beta the short way through upside down", () => {
+    expect(nearestAngles(pose(175, 0), pose(-175, 0)).beta).toBeCloseTo(185, 10);
   });
 
-  it("expresses a heading turn about a tilted reference frame", () => {
-    const rad = Math.PI / 180;
-    const pose = relativeTiltPose(10, 40, 0, { ...origin, beta: 40 });
-    const expected = (2 * Math.atan(Math.cos(40 * rad) * Math.tan(5 * rad))) / rad;
-    expect(pose.rotationDegrees).toBeCloseTo(-expected, 10);
-    expect(pose.x).toBeGreaterThan(0);
+  it("takes the sensor's other branch when the device rolls past sideways", () => {
+    const from = pose(30, 89);
+    const to = pose(150, -89);
+    const near = nearestAngles(from, to);
+    expectSameUp(near, to);
+    expect(Math.abs(near.beta - from.beta) + Math.abs(near.gamma - from.gamma)).toBeLessThan(5);
+  });
+});
+
+describe("screenLean", () => {
+  it.each([0, 90, 180, 270])("is still at the still pose, read at %s degrees", (angle) => {
+    expect(screenLean(readAt(STILL_POSE, angle))).toEqual({ x: 0, y: 0 });
+  });
+
+  it("leans across with a sideways tilt and up as the device stands, up to the edge", () => {
+    expect(screenLean(pose(55, 10)).x).toBeGreaterThan(0);
+    expect(screenLean(pose(55, -10)).x).toBeLessThan(0);
+    expect(screenLean(pose(65, 0)).y).toBeGreaterThan(0);
+    expect(screenLean(pose(45, 0)).y).toBeLessThan(0);
+    expect(screenLean(pose(10, 80))).toEqual({ x: 1, y: -1 });
   });
 });
 
@@ -100,18 +131,18 @@ describe("rotationInputForLight", () => {
 });
 
 describe("fallbackPose", () => {
-  it("changes one continuous bounded pose and returns to the same position each cycle", () => {
-    expect(fallbackPose(0.25).x).toBeGreaterThan(0.3);
-    expect(fallbackPose(0.75).x).toBeLessThan(-0.3);
-    expect(fallbackPose(0.25).y).toBeCloseTo(0, 8);
-    expect(fallbackPose(0)).toEqual(fallbackPose(1));
-    for (const phase of [0, 0.1, 0.3, 0.5, 0.7, 0.9]) {
+  it("starts at the still pose and sweeps continuously around it, the same each cycle", () => {
+    expect(fallbackPose(0)).toEqual(STILL_POSE);
+    expect(fallbackPose(0.25)).toEqual(fallbackPose(1.25));
+    for (let phase = 0; phase < 1; phase += 0.05) {
       const before = fallbackPose(phase);
       const after = fallbackPose(phase + 0.0001);
-      expect(Math.abs(before.x - after.x)).toBeLessThan(0.002);
-      expect(Math.abs(before.y - after.y)).toBeLessThan(0.002);
-      expect(Math.abs(before.x)).toBeLessThan(0.7);
-      expect(Math.abs(before.y)).toBeLessThan(0.3);
+      expect(Math.abs(before.beta - after.beta)).toBeLessThan(0.02);
+      expect(Math.abs(before.gamma - after.gamma)).toBeLessThan(0.02);
     }
+    expect(fallbackPose(0.25).gamma).toBeGreaterThan(5);
+    expect(fallbackPose(0.75).gamma).toBeLessThan(-5);
+    expect(fallbackPose(0.125).beta).toBeGreaterThan(STILL_POSE.beta + 5);
+    expect(fallbackPose(0.375).beta).toBeLessThan(STILL_POSE.beta - 5);
   });
 });

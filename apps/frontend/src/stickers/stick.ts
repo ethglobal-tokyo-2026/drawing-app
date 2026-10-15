@@ -1,4 +1,5 @@
 import { EASE_PEEL } from "../ui/easing";
+import { followSticker } from "./stickerRenderer";
 
 interface Options {
   /** `land`: dropped from above the board as it arrives. `drop`: pressed flat where it was let go. */
@@ -33,8 +34,13 @@ export function playStick(
         { transform: "scale(0.99)", offset: 0.7 },
         { transform: "scale(1)" },
       ];
-  const played = [el.animate(frames, { duration, delay, easing: EASE_PEEL, fill: "backwards" })];
-  return settled(played);
+  const played = settled([
+    el.animate(frames, { duration, delay, easing: EASE_PEEL, fill: "backwards" }),
+  ]);
+  // Its laminate reflects the room from each spot it passes through, and from where it settles.
+  const canvas = el.querySelector("canvas.sticker-material");
+  if (canvas instanceof HTMLCanvasElement) followSticker(canvas, played);
+  return played;
 }
 
 /** Once every animation has finished, or was cancelled with its element. */

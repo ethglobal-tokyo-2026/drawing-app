@@ -163,7 +163,7 @@ export class MountedSurface {
   /** What sizeOutput last wrote, so an unchanged output writes no styles. */
   readonly outputs = new WeakMap<
     HTMLCanvasElement,
-    { coverage: object | undefined; wrapped: boolean }
+    { coverage: Omit<FoilCoverage, "alpha"> | undefined; wrapped: boolean }
   >();
   writtenOrigin: { coverage: object | undefined; width: number; height: number } | null = null;
   /** The container's size as this frame's draw measured it. */
@@ -728,6 +728,7 @@ export class MountedSurface {
     if (!gpu) return;
     gpu.surfaces.delete(this);
     gpu.refreshes.delete(this);
+    gpu.following.delete(this);
     if (this.printCut) {
       gpu.release(this.printCut.print);
       gpu.release(this.printCut.cut);
@@ -854,6 +855,20 @@ export function turnSticker(canvas: HTMLCanvasElement, turn: number, tiltX = 0, 
     return;
   Object.assign(surface.options, { turn, tiltX, tiltY });
   surface.draw();
+}
+
+/** A sticker moved on screen reflects the room from its new spot, even when its turn holds. */
+export function moveSticker(canvas: HTMLCanvasElement, turn: number) {
+  const surface = mounted.get(canvas);
+  if (!surface) return;
+  Object.assign(surface.options, { turn, tiltX: 0, tiltY: 0 });
+  surface.draw();
+}
+
+/** A sticker in motion on screen, such as one sticking to the board, redraws each frame until it settles. */
+export function followSticker(canvas: HTMLCanvasElement, motion: Promise<unknown>) {
+  const surface = mounted.get(canvas);
+  surface?.gpu?.follow(surface, motion);
 }
 
 /** An exposed tray face samples the held pose after spending time inside the closed tray. */

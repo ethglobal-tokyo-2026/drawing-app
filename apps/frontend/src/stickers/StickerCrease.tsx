@@ -1,6 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { CREASE_LIGHT } from "./crease";
-import { lightUp } from "./light";
 import type { Crease } from "./StickerFigure";
 import "./sticker-crease.css";
 import "./crease-reveal.css";
@@ -11,8 +10,8 @@ const CREASE_DECODE_TIMEOUT_MS = 20_000;
 
 /**
  * A sticker's crease where it lies over other stickers' edges: its base, the shoulder and foot that show
- * under any light, and over it an image of its rise lit from each side, blended by where the one light
- * is, so its lit and shaded sides follow the light without a new bake.
+ * under any light, and over it an image of its rise lit from each side, shown for the light at rest in
+ * the top left, where every drop shadow falls from.
  */
 export function StickerCrease({
   crease,
@@ -27,10 +26,6 @@ export function StickerCrease({
   const sides = { topLeft, bottomRight, topRight, bottomLeft };
   const local = useRef<HTMLSpanElement>(null);
   const el = ref ?? local;
-  // Shown after the light last moved, it starts where the light is, like every crease already shown.
-  useLayoutEffect(() => {
-    if (el.current) lightUp(el.current);
-  }, [el]);
   useEffect(() => {
     if (!onReady) return;
     let current = true;

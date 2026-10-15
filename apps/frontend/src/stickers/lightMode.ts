@@ -47,113 +47,92 @@ export function rotationInputForLight(facts: RotationFactsForLight): RotationInp
     : "unknown";
 }
 
+/** DeviceOrientation beta and gamma in degrees, and the screen orientation angle they were read at. */
+export interface DevicePose {
+  beta: number;
+  gamma: number;
+  screenAngle: number;
+}
+
+/**
+ * The usual reading angle, which the light assumes without tilt. Its screen angle of 0 makes the
+ * device's axes the screen's, so it reads the same whichever way the screen is turned.
+ */
+export const STILL_POSE: DevicePose = { beta: 55, gamma: 0, screenAngle: 0 };
+
 const RAD = Math.PI / 180;
-const TILT_RANGE = 32;
-const HELD_BETA = 40;
-const ACROSS_RANGE = Math.cos(HELD_BETA * RAD) * Math.sin(TILT_RANGE * RAD);
 const clamp11 = (v: number) => Math.max(-1, Math.min(1, v));
+
+/** Gravity's up in the screen's axes: x right, y toward the top, z out of the screen. */
+export function upOnScreen({ beta, gamma, screenAngle }: DevicePose): [number, number, number] {
+  const b = beta * RAD,
+    g = gamma * RAD,
+    a = screenAngle * RAD;
+  const x = -Math.cos(b) * Math.sin(g),
+    y = Math.sin(b);
+  return [
+    x * Math.cos(a) - y * Math.sin(a),
+    x * Math.sin(a) + y * Math.cos(a),
+    Math.cos(b) * Math.cos(g),
+  ];
+}
+
+/** The same up on screen, as a device read at `screenAngle` reports it. */
+export function readAt(pose: DevicePose, screenAngle: number): DevicePose {
+  const [x, y, z] = upOnScreen(pose);
+  const a = screenAngle * RAD;
+  const across = x * Math.cos(a) + y * Math.sin(a),
+    up = -x * Math.sin(a) + y * Math.cos(a);
+  return { beta: Math.asin(clamp11(up)) / RAD, gamma: Math.atan2(-across, z) / RAD, screenAngle };
+}
+
+/** `to`'s angles nearest `from`, so a glide between them never takes the long way round. */
+export function nearestAngles(from: DevicePose, to: DevicePose): DevicePose {
+  const near = (v: number, ref: number) => v + 360 * Math.round((ref - v) / 360);
+  const direct = {
+    beta: near(to.beta, from.beta),
+    gamma: near(to.gamma, from.gamma),
+    screenAngle: to.screenAngle,
+  };
+  // Rolled past sideways, the sensor flips to its other branch, (180° − β, γ + 180°): the same up.
+  const flipped = {
+    beta: near(180 - to.beta, from.beta),
+    gamma: near(to.gamma + 180, from.gamma),
+    screenAngle: to.screenAngle,
+  };
+  const distance = (p: DevicePose) => Math.abs(p.beta - from.beta) + Math.abs(p.gamma - from.gamma);
+  return distance(flipped) < distance(direct) ? flipped : direct;
+}
+
+const TILT_RANGE = 32;
+const ACROSS_RANGE = Math.cos(STILL_POSE.beta * RAD) * Math.sin(TILT_RANGE * RAD);
 const easeToEdge = (v: number) => {
   const c = clamp11(v);
   return 1.5 * c - 0.5 * c * c * c;
 };
+/** A rounding error under a billionth is no lean at all. */
+const quiet = (v: number) => (Math.abs(v) < 1e-9 ? 0 : v);
 
-export interface LightPose {
-  x: number;
-  y: number;
-  /** Physical rotation in displayed CSS axes, in degrees. */
-  rotationDegrees: number;
-}
-
-export interface RotationOrigin {
-  alpha: number;
-  beta: number;
-  gamma: number;
-  screenAngle: number;
-  pose: LightPose;
-}
-
-/** Fixed-reference tilt; the material consumers apply its twist and displayed screen turn once. */
-export function relativeTiltPose(
-  alpha: number,
-  beta: number,
-  gamma: number,
-  origin: RotationOrigin,
-  screenAngle = origin.screenAngle,
-): LightPose {
-  const a = alpha * RAD,
-    b = beta * RAD,
-    g = gamma * RAD;
-  const a0 = origin.alpha * RAD,
-    b0 = origin.beta * RAD,
-    g0 = origin.gamma * RAD;
-  // DeviceOrientation uses Rz(alpha) * Rx(beta) * Ry(gamma). Transform its surface normal
-  // back into the reference device frame; this stays signed on either side of upright.
-  const nx = Math.cos(a) * Math.sin(g) + Math.sin(a) * Math.sin(b) * Math.cos(g);
-  const ny = Math.sin(a) * Math.sin(g) - Math.cos(a) * Math.sin(b) * Math.cos(g);
-  const nz = Math.cos(b) * Math.cos(g);
-  const ax = Math.cos(a0) * nx + Math.sin(a0) * ny;
-  const ay = -Math.sin(a0) * nx + Math.cos(a0) * ny;
-  const by = Math.cos(b0) * ay + Math.sin(b0) * nz;
-  const bz = -Math.sin(b0) * ay + Math.cos(b0) * nz;
-  const cx = Math.cos(g0) * ax - Math.sin(g0) * bz;
-  const cz = Math.sin(g0) * ax + Math.cos(g0) * bz;
-  const across = Math.atan2(cx, cz) / RAD;
-  const up = Math.atan2(-by, cz) / RAD;
-  const angle = origin.screenAngle * RAD;
-  const quiet = (v: number) => (Math.abs(v) < 1e-9 ? 0 : v);
-  const referenceAxes = (vx: number, vy: number, vz: number) => {
-    const dx = Math.cos(a0) * vx + Math.sin(a0) * vy;
-    const dy = -Math.sin(a0) * vx + Math.cos(a0) * vy;
-    const ey = Math.cos(b0) * dy + Math.sin(b0) * vz;
-    const ez = -Math.sin(b0) * dy + Math.cos(b0) * vz;
-    return [Math.cos(g0) * dx - Math.sin(g0) * ez, ey] as const;
-  };
-  const tangentX = referenceAxes(
-    Math.cos(a) * Math.cos(g) - Math.sin(a) * Math.sin(b) * Math.sin(g),
-    Math.sin(a) * Math.cos(g) + Math.cos(a) * Math.sin(b) * Math.sin(g),
-    -Math.cos(b) * Math.sin(g),
-  );
-  const tangentY = referenceAxes(
-    -Math.sin(a) * Math.cos(b),
-    Math.cos(a) * Math.cos(b),
-    Math.sin(b),
-  );
-  // The full relative frame retains twist about its normal, even when the normal does not move.
-  // DeviceOrientation's upward-y rotation has the opposite sign from displayed CSS axes.
-  const twist = Math.atan2(tangentX[1] - tangentY[0], tangentX[0] + tangentY[1]) / RAD;
+/** How far gravity leans the screen from the still pose, across and up, eased from -1 to 1. */
+export function screenLean(pose: DevicePose): { x: number; y: number } {
+  const [x, y] = upOnScreen(pose);
   return {
-    x: clamp11(
-      origin.pose.x +
-        easeToEdge(quiet(across * Math.cos(angle) + up * Math.sin(angle)) / TILT_RANGE),
-    ),
-    y: clamp11(
-      origin.pose.y +
-        easeToEdge(quiet(up * Math.cos(angle) - across * Math.sin(angle)) / TILT_RANGE),
-    ),
-    rotationDegrees: origin.pose.rotationDegrees - quiet(twist) + screenAngle - origin.screenAngle,
+    x: easeToEdge(quiet(-x) / ACROSS_RANGE),
+    y: easeToEdge(quiet(Math.asin(clamp11(y)) / RAD - STILL_POSE.beta) / TILT_RANGE),
   };
 }
 
-/** Rotate device gravity into displayed axes before applying the established reading range. */
-export function tiltPose(beta: number, gamma: number, screenAngle = 0): LightPose {
-  const b = beta * RAD;
-  const angle = screenAngle * RAD;
-  const gx = Math.cos(b) * Math.sin(gamma * RAD);
-  const gy = Math.sin(b);
-  const across = gx * Math.cos(angle) + gy * Math.sin(angle);
-  const up = gy * Math.cos(angle) - gx * Math.sin(angle);
-  const lean = Math.asin(clamp11(up)) / RAD;
-  return {
-    x: easeToEdge(across / ACROSS_RANGE),
-    y: easeToEdge((lean - HELD_BETA) / TILT_RANGE),
-    rotationDegrees: 0,
-  };
-}
-
-/** One virtual reading pose per cycle: provisional 12° horizontal and 4° vertical excursions. */
-export function fallbackPose(phase: number): LightPose {
+/**
+ * One virtual reading per cycle: a figure eight through the still pose, so it starts there, with
+ * provisional excursions of 8° in beta and 10° in gamma.
+ */
+export function fallbackPose(phase: number): DevicePose {
   const angle = (phase - Math.floor(phase)) * 2 * Math.PI;
-  return tiltPose(HELD_BETA + 4 * Math.cos(angle), 12 * Math.sin(angle));
+  return {
+    beta: STILL_POSE.beta + 8 * Math.sin(2 * angle),
+    gamma: 10 * Math.sin(angle),
+    screenAngle: 0,
+  };
 }
 
 /** Qualification may tune this shared period; every presentation consumes the same phase. */

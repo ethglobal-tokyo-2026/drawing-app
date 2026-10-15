@@ -1,10 +1,5 @@
-import {
-  createFoilLookup,
-  createFoilSourceSamples,
-  FOIL_ROOM,
-  FOIL_STYLES,
-  type Rgb,
-} from "./foilMaterial";
+import { createFoilLookup, FOIL_STYLES, type Rgb } from "./foilMaterial";
+import { roomFoilSources, roomFrame } from "./sharedRoom";
 import {
   acquireFoilCoverage,
   FOIL_COVERAGE_TIMEOUT_MS,
@@ -12,7 +7,7 @@ import {
 } from "./acquireFoilCoverage";
 import { stickerFoilColors, type StickerFoilMaterial } from "./stickerFoilMaterial";
 import { LAMINATE_FINISHES } from "./laminate";
-import { currentLight, subscribeLight } from "./light";
+import { subscribeLight } from "./light";
 import {
   isPerformanceRecorderOn,
   notePerformance,
@@ -31,6 +26,8 @@ const TEXTURE_VALIDATION_TIMEOUT_MS = 20_000;
 const TEXTURE_LOAD_TIMEOUT_MS = 20_000;
 /** A failed check drains the finite WebGL error flags before another upload batch can proceed. */
 const MAX_TEXTURE_ERROR_CHECKS = 8;
+/** A scroller quiet this long has stopped; its surfaces then reflect the room from their new spots. */
+const SCROLL_SETTLE_MS = 120;
 
 interface TextureValidation {
   url: string;
@@ -49,8 +46,6 @@ export type FoilResources = {
   ink: number[];
   material: StickerFoilMaterial;
 };
-const foilSources = createFoilSourceSamples(FOIL_ROOM);
-
 /** One GPU context computes the coating; each visible sticker keeps its own 2D snapshot. */
 export class StickerRenderer {
   readonly canvas = document.createElement("canvas");
@@ -74,7 +69,35 @@ export class StickerRenderer {
   >();
   readonly surfaces = new Set<MountedSurface>();
   readonly refreshes = new Set<MountedSurface>();
+  /** Surfaces moving on screen, redrawn every frame until each of their motions ends. */
+  readonly following = new Map<MountedSurface, number>();
   readonly reveals = new Set<MountedSurface>();
+  /** Scrollers that moved since they last stopped. */
+  readonly scrollers = new Set<EventTarget>();
+  scrollTimer = 0;
+  readonly scrolled = (event: Event) => {
+    if (event.target) this.scrollers.add(event.target);
+    window.clearTimeout(this.scrollTimer);
+    this.scrollTimer = window.setTimeout(this.scrollStopped, SCROLL_SETTLE_MS);
+  };
+  readonly scrollStopped = () => {
+    this.scrollTimer = 0;
+    const scrollers = [...this.scrollers];
+    this.scrollers.clear();
+    for (const surface of this.surfaces)
+      if (
+        scrollers.some(
+          (scroller) =>
+            scroller === document ||
+            (scroller instanceof Node && scroller.contains(surface.container)),
+        )
+      )
+        this.refresh(surface);
+  };
+  /** A resize or turned screen moves every surface relative to the screen's center. */
+  readonly resized = () => {
+    for (const surface of this.surfaces) this.refresh(surface);
+  };
   readonly textureValidations = new Set<TextureValidation>();
   textureValidationTimer = 0;
   /** An undrained or unreadable error state cannot be used for later uploads or snapshots. */
@@ -171,6 +194,14 @@ export class StickerRenderer {
         "opaquePaper",
         "laminateStyle",
         "laminatePalette[0]",
+        "screenCenter",
+        "screenScale",
+        "roomUp",
+        "roomToward",
+        "roomEye",
+        "roomLight",
+        "roomAcross",
+        "roomDown",
       ])
         this.uniforms.set(name, gl.getUniformLocation(program, name));
       gl.useProgram(program);
@@ -195,20 +226,36 @@ export class StickerRenderer {
         timeOurWork("laminate", () => {
           this.cancelRefresh();
           this.draw([...this.surfaces]);
+          this.scheduleRefresh();
         }),
       );
       this.canvas.addEventListener("webglcontextlost", this.contextLost);
       this.canvas.addEventListener("webglcontextrestored", this.contextRestored);
       this.reduced.addEventListener("change", this.motionChanged);
+      // Scroll events don't bubble; capturing them at the document hears every scroller.
+      document.addEventListener("scroll", this.scrolled, { capture: true, passive: true });
+      window.addEventListener("resize", this.resized);
+      screen.orientation?.addEventListener("change", this.resized);
     } catch (error) {
       // A constructor that throws never becomes the shared renderer; release its partial allocation.
+      // Each release runs on its own, and one that fails is logged: the first error says why.
       this.disposed = true;
-      this.stopLight();
-      this.canvas.removeEventListener("webglcontextlost", this.contextLost);
-      this.canvas.removeEventListener("webglcontextrestored", this.contextRestored);
-      this.reduced.removeEventListener("change", this.motionChanged);
-      if (!gl.isContextLost()) gl.getExtension("WEBGL_lose_context")?.loseContext();
-      releaseCanvas(this.canvas);
+      for (const release of [
+        () => this.stopLight(),
+        () => this.stopListening(),
+        () => {
+          if (!gl.isContextLost()) gl.getExtension("WEBGL_lose_context")?.loseContext();
+        },
+        () => releaseCanvas(this.canvas),
+      ])
+        try {
+          release();
+        } catch (cleanup) {
+          console.error(
+            "Releasing a sticker material renderer that failed to start failed",
+            cleanup,
+          );
+        }
       throw error;
     }
   }
@@ -550,19 +597,51 @@ export class StickerRenderer {
   refresh(surface: MountedSurface) {
     if (this.disposed || this.lost || this.textureValidationFailure) return;
     this.refreshes.add(surface);
-    if (this.refreshFrame) return;
+    this.scheduleRefresh();
+  }
+
+  /** One draw per frame takes every requested surface and every one still moving. */
+  scheduleRefresh() {
+    if (this.refreshFrame || (!this.refreshes.size && !this.following.size)) return;
+    if (this.disposed || this.lost || this.textureValidationFailure) return;
     this.refreshFrame = requestAnimationFrame(() => {
       this.refreshFrame = 0;
-      const surfaces = [...this.refreshes];
+      const surfaces = new Set([...this.refreshes, ...this.following.keys()]);
       this.refreshes.clear();
-      timeOurWork("laminate", () => this.draw(surfaces));
+      timeOurWork("laminate", () => this.draw([...surfaces]));
+      this.scheduleRefresh();
     });
+  }
+
+  /** Redraws `surface` every frame until `motion` settles, as it moves on screen under a held pose. */
+  follow(surface: MountedSurface, motion: Promise<unknown>) {
+    if (this.disposed || this.lost) return;
+    this.following.set(surface, (this.following.get(surface) ?? 0) + 1);
+    this.scheduleRefresh();
+    const stop = () => {
+      const left = (this.following.get(surface) ?? 0) - 1;
+      if (left > 0) this.following.set(surface, left);
+      else if (this.following.delete(surface)) this.refresh(surface);
+    };
+    motion.then(stop, stop);
   }
 
   cancelRefresh() {
     cancelAnimationFrame(this.refreshFrame);
     this.refreshFrame = 0;
     this.refreshes.clear();
+  }
+
+  stopListening() {
+    this.canvas.removeEventListener("webglcontextlost", this.contextLost);
+    this.canvas.removeEventListener("webglcontextrestored", this.contextRestored);
+    this.reduced.removeEventListener("change", this.motionChanged);
+    document.removeEventListener("scroll", this.scrolled, { capture: true });
+    window.removeEventListener("resize", this.resized);
+    screen.orientation?.removeEventListener("change", this.resized);
+    window.clearTimeout(this.scrollTimer);
+    this.scrollTimer = 0;
+    this.scrollers.clear();
   }
 
   /** Ready snapshots reveal on the compositor; no material copies are needed per animation frame. */
@@ -600,48 +679,103 @@ export class StickerRenderer {
       for (const surface of surfaces) surface.finishCreaseReveal();
       return;
     }
+    // A standalone canvas wears its overflow before its first snapshot, so every draw measures it through
+    // the same transform: WebKit resolves the transform's percentages against a pixel-snapped box.
+    for (const surface of this.surfaces)
+      if (surface.container === surface.canvas && !surface.hasSnapshot)
+        surface.sizeOutput(surface.canvas);
     // Exposed owners reserve their geometry before assets arrive; partial requests only select draws.
-    // Read the complete scene before allocation and snapshots change, avoiding interleaved layout.
-    const jobs = [...this.surfaces].flatMap((surface) => {
-      const { canvas } = surface;
-      if (!canvas.isConnected || (surface.options.active && !surface.options.active())) {
-        surface.finishCreaseReveal();
-        return [];
-      }
+    // Every surface's layout is read before anything else is written, so a frame forces one layout at most.
+    const viewport = visualViewport;
+    const screenWidth = innerWidth,
+      screenHeight = innerHeight;
+    const centerX = viewport ? viewport.offsetLeft + viewport.width / 2 : screenWidth / 2,
+      centerY = viewport ? viewport.offsetTop + viewport.height / 2 : screenHeight / 2;
+    const scene = [...this.surfaces].map((surface) => {
+      if (!surface.canvas.isConnected || (surface.options.active && !surface.options.active()))
+        return { surface, layout: null };
       const box = surface.container.getBoundingClientRect();
-      if (box.bottom < 0 || box.top > innerHeight || box.right < 0 || box.left > innerWidth) {
-        surface.finishCreaseReveal();
-        return [];
-      }
+      if (box.bottom < 0 || box.top > screenHeight || box.right < 0 || box.left > screenWidth)
+        return { surface, layout: null };
       const width = surface.container.clientWidth,
         height = surface.container.clientHeight;
-      if (!width || !height) {
+      if (!width || !height) return { surface, layout: null };
+      // The moving window keeps the unrounded local box, preserving the print's CSS sampling.
+      const style = getComputedStyle(surface.container);
+      return {
+        surface,
+        layout: {
+          box,
+          width,
+          height,
+          revealWidth: parseFloat(style.width),
+          revealHeight: parseFloat(style.height),
+          // A standalone canvas wears its overflow as its own scale and translate, which its box includes.
+          overflow:
+            surface.container === surface.canvas
+              ? surface.outputs.get(surface.canvas)?.coverage
+              : undefined,
+        },
+      };
+    });
+    const jobs = scene.flatMap(({ surface, layout }) => {
+      if (!layout) {
         surface.finishCreaseReveal();
         return [];
       }
+      const { box, width, height, overflow } = layout;
+      // Where the sticker sits on screen and how large it shows there, for the one shared eye.
+      // A turned box's bounds stay centered on it; their width gives its scale once the turn is known.
+      // The source box is measured through any overflow it wears, so the light holds once it's applied.
+      const boxWidth = overflow ? (width * overflow.width) / overflow.sourceWidth : width,
+        boxHeight = overflow ? (height * overflow.height) / overflow.sourceHeight : height;
+      const turned = (surface.options.turn * Math.PI) / 180;
+      const cos = Math.abs(Math.cos(turned)),
+        sin = Math.abs(Math.sin(turned));
+      const onScreen =
+        (box.width / (boxWidth * cos + boxHeight * sin) +
+          box.height / (boxWidth * sin + boxHeight * cos)) /
+        2;
+      // Overflow grown unevenly moves the box's center off the source's, in the sticker's own axes.
+      const offsetX = overflow
+          ? (width * overflow.x) / overflow.sourceWidth + (boxWidth - width) / 2
+          : 0,
+        offsetY = overflow
+          ? (height * overflow.y) / overflow.sourceHeight + (boxHeight - height) / 2
+          : 0;
+      const cosTurn = Math.cos(turned),
+        sinTurn = Math.sin(turned);
+      const screenX =
+        (box.left + box.right) / 2 - onScreen * (offsetX * cosTurn - offsetY * sinTurn) - centerX;
+      const screenY =
+        (box.top + box.bottom) / 2 - onScreen * (offsetX * sinTurn + offsetY * cosTurn) - centerY;
+      const screenScale = onScreen * Math.min(width, height);
       surface.resizeCoverage(width, height);
       const coverage = surface.printCut?.foil?.coverage;
       const outputWidth = coverage ? (width * coverage.width) / coverage.sourceWidth : width;
       const outputHeight = coverage ? (height * coverage.height) / coverage.sourceHeight : height;
-      // The moving window keeps the unrounded local box, preserving the print's CSS sampling.
-      const style = getComputedStyle(surface.container);
       const ratio = Math.min(devicePixelRatio || 1, 2, 1024 / Math.max(width, height));
+      // A revealing crease's flat snapshot has no canvas of its own until its copy.
+      const target: HTMLCanvasElement | null = surface.canvas;
       const job = {
         surface,
         width,
         height,
-        revealWidth: parseFloat(style.width),
-        revealHeight: parseFloat(style.height),
+        revealWidth: layout.revealWidth,
+        revealHeight: layout.revealHeight,
         sourceW: Math.max(1, Math.round(width * ratio)),
         sourceH: Math.max(1, Math.round(height * ratio)),
         w: Math.max(1, Math.round(outputWidth * ratio)),
         h: Math.max(1, Math.round(outputHeight * ratio)),
         x: 0,
         y: 0,
-        target: canvas,
+        screenX,
+        screenY,
+        screenScale,
+        target,
         creaseProgress: 1,
       };
-      return surface.revealing ? [{ ...job, target: null, creaseProgress: 0 }, job] : [job];
+      return [job];
     });
     type Tile = (typeof jobs)[number];
     const batches: Tile[][] = [];
@@ -656,6 +790,9 @@ export class StickerRenderer {
       tiles = [];
       x = y = row = 0;
     };
+    // The shaders' derivatives come from 2×2 pixel quads, so a tile's pixels change with the parity
+    // of where it lands. Even origins give a sticker the same quads, and pixels, in any batch.
+    const even = (size: number) => size + (size & 1);
     // Put tall tiles first so short stickers do not leave gaps beside later rows.
     jobs.sort((a, b) => b.h - a.h || b.w - a.w);
     for (const job of jobs) {
@@ -668,26 +805,32 @@ export class StickerRenderer {
       job.x = x;
       job.y = y;
       tiles.push(job);
-      x += job.w;
-      row = Math.max(row, job.h);
+      x += even(job.w);
+      row = Math.max(row, even(job.h));
     }
     flush();
     const requested = new Set(surfaces);
-    const draws = batches
-      .map((batch) =>
-        batch.filter(
-          ({ surface }) =>
-            requested.has(surface) &&
-            surface.textures &&
-            (surface.hasSnapshot || !surface.pendingNormal) &&
-            !(surface.seededCopy && surface.options.normal !== surface.normalUrl) &&
-            !(surface.revealing && surface.pendingPrintCut),
-        ),
-      )
-      .filter((batch) => batch.length);
+    // A revealing crease's flat snapshot takes its sticker's own tile, in a batch of its own drawn first.
+    // The GPU rounds a tile's pixels a little differently elsewhere in the atlas, so the sticker keeps
+    // the tile, and the exact pixels, that every other draw gives it.
+    const draws = batches.flatMap((batch) => {
+      const drawn = batch.filter(
+        ({ surface }) =>
+          requested.has(surface) &&
+          surface.textures &&
+          (surface.hasSnapshot || !surface.pendingNormal) &&
+          !(surface.seededCopy && surface.options.normal !== surface.normalUrl) &&
+          !(surface.revealing && surface.pendingPrintCut),
+      );
+      const flats = drawn.flatMap((job) =>
+        job.surface.revealing ? [{ ...job, target: null, creaseProgress: 0 }] : [],
+      );
+      return [flats, drawn].filter((tiles) => tiles.length);
+    });
     if (!draws.length) return;
     const width = Math.max(...jobs.map((tile) => tile.x + tile.w));
-    const height = Math.max(...jobs.map((tile) => tile.y + tile.h));
+    // GL counts viewport rows up from the bottom, so an even height keeps those origins' parity too.
+    const height = even(Math.max(...jobs.map((tile) => tile.y + tile.h)));
     try {
       // Scene changes may shrink storage; turns and texture arrivals keep the complete scene size.
       if (this.canvas.width !== width) this.canvas.width = width;
@@ -720,6 +863,9 @@ export class StickerRenderer {
       target: HTMLCanvasElement | null;
       x: number;
       y: number;
+      screenX: number;
+      screenY: number;
+      screenScale: number;
     }[],
   ) {
     const recording = isPerformanceRecorderOn();
@@ -737,20 +883,20 @@ export class StickerRenderer {
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.disable(gl.SCISSOR_TEST);
-    const pose = currentLight();
-    const poseX = pose.y * 0.38,
-      poseY = -pose.x * 0.38;
-    const poseCosX = Math.cos(poseX),
-      poseSinX = Math.sin(poseX),
-      poseCosY = Math.cos(poseY),
-      poseSinY = Math.sin(poseY);
+    // The room turns with the device; normals stay fixed to the sticker.
+    const room = roomFrame();
+    gl.uniform3fv(this.uniforms.get("roomUp") ?? null, room.up);
+    gl.uniform3fv(this.uniforms.get("roomToward") ?? null, room.toward);
+    gl.uniform3fv(this.uniforms.get("roomEye") ?? null, room.eye);
+    gl.uniform3fv(this.uniforms.get("roomLight") ?? null, room.light);
+    gl.uniform3fv(this.uniforms.get("roomAcross") ?? null, room.across);
+    gl.uniform3fv(this.uniforms.get("roomDown") ?? null, room.down);
+    const foilSources = roomFoilSources(room);
     const normalTransform = this.normalTransform;
     const writeNormalColumn = (column: number, x: number, y: number, z: number) => {
-      const across = poseCosX * y - poseSinX * z;
-      const toward = poseSinX * y + poseCosX * z;
-      normalTransform[column * 3] = poseCosY * x + poseSinY * toward;
-      normalTransform[column * 3 + 1] = across;
-      normalTransform[column * 3 + 2] = -poseSinY * x + poseCosY * toward;
+      normalTransform[column * 3] = x;
+      normalTransform[column * 3 + 1] = y;
+      normalTransform[column * 3 + 2] = z;
     };
     for (const tile of tiles) {
       const { options, textures } = tile.surface;
@@ -807,7 +953,9 @@ export class StickerRenderer {
         );
       }
       gl.uniform2f(this.uniforms.get("size") ?? null, tile.width, tile.height);
-      const turn = ((options.turn + pose.rotationDegrees) * Math.PI) / 180,
+      gl.uniform2f(this.uniforms.get("screenCenter") ?? null, tile.screenX, tile.screenY);
+      gl.uniform1f(this.uniforms.get("screenScale") ?? null, tile.screenScale);
+      const turn = (options.turn * Math.PI) / 180,
         flightX = ((options.tiltX ?? 0) * Math.PI) / 180,
         flightY = ((options.tiltY ?? 0) * Math.PI) / 180;
       const cosTurn = Math.cos(turn),
@@ -816,7 +964,7 @@ export class StickerRenderer {
         sinX = Math.sin(flightX),
         cosY = Math.cos(flightY),
         sinY = Math.sin(flightY);
-      // Ry(poseY) Rx(poseX) Rz(turn) Rx(flightX) Ry(flightY), in GL column order.
+      // Rz(turn) Rx(flightX) Ry(flightY), in GL column order; the device's pose turns the room instead.
       writeNormalColumn(
         0,
         cosTurn * cosY - sinTurn * sinX * sinY,
@@ -834,7 +982,7 @@ export class StickerRenderer {
       gl.uniform2f(this.uniforms.get("pointTurn") ?? null, cosTurn, sinTurn);
       gl.uniform1f(
         this.uniforms.get("roughness") ?? null,
-        material?.finish === "matte" ? 0.16 : 0.016,
+        material?.finish === "matte" ? 0.16 : 0.002,
       );
       const laminate = material?.finish ?? "gloss";
       gl.uniform1f(this.uniforms.get("laminateStyle") ?? null, LAMINATE_FINISHES.indexOf(laminate));
@@ -955,13 +1103,12 @@ export class StickerRenderer {
     this.disposed = true;
     this.cancelTextureValidations("The shared sticker material renderer was destroyed");
     this.cancelRefresh();
+    this.following.clear();
     cancelAnimationFrame(this.revealFrame);
     this.revealFrame = 0;
     this.reveals.clear();
     this.stopLight();
-    this.canvas.removeEventListener("webglcontextlost", this.contextLost);
-    this.canvas.removeEventListener("webglcontextrestored", this.contextRestored);
-    this.reduced.removeEventListener("change", this.motionChanged);
+    this.stopListening();
     for (const entry of this.textures.values()) {
       entry.abort.abort();
       // All owners are already disposed or are reloading after context restoration.

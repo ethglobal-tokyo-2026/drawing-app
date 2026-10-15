@@ -1,7 +1,7 @@
 import { FOIL_ROOM } from "./foilMaterial";
 import { glslFloat as f } from "./glsl";
 import { LAMINATE_FINISHES } from "./laminate";
-import { OVERHEAD_WINDOW } from "./overheadWindow";
+import { ROOM } from "./sharedRoom";
 
 /**
  * Glitter's flakes. A first-lattice cell's side in CSS px, the same at every sticker size, so a
@@ -109,15 +109,10 @@ vec3 laminateGlitter(vec3 coat,vec2 cellPoint,float footprint,float scale,vec3 s
  vec4 facet=laminateHash(cell+71.);
  vec3 n=normalize(normalTransform*normalize(surfaceNormal+vec3((facet.xy-.5)*${f(GLITTER.tilt)},0.)));
  vec3 r=normalize(2.*dot(view,n)*n-view);
- float flash=0.;
- if(r.z>0.){
-  vec2 p=r.xy/r.z;
-  vec2 lit=(windowAxes(p-${f(GLITTER.lobe)})+2.*windowAxes(p)+windowAxes(p+${f(GLITTER.lobe)}))*.25;
-  flash=lit.x*lit.y;
- }
+ float flash=roomShoji(r,${f(GLITTER.lobe)});
  vec3 hue=laminateHue(facet.z);
  vec3 tint=mix(vec3(1.),vec3(linear(hue.r),linear(hue.g),linear(hue.b)),${f(GLITTER.tint)});
- vec3 mirror=tint*foilRoom(r)*${f(FOIL_ROOM.level)}+flash*${f(OVERHEAD_WINDOW.radiance)};
+ vec3 mirror=tint*foilRoom(r)*${f(FOIL_ROOM.level)}+flash*${f(ROOM.shoji.radiance)};
  vec3 coatNormal=normalize(normalTransform*surfaceNormal);
  float cosine=clamp(dot(coatNormal,view),0.,1.);
  float sheen=foilCoat(cosine);
@@ -127,9 +122,8 @@ vec3 laminateGlitter(vec3 coat,vec2 cellPoint,float footprint,float scale,vec3 s
 // Hard-edged facets of the palette fanning from a point in the coat, over the print as CSS soft-light
 // blends, so ink stays dark. The point and the fan follow the coat's normal, so a tilt slides and
 // turns the facets. sRGB.
-vec3 laminatePrism(vec3 paper,vec2 point,vec3 reflected){
- vec2 turned=vec2(pointTurn.x*point.x-pointTurn.y*point.y,pointTurn.y*point.x+pointTurn.x*point.y);
- vec3 n=normalize(reflected+normalize(vec3(-turned,2.4)));
+vec3 laminatePrism(vec3 paper,vec2 point,vec3 reflected,vec3 view){
+ vec3 n=normalize(reflected+view);
  vec2 fan=point-vec2(${f(PRISM.center[0])},${f(PRISM.center[1])})+${f(PRISM.follow)}*n.xy;
  float t=fract(atan(fan.x,-fan.y)/6.28318530718-${facetChain.seam}+${f(PRISM.spin)}*n.x);
  // Half a pixel, in turns at this distance from the point.
@@ -154,7 +148,7 @@ vec3 laminateCoat(vec3 coat,vec2 surfacePoint,float pixelFootprint,vec3 surfaceN
   footprint/${f(GLITTER.coarser)},${f(1 / GLITTER.coarser)},surfaceNormal,view);
 }
 // The paper in sRGB, under prism's sheen; every other finish passes it through.
-vec3 laminatePaper(vec3 paper,vec2 point,vec3 reflected){
- return abs(laminateStyle-${prism})>.5?paper:laminatePrism(paper,point,reflected);
+vec3 laminatePaper(vec3 paper,vec2 point,vec3 reflected,vec3 view){
+ return abs(laminateStyle-${prism})>.5?paper:laminatePrism(paper,point,reflected,view);
 }
 `;
