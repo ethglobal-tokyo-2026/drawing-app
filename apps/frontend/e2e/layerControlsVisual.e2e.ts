@@ -188,7 +188,6 @@ test("first-use timer help remains readable while Fill appears and after the fir
 test("short phone controls stay readable over black ink at one and ten layers and every scroll position", async ({
   page,
 }) => {
-  test.setTimeout(90_000);
   await page.setViewportSize({ width: 390, height: 667 });
   const language = "en";
   await signIn(page, "layer-visual-phone", language);
@@ -255,7 +254,6 @@ test("left hand and Japanese keep the selector clear of the layer controls", asy
 test("short Kyoto Seika sheet keeps its corner print and Fill choices reachable", async ({
   page,
 }) => {
-  test.setTimeout(90_000);
   await page.setViewportSize({ width: 390, height: 667 });
   const language = "en";
   await signIn(page, "lv-kyoto", language);

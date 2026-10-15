@@ -148,7 +148,6 @@ test("a left drawing hand mirrors the layer column, slider and options toward th
 test("a begun Kyoto Seika clock holds for layer tools during recording and resumes afterward", async ({
   page,
 }) => {
-  test.setTimeout(90_000);
   await signIn(page, "kyoto-layers", language);
   const on = await page.request.post("/api/me/kyoto-seika-practice", {
     headers: { "x-croquis-user-id": await signedInUserId(page) },

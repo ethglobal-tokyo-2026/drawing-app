@@ -29,7 +29,6 @@ test("foil follows the room as the device turns, returns to its held pose, and g
 test("the window's source grid matches independently integrated diffraction", async ({
   page,
 }, info) => {
-  test.setTimeout(120_000);
   await page.goto("/e2e/stickerFoil.html");
   await expect(page.locator("#foil")).toHaveAttribute("data-ready", "true");
   const matrix: ReferenceFrame[] = [

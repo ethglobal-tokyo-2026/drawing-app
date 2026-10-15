@@ -21,7 +21,15 @@ import {
   slider,
   undo,
 } from "./fillHelpers.ts";
-import { canvas, openDetail, openSealSheet, say, sealOnSheet, ticketSnapshot } from "./helpers.ts";
+import {
+  canvas,
+  openDetail,
+  openSealSheet,
+  overlayEntry,
+  say,
+  sealOnSheet,
+  ticketSnapshot,
+} from "./helpers.ts";
 import {
   along,
   at,
@@ -263,6 +271,9 @@ test("fully erased ink offers recovery, and Undo restores a ready preview", asyn
   await expect(sheet.getByRole("switch")).toHaveCount(0);
   await expect(button(page, creation.sealSheet.seal)).toBeDisabled();
   await button(page, creation.sealSheet.backToDrawing).click();
+  // The seal sheet takes its history entry off a moment after it closes, which would cancel a
+  // reload under way.
+  await expect.poll(() => overlayEntry(page)).toBeNull();
   await page.reload();
   await button(page, stickerBoard.board.continueDrawing).click();
   await expect(page.locator(".ink-sheet")).toBeVisible();
@@ -311,6 +322,7 @@ test("restoring opacity replaces an empty preview with ready ink", async ({ page
   await expect(button(page, creation.sealSheet.seal)).toBeDisabled();
   await expect(page.locator(".seal-preview__sticker")).toBeHidden();
   await button(page, creation.sealSheet.backToDrawing).click();
+  await expect.poll(() => overlayEntry(page)).toBeNull();
   await page.reload();
   await button(page, stickerBoard.board.continueDrawing).click();
   await expect(page.locator(".ink-sheet")).toBeVisible();
@@ -338,6 +350,7 @@ test("clipping to an empty base preserves recoverable ink", async ({ page }) => 
   await expect(button(page, creation.sealSheet.seal)).toBeDisabled();
   await expect(page.locator(".seal-preview__sticker")).toBeHidden();
   await button(page, creation.sealSheet.backToDrawing).click();
+  await expect.poll(() => overlayEntry(page)).toBeNull();
   await page.reload();
   await button(page, stickerBoard.board.continueDrawing).click();
   await expect(page.locator(".ink-sheet")).toBeVisible();
@@ -422,7 +435,6 @@ test("measures repeated empty previews with retained layer history", async ({
   page,
   browserName,
 }) => {
-  test.setTimeout(180_000);
   await page.addInitScript(() => {
     const records = new Map<number, { width: number; height: number; released: boolean }>();
     const ids = new WeakMap<HTMLCanvasElement, number>();

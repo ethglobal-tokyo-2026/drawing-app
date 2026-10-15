@@ -194,7 +194,6 @@ for (const language of ["en", "ja"] as const) {
         page,
         browserName,
       }) => {
-        test.setTimeout(90_000);
         await page.setViewportSize(size);
         await page.emulateMedia({ reducedMotion: "reduce" });
         const consoleErrors: string[] = [];

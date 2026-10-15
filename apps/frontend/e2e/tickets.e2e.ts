@@ -10,6 +10,7 @@ import {
   drawKey,
   drawKeyName,
   openShop,
+  overlayEntry,
   say,
   sayCount,
   signIn,
@@ -93,6 +94,9 @@ test("spending a reserve ticket: with no daily ticket left Draw asks first; Not 
   await expect(ask).toBeVisible();
   await ask.getByRole("button", { name: say(tickets.notNow, language) }).click();
   await expect(ask).toBeHidden();
+  // The ask takes its history entry off a moment after it closes, which would cancel a reload
+  // under way.
+  await expect.poll(() => overlayEntry(page)).toBeNull();
   // The server still counts every one.
   await page.reload();
   await drawOnReserve(pack.tickets);

@@ -23,6 +23,10 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   use: {
     baseURL: appOrigin,
+    // A click, wait or load that takes this long has stuck: it fails with its own call log instead
+    // of spending the test's whole budget.
+    actionTimeout: 15_000,
+    navigationTimeout: 15_000,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
