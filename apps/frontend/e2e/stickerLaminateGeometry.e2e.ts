@@ -241,7 +241,10 @@ test("Shop matte uses the same held light and broadens the shoji's reflection", 
       turn: 0,
     };
     const release = api.mountSticker(c, { ...material, finish: "gloss" });
-    /** The column down the middle: its brightest and darkest, and its steepest step. */
+    /**
+     * The column down the middle: its brightest and darkest, and its steepest change over eight rows,
+     * since gloss's blurred edge rises less than two levels a row.
+     */
     const column = () => {
       const data = required(c.getContext("2d")).getImageData(c.width >> 1, 0, 1, c.height).data;
       let step = 0,
@@ -250,7 +253,7 @@ test("Shop matte uses the same held light and broadens the shoji's reflection", 
       for (let i = 0; i < data.length; i += 4) {
         low = Math.min(low, data[i]);
         high = Math.max(high, data[i]);
-        if (i) step = Math.max(step, Math.abs(data[i] - data[i - 4]));
+        if (i >= 32) step = Math.max(step, Math.abs(data[i] - data[i - 32]));
       }
       return { range: high - low, step };
     };
@@ -277,8 +280,14 @@ test("Shop matte uses the same held light and broadens the shoji's reflection", 
       return el.toDataURL();
     });
   await page.evaluate(() => window.laminateFixture.tilt(40, 0));
-  await page.evaluate(() => window.laminateFixture.tilt(40, 28));
-  await page.waitForTimeout(1200);
+  // Inside the viewer's re-centering release, so the light lands and then holds still.
+  await page.evaluate(() => window.laminateFixture.tilt(40, 20));
+  await expect
+    .poll(() => page.evaluate(() => window.laminateFixture.getPose()))
+    .toMatchObject({ beta: 40, gamma: 20 });
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
   const held = await image();
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.evaluate(() => window.laminateFixture.tilt(10, -28));

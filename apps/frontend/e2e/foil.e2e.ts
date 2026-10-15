@@ -3,6 +3,7 @@ import { expect, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
 import { drawAndSeal, drawKeyName, openDetail, say, signIn, test } from "./helpers.ts";
 import { ipad } from "./ipad.ts";
+import { STILL_POSE } from "../src/stickers/lightMode.ts";
 
 const { ui } = strings;
 const language = "en";
@@ -115,7 +116,7 @@ test("a foil follows only device tilt, holding still through mouse and Apple Pen
   await lightAtRest(page);
   expect(
     await page.evaluate(async () => (await import("../src/stickers/light.ts")).currentLight()),
-  ).toEqual({ beta: 55, gamma: 0, screenAngle: 0 });
+  ).toEqual(STILL_POSE);
   const still = await bandPixels(page, foil);
   await page.waitForTimeout(500);
   expect((await bandPixels(page, foil)).equals(still)).toBe(true);
@@ -125,10 +126,11 @@ test("a foil follows only device tilt, holding still through mouse and Apple Pen
   await tiltLight(page, 40, 0);
   expect((await bandPixels(page, foil)).equals(still)).toBe(false);
 
-  // Device tilt swings the light across the screen, and the complete reflection follows it.
-  await tiltLight(page, 40, -25);
+  // Device tilt swings the light across the screen, and the complete reflection follows it. Each side
+  // stays inside the viewer's release, so the viewer holds still and the reflection settles at once.
+  await tiltLight(page, 40, -20);
   const left = await bandPixels(page, foil);
-  await tiltLight(page, 40, 25);
+  await tiltLight(page, 40, 20);
   const right = await bandPixels(page, foil);
   expect(right.equals(left)).toBe(false);
   await ignorePointers(page, foil, right);

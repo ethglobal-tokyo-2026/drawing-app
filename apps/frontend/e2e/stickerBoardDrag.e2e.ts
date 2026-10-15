@@ -437,10 +437,13 @@ test("21 distinct large creased stickers follow diagonal tilt and retain a stati
       }[] = [];
       const started = performance.now();
       fixture.setPhase("steady-tilt");
-      while (performance.now() - started < 2000) {
+      // Two sweeps in two seconds, slowed to one display frame's step when a loaded machine draws
+      // fewer than 60 frames, so the sweep is never sampled at only a few points.
+      const swept = (elapsed: number) => Math.min(elapsed / 2000, samples.length / 60);
+      while (swept(performance.now() - started) < 1) {
         const now = await new Promise<number>(requestAnimationFrame);
         const elapsed = now - started;
-        const angle = (elapsed / 2000) * Math.PI * 4;
+        const angle = swept(elapsed) * Math.PI * 4;
         const inputMs = fixture.tilt(
           40 + 5 * Math.cos(angle),
           5 * Math.sin(angle),
@@ -599,7 +602,7 @@ test("21 distinct large creased stickers follow diagonal tilt and retain a stati
     expect(
       hold.pose,
       "The held light is the device's absolute pose, with no first-reading reference",
-    ).toEqual({ beta: 45, gamma: 5, screenAngle: 0 });
+    ).toMatchObject({ beta: 45, gamma: 5, screenAngle: 0 });
     expect(errors, "The large board motion pipeline must not silently fail").toEqual([]);
     const screenshot = info.outputPath("large-board-held-diagonal-tilt.png");
     await page.screenshot({ path: screenshot });

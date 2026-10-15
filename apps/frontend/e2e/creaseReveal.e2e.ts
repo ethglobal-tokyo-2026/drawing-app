@@ -162,6 +162,16 @@ const figureBounds = (page: Page) =>
       }),
     );
 
+const edges = ({ left, top, width, height }: Awaited<ReturnType<typeof figureBounds>>[number]) => ({
+  left,
+  top,
+  right: left + width,
+  bottom: top + height,
+});
+
+/** The gap between `value` and the next float32 above it. */
+const float32Step = (value: number) => 2 ** (Math.floor(Math.log2(Math.abs(value))) - 23);
+
 function difference(before: number[], after: number[], box: [number, number, number, number]) {
   let peak = 0;
   const [left, top, width, height] = box;
@@ -553,7 +563,18 @@ for (const { width, height } of [
     const checkBounds = async () => {
       const actual = await figureBounds(page);
       if (!fractional) {
-        expect(actual, "The reveal must not move artwork or material bounds").toEqual(bounds);
+        // Engines map a box through each of the reveal's opposite translations in float32, so an edge
+        // they leave in place can read one float32 step off; any real move, even 1/64 px, is far more.
+        expect(actual).toHaveLength(bounds.length);
+        for (const [index, box] of actual.entries()) {
+          const before = edges(bounds[index]),
+            after = edges(box);
+          for (const edge of ["left", "top", "right", "bottom"] as const)
+            expect(
+              Math.abs(after[edge] - before[edge]),
+              `The reveal must not move artwork or material bounds: ${edge}`,
+            ).toBeLessThanOrEqual(float32Step(before[edge]));
+        }
         return;
       }
       expect(actual).toHaveLength(bounds.length);
