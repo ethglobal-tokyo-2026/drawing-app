@@ -21,16 +21,17 @@ async function digests(page: Page, selector: string) {
 
 /** One fixed pose for the whole test, given as the sensors give it, once the light has landed on it. */
 async function holdPose(page: Page) {
-  await tiltScreen(page, 55, 0);
-  // The material draws each pose the light publishes; it holds once two frames publish the same.
+  const reading = await tiltScreen(page, 55, 0);
+  // A landed light publishes the reading's own angles, where a gliding one publishes its own; the
+  // material draws each pose the light publishes.
   await expect
     .poll(() =>
-      page.evaluate(async () => {
+      page.evaluate(async ({ beta, gamma }) => {
         const { currentLight } = await import("../src/stickers/light.ts");
-        const before = JSON.stringify(currentLight());
+        const landed = currentLight();
         await new Promise((frame) => requestAnimationFrame(() => requestAnimationFrame(frame)));
-        return JSON.stringify(currentLight()) === before;
-      }),
+        return landed.beta === beta && landed.gamma === gamma;
+      }, reading),
     )
     .toBe(true);
 }

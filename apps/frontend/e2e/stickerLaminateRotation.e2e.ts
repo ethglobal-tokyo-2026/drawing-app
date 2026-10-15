@@ -130,6 +130,38 @@ async function holdDisplayed(page: Page, screenAngle: number, held: number, roll
   await landed(page);
 }
 
+/**
+ * The shoji's side edge nearer the screen's middle, from the room at the landed pose: where it
+ * mirrors on screen, in CSS px from the viewport's center (y down, at the shoji's middle), and how
+ * far a degree of roll about the displayed vertical carries it. A direction d mirrors for the eye e
+ * at e.xy + e.z·d.xy / d.z, and a roll turns the eye and the room together, since both stay put.
+ */
+const shojiEdge = (page: Page) =>
+  page.evaluate(async () => {
+    const { roomFrame, ROOM } = await import("../src/stickers/sharedRoom.ts");
+    const frame = roomFrame(window.laminateFixture.getPose());
+    type Vector = readonly number[];
+    const mirror = (eye: Vector, d: Vector) => [
+      eye[0] + (eye[2] * d[0]) / d[2],
+      eye[1] + (eye[2] * d[1]) / d[2],
+    ];
+    const a = Math.PI / 180;
+    const roll = (v: Vector) => [
+      v[0] * Math.cos(a) + v[2] * Math.sin(a),
+      v[1],
+      -v[0] * Math.sin(a) + v[2] * Math.cos(a),
+    ];
+    const [edge] = [-1, 1]
+      .map((side) => frame.light.map((l, i) => l + side * ROOM.shoji.halfWidth * frame.across[i]))
+      .toSorted((p, q) => Math.abs(mirror(frame.eye, p)[0]) - Math.abs(mirror(frame.eye, q)[0]));
+    const [x] = mirror(frame.eye, edge);
+    return {
+      x,
+      y: mirror(frame.eye, frame.light)[1],
+      perDegree: Math.abs(mirror(roll(frame.eye), roll(edge))[0] - x),
+    };
+  });
+
 for (const [name, angle, held] of [
   ["portrait", 0, 45],
   ["landscape clockwise", 90, 45],
@@ -142,15 +174,26 @@ for (const [name, angle, held] of [
     const paper = page.locator("[data-white] canvas.sticker-material");
     const foil = page.locator('[data-sticker="0"] .sticker-material');
     await expect(paper).toHaveAttribute("data-state", "ready");
-    // The same pose of the displayed screen in every turn, with the shoji's glare on the paper.
+    // The same pose of the displayed screen in every turn. Inside the shoji's glare white paper
+    // clips evenly, so the paper straddles the glare's side edge, where the room puts it.
+    await holdDisplayed(page, angle, held, 0);
+    const edge = await shojiEdge(page);
+    const view = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }));
+    const side = 240;
+    const top = Math.min(Math.max(view.height / 2 + edge.y - side / 2, 0), view.height - side);
+    await page.addStyleTag({
+      content: `[data-white]{position:fixed!important;left:${view.width / 2 + edge.x - side / 2}px;top:${top}px}`,
+    });
+    // A step away and back redraws the paper where it now sits.
+    await holdDisplayed(page, angle, held + 1, 0);
     await holdDisplayed(page, angle, held, 0);
     const neutral = await reflection(paper);
     const foilNeutral = await snapshot(foil);
+    // A roll that carries the edge a third of the way across the paper.
+    const roll = side / 3 / edge.perDegree;
     for (const sign of [-1, 1]) {
-      // A wrist turn delivers coupled beta and gamma changes, not independent Euler sliders. The
-      // paper sits inside the glare, where its brightness barely shifts; a turn of a few degrees
-      // carries the glare's side edge onto it, at a mirror's rate, and stays inside the release.
-      await holdDisplayed(page, angle, held + (4 / 3) * sign, 4 * sign);
+      // A wrist turn delivers coupled beta and gamma changes, not independent Euler sliders.
+      await holdDisplayed(page, angle, held + (roll / 3) * sign, roll * sign);
       const after = await reflection(paper);
       await expect.poll(() => snapshot(foil)).not.toBe(foilNeutral);
       // With the eye and room still, rolling the displayed right edge away carries the glare toward

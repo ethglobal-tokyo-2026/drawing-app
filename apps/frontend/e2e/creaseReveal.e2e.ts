@@ -210,7 +210,7 @@ async function openFixture(page: Page, query = "") {
 async function routeImages(page: Page, images: Crease, delay?: CreaseImage) {
   const pending: Route[] = [];
   let released = false;
-  const names = ["base", "rise", "normal"] as const;
+  const names = ["base", "normal"] as const;
   await page.route("**/e2e/crease-reveal-*.png?*", (route) => {
     const path = new URL(route.request().url()).pathname;
     const name = names.find((name) => path.endsWith(`crease-reveal-${name}.png`));

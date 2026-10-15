@@ -152,7 +152,7 @@ test("the draped ramp changes reflection by slope while raised plateaus stay fla
   const sample = await page.evaluate(async () => {
     const { required, solidPng, twoFrames } = await import("./stickerMaterialFixture.ts");
     const api = await import("../src/stickers/stickerRenderer.ts");
-    const { CREASE_LIGHT, creasePixels } = await import("../src/stickers/crease.ts");
+    const { creasePixels } = await import("../src/stickers/crease.ts");
     // A step down at the middle, which the drape turns into a ramp between two plateaus.
     const field = new Float32Array(240 * 240);
     for (let y = 0; y < 240; y++) field.fill(2, y * 240, y * 240 + 120);
@@ -163,7 +163,6 @@ test("the draped ramp changes reflection by slope while raised plateaus stay fla
         surface: field,
         own: new Float32Array(240 * 240).fill(1),
         scale: 1,
-        light: CREASE_LIGHT,
       }),
     );
     const image = document.createElement("canvas");
@@ -227,10 +226,10 @@ test("Shop matte uses the same held light and broadens the shoji's reflection", 
   const profile = await page.evaluate(async () => {
     const { required, solidPng, twoFrames } = await import("./stickerMaterialFixture.ts");
     const api = await import("../src/stickers/stickerRenderer.ts");
-    // Gray paper across the still glare's lower edge, in gloss and then matte, in one place.
+    // Gray paper across the still glare's upper edge, in gloss and then matte, in one place.
     const host = document.createElement("div");
     host.className = "sticker-material-surface";
-    host.style.cssText = "position:absolute;left:75px;top:160px;width:240px;height:240px";
+    host.style.cssText = "position:absolute;left:75px;top:0;width:240px;height:240px";
     const c = document.createElement("canvas");
     c.className = "sticker-material";
     host.append(c);
@@ -241,39 +240,57 @@ test("Shop matte uses the same held light and broadens the shoji's reflection", 
       turn: 0,
     };
     const release = api.mountSticker(c, { ...material, finish: "gloss" });
+    /** The column down the middle, its red level row by row. */
+    const column = () =>
+      [...required(c.getContext("2d")).getImageData(c.width >> 1, 0, 1, c.height).data].filter(
+        (_, i) => i % 4 === 0,
+      );
     /**
-     * The column down the middle: its brightest and darkest, and its steepest change over eight rows,
-     * since gloss's blurred edge rises less than two levels a row.
+     * A column's range; its steepest change over eight rows; how many rows sit partway up its rise,
+     * between a tenth and nine tenths, the width of its edge; and how much brighter it is on the rows
+     * where gloss shows the glare than on the rest.
      */
-    const column = () => {
-      const data = required(c.getContext("2d")).getImageData(c.width >> 1, 0, 1, c.height).data;
-      let step = 0,
-        low = 255,
-        high = 0;
-      for (let i = 0; i < data.length; i += 4) {
-        low = Math.min(low, data[i]);
-        high = Math.max(high, data[i]);
-        if (i >= 32) step = Math.max(step, Math.abs(data[i] - data[i - 32]));
-      }
-      return { range: high - low, step };
+    const profile = (rows: number[], glare: boolean[]) => {
+      const low = Math.min(...rows);
+      const range = Math.max(...rows) - low;
+      let step = 0;
+      for (let i = 8; i < rows.length; i++) step = Math.max(step, Math.abs(rows[i] - rows[i - 8]));
+      const edge = rows.filter((v) => v > low + 0.1 * range && v < low + 0.9 * range).length;
+      const mean = (lit: boolean) => {
+        const side = rows.filter((_, i) => glare[i] === lit);
+        return side.reduce((sum, value) => sum + value, 0) / Math.max(side.length, 1);
+      };
+      return { range, step, edge, lift: mean(true) - mean(false) };
     };
     try {
       await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
       const gloss = column();
+      const middle = (Math.max(...gloss) + Math.min(...gloss)) / 2;
+      const glare = gloss.map((value) => value > middle);
       api.updateSticker(c, { ...material, finish: "matte" });
       await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
       await twoFrames();
-      return { gloss, matte: column() };
+      return { gloss: profile(gloss, glare), matte: profile(column(), glare) };
     } finally {
       release();
       host.remove();
     }
   });
-  expect(profile.gloss.range, "Gloss shows the glare's edge").toBeGreaterThan(20);
-  expect(profile.matte.range, "Matte still shows the glare").toBeGreaterThan(10);
-  expect(profile.matte.step, "Matte spreads the edge gloss keeps crisp").toBeLessThan(
-    profile.gloss.step / 2,
+  const report = JSON.stringify(profile);
+  expect(profile.gloss.range, `Gloss shows the glare's edge: ${report}`).toBeGreaterThan(20);
+  // Matte mirrors the same shoji through a wide lobe: a soft highlight where gloss's glare is, its
+  // edge spread over more rows than gloss's, and a rise over at least three eight-row spans, not flat.
+  expect(
+    profile.matte.lift,
+    `Matte is brighter where gloss shows the glare: ${report}`,
+  ).toBeGreaterThan(0);
+  expect(profile.matte.edge, `Matte spreads the edge gloss keeps crisp: ${report}`).toBeGreaterThan(
+    profile.gloss.edge,
   );
+  expect(
+    profile.matte.range,
+    `Matte's highlight is broad, not flat: ${report}`,
+  ).toBeGreaterThanOrEqual(3 * Math.max(profile.matte.step, 1));
   const image = () =>
     matte.evaluate((el) => {
       if (!(el instanceof HTMLCanvasElement)) throw new Error("The matte snapshot is not a canvas");

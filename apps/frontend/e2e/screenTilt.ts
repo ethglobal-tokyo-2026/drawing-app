@@ -1,8 +1,48 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
-/** Shares a complete rotation relative to a 40° held screen, in the displayed axes. */
+/** The laminate fixture's tilts mean a portrait screen, which WebKit reports turned; a turned screen turns the room. */
+export const holdPortrait = (page: Page) =>
+  page.addInitScript(() => {
+    if (typeof ScreenOrientation === "function")
+      Object.defineProperty(ScreenOrientation.prototype, "angle", {
+        get: () => 0,
+        configurable: true,
+      });
+  });
+
+/**
+ * On the laminate fixture: the light glides to the device's absolute pose and comes to rest on the
+ * reading, within the light's half-degree tremor step. A pause, such as a remounted sticker letting go
+ * of the light, drops an unfinished glide, so each look delivers the reading again, as a real sensor
+ * keeps doing.
+ */
+export const expectLanded = async (page: Page, [beta, gamma]: number[]) => {
+  let previous = "";
+  await expect
+    .poll(async () => {
+      const pose = await page.evaluate(
+        ([beta, gamma]) => {
+          window.laminateFixture.tilt(beta, gamma);
+          return window.laminateFixture.getPose();
+        },
+        [beta, gamma],
+      );
+      const now = JSON.stringify(pose);
+      const resting = now === previous;
+      previous = now;
+      return (
+        resting &&
+        Math.abs(pose.beta - beta) < 0.5 &&
+        Math.abs(pose.gamma - gamma) < 0.5 &&
+        pose.screenAngle === 0
+      );
+    })
+    .toBe(true);
+};
+
+/** Shares a complete rotation relative to a 40° held screen, in the displayed axes; returns the reading. */
 export async function tiltScreen(page: Page, beta: number, gamma: number) {
-  await page.evaluate(
+  return page.evaluate(
     ({ beta, gamma }) => {
       const radians = Math.PI / 180;
       const reportedAngle = screen.orientation?.angle ?? Reflect.get(window, "orientation");
@@ -60,13 +100,13 @@ export async function tiltScreen(page: Page, beta: number, gamma: number) {
         rz(angle),
       ].reduce(multiply);
       const clamp = (value: number) => Math.max(-1, Math.min(1, value));
-      window.dispatchEvent(
-        Object.assign(new Event("deviceorientation"), {
-          alpha: Math.atan2(-matrix[1], matrix[4]) / radians,
-          beta: Math.asin(clamp(matrix[7])) / radians,
-          gamma: Math.atan2(-matrix[6], matrix[8]) / radians,
-        }),
-      );
+      const reading = {
+        alpha: Math.atan2(-matrix[1], matrix[4]) / radians,
+        beta: Math.asin(clamp(matrix[7])) / radians,
+        gamma: Math.atan2(-matrix[6], matrix[8]) / radians,
+      };
+      window.dispatchEvent(Object.assign(new Event("deviceorientation"), reading));
+      return reading;
     },
     { beta, gamma },
   );

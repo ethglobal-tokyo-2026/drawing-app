@@ -11,6 +11,7 @@ import { orderOn } from "../src/sticker-board/stickerOrder";
 import { testBoardSticker } from "../src/sticker-board/testBoardSticker";
 import { CreasesContext, useCreases } from "../src/sticker-board/useCreases";
 import { useBoardGestures } from "../src/sticker-board/useBoardGestures";
+import { roomFrame } from "../src/stickers/sharedRoom";
 import { acquireLight, currentLight, installLight } from "../src/stickers/light";
 import { askForMotion } from "../src/ui/motionPermission";
 import { formatNo } from "../src/stickers/format";
@@ -129,6 +130,8 @@ const diagnostics = {
   recorderOn: isPerformanceRecorderOn,
   askForMotion,
   getPose: currentLight,
+  /** The shoji's direction in screen axes (y down), for the key shadow's direction. */
+  roomLight: () => roomFrame(currentLight()).light,
   tilt(beta: number, gamma: number, alpha = 123) {
     const started = performance.now();
     window.dispatchEvent(Object.assign(new Event("deviceorientation"), { alpha, beta, gamma }));

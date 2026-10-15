@@ -4,6 +4,17 @@ import { about, compose, sendReading, type Rotation } from "./deviceRotation";
 import { ipad } from "./ipad";
 import { phone } from "./phone";
 import { decodeScreenshot } from "./screenshotPixels";
+import {
+  expectTravel,
+  landOn,
+  latticeTurn,
+  listPath,
+  measureGlare,
+  STEP_SLACK,
+  wholeGlare,
+  type Frame,
+  type Glare,
+} from "./shojiGlare";
 
 // The light sweeps' black gloss sticker, held in every orientation its screen can be turned to. Each
 // reading is the screen's own tilt carried into the device's portrait axes, so the glare must cross
@@ -103,107 +114,6 @@ const held = (screen: Rotation, turn: Turn) => compose(screen, about.z(turn));
 /** The reading tilt: the still pose's beta, about the screen's horizontal axis. */
 const READING = 47;
 
-/** Display luma, 0 to 1, above which a pixel of the black sticker is the shoji's glare. */
-const GLARE = 0.35;
-/** The least share of the sticker the glare must cover to be measured. */
-const MIN_SHARE = 0.003;
-/** How far back, as a share of the sticker, a step may go before it breaks a monotonic path. */
-const STEP_SLACK = 0.01;
-/** The glare's share of the sticker past which its centroid no longer tracks where it is. */
-const FILLED = 0.7;
-
-interface Glare {
-  /** The swept angle, in degrees, or the frame's name. */
-  at: number | string;
-  /** The glare's share of the sticker's pixels. */
-  share: number;
-  /** The glare's centroid, as a share of the sticker's width and height from its top left. */
-  x: number;
-  y: number;
-  /** The lattice's orientation mod 90°, in degrees clockwise on screen. */
-  lattice: number;
-}
-
-interface Frame {
-  luma: Float32Array;
-  glare: Omit<Glare, "at"> | null;
-}
-
-/** The glare's centroid, and the lattice's orientation from its edges' gradients, averaged at 4θ. */
-async function measure(png: Buffer): Promise<Frame> {
-  const { width, height, data } = await decodeScreenshot(png);
-  const luma = new Float32Array(width * height);
-  let count = 0,
-    sumX = 0,
-    sumY = 0;
-  for (let y = 0; y < height; y++)
-    for (let x = 0; x < width; x++) {
-      const i = y * width + x;
-      const value =
-        (0.2126 * data[i * 4] + 0.7152 * data[i * 4 + 1] + 0.0722 * data[i * 4 + 2]) / 255;
-      luma[i] = value;
-      if (value > GLARE) {
-        count++;
-        sumX += x;
-        sumY += y;
-      }
-    }
-  if (count < MIN_SHARE * width * height) return { luma, glare: null };
-  let cos = 0,
-    sin = 0;
-  for (let y = 1; y < height - 1; y++)
-    for (let x = 1; x < width - 1; x++) {
-      const at = (dx: number, dy: number) => luma[(y + dy) * width + x + dx];
-      const gx = at(1, -1) + 2 * at(1, 0) + at(1, 1) - at(-1, -1) - 2 * at(-1, 0) - at(-1, 1);
-      const gy = at(-1, 1) + 2 * at(0, 1) + at(1, 1) - at(-1, -1) - 2 * at(0, -1) - at(1, -1);
-      const weight = gx * gx + gy * gy;
-      if (!weight) continue;
-      const angle = 4 * Math.atan2(gy, gx);
-      cos += weight * Math.cos(angle);
-      sin += weight * Math.sin(angle);
-    }
-  return {
-    luma,
-    glare: {
-      share: count / (width * height),
-      x: sumX / count / width,
-      y: sumY / count / height,
-      lattice: (Math.atan2(sin, cos) / 4) * (180 / Math.PI),
-    },
-  };
-}
-
-/**
- * Waits for the light to land on the last reading, then for the material to draw it. With `quietMs`,
- * the pose must also hold that long, which outlasts a re-centering viewer's spaced steps.
- */
-async function settle(page: Page, deadlineMs: number, quietMs = 0) {
-  return page.evaluate(
-    async ({ deadlineMs, quietMs }) => {
-      const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
-      const start = performance.now();
-      let previous = "";
-      let still = 0;
-      let changed = start;
-      while (performance.now() < start + deadlineMs) {
-        await frame();
-        const next = JSON.stringify(window.lightSweepsFixture.getPose());
-        if (next === previous) still++;
-        else {
-          still = 0;
-          changed = performance.now();
-        }
-        previous = next;
-        if (still >= 2 && performance.now() - changed >= quietMs) break;
-      }
-      await frame();
-      await frame();
-      return { settledMs: changed - start, timedOut: performance.now() >= start + deadlineMs };
-    },
-    { deadlineMs, quietMs },
-  );
-}
-
 /** Presents the page as `device` turned by `turn`, from before its first script runs. */
 async function presentAs(page: Page, device: Device, turn: Turn) {
   await page.addInitScript(
@@ -252,10 +162,10 @@ async function stickerClip(page: Page) {
 
 type Clip = Awaited<ReturnType<typeof stickerClip>>;
 
-async function capture(page: Page, clip: Clip, testInfo: TestInfo, name: string) {
+async function capture(page: Page, clip: Clip, testInfo: TestInfo, name: string): Promise<Frame> {
   const png = await page.screenshot({ clip, scale: "css" });
   await writeFile(testInfo.outputPath(`${name}.png`), png);
-  return measure(png);
+  return measureGlare(await decodeScreenshot(png));
 }
 
 /**
@@ -270,12 +180,10 @@ async function sweep(
   poses: { at: number; rotation: Rotation }[],
   centered: Rotation,
 ) {
-  await sendReading(page, centered);
-  await settle(page, 3000);
+  await landOn(page, await sendReading(page, centered), 3000);
   const path: (Glare | null)[] = [];
   for (const [i, { at, rotation }] of poses.entries()) {
-    await sendReading(page, rotation);
-    await settle(page, i === 0 ? 3000 : 900);
+    await landOn(page, await sendReading(page, rotation), 3000);
     const { glare } = await capture(
       page,
       clip,
@@ -287,39 +195,6 @@ async function sweep(
   await writeFile(testInfo.outputPath(`${name}.json`), JSON.stringify(path, null, 1));
   return path.filter((glare): glare is Glare => glare !== null);
 }
-
-const describeGlare = (g: Glare) =>
-  `${g.at}: (${g.x.toFixed(3)}, ${g.y.toFixed(3)}) lattice ${g.lattice.toFixed(1)}° share ${g.share.toFixed(3)}`;
-const listPath = (path: Glare[]) => path.map(describeGlare).join("\n");
-
-/**
- * The glare travels one way along `along` as the sweep goes, with little drift across it: each step
- * goes `direction`'s way, never back by more than STEP_SLACK.
- */
-function expectTravel(path: Glare[], along: "x" | "y", direction: 1 | -1, label: string) {
-  const across = along === "x" ? "y" : "x";
-  const detail = `${label}\n${listPath(path)}`;
-  expect.soft(path.length, `The glare shows at too few poses: ${detail}`).toBeGreaterThanOrEqual(4);
-  if (path.length < 2) return;
-  // A glare that fills most of the sticker has its centroid pinned near the middle, so those steps
-  // say nothing about its travel.
-  const backSteps = path
-    .slice(1)
-    .filter(
-      (glare, i) =>
-        Math.max(glare.share, path[i].share) < FILLED &&
-        (glare[along] - path[i][along]) * direction < -STEP_SLACK,
-    );
-  expect.soft(backSteps, `The glare turns back along ${along}: ${detail}`).toEqual([]);
-  const values = (axis: "x" | "y") => path.map((glare) => glare[axis]);
-  const travel = Math.max(...values(along)) - Math.min(...values(along));
-  const drift = Math.max(...values(across)) - Math.min(...values(across));
-  expect.soft(travel, `The glare barely moves along ${along}: ${detail}`).toBeGreaterThan(0.15);
-  expect.soft(drift, `The glare drifts along ${across}: ${detail}`).toBeLessThan(0.25 * travel);
-}
-
-/** Lattice orientations differ by this much, in degrees, mod 90. */
-const latticeTurn = (from: number, to: number) => ((((to - from + 45) % 90) + 90) % 90) - 45;
 
 /** A sweep's steps, evenly from `from` to `to`. */
 const steps = (from: number, to: number, count: number) =>
@@ -395,9 +270,7 @@ for (const device of DEVICES)
           held(about.x(tilt), turn),
         );
         expectTravel(leftRight, "x", -1, `Left/right, ${turnName(turn)}`);
-        const whole = leftRight.filter(
-          (glare) => glare.share >= 0.5 * Math.max(...leftRight.map((other) => other.share)),
-        );
+        const whole = wholeGlare(leftRight);
         const turns = whole.map((glare) => latticeTurn(whole[0].lattice, glare.lattice));
         expect
           .soft(
@@ -419,13 +292,15 @@ for (const device of DEVICES)
         if (glare) frames.push({ at, ...glare });
       };
 
-      await sendReading(page, held(about.x(READING), 0));
-      await settle(page, 3000);
+      await landOn(page, await sendReading(page, held(about.x(READING), 0)), 3000);
       note("upright", await capture(page, clip, testInfo, "turn-00-upright"));
       // A steering-wheel turn at the reading tilt, the UI still upright until the turn completes.
       for (const [i, wheel] of [15, 30, 45, 60, 75, 90].entries()) {
-        await sendReading(page, compose(about.x(READING), about.z(wheel)));
-        await settle(page, 900);
+        await landOn(
+          page,
+          await sendReading(page, compose(about.x(READING), about.z(wheel))),
+          3000,
+        );
         note(
           `wheel ${wheel}°`,
           await capture(page, clip, testInfo, `turn-0${i + 1}-wheel-${wheel}`),
@@ -434,8 +309,8 @@ for (const device of DEVICES)
       await turnUi(page, device, 90);
       clip = await stickerClip(page);
       const pose = held(about.x(READING), 90);
-      await sendReading(page, pose);
-      await settle(page, 900);
+      const reading = await sendReading(page, pose);
+      await landOn(page, reading, 3000);
       // Through the viewer's re-centering, then once the light stops publishing.
       const after: Frame[] = [];
       for (let i = 0; i < 6; i++) {
@@ -444,8 +319,7 @@ for (const device of DEVICES)
         after.push(frame);
         await page.waitForTimeout(1000);
       }
-      const { settledMs, timedOut } = await settle(page, 20_000, 1500);
-      expect(timedOut, "The light never stops publishing after the turn").toBe(false);
+      const settledMs = await landOn(page, reading, 20_000, 1500);
       const settled = await capture(page, clip, testInfo, "turn-20-settled");
       note(`settled after ${Math.round(settledMs)} ms`, settled);
       after.push(settled);
@@ -456,8 +330,7 @@ for (const device of DEVICES)
       await presentAs(freshPage, device, 90);
       await freshPage.goto("/e2e/stickerLightSweeps.html");
       clip = await stickerClip(freshPage);
-      await sendReading(freshPage, pose);
-      await settle(freshPage, 5000, 1500);
+      await landOn(freshPage, await sendReading(freshPage, pose), 5000, 1500);
       const fresh = await capture(freshPage, clip, testInfo, "turn-30-fresh-on-its-side");
       note("fresh on its side", fresh);
       await writeFile(testInfo.outputPath("turn.json"), JSON.stringify(frames, null, 1));

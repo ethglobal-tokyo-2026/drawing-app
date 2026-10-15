@@ -49,9 +49,13 @@ function orientationAngles(r: Rotation) {
   };
 }
 
-/** Sends the reading a device held at this rotation gives. */
-export async function sendReading(page: Page, rotation: Rotation) {
+export type Reading = ReturnType<typeof orientationAngles>;
+
+/** Sends the reading a device held at this rotation gives, and returns it. */
+export async function sendReading(page: Page, rotation: Rotation): Promise<Reading> {
+  const reading = orientationAngles(rotation);
   await page.evaluate((angles) => {
     window.dispatchEvent(Object.assign(new Event("deviceorientation"), angles));
-  }, orientationAngles(rotation));
+  }, reading);
+  return reading;
 }

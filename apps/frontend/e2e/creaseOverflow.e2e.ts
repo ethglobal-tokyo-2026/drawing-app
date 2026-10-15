@@ -8,8 +8,7 @@ for (const scenario of ["overflow", "normal-only", "ordinary", "empty"] as const
     await page.goto("/e2e/stickerLaminate.html?board=1");
     const result = await page.evaluate(async (scenario) => {
       const { required } = await import("./stickerMaterialFixture.ts");
-      const { CREASE_LIGHT, creasePixels, stackedSurface } =
-        await import("../src/stickers/crease.ts");
+      const { creasePixels, stackedSurface } = await import("../src/stickers/crease.ts");
       const { foilCoverage } = await import("../src/stickers/foilCoverage.ts");
       const { mountSticker, whenStickerSettled } =
         await import("../src/stickers/stickerRenderer.ts");
@@ -47,7 +46,6 @@ for (const scenario of ["overflow", "normal-only", "ordinary", "empty"] as const
         height: size,
         scale: 1,
         own: { url: cut.toDataURL(), grow },
-        light: [...CREASE_LIGHT],
         under: [
           {
             url: lower.toDataURL(),
@@ -85,7 +83,7 @@ for (const scenario of ["overflow", "normal-only", "ordinary", "empty"] as const
       if (!reply.ok) throw new Error(reply.error);
       const images: Record<string, { width: number; height: number; data: Uint8ClampedArray }> = {};
       if (reply.crease)
-        for (const name of ["normal", "base", "rise"] as const) {
+        for (const name of ["normal", "base"] as const) {
           const bitmap = await createImageBitmap(reply.crease[name]);
           const c = document.createElement("canvas");
           c.width = bitmap.width;
@@ -147,13 +145,12 @@ for (const scenario of ["overflow", "normal-only", "ordinary", "empty"] as const
           width: size,
           height: size,
           scale: 1,
-          light: job.light,
           own: a(),
           surface: stackedSurface([support], size, size),
         });
         ordinaryEqual = !!baseline;
         if (baseline && reply.crease)
-          for (const k of ["normal", "base", "rise"] as const) {
+          for (const k of ["normal", "base"] as const) {
             g.putImageData(new ImageData(baseline[k], size, size), 0, 0);
             const expected = new Uint8Array(
               await (await c.convertToBlob({ type: "image/png" })).arrayBuffer(),
@@ -165,7 +162,7 @@ for (const scenario of ["overflow", "normal-only", "ordinary", "empty"] as const
       }
       let registrationEqual = true;
       let paintPeak = 0;
-      for (const name of ["base", "rise"])
+      for (const name of ["base"])
         for (let q = 3; q < (images[name]?.data.length ?? 0); q += 4)
           paintPeak = Math.max(paintPeak, images[name].data[q]);
       if (scenario === "overflow" && bounds) {
@@ -208,12 +205,11 @@ for (const scenario of ["overflow", "normal-only", "ordinary", "empty"] as const
           width: w,
           height: w,
           scale: 1,
-          light: job.light,
           own: a(),
           surface,
         });
         if (!reference) throw new Error("Reference geometry has no support");
-        for (const name of ["normal", "base", "rise"] as const) {
+        for (const name of ["normal", "base"] as const) {
           const image = images[name],
             ox = padding + (name === "normal" ? Math.round(bounds.x * size) : 0),
             oy = padding + (name === "normal" ? Math.round(bounds.y * size) : 0);
@@ -274,8 +270,7 @@ for (const scenario of ["overflow", "normal-only", "ordinary", "empty"] as const
       if (scenario === "normal-only") expect(result.paintPeak).toBe(0);
       expect(result.state).toBe("ready");
       expect(result.diagnostic).toBe("");
-      for (const name of ["base", "rise"])
-        expect(result.images[name]).toEqual({ width: 120, height: 120 });
+      for (const name of ["base"]) expect(result.images[name]).toEqual({ width: 120, height: 120 });
     } else {
       expect(result.bounds).toBeUndefined();
       if (scenario === "ordinary") expect(result.ordinaryEqual).toBe(true);
@@ -355,7 +350,7 @@ test("board figures accept real asymmetric overflow bounds with ordinary control
   expect(result.normal[0]).toBeGreaterThan(result.paint[0]);
   expect(result.normal[1]).toBe(result.paint[1]);
   expect(result.ordinaryBounds).toBeUndefined();
-  expect(result.layers).toBe(2);
+  expect(result.layers).toBe(1);
   expect(result.ready).toHaveLength(3);
   for (const canvas of result.ready) {
     expect(canvas.state).toBe("ready");

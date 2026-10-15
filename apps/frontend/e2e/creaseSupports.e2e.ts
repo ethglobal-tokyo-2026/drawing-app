@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import type { CreaseJob, CreaseReply } from "../src/stickers/creaseWorker";
+import { expectLanded, holdPortrait } from "./screenTilt.ts";
 
 /** A real worker bake over two separate support masks, or one exposed support edge. */
 async function bakeSupports(page: Page, gap: number | null) {
@@ -30,7 +31,6 @@ async function bakeSupports(page: Page, gap: number | null) {
       height: side,
       scale: 1,
       own,
-      light: [-0.6, -0.8],
       under: silhouettes.map((url) => ({
         url,
         grow: 0,
@@ -96,45 +96,7 @@ async function bakeSupports(page: Page, gap: number | null) {
   }, gap);
 }
 
-// The tilts below mean a portrait screen, which WebKit reports turned; a turned screen turns the room.
-test.beforeEach(({ page }) =>
-  page.addInitScript(() => {
-    if (typeof ScreenOrientation === "function")
-      Object.defineProperty(ScreenOrientation.prototype, "angle", {
-        get: () => 0,
-        configurable: true,
-      });
-  }),
-);
-
-/**
- * The light glides to the device's absolute pose and comes to rest on the reading, within the light's
- * half-degree tremor step. A pause, such as a remounted sticker letting go of the light, drops an
- * unfinished glide, so each look delivers the reading again, as a real sensor keeps doing.
- */
-const expectLanded = async (page: Page, [beta, gamma]: number[]) => {
-  let previous = "";
-  await expect
-    .poll(async () => {
-      const pose = await page.evaluate(
-        ([beta, gamma]) => {
-          window.laminateFixture.tilt(beta, gamma);
-          return window.laminateFixture.getPose();
-        },
-        [beta, gamma],
-      );
-      const now = JSON.stringify(pose);
-      const resting = now === previous;
-      previous = now;
-      return (
-        resting &&
-        Math.abs(pose.beta - beta) < 0.5 &&
-        Math.abs(pose.gamma - gamma) < 0.5 &&
-        pose.screenAngle === 0
-      );
-    })
-    .toBe(true);
-};
+test.beforeEach(({ page }) => holdPortrait(page));
 
 /** The actual laminate canvas over the support seam, away from the sticker's cut. */
 const laminatePixels = (page: Page, box = { left: 0.35, top: 0.3, width: 0.3, height: 0.4 }) =>

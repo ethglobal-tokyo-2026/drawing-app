@@ -15,7 +15,7 @@ async function middleOf(sticker: Locator) {
 const creaseOf = (page: Page, id: string) =>
   page.locator(`[data-sticker-id="${id}"] .sticker-crease`);
 
-/** A crease's images as they show now, its base and then its rise: which image, and how much of it. */
+/** A crease's images as they show now: which image, and how much of it. */
 const layersOf = (crease: Locator) =>
   crease.locator(":scope > i").evaluateAll((layers) =>
     layers.map((layer) => ({
@@ -33,7 +33,7 @@ async function stuck(page: Page, no: string) {
   return { sticker, id };
 }
 
-test("a sticker over another shows the crease of the edge beneath, lit from the top left through any tilt, on your board and to a visitor, none while it's in hand", async ({
+test("a sticker over another shows the crease of the edge beneath, on your board and to a visitor, none while it's in hand", async ({
   page,
   friend,
 }) => {
@@ -61,21 +61,18 @@ test("a sticker over another shows the crease of the edge beneath, lit from the 
   await page.mouse.up();
   await expect(creaseOf(page, over.id)).toHaveCount(1);
 
-  // The crease is lit from the top left, where every drop shadow falls from: its base and its rise
-  // show in full. A device tilt turns the room the sticker reflects, but the crease stays as it is.
+  // Its base, the shoulder and foot, shows in full, and no light moves it: a device tilt turns the
+  // room, whose light on the crease's slopes is the sticker material's.
   const crease = creaseOf(page, over.id);
-  await expect.poll(async () => (await layersOf(crease)).length).toBe(2);
+  await expect.poll(async () => (await layersOf(crease)).length).toBe(1);
   const atRest = await layersOf(crease);
-  for (const { image, opacity } of atRest) {
-    expect(image).toMatch(/^url\("blob:/);
-    expect(opacity).toBe(1);
-  }
-  expect(atRest[0].image).not.toBe(atRest[1].image);
+  expect(atRest[0].image).toMatch(/^url\("blob:/);
+  expect(atRest[0].opacity).toBe(1);
   const lightPose = () =>
     page.evaluate(async () => (await import("../src/stickers/light.ts")).currentLight());
   const still = await lightPose();
   await tiltScreen(page, 72, 32);
-  await expect.poll(lightPose, "The tilt reaches the one light").not.toEqual(still);
+  await expect.poll(lightPose, "The tilt reaches the room's light").not.toEqual(still);
   expect(await layersOf(crease)).toEqual(atRest);
 
   // Someone else looking at the board sees the same crease.

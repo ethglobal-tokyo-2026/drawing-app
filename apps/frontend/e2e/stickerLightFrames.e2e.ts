@@ -40,18 +40,26 @@ async function heldPose(
     },
     { angle, beta, gamma, alpha },
   );
-  await page.evaluate(async () => {
-    let previous = "";
-    let still = 0;
-    const deadline = performance.now() + 5000;
-    while (still < 5) {
-      if (performance.now() > deadline) throw new Error("The shared material light did not settle");
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      const next = JSON.stringify(window.laminateFixture.getPose());
-      still = next === previous ? still + 1 : 0;
-      previous = next;
-    }
-  });
+  // A landed light publishes the reading's own angles, where a gliding one publishes its own.
+  await page.evaluate(
+    async ({ beta, gamma }) => {
+      let previous = "";
+      let still = 0;
+      let landed = false;
+      const deadline = performance.now() + 5000;
+      while (!landed || still < 5) {
+        if (performance.now() > deadline)
+          throw new Error("The shared material light did not land on the reading");
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        const pose = window.laminateFixture.getPose();
+        const next = JSON.stringify(pose);
+        still = next === previous ? still + 1 : 0;
+        previous = next;
+        landed = pose.beta === beta && pose.gamma === gamma;
+      }
+    },
+    { beta, gamma },
+  );
   return materialPixels(page);
 }
 
