@@ -417,7 +417,7 @@ Stickers and foils follow the app's one moving light. It tracks only device tilt
 
 ### Named Rules
 
-**The One Light Rule.** One light for the whole app, including Shop previews. Static shadows fall from the top left; the laminate and foil reflections and the crease shading read the shared material pose. On phone and iPad, real device tilt changes that pose, finite smoothing settles, and the reflection holds. Unasked, denied, blocked, silent, or uncertain rotation input stays still. Only a recognized device without rotation input may use the shared timed fallback. Pointer movement never moves material light. Reduced motion, backgrounding, and the last light owner's release stop pending motion while preserving the held pose.
+**The One Light Rule.** One light for the whole app, including Shop previews. Static shadows and crease shading fall from the top left; the laminate and foil reflect one room, fixed to gravity, from one viewpoint in front of the screen. On phone and iPad, real device tilt changes that pose, finite smoothing settles, and the reflection holds. Unasked, denied, blocked, silent, or uncertain rotation input stays still. Only a recognized device without rotation input may use the shared timed fallback. Pointer movement never moves material light. Reduced motion, backgrounding, and the last light owner's release stop pending motion while preserving the held pose.
 
 **The Neutral Shadow Rule.** Shadows are Ink alpha, never tinted, except on the stat board, where paper casts a cork-brown throw over an Ink contact line.
 
