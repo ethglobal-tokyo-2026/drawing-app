@@ -68,7 +68,8 @@ interface ZipperGeometry {
 }
 
 interface ZipperEvents {
-  grab: { progress: number };
+  /** The person operates the Zipper: a hand takes its pull, or one of its keys is pressed. */
+  operate: void;
   /** A run toward open or shut has begun. */
   commit: { open: boolean };
   /** The slider knocked the far stop, or the top one. */
@@ -384,7 +385,7 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
   let destroyed = false;
 
   const listeners: { [K in keyof ZipperEvents]: Set<Listener<K>> } = {
-    grab: new Set(),
+    operate: new Set(),
     commit: new Set(),
     opened: new Set(),
     closed: new Set(),
@@ -972,7 +973,7 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     st.pv = 0;
     st.lastTick = Math.floor((st.p * travel) / PITCH);
     root.classList.add("is-dragging");
-    emit("grab", { progress: st.p });
+    emit("operate", undefined);
     wake();
   };
   const onMove = (e: PointerEvent) => {
@@ -1030,18 +1031,23 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     st.hover = false;
     wake();
   };
+  /** A key runs the slider as the person's own operation, as a hand on the pull is. */
+  const byKey = (open: boolean) => {
+    emit("operate", undefined);
+    void run(open);
+  };
   // Enter and Space click a button with no pointer behind it; a pointer's click follows a release,
   // which has already decided.
   const onClick = (e: MouseEvent) => {
-    if (e.detail === 0) void run(!st.open);
+    if (e.detail === 0) byKey(!st.open);
   };
   const onKey = (e: KeyboardEvent) => {
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      void run(true);
+      byKey(true);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      void run(false);
+      byKey(false);
     }
   };
   slider.addEventListener("pointerdown", onDown, { signal });

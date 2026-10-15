@@ -487,10 +487,12 @@ export function createTrayEngine(
   zip.on("closed", () => {
     if (seeShown()) renderStack();
   });
-  // A hand on the pull decides for itself.
-  zip.on("grab", () => {
+  // The person operating the Zipper, by its pull or its keys, decides for themselves: no pending
+  // shut, and no ride home under way, shuts the tray on them.
+  zip.on("operate", () => {
     cancelTugs();
     cancel(ui.shutTimer);
+    ui.zipperOperations++;
   });
   const hasNew = () => newIds().size > 0;
 

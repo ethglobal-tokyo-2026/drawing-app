@@ -457,6 +457,53 @@ describe("StickerTray", () => {
     expect(tray.current?.isOpen).toBe(false);
   });
 
+  describe("zips shut after a Remove ride home that opened it", () => {
+    const slider = () => board.querySelector(".zip__slider");
+    /** The person operating the Zipper: one of its keys, or a hand that stays on its pull. */
+    const operate = {
+      key: () => press(slider(), "ArrowDown"),
+      hand: () => pointer(slider(), "pointerdown", 380, 100),
+    };
+    /**
+     * Remove puts a board sticker back into the shut tray, which opens for it: `inFlight` runs while
+     * the sticker rides home, `landed` once it's in. Resolves with whether the tray is open well after.
+     */
+    async function rideHome({ inFlight = () => {}, landed = () => {} } = {}) {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      onTestFinished(() => void vi.useRealTimers());
+      const motion = holdAnimations();
+      render([sticker("a", 1, true)]);
+      let back: Promise<boolean> | undefined;
+      await act(async () => {
+        back = tray.current?.boardDrop("a", { x: 380, y: 300 });
+        // The tray has opened at once; with motion from here, the sticker is held in the air.
+        motion.animate();
+      });
+      expect(flyers()).toHaveLength(1);
+      inFlight();
+      await motion.finishAll();
+      expect(await back).toBe(true);
+      landed();
+      await act(async () => void (await vi.advanceTimersByTimeAsync(1000)));
+      return tray.current?.isOpen;
+    }
+
+    it("once the sticker is home, when no one operates the Zipper", async () => {
+      expect(await rideHome()).toBe(false);
+    });
+
+    it("unless a key operates the Zipper before it shuts", async () => {
+      expect(await rideHome({ landed: operate.key })).toBe(true);
+    });
+
+    it.each(["key", "hand"] as const)(
+      "unless a %s operates the Zipper while the sticker rides home",
+      async (by) => {
+        expect(await rideHome({ inFlight: operate[by] })).toBe(true);
+      },
+    );
+  });
+
   it("leaves a given sticker's spot, a button that opens it among the stickers you gave", async () => {
     const openGiven = vi.fn();
     render([givenSticker("given", 1)], { openGiven });

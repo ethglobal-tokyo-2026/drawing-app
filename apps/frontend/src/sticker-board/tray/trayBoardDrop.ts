@@ -161,8 +161,8 @@ export function createTrayBoardDrop(
   }
   /**
    * A board sticker let go: over the tray it goes back into its used sticker silhouette. Whether the
-   * tray was open when the drag, or Remove, began decides the ending: it stays open if it was, else it
-   * zips shut once the sticker has visibly landed.
+   * tray was open when the drag, or Remove, began decides the ending: it stays open if it was, or if
+   * the person operated the Zipper on the way, else it zips shut once the sticker has visibly landed.
    */
   async function boardDrop(id: string, pt: Point) {
     // On its way into its used sticker silhouette already: it isn't the board's to drop again until
@@ -200,6 +200,7 @@ export function createTrayBoardDrop(
    */
   async function takeHome(s: Slot, pt: Point, wasOpen: boolean, onPulled: boolean) {
     const id = s.id;
+    const operations = ui.zipperOperations;
     if (ui.pulled && !onPulled) await sendHome({ quick: true });
     if (!zip.isOpen) {
       void bringToFront(s.sheet, { instant: true });
@@ -247,8 +248,9 @@ export function createTrayBoardDrop(
     catchUp();
     await pressIn(id);
     removeFlyer(flyer);
-    // Shown home, then shut: unless a hand is back on the tray or another sticker is on its way.
-    if (!wasOpen) {
+    // Shown home, then shut: unless the person operated the Zipper on the way, which makes the tray
+    // theirs, a hand is back on the tray, or another sticker is on its way.
+    if (!wasOpen && ui.zipperOperations === operations) {
       cancel(ui.shutTimer);
       ui.shutTimer = later(
         () => {

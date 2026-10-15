@@ -21,7 +21,7 @@ const snapshotCopies = (coat: Locator) =>
     return typeof count === "number" ? count : 0;
   });
 
-test("an opaque sticker detail pauses the covered Sticker Board and reopening samples the held pose", async ({
+test("an opaque sticker detail pauses the covered Sticker Board and uncovering it samples the held pose", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -136,9 +136,8 @@ test("an opaque sticker detail pauses the covered Sticker Board and reopening sa
   await expect(detail).toHaveCount(0);
   await expect.poll(() => snapshotCopies(boardCoat)).toBeGreaterThan(0);
   await expect.poll(() => snapshot(boardCoat)).not.toBe(covered);
-  // The tray is closed after returning to the board; reopen without another sensor reading.
-  await expect(zipper).toHaveAttribute("aria-expanded", "false");
-  await zipper.press("ArrowDown");
+  // The tray its Zipper opened stays open through the detail, and draws again without another sensor
+  // reading.
   await expect(zipper).toHaveAttribute("aria-expanded", "true");
   await expect.poll(trayCopies).toBeGreaterThan(0);
   expect(

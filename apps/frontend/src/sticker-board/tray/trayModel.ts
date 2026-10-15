@@ -186,6 +186,8 @@ export interface TrayState {
   /** The board sticker being dragged, and whether the tray was open when its drag began. */
   drop: { id: string; wasOpen: boolean; view: BoardView } | null;
   shutTimer: number;
+  /** How many times the person has operated the Zipper: a ride home that saw it change won't shut it. */
+  zipperOperations: number;
   relaxTimer: number;
   /**
    * Stickers flying between a sheet and the board, either way: the sheets redraw once they land, so
@@ -443,6 +445,7 @@ export function createTrayState(model: TrayState["model"]): TrayState {
     dwell: 0,
     drop: null,
     shutTimer: 0,
+    zipperOperations: 0,
     relaxTimer: 0,
     landing: new Set(),
     spreadOpen: false,
