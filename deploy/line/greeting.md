@@ -7,15 +7,14 @@ LINE sends this message when someone adds Croquis's official account as a friend
 Paste it as one text bubble, exactly:
 
 ```text
-クロッキーへようこそ！下のリンクからひらいて、たのしんでください。
+お絵かきアプリ「クロッキー」です。5分でかいた絵が、シールになります。ボードにはるのも、友だちにあげるのも自由。下のメニューからクロッキーをひらいてください。
 
-Welcome to Croquis! Open it from the link below, and have fun.
-
-https://liff.line.me/2011732197-P98cxGpu
+This is Croquis, a drawing app. Draw for five minutes, and your drawing becomes a sticker to keep on your board or give to a friend. Open Croquis from the menu below.
 ```
 
-- It welcomes people and links the app: no rules, and no drawing time, which can change while the saved greeting goes on saying the old one.
-- Its link is the one the chat menus open (`LIFF_URL` in `create-returning-menu.sh`). If that changes, change it here and in the Manager.
+- It names the app first, since the chat comes from the account, whose name in LINE isn't the app's. Then it says what you do in it and where to tap, in the app's own words.
+- It names the drawing clock's length (`MAX_TIME_USED_S`): when the clock changes, change it here and in the Manager.
+- It sends people to the default chat menu that new people see under it (`images/default.png`), whose bar says クロッキー Croquis. If the menu's words change, check that this still matches them.
 - It doesn't use `{Nickname}`: LINE may not deliver a message that carries it to some people.
 
 ## Replacing LINE's default greeting
