@@ -5,10 +5,21 @@ import {
   currentLight,
   GLIDE_MS,
   installLight,
+  STEP_DEGREES,
   subscribeLight,
   type DevicePose,
 } from "./light";
-import { FALLBACK_PERIOD_MS, STILL_POSE, upOnScreen } from "./lightMode";
+import {
+  angleBetween,
+  attitudeOf,
+  FALLBACK_PERIOD_MS,
+  IDENTITY,
+  inverse,
+  rotate,
+  STILL_POSE,
+  upOnScreen,
+} from "./lightMode";
+import { roomFrame } from "./sharedRoom";
 import * as motionPermission from "../ui/motionPermission";
 
 const browserDocument = globalThis.document;
@@ -33,6 +44,12 @@ const pointAt = (x: number, y: number, pointerType = "mouse", type = "pointermov
 const tiltTo = (beta: number | null, gamma: number | null, alpha: number | null = 0) =>
   window.dispatchEvent(Object.assign(new Event("deviceorientation"), { alpha, beta, gamma }));
 const pose = (beta: number, gamma: number, screenAngle = 0): DevicePose => ({
+  beta,
+  gamma,
+  screenAngle,
+});
+/** A published pose's angles, without the viewer's turn. */
+const angles = ({ beta, gamma, screenAngle }: DevicePose): DevicePose => ({
   beta,
   gamma,
   screenAngle,
@@ -92,12 +109,12 @@ const showScreen = () => {
   };
 };
 /** The light installed with a screen showing it, tilted to `beta`, `gamma` and landed there. */
-const landAt = (beta: number, gamma: number) => {
+const landAt = (beta: number, gamma: number, alpha = 0) => {
   uninstall = installLight(root);
   const close = showScreen();
-  tiltTo(beta, gamma);
+  tiltTo(beta, gamma, alpha);
   settle();
-  expect(currentLight()).toEqual(pose(beta, gamma));
+  expect(angles(currentLight())).toEqual(pose(beta, gamma));
   return close;
 };
 
@@ -147,7 +164,7 @@ describe("the shared light", () => {
     uninstall = installLight(root);
     showScreen();
     vi.advanceTimersByTime(22000);
-    expect(currentLight()).toEqual(STILL_POSE);
+    expect(angles(currentLight())).toEqual(STILL_POSE);
     expect(published).toHaveLength(0);
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -163,7 +180,7 @@ describe("the shared light", () => {
     expect(first.gamma).toBeGreaterThan(0);
     expect(first.gamma).toBeLessThan(10);
     settle();
-    expect(currentLight()).toEqual(pose(30, 10));
+    expect(angles(currentLight())).toEqual(pose(30, 10));
     for (let i = 1; i < published.length; i++)
       expect(published[i].beta).toBeLessThan(published[i - 1].beta);
   });
@@ -182,7 +199,7 @@ describe("the shared light", () => {
         expect(frames[i].pose.gamma).toBeLessThan(frames[i - 1].pose.gamma);
       }
       settle();
-      expect(currentLight()).toEqual(pose(48, -6));
+      expect(angles(currentLight())).toEqual(pose(48, -6));
       const count = frames.length;
       vi.advanceTimersByTime(22000);
       expect(frames).toHaveLength(count);
@@ -202,7 +219,7 @@ describe("the shared light", () => {
     expect(published).toHaveLength(before + 1);
     expect(currentLight().gamma).toBeLessThan(0);
     settle();
-    expect(currentLight()).toEqual(pose(40, -30));
+    expect(angles(currentLight())).toEqual(pose(40, -30));
   });
 
   it("keeps still for the hand's tremor", () => {
@@ -215,9 +232,11 @@ describe("the shared light", () => {
 
   it("takes the short way round when the device turns face down past upside down", () => {
     landAt(175, 0);
+    const before = published.length;
     tiltTo(-175, 0);
     settle();
-    expect(published.slice(-3).every(({ beta }) => beta >= 175)).toBe(true);
+    // The long way round would turn the screen face up on its way.
+    expect(published.slice(before).every((p) => upOnScreen(p)[2] < -0.99)).toBe(true);
     const [x, y, z] = upOnScreen(currentLight());
     const [ux, uy, uz] = upOnScreen(pose(-175, 0));
     expect([x, y, z].map((v, i) => v - [ux, uy, uz][i]).every((d) => Math.abs(d) < 1e-9)).toBe(
@@ -235,7 +254,7 @@ describe("the shared light", () => {
     expect(published).toHaveLength(0);
     tiltTo(0, -30);
     settle();
-    expect(currentLight()).toEqual(pose(0, -30, 90));
+    expect(angles(currentLight())).toEqual(pose(0, -30, 90));
   });
 
   it("turns the room at once when the screen turns under a still device", () => {
@@ -243,7 +262,7 @@ describe("the shared light", () => {
     screenAt(90);
     tiltTo(40, 0);
     vi.advanceTimersByTime(FRAME_MS);
-    expect(currentLight()).toEqual(pose(40, 0, 90));
+    expect(angles(currentLight())).toEqual(pose(40, 0, 90));
   });
 
   it.each([
@@ -258,7 +277,7 @@ describe("the shared light", () => {
     showScreen();
     pointAt(window.innerWidth, 0, pointerType, type);
     vi.advanceTimersByTime(100);
-    expect(currentLight()).toEqual(STILL_POSE);
+    expect(angles(currentLight())).toEqual(STILL_POSE);
     expect(published).toHaveLength(0);
     tiltTo(40, 20);
     settle();
@@ -266,7 +285,7 @@ describe("the shared light", () => {
     pointAt(0, window.innerHeight, pointerType, type);
     vi.advanceTimersByTime(100);
     expect(published).toHaveLength(count);
-    expect(currentLight()).toEqual(pose(40, 20));
+    expect(angles(currentLight())).toEqual(pose(40, 20));
   });
 
   it("follows the phone's tilt on a screen with stickers, even in a browser that can also ask", () => {
@@ -284,7 +303,7 @@ describe("the shared light", () => {
     uninstall = installLight(root);
     tiltTo(40, 20);
     vi.advanceTimersByTime(100);
-    expect(currentLight()).toEqual(STILL_POSE);
+    expect(angles(currentLight())).toEqual(STILL_POSE);
     expect(tiltListeners.size).toBe(0);
   });
 
@@ -300,7 +319,7 @@ describe("the shared light", () => {
     expect(tiltListeners.size).toBe(0);
     tiltTo(70, -20);
     vi.advanceTimersByTime(100);
-    expect(currentLight()).toEqual(pose(40, 20));
+    expect(angles(currentLight())).toEqual(pose(40, 20));
   });
 
   it("starts still under reduced motion", () => {
@@ -310,7 +329,7 @@ describe("the shared light", () => {
     showScreen();
     tiltTo(30, 20);
     vi.advanceTimersByTime(1000);
-    expect(currentLight()).toEqual(STILL_POSE);
+    expect(angles(currentLight())).toEqual(STILL_POSE);
     expect(published).toHaveLength(0);
   });
 
@@ -322,7 +341,7 @@ describe("the shared light", () => {
     showScreen();
     tiltTo(30, 20);
     vi.advanceTimersByTime(1000);
-    expect(currentLight()).toEqual(STILL_POSE);
+    expect(angles(currentLight())).toEqual(STILL_POSE);
     expect(published).toHaveLength(0);
   });
 
@@ -362,13 +381,13 @@ describe("the shared light", () => {
     vi.advanceTimersByTime(1000);
     showScreen();
     vi.advanceTimersByTime(1000);
-    expect(currentLight()).toEqual(pose(40, 20));
+    expect(angles(currentLight())).toEqual(pose(40, 20));
     tiltTo(60, -20);
     vi.advanceTimersByTime(FRAME_MS);
     expect(currentLight().beta).toBeGreaterThan(40);
     expect(currentLight().beta).toBeLessThan(60);
     settle();
-    expect(currentLight()).toEqual(pose(60, -20));
+    expect(angles(currentLight())).toEqual(pose(60, -20));
   });
 
   it.each([
@@ -401,7 +420,7 @@ describe("the shared light", () => {
     tiltTo(40, NaN);
     tiltTo(null, null);
     vi.advanceTimersByTime(22000);
-    expect(currentLight()).toEqual(STILL_POSE);
+    expect(angles(currentLight())).toEqual(STILL_POSE);
     expect(published).toHaveLength(0);
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -462,7 +481,7 @@ describe("the shared light", () => {
     vi.advanceTimersByTime(3500);
     tiltTo(30, 5);
     settle();
-    expect(currentLight()).toEqual(pose(30, 5));
+    expect(angles(currentLight())).toEqual(pose(30, 5));
     const count = published.length;
     vi.advanceTimersByTime(22000);
     expect(published).toHaveLength(count);
@@ -477,7 +496,7 @@ describe("the shared light", () => {
     uninstall = installLight(root);
     showScreen();
     vi.advanceTimersByTime(22000);
-    expect(currentLight()).toEqual(pose(40, 20));
+    expect(angles(currentLight())).toEqual(pose(40, 20));
     expect(vi.getTimerCount()).toBe(0);
   });
 
@@ -493,11 +512,11 @@ describe("the shared light", () => {
     vi.spyOn(reduced, "matches", "get").mockReturnValue(false);
     reduced.dispatchEvent(new Event("change"));
     vi.advanceTimersByTime(22000);
-    expect(currentLight()).toEqual(STILL_POSE);
+    expect(angles(currentLight())).toEqual(STILL_POSE);
     expect(vi.getTimerCount()).toBe(0);
     tiltTo(70, -20);
     settle();
-    expect(currentLight()).toEqual(pose(70, -20));
+    expect(angles(currentLight())).toEqual(pose(70, -20));
   });
 
   it("keeps usable orientation moving when the devicemotion permission check becomes unasked", () => {
@@ -505,6 +524,124 @@ describe("the shared light", () => {
     landAt(40, 20);
     tiltTo(60, -20);
     settle();
-    expect(currentLight()).toEqual(pose(60, -20));
+    expect(angles(currentLight())).toEqual(pose(60, -20));
+  });
+});
+
+describe("the viewer", () => {
+  const turned = () => angleBetween(currentLight().turn ?? IDENTITY, IDENTITY);
+  /** Expects the published turn to carry the world's axes from `from`'s device axes into `to`'s. */
+  const expectTurnBetween = (from: readonly number[], to: readonly number[]) => {
+    const turn = currentLight().turn ?? IDENTITY;
+    for (const axis of [
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 1],
+    ]) {
+      const carried = rotate(turn, rotate(inverse(attitudeOf(from[0], from[1], from[2])), axis));
+      const now = rotate(inverse(attitudeOf(to[0], to[1], to[2])), axis);
+      carried.forEach((v, i) => expect(v).toBeCloseTo(now[i], 9));
+    }
+  };
+
+  it("stays where it was through a playful tilt and back", () => {
+    landAt(STILL_POSE.beta, 0);
+    const before = roomFrame();
+    tiltTo(STILL_POSE.beta + 12, 8, 5);
+    settle();
+    expect(turned()).toBeGreaterThan(10);
+    expectTurnBetween([0, STILL_POSE.beta, 0], [5, STILL_POSE.beta + 12, 8]);
+    tiltTo(STILL_POSE.beta, 0);
+    settle();
+    expect(turned()).toBeLessThan(1e-6);
+    expect(roomFrame()).toEqual(before);
+  });
+
+  it("is centered on the first reading, however far from the still pose it lands", () => {
+    landAt(10, 20, 30);
+    expect(turned()).toBeLessThan(0.01);
+  });
+
+  it("re-centers on a device held past the release, then holds still", () => {
+    landAt(STILL_POSE.beta, 0);
+    tiltTo(STILL_POSE.beta, 0, 60);
+    settle();
+    const centered = roomFrame(angles(currentLight()));
+    const distance = () => {
+      const frame = roomFrame();
+      return Math.max(...frame.light.map((v, i) => Math.abs(v - centered.light[i])));
+    };
+    const away = distance();
+    const steps = published.length;
+    vi.advanceTimersByTime(20000);
+    expect(turned()).toBeLessThan(1e-6);
+    expect(distance()).toBeLessThan(away / 4);
+    // With the light landed, each redraw but the landing is a step the hand's tremor would not make.
+    const turns = published.slice(steps - 1).map((p) => p.turn ?? IDENTITY);
+    for (let i = 1; i < turns.length - 1; i++)
+      expect(angleBetween(turns[i - 1], turns[i])).toBeGreaterThanOrEqual(STEP_DEGREES / 2);
+    const held = currentLight();
+    const count = published.length;
+    for (let i = 0; i < 50; i++) {
+      tiltTo(STILL_POSE.beta + (i % 2) * 0.2, 0, 60);
+      vi.advanceTimersByTime(200);
+    }
+    expect(currentLight()).toEqual(held);
+    expect(published).toHaveLength(count);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("goes on re-centering after a pause, on a device lying still", () => {
+    const close = landAt(STILL_POSE.beta, 0);
+    tiltTo(STILL_POSE.beta, 0, 60);
+    settle();
+    const mid = turned();
+    expect(mid).toBeGreaterThan(10);
+    close();
+    showScreen();
+    for (let i = 0; i < 100; i++) {
+      tiltTo(STILL_POSE.beta, 0, 60);
+      vi.advanceTimersByTime(200);
+    }
+    expect(turned()).toBeLessThan(10);
+  });
+
+  it("settles on the same frame for one pose, whichever side the device turned to it from", () => {
+    const settleAt = (alpha: number) => {
+      tiltTo(STILL_POSE.beta, 0, alpha);
+      vi.advanceTimersByTime(30000);
+      expect(turned()).toBeLessThan(1e-6);
+      return roomFrame();
+    };
+    landAt(STILL_POSE.beta, 0);
+    const fromBelow = settleAt(60);
+    settleAt(120);
+    expect(settleAt(60)).toEqual(fromBelow);
+  });
+
+  it("keeps its heading when the listener restarts with alpha counted from elsewhere", () => {
+    const close = landAt(STILL_POSE.beta, 0, 40);
+    close();
+    showScreen();
+    tiltTo(STILL_POSE.beta, 0, 130);
+    settle();
+    expect(turned()).toBeLessThan(0.01);
+    tiltTo(STILL_POSE.beta, 0, 140);
+    settle();
+    expect(turned()).toBeCloseTo(10, 6);
+  });
+
+  it("turns the gravity it was given without alpha the smallest way, keeping its heading", () => {
+    landAt(STILL_POSE.beta, 0, 40);
+    tiltTo(STILL_POSE.beta + 10, 15, null);
+    settle();
+    const frame = roomFrame();
+    const [a, b] = [upOnScreen(STILL_POSE), upOnScreen(pose(STILL_POSE.beta + 10, 15))];
+    const gravityMoved = Math.acos(a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / (Math.PI / 180);
+    expect(turned()).toBeCloseTo(gravityMoved, 6);
+    tiltTo(STILL_POSE.beta, 0, null);
+    settle();
+    expect(turned()).toBeLessThan(1e-6);
+    expect(frame.up).not.toEqual(roomFrame().up);
   });
 });

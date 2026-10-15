@@ -22,7 +22,6 @@ uniform vec2 size;
 uniform mat3 normalTransform;
 uniform vec2 pointTurn;
 uniform float roughness;
-uniform float creaseReveal;
 uniform sampler2D outerImage;
 uniform vec4 sourceBounds;
 uniform vec4 normalBounds;
@@ -46,9 +45,8 @@ void main() {
   vec4 art=texture2D(printImage,sourceUv);
   vec3 base=mix(vec3(1.),art.rgb,art.a);
   // Frame-constant rotations are composed on the CPU, rather than at every covered fragment.
-  vec3 bakedNormal=(texture2D(normalImage,(sourceUv-normalBounds.xy)/normalBounds.zw).rgb*255.-128.)/127.;
   // Flat and bent snapshots share the print and light; their diagonal reveal is composited afterward.
-  vec3 surfaceNormal=mix(vec3(0.,0.,1.),bakedNormal,creaseReveal);
+  vec3 surfaceNormal=(texture2D(normalImage,(sourceUv-normalBounds.xy)/normalBounds.zw).rgb*255.-128.)/127.;
   vec3 n=normalize(normalTransform*surfaceNormal);
   vec2 localPoint=(sourceUv-.5)*size/min(size.x,size.y);
   vec2 point=vec2(pointTurn.x*localPoint.x-pointTurn.y*localPoint.y,
