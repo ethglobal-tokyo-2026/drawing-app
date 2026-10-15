@@ -23,7 +23,7 @@ The e2e sweeps (`stickerLightSweeps`, `stickerLightRotations`) cover every orien
 - [ ] **The foil's moving shine.**
   - ad0ll wants holo's hue bands kept all the way around, a bright patch where the light falls that fades into darker metal and glides with tilt, and pink's deep-rose side back.
   - Round 3 is commit 6d0341a1 on branch `foil-shine-3`, not merged. It scored 13/20 against a bar of 15, and e2e passes.
-    - What's left: holo shows no patch, because darkening alone doesn't read on pastels and it needs light added at the patch. Pink goes wine-dark when upright. The two foils swing by different amounts for the same light.
-  - Questions for ad0ll:
-    - Should pink keep a floor that stays recognizably pink when upright, since it marks an NSFW sticker?
-    - Should holo's patch add light, or only darken the metal away from it?
+    - What's left: holo shows no patch, and its far side turns muddy at β 90 because round 3 darkens it. The two foils swing by different amounts for the same light.
+  - Decided (2026-10-15):
+    - Pink needs no floor when upright: going deep there is the foil effect (ad0ll).
+    - Holo's patch adds light, as real foil does. Metal is a mirror: the bright patch is the window's reflection, with its diffracted rainbow beside it, and the rest of the band shows the room's dimmer light. Nothing darkens it.
