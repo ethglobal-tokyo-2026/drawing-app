@@ -4,15 +4,14 @@ import { LAMINATE_FINISHES } from "./laminate";
 import { OVERHEAD_WINDOW } from "./overheadWindow";
 
 /**
- * Glitter's flakes. Cells: how many span the sticker's short side, and the CSS px one never shrinks
- * under, so a flake stays a fleck. The share of cells holding a flake, in each of two lattices; the
- * second lattice's pitch over the first's; each flake's radius in first-lattice cells; the spread of
- * their tilts, as a normal offset; the width of the lobe that catches the window; and how far their
- * hue tints the white of the mirror.
+ * Glitter's flakes. A first-lattice cell's side in CSS px, the same at every sticker size, so a
+ * bigger sticker shows more fine flecks rather than bigger ones. The share of cells holding a flake,
+ * in each of two lattices; the second lattice's pitch over the first's; each flake's radius in
+ * first-lattice cells; the spread of their tilts, as a normal offset; the width of the lobe that
+ * catches the window; and how far their hue tints the white of the mirror.
  */
 const GLITTER = {
-  across: 22,
-  minPitch: 3.5,
+  pitch: 3.5,
   occupied: 0.42,
   coarser: 1.3,
   radius: { least: 0.24, more: 0.08 },
@@ -76,7 +75,7 @@ const facetChain = prismFacetChain();
  * normal and reflection, so the shared light, pose and crease move them as they move gloss.
  * laminateStyle is the finish's index in LAMINATE_FINISHES; laminatePalette is the holo foil's six
  * palette colors in sRGB. Needs foilFragment (foilAllowedHue, foilRoom, foilCoat), windowAxes,
- * environment, linear, and the size, normalTransform and pointTurn uniforms before it.
+ * environment, linear, and the normalTransform and pointTurn uniforms before it.
  */
 export const laminateFragment = `
 uniform float laminateStyle;
@@ -146,7 +145,7 @@ ${facetChain.body}
 // surfacePoint and pixelFootprint are in CSS px.
 vec3 laminateCoat(vec3 coat,vec2 surfacePoint,float pixelFootprint,vec3 surfaceNormal,vec3 view){
  if(abs(laminateStyle-${glitter})>.5)return coat;
- float pitch=max(${f(GLITTER.minPitch)},min(size.x,size.y)/${f(GLITTER.across)});
+ float pitch=${f(GLITTER.pitch)};
  vec2 cells=surfacePoint/pitch;
  float footprint=pixelFootprint/pitch;
  coat=laminateGlitter(coat,cells,footprint,1.,surfaceNormal,view);
