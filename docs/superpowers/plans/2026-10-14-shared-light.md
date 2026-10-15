@@ -13,7 +13,8 @@
 3. **The light is a shoji screen (ad0ll):**
    - **What it is:** a large washi screen above and behind the viewer, a little to the left. It's the same light the static shadows fall from (DESIGN.md: top left).
    - **How it looks:** soft light through the paper, with the lattice crisp in its reflection, so gloss reads as gloss even where the patch is faint.
-   - **Where it shows:** its reflection is a broad patch over several stickers. It lands on the board, not just its top edge, at the still pose, and slides off as the device tilts.
+   - **Where it shows (ad0ll):** at the still pose, the glare sits in the upper third of the screen with a crisp edge. The art below it keeps full contrast, paper under it brightens, and a tilt slides it off.
+   - **Lying flat and upright, gloss shows nothing (ad0ll: one light for now).** Revisit later: iPads lie flat on a desk while people draw and seal, and a small ceiling lamp that only a flat device mirrors would let them see laminate there.
 4. **Bounce:**
    - **The room:** a ceiling, the wall the screen lights, a horizon and a floor, each dimmer than the one before. Not a bare gradient.
    - **Gloss** mirrors the room faintly and the screen strongly.
@@ -57,13 +58,22 @@
   - the 21-sticker board (`e2e/stickerBoardDrag.html?variant=mixed-21`) and a sticker detail;
   - Chromium and WebKit;
   - side by side with main at rest.
-- **Critique:** each round is critiqued with impeccable. Round 1 scored 13/20 (Acceptable), with two P1s (grey holo; gloss at the still pose) and three P2s (flat viewpoint, washout, creases).
+- **Critique:** each round is critiqued with impeccable.
+  - Round 1 scored 13/20, with two P1s (grey holo; gloss at the still pose) and three P2s.
+  - Round 2 scored 12/20: the flat viewpoint, the washout and the creases are fixed, but the still pose now veils the art, and the foils lose their identity near upright.
+  - **Build rule (ad0ll):** once a round scores Good (70%+) with no P1s, it's built into the app.
 - **Performance:** the 21-sticker board tilt and drag at 4× CPU throttle, against main.
 - **Real device:** a phone check in LINE through the performance recorder.
 
 ## Lanes
 
 - [x] **A. Prototype and pose matrix (spike):** branch `shared-light-spike`, d7b0a9d5; critiqued.
-- [ ] **A2. Second round on the spike:** the shoji screen, holo off the reflection, the flat viewpoint, the paper shoulder and top-left creases; the pose matrix again; re-critique.
+- [x] **A2. Second round on the spike:** cb46336f; critiqued (12/20).
+- [ ] **A3. Third round on the spike:**
+  - the still glare in the upper third with a crisp edge, and paper brightening under it;
+  - the foils keep their identity near upright;
+  - holo's warm hues;
+  - crisp lattice bars;
+  - re-critique.
 - [ ] **B. Light:** `light.ts` publishes the absolute up vector, smoothed, with the still pose and the fallback; creases stay top-left; unit tests.
 - [ ] **C. Renderer:** per-surface screen positions, drag and scroll redraws, flights, the Shop; e2e updates; performance check.
