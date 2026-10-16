@@ -143,10 +143,12 @@ export async function signIn(page: Page, who: string, language: Language) {
 /** Someone's handle as Croquis prints it: it starts as the LINE name LIFF Mock gives their `?as=` name. */
 export const handleOf = (name: string) => `@${name.charAt(0).toUpperCase()}${name.slice(1)}`;
 
-/** Flips your own sticker board over to its stat board. */
+/** Flips your own sticker board over to its stat board, and waits for it to land there. */
 export async function flipToStatBoard(page: Page, language: Language) {
   const yourStats = say(stickerBoard.board.yourStats, language, { name: "" });
   await page.getByRole("button", { name: new RegExp(`${yourStats}$`) }).click();
+  // The stat board takes focus as the turn starts, but a click or a key's press mid-turn turns it back.
+  await expect(page.locator(".board-front")).toHaveAttribute("data-away", "");
 }
 
 /** Your stat board's Settings note: flips the board over and brings the note into view. */
