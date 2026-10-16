@@ -32,24 +32,22 @@
 - Catalog, `kyotoSeika.marks`: `tag` (en "Cut", ja "トル"), `spoken` (en "{{subject}}, marked for
   deletion", ja "{{subject}}、削除候補"), `markFailed`, `unmarkFailed`, `loadFailed`.
 
-## Lane API: `kyoto-seika-marks-api`
-
-- [ ] `packages/db/src/schema/kyotoSeikaSubjectsMarkedForDeletion.ts`: the table; export it from
+- [x] `packages/db/src/schema/kyotoSeikaSubjectsMarkedForDeletion.ts`: the table; export it from
       `schema/index.ts` and add it to `allTables`.
-- [ ] `pnpm --filter @drawing-app/db db:generate`; rename the migration `0020_kyoto_seika_subject_marks`
+- [x] `pnpm --filter @drawing-app/db db:generate`; rename the migration `0020_kyoto_seika_subject_marks`
       (file and `meta/_journal.json` tag) and append its `updated_at` trigger in
       `updatedAtTriggerStatements`' form, as `0018_person_switch_sessions.sql` ends.
-- [ ] `apps/api/src/session/sessionShapes.ts` and `sessionEnvelope()` in `session/personSwitch.ts`: the flag,
+- [x] `apps/api/src/session/sessionShapes.ts` and `sessionEnvelope()` in `session/personSwitch.ts`: the flag,
       from one exported predicate `marksKyotoSeikaSubjects(config, session)`.
-- [ ] `apps/api/src/routes/kyotoSeika.ts` with the three routes; mount it in `app.ts`.
-- [ ] `apps/api/src/routes/kyotoSeika.test.ts` (`createTestApp` with the person pair, as
+- [x] `apps/api/src/routes/kyotoSeika.ts` with the three routes; mount it in `app.ts`.
+- [x] `apps/api/src/routes/kyotoSeika.test.ts` (`createTestApp` with the person pair, as
       `personSwitch.test.ts` sets it up):
   - the operator marks one word twice (204, 204), lists it, unmarks twice (204, 204), lists none
   - another person gets 403 `operator_only` from all three and `marksKyotoSeikaSubjects: false`
   - the operator acting as Hana gets 403 and `false`; acting as themself, `true`
   - a 65-character word gets 400
-- [ ] Update the frontend's `sessionTestFixtures.ts` envelope with `marksKyotoSeikaSubjects: false`.
-- [ ] Checks: api and db lint, typecheck and tests; frontend typecheck; `pnpm format:check`.
+- [x] Update the frontend's `sessionTestFixtures.ts` envelope with `marksKyotoSeikaSubjects: false`.
+- [x] Checks: api and db lint, typecheck and tests; frontend typecheck; `pnpm format:check`.
 
 ## Lane UI: `kyoto-seika-marks-ui`
 
@@ -88,7 +86,7 @@
       tag. In `finally`, unmark what was marked and switch the mode back off for BIGWHEEL.
 - [ ] `apps/frontend/src/kyoto-seika/subjects/README.md`: where marks live, and the read-only query
       `sqlite3 -readonly /srv/drawing-api/data/drawing-app.db "select word from
-  kyoto_seika_subjects_marked_for_deletion order by created_at"`.
+kyoto_seika_subjects_marked_for_deletion order by created_at"`.
 - [ ] Checks: frontend lint, typecheck, `src/kyoto-seika` and `src/api` tests, the new e2e spec and
       `kyotoSeika.e2e.ts` and `personSwitching.e2e.ts` in both engines.
 
