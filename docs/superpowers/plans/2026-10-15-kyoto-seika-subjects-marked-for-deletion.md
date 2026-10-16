@@ -49,25 +49,23 @@
 - [x] Update the frontend's `sessionTestFixtures.ts` envelope with `marksKyotoSeikaSubjects: false`.
 - [x] Checks: api and db lint, typecheck and tests; frontend typecheck; `pnpm format:check`.
 
-## Lane UI: `kyoto-seika-marks-ui`
-
-- [ ] `apps/frontend/src/kyoto-seika/useHold.ts`: pointer handlers for one element per the contract,
+- [x] `apps/frontend/src/kyoto-seika/useHold.ts`: pointer handlers for one element per the contract,
       plus `onContextMenu` preventDefault while held; clears its timer on unmount and when `key`
       changes (the cloud's word after a roll).
-- [ ] `useHold.test.ts` (fake timers): fires at `HOLD_MS`, not before; release, cancel, leave and a
+- [x] `useHold.test.ts` (fake timers): fires at `HOLD_MS`, not before; release, cancel, leave and a
       move past `HOLD_SLOP_PX` each cancel; the click after a fired hold is swallowed and a short
       press's isn't.
-- [ ] `SubjectBalloons.tsx`: the two props; a marked cloud wears the tag and its button's name is
+- [x] `SubjectBalloons.tsx`: the two props; a marked cloud wears the tag and its button's name is
       `spoken`; the pick button takes `useHold` only when `onHold` is given.
-- [ ] The tag: run impeccable (`impeccable context` from `apps/frontend`, then its shape step) for a
+- [x] The tag: run impeccable (`impeccable context` from `apps/frontend`, then its shape step) for a
       red proofreader's 「トル」 on the cloud's edge, clear of the word, legible on a picked (inked)
       cloud too. Check it in a scratch page over the running app at 390 wide, both languages, in
       Chromium and WebKit, screenshots in `data/scratch/kyoto-seika-marks/ui/`. Then build it.
-- [ ] `SubjectBalloons.test.tsx`: the tag and the spoken name only on marked words; without `onHold`
+- [x] `SubjectBalloons.test.tsx`: the tag and the spoken name only on marked words; without `onHold`
       a 3-second press still picks; with it, a short press picks and a held one calls `onHold` and
       doesn't pick.
-- [ ] Catalog strings per the contract, each with its `/** … */` comment.
-- [ ] Checks: frontend lint, typecheck, `src/kyoto-seika` tests, `pnpm format:check`.
+- [x] Catalog strings per the contract, each with its `/** … */` comment.
+- [x] Checks: frontend lint, typecheck, `src/kyoto-seika` tests, `pnpm format:check`.
 
 ## Lane integration: `kyoto-seika-marks-integration` (after both merge)
 
