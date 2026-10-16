@@ -12,7 +12,6 @@ export function creaseCanShade(
     normalTransform[3] * light[0] + normalTransform[4] * light[1] + normalTransform[5] * light[2];
   const z =
     normalTransform[6] * light[0] + normalTransform[7] * light[1] + normalTransform[8] * light[2];
-  if (z <= 0) return false;
   const extent = Math.min(...size);
   // An independently supplied height image can lack a bound. Only a known conservative bound may skip.
   if (
@@ -23,5 +22,6 @@ export function creaseCanShade(
     !Number.isFinite(extent)
   )
     return true;
+  // A tilted facet can still face a source below the flat paper's plane.
   return Math.atan2(z, Math.hypot(x, y)) < Math.atan(maxSlope / extent) + angularRadius;
 }

@@ -118,6 +118,38 @@ const WHITE = flatPrint("#ffffff");
 /** Black paper takes no light, so its coat is the reflection alone. */
 const BLACK = flatPrint("#000000");
 
+/** A crease between two supports: its inward slope still faces light below the flat paper's horizon. */
+const gapCrease = (page: Page) =>
+  page.evaluate(async () => {
+    const { creasePixels } = await import("../src/stickers/crease.ts");
+    const side = 240;
+    const surface = Float32Array.from({ length: side * side }, (_, i) => {
+      const row = Math.floor(i / side);
+      return row < 60 || row > 94 ? 2 : 0;
+    });
+    const pixels = creasePixels({
+      width: side,
+      height: side,
+      surface,
+      own: new Float32Array(side * side).fill(1),
+      scale: 1,
+    });
+    if (!pixels) throw new Error("The supports raised no crease");
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = side;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("The gap crease's context is missing");
+    const image = (data: Uint8ClampedArray<ArrayBuffer>) => {
+      context.putImageData(new ImageData(data, side, side), 0, 0);
+      return canvas.toDataURL();
+    };
+    return {
+      normal: image(pixels.normal),
+      height: image(pixels.height),
+      maxSlope: pixels.maxSlope,
+    };
+  });
+
 test("a crease keeps its appearance through a long inspection and restores it on return", async ({
   page,
 }) => {
@@ -250,6 +282,38 @@ const displayLevel = (l: number) => {
   const up = display + 1 / 255;
   return (up <= 0.04045 ? up / 12.92 : ((up + 0.055) / 1.055) ** 2.4) - l;
 };
+
+test("a crease stays shaded continuously as the light passes below the flat paper", async ({
+  page,
+}) => {
+  await page.goto("/e2e/stickerLaminate.html?reload=1");
+  await page.addStyleTag({
+    content: "[data-reload]{position:fixed!important;left:50%;bottom:0;translate:-50% 0}",
+  });
+  await expect(coatOf(page)).toHaveAttribute("data-state", "ready");
+  const crease = await gapCrease(page);
+  await page.evaluate(({ crease, print }) => window.laminateFixture.update({ print, ...crease }), {
+    crease,
+    print: WHITE,
+  });
+  const horizon = await lightAbovePaper(page, 0);
+  const radius = await page.evaluate(
+    async () =>
+      ((await import("../src/stickers/stickerShader.ts")).LIGHT_ANGULAR_RADIUS * 180) / Math.PI,
+  );
+  // Removing only the center cutoff moves the same snap to the disc's lower rim unless the
+  // light-facing facet's own horizon is also allowed below the flat paper's.
+  for (const beta of [horizon.beta, horizon.beta + radius]) {
+    await expectLanded(page, [beta - 0.01, 0]);
+    const before = await settledRows(page, { crease: [81, 84] });
+    await expectLanded(page, [beta + 0.01, 0]);
+    const after = await settledRows(page, { crease: [81, 84] });
+    expect(
+      Math.abs(after.crease - before.crease),
+      `The crease must not flash as the source crosses beta ${beta}: ${JSON.stringify({ before, after })}`,
+    ).toBeLessThan(2 * displayLevel(before.crease));
+  }
+});
 
 // Red when the shader stops shading by the room's light (CREASE_SHADING 0).
 test("the room's light shades a crease's slopes, more as the device rises", async ({ page }) => {

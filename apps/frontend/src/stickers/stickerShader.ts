@@ -52,7 +52,7 @@ float creaseSelfShadow(vec2 sourceUv,vec2 slope){
   // The light in the sticker's own axes: normalTransform is a rotation, so its transpose undoes it.
   vec3 light=roomLight*normalTransform;
   float across=length(light.xy);
-  if(light.z<=0.||across<.0001)return 0.;
+  if(across<.0001)return 0.;
   vec2 toward=light.xy/across;
   float base=here.r*${f((255 / HEIGHT_LEVELS) * STICKER_THICKNESS)};
   float horizon=0.;
@@ -64,8 +64,8 @@ float creaseSelfShadow(vec2 sourceUv,vec2 slope){
   }
   if(horizon<=0.)return 0.;
   float elevation=atan(light.z,across);
-  // What the surface's own tilt toward the light already hides, and the share of the rest hidden too.
-  float own=discBelow(elevation,atan(max(-dot(slope,toward),0.)));
+  // The facet's own horizon can lie below the flat paper's; count only additional obstruction.
+  float own=discBelow(elevation,atan(-dot(slope,toward)));
   return max(discBelow(elevation,atan(horizon))-own,0.)/max(1.-own,.0001);
 }
 `;

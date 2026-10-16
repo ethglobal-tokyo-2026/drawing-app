@@ -36,8 +36,12 @@ describe("the crease self-shadow gate", () => {
     expect(creaseCanShade(lightAt(0.4), identity, 20, [25, 50], 0.05)).toBe(true);
   });
 
-  it("skips light behind the sticker and keeps unknown geometry conservative", () => {
-    expect(creaseCanShade(lightAt(-0.1), identity, 20, [100, 100], 0.05)).toBe(false);
+  it("keeps obstruction when the light crosses the flat plane but can still reach a tilted crease", () => {
+    for (const elevation of [0.001, 0, -0.001, -0.1])
+      expect(creaseCanShade(lightAt(elevation), identity, 20, [100, 100], 0.05)).toBe(true);
+  });
+
+  it("keeps unknown geometry conservative", () => {
     expect(creaseCanShade(lightAt(1), identity, 20, [0, 100], 0.05)).toBe(true);
   });
 });
