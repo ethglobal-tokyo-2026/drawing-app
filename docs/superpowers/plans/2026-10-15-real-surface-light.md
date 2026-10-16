@@ -2,8 +2,7 @@
 
 **Goal (ad0ll):** "an accurate simulation that looks really, really visually striking." Every value is measured or computed from a source. Where it isn't, it's labeled a design decision, with its reason.
 
-- **Live:** one soft ceiling light, steeper creases, paper light and drop shadows (4bfb1b06).
-- **Next deploy** (branch `round2`): foil lit by the one light only, shadow softness from the light, the crease step's contact shadow, and aligned specs.
+- **Live** (9ffdce3d): one soft ceiling light, steeper creases, paper light, drop shadows, foil lit by the one light only, shadow softness from the light, and the crease step's contact shadow.
 - **Research notes:** `data/scratch/physical-model/`.
 
 ## The model, term by term
@@ -14,7 +13,7 @@
 | Phone or tablet        | the screen's short side ≥ 600 CSS px, with a coarse pointer, means a tablet                                                                                                                                       | Android's 600 dp boundary. A viewport test would misread an iPad in Split View or in LINE                                                                                          | computed                                                                                                       |
 | Still pose             | tablet 36°; phone 47°                                                                                                                                                                                             | Young 2012 measured tablets; phones are derived from Chen 2022's gaze angles                                                                                                       | measured / derived                                                                                             |
 | The light's place      | fixed in the room, above and behind the viewer                                                                                                                                                                    | It no longer moves with the still pose                                                                                                                                             | design decision: placed so its glare crosses the reading band                                                  |
-| The light's size       | a 45 cm round diffuser, 21–24° across, its height foreshortened by sin e                                                                                                                                          | The 8-tatami standard (JLMA, 3,800 lm); Panasonic HH-CK0825CA (2023)                                                                                                               | measured / computed                                                                                            |
+| The light's size       | a 45 cm round diffuser 1.62 m from the device in the solved room: 15.8° across (today 21.5°), its height foreshortened by sin e                                                                                   | The 8-tatami standard (JLMA, 3,800 lm); Panasonic HH-CK0825CA (2023); the room solve's geometry                                                                                    | measured / computed                                                                                            |
 | The light's brightness | radiance from lumens and diffuser area, about 120× paper white; its reflection about 5× paper                                                                                                                     | 3,800 lm; 200 lx room light (JIS Z 9125:2023); Fresnel                                                                                                                             | computed                                                                                                       |
 | The light's edge       | sharp, about 0.5° before each coat's own blur                                                                                                                                                                     | The haze of gloss BOPP lamination film, 1.2% (Ball & Doggett datasheet)                                                                                                            | measured                                                                                                       |
 | The light's color      | neutral, the display's white (D65)                                                                                                                                                                                | True Tone adapts the screen to the room; Japanese ceiling lights are color-tunable, with no measured common setting                                                                | design decision                                                                                                |
@@ -37,12 +36,15 @@
 
 1. **The light's reflection at its real brightness.** Physically it's about 5× paper white, and a screen can't show that, so the print under it turns white. Real stickers do the same in a band of tilts.
    - Or cap the reflection near half of paper white (a design decision): the print stays faintly readable under it (about 1.9:1 instead of about 1.03:1), but it no longer reads as a light.
-   - A mock shows both on the 21-sticker board.
+   - Mock (draft branch `mock-coat-light`): `data/scratch/mocks/coat-reflection/reflection-webkit.png`. At real brightness the light reads as a light only with R2's sharp edge and CIE veil; with today's soft edge and halo it reads as bloom. Capped reads as fog, or with the sharp edge as a dim lamp.
+   - The patch is as big as a real one: about 570 CSS px across on a phone, wider than its screen, and 720 on an iPad. Wherever it reflects, that part of the board blanks until you tilt.
+   - If physical: the still pose's glare sits off the stickers, so a device that never moves never hides one; and foil under the light brightens to the metal's reflection of it, since foil sees it far dimmer today.
    - Recommended: physical.
 2. **How much the coat deepens the art's colors (δ).**
-   - At 1, physical: mid-tones deepen and colors saturate. Gray #BCBCBC becomes #9B9B9B, and skin #F0C8A8 becomes #E3A986. Paper white and black stay put.
+   - At 1, physical: mid-tones deepen and colors saturate, the gloss look. Paper white and black stay put.
    - At 0, colors stay as drawn: printed as if for the laminated stock, also physical.
-   - Recommended: a mock on the 21-sticker board at 1, 0.5 and 0, then choose by eye.
+   - Mock: `data/scratch/mocks/coat-reflection/coat-darkening-webkit.png`. On screen, under lit paper #EBEBEB, gray #BCBCBC shows #8F8F8F at 1, #A1A1A1 at 0.5 and #AEAEAE today; skin #F0C8A8 shows #D19C7C, #D8AD8E and #DEB99B.
+   - Recommended: 1, the gloss look; 0.5 if drawn grays darkening by about a third is too far from what artists picked.
 3. **The board's physical scale.** At life size, a sticker on the board is a small real sticker (about 1.9 cm on an iPhone), and creases are drawn at real thickness and drape. Miniature makes them sub-pixel.
    - Recommended: life size.
 4. **Re-centering at extreme poses.**
@@ -72,7 +74,7 @@
 ## Open
 
 - **Bright paper upright on ad0ll's iPad:** not reproduced in WebKit, where everything darkens there.
-  - It could be the real room's reflection in the iPad's glass, or LINE reporting the iPad's rotation differently.
+  - It could be the panel itself (OLEDs are brightest seen square-on, so facing the iPad squarely brightens everything on it), the real room's reflection in the iPad's glass, or LINE reporting the iPad's rotation differently.
   - It needs a screenshot at that pose, and a recorder run (developer slip) while tilting. A screenshot tells the two apart, since it shows only what the app drew, never the glass's glare.
 - **Each foil's metal and the room's bounce** (ad0ll: after this): gold warms it, silver keeps it neutral, rose gold tints it, holo diffracts it. R1's solve gives the bounce to color.
 - **Static shadows left:** the photo sticker, gift bag, give sheet pick, gift received notice and receive dialog. The tray is unchecked.
