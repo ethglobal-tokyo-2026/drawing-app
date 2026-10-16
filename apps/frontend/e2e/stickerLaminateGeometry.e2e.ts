@@ -371,6 +371,67 @@ test("Shop matte uses the same held light and broadens the ceiling light's refle
   await expect.poll(image).not.toBe(held);
 });
 
+for (const frame of [
+  { source: [674, 704], css: [129.3125, 135.078125] },
+  { source: [704, 590], css: [122.359375, 102.546875] },
+  { source: [694, 704], css: [173.875, 176.390625] },
+]) {
+  test(`a source-sized crease commits over inset Kyoto Seika foil at ${frame.source.join("×")}`, async ({
+    page,
+  }) => {
+    await page.goto("/e2e/stickerLaminate.html?board=1&count=0");
+    const result = await page.evaluate(async ({ source, css }) => {
+      const { solidPng } = await import("./stickerMaterialFixture.ts");
+      const api = await import("../src/stickers/stickerRenderer.ts");
+      const canvas = document.createElement("canvas");
+      canvas.className = "sticker-material";
+      canvas.style.cssText = `position:absolute;left:30px;top:30px;width:${css[0]}px;height:${css[1]}px`;
+      document.body.append(canvas);
+      // The 32 px margin leaves the grown foil entirely inside the original source frame.
+      const cut = solidPng(source[0], source[1], "white", 32);
+      const material = {
+        print: solidPng(source[0], source[1], "#888888"),
+        cut,
+        turn: 0,
+        finish: "gloss" as const,
+        foil: { style: "kyoto-seika" as const, size: "board" as const },
+      };
+      const release = api.mountSticker(canvas, material);
+      try {
+        await api.whenStickerSettled(canvas, undefined, AbortSignal.timeout(5000));
+        const flat = canvas.toDataURL();
+        const normal = solidPng(source[0], source[1], "rgb(128,150,249)");
+        api.updateSticker(canvas, { ...material, normal });
+        await api.whenStickerSettled(canvas, { normal }, AbortSignal.timeout(5000));
+        const coverage = api.stickerFoilCoverage(canvas)?.coverage;
+        return {
+          state: canvas.dataset.state,
+          error: canvas.dataset.error ?? "",
+          changed: canvas.toDataURL() !== flat,
+          coverage: coverage && {
+            x: coverage.x / coverage.sourceWidth,
+            y: coverage.y / coverage.sourceHeight,
+            right: (coverage.x + coverage.width) / coverage.sourceWidth,
+            bottom: (coverage.y + coverage.height) / coverage.sourceHeight,
+          },
+        };
+      } finally {
+        release();
+        canvas.remove();
+      }
+    }, frame);
+    const diagnostic = JSON.stringify(result);
+    expect(result.coverage, diagnostic).toBeDefined();
+    expect(result.coverage?.x, diagnostic).toBeCloseTo(0, 7);
+    expect(result.coverage?.y, diagnostic).toBeCloseTo(0, 7);
+    expect(result.coverage?.right, diagnostic).toBeCloseTo(1, 7);
+    expect(result.coverage?.bottom, diagnostic).toBeCloseTo(1, 7);
+    expect(result.error, diagnostic).toBe("");
+    expect(result.state, diagnostic).toBe("ready");
+    expect(result.changed, diagnostic).toBe(true);
+  });
+}
+
 test("expanded complete materials preserve source paper and reject unregistered creased overflow", async ({
   page,
 }) => {

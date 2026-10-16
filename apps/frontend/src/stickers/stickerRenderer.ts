@@ -524,7 +524,10 @@ export class MountedSurface {
     if (
       normal &&
       c &&
-      (c.x < 0 || c.y < 0 || c.width > c.sourceWidth || c.height > c.sourceHeight) &&
+      (c.x / c.sourceWidth < -1e-7 ||
+        c.y / c.sourceHeight < -1e-7 ||
+        (c.x + c.width) / c.sourceWidth > 1 + 1e-7 ||
+        (c.y + c.height) / c.sourceHeight > 1 + 1e-7) &&
       (!bounds ||
         bounds.x > c.x / c.sourceWidth + 1e-7 ||
         bounds.y > c.y / c.sourceHeight + 1e-7 ||
