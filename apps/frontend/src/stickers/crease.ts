@@ -403,7 +403,7 @@ function stepResponse(scale: number): StepResponse {
 export const NORMAL_SLOPE = stepResponse(1).slope * STICKER_THICKNESS;
 
 /** How many NORMAL_SLOPEs a slope may reach, where steps stack, before it clips. */
-export const NORMAL_RANGE = 6;
+const NORMAL_RANGE = 6;
 
 /** B's levels per NORMAL_SLOPE of range beyond the first. */
 export const NORMAL_RANGE_LEVELS = 255 / (NORMAL_RANGE - 1);

@@ -4,12 +4,12 @@ The live laminate covers the sticker's full cut, including blank line-art interi
 
 `apps/frontend/src/stickers/stickerShader.ts` composes paper, ink, and neutral dielectric reflection in linear light using exact Fresnel. Every material on screen reflects one room from one viewpoint (`sharedRoom.ts`, `roomShader.ts`):
 
-- **The lights:** a shoji screen above and behind the viewer, a little left, with a squared frame and a softened kumiko lattice; its still glare sits in the screen's upper third. Round lights (`ROOM.lights`) light the poses the shoji misses: a ceiling lamp beyond the device for a device lying back, and a marumado behind and above the viewer for an upright one. Each coat blurs a light by its own lobe, and a soft halo around each, for the wall it lights and the eye's veiling glare, brightens before its reflection arrives and fades after it leaves. Gloss, foil and glitter mirror the same lights.
-- **The bounce:** a ceiling, the wall the shoji lights, other walls and a floor.
+- **The light:** one round, soft ceiling light above and behind the viewer, a little left (`ROOM.light`); only a band of tilts mirrors it, as a real one does. Each coat blurs its edge by its own lobe, and a soft halo around it, for the ceiling it lights, the coat's haze and the eye's veiling glare, brightens before its reflection arrives and fades after it leaves. Gloss, foil and glitter mirror the same light.
+- **The bounce:** the ceiling, the wall beyond the device, the other walls and the floor.
 - **The viewpoint:** one viewer in front of the screen's center, toward its bottom edge when the device lies flat. The room and the viewer stay put in the world while the hand turns the device; once the device turns past a release, the viewer glides back in front of it. A sticker's reflection depends on where it sits on screen.
-- **Paper's highlights** roll off above a shoulder, so the print never clips.
+- **Paper's highlights** roll off above a shoulder, so the print never clips. The print follows the light slightly (`paperLight.ts`), dimming as the screen turns from it.
 
-Gloss and matte use different angular filter widths. The separable filter matches nine positive tent-weighted samples. Raw crease slopes supply geometric normals; raised plateaus stay flat. Glitter and prism (`laminateShader.ts`) build on the same coat: glitter adds flakes that mirror the foil's room and flash where they meet the overhead window; prism lays palette facets over the print that slide and turn with the coat's normal. Scene and appearance constants are declared assumptions, not measured laminate parameters.
+Gloss and matte use different angular filter widths. The separable filter matches nine positive tent-weighted samples. Raw crease slopes supply geometric normals; raised plateaus stay flat. Glitter and prism (`laminateShader.ts`) build on the same coat: glitter adds flakes that mirror the foil's room and flash where they meet the ceiling light; prism lays palette facets over the print that slide and turn with the coat's normal. Scene and appearance constants are declared assumptions, not measured laminate parameters.
 
 ## Runtime
 
@@ -19,7 +19,7 @@ The light publishes the device's pose, beta and gamma from DeviceOrientation plu
 - **The still pose:** before any reading the room is lit at the usual reading angle; the first reading moves the light to the device's pose, with the viewer centered on it.
 - **Pauses:** release, a hidden page, reduced motion or revoked permission hold the last pose.
 - **Redraws:** coating and foil receive the same pose each display frame. A surface that moves on screen redraws as it moves: a drag, a landing, a scroll once it stops, a resize.
-- **Creases and shadows** follow the room. The shader shades a crease's slopes by the room's irradiance on its normal (`roomIrradiance.ts`: the bounce as spherical harmonics, plus each light), relative to flat paper, so upright the bottom-facing slopes darken; the baked base keeps only the shoulder and foot. A sticker's key shadow (`keyShadow.ts`) falls away from the shoji, longer and softer as the light lowers, over a static ambient shadow. Mobile, unknown, denied, blocked, and silent sensor states remain stationary; only positively classified devices without rotation input qualify for timed fallback motion. The static foil span supplies only the fallback and registered cast; complete material rendering replaces the former live CSS effects.
+- **Creases and shadows** follow the room. The shader shades a crease's slopes by the room's irradiance on its normal (`roomIrradiance.ts`: the bounce as spherical harmonics, plus the light's disc), relative to flat paper, so upright the bottom-facing slopes darken; the baked base keeps only the shoulder and foot. A crease's step casts a short contact shadow away from the light, marched over the crease's height image. A sticker's key shadow (`keyShadow.ts`) falls away from the ceiling light, longer as the light lowers, blurred by the light's size, over a static ambient shadow. Mobile, unknown, denied, blocked, and silent sensor states remain stationary; only positively classified devices without rotation input qualify for timed fallback motion. The static foil span supplies only the fallback and registered cast; complete material rendering replaces the former live CSS effects.
 
 One WebGL context renders packed tiles. It requests `premultipliedAlpha: true`; the shader composes paper over foil and multiplies final display-space RGB by their combined alpha, leaving optical calculations and print uploads unchanged. Zero combined alpha produces zero RGBA. Each batch clears its used GL rectangle, submits its tile draws, then crops directly into retained sticker canvases with `copy`, including transparent pixels. All crops finish before the next batch overwrites the source. There is no second full-size 2D atlas.
 
@@ -89,7 +89,7 @@ Foil renders in the same pass as paper and laminate, under the same light, pose,
 
 Holo:
 
-- **Diffraction** comes from concentric grooves lit by the shoji and by lamps fixed in the room, eye-level ones among them.
+- **Diffraction** comes from concentric grooves lit by the ceiling light, sampled across its disc.
 - **A floor:** the room's bounce adds a colored floor, so every band keeps color at every pose.
 - **Hue sweep:** an authored sweep sets the band's hues by its angle round the sticker, and the floor's hues travel with tilt and side tilt.
 - **No hue is green.**

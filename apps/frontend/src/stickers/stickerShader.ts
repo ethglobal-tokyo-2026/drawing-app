@@ -11,7 +11,7 @@ import { ROOM } from "./sharedRoom";
  * How strongly the room's light shades a crease's slopes: 1 is physical, the change in the light
  * falling on the slope against the flat paper's.
  */
-export const CREASE_SHADING = 1;
+const CREASE_SHADING = 1;
 
 /**
  * How many times steeper than the bake a crease's slopes are drawn, for its shading and its gloss alike:
@@ -134,8 +134,8 @@ void main() {
   float parallel=(1.5*cosine-transmitted)/(1.5*cosine+transmitted);
   float fresnel=(perpendicular*perpendicular+parallel*parallel)*.5;
   vec3 reflected=normalize(2.*dot(view,n)*n-view);
-  vec2 shojiPoint=roomPlane(reflected);
-  roomFootprint=max(length(dFdx(shojiPoint)),length(dFdy(shojiPoint)));
+  vec2 lightPlanePoint=roomPlane(reflected);
+  roomFootprint=max(length(dFdx(lightPlanePoint)),length(dFdy(lightPlanePoint)));
   vec3 coat=laminateCoat(vec3(linear(base.r),linear(base.g),linear(base.b))*creaseLight*paperLight*.9*(1.-fresnel)+fresnel*environment(reflected),
     sourceUv*size,printFootprint*tile,surfaceNormal,view);
   // Paper never clips: the brightest reflection rolls off, so it keeps its gradation over the print.

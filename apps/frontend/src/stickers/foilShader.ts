@@ -32,7 +32,7 @@ vec3 foilAllowedHue(vec3 c){
  return mix(c,vec3(foilY(c)),smoothstep(.02,.08,(c.g-max(c.r,c.b))/max(peak,.000001)));
 }
 // Paper and metal both: identity below the knee keeps room-lit surfaces bright; only highlights roll
-// toward the display's peak. Paper's knee sits higher, so paper under the shoji rises above unlit paper.
+// toward the display's peak. Paper's knee sits higher, so paper under the light's reflection rises above unlit paper.
 vec3 highlightShoulder(vec3 c,float knee){
  float peak=max(c.r,max(c.g,c.b));
  if(peak<=knee)return c;

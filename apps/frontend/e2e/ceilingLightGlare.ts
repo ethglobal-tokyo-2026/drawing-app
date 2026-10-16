@@ -139,7 +139,7 @@ export const listPath = (path: Glare[]) => path.map(describeGlare).join("\n");
  * The poses where most of the glare is on the sticker. A sliver clipped by the sticker's edge has
  * its centroid wherever the tilted edge crosses first.
  */
-export const wholeGlare = (path: Glare[]) =>
+const wholeGlare = (path: Glare[]) =>
   path.filter((glare) => glare.share >= 0.5 * Math.max(...path.map((other) => other.share)));
 
 /**
