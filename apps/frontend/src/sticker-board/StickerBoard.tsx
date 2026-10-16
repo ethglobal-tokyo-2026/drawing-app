@@ -39,6 +39,7 @@ import { formatNo, handleOf } from "../stickers/format";
 import { useLight } from "../stickers/light";
 import { LaminateActiveContext } from "../stickers/laminateActiveContext";
 import { boardFoil } from "../stickers/madeFoil";
+import { boardDimmingLayer } from "../stickers/paperLight";
 import { playStick } from "../stickers/stick";
 import { DrawKeyTickets } from "../tickets/DrawKeyTickets";
 import { describeTickets } from "../tickets/tickets";
@@ -1024,6 +1025,7 @@ export function StickerBoard({
 
   const front = (
     <div className="board" ref={setFace} data-resting={turned || gratitudeFor ? "" : undefined}>
+      <span ref={boardDimmingLayer} className="board-dimming" aria-hidden="true" />
       {/* Your name and Draw come before the stickers, so Tab reaches them first. On a large screen the
           name and the gifts share one row, so a long name gives way to the gifts rather than under them. */}
       {layout === "large" ? <div className="board-head">{head}</div> : head}

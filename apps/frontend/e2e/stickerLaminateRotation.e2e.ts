@@ -131,12 +131,12 @@ async function holdDisplayed(page: Page, screenAngle: number, held: number, roll
 }
 
 /**
- * The shoji's side edge nearer the screen's middle, from the room at the landed pose: where it
- * mirrors on screen, in CSS px from the viewport's center (y down, at the shoji's middle), and how
+ * The ceiling light's side edge nearer the screen's middle, from the room at the landed pose: where
+ * it mirrors on screen, in CSS px from the viewport's center (y down, at the light's middle), and how
  * far a degree of roll about the displayed vertical carries it. A direction d mirrors for the eye e
  * at e.xy + e.z·d.xy / d.z, and a roll turns the eye and the room together, since both stay put.
  */
-const shojiEdge = (page: Page) =>
+const lightEdge = (page: Page) =>
   page.evaluate(async () => {
     const { roomFrame, ROOM } = await import("../src/stickers/sharedRoom.ts");
     const frame = roomFrame(window.laminateFixture.getPose());
@@ -152,7 +152,7 @@ const shojiEdge = (page: Page) =>
       -v[0] * Math.sin(a) + v[2] * Math.cos(a),
     ];
     const [edge] = [-1, 1]
-      .map((side) => frame.light.map((l, i) => l + side * ROOM.shoji.halfWidth * frame.across[i]))
+      .map((side) => frame.light.map((l, i) => l + side * ROOM.light.radius * frame.across[i]))
       .toSorted((p, q) => Math.abs(mirror(frame.eye, p)[0]) - Math.abs(mirror(frame.eye, q)[0]));
     const [x] = mirror(frame.eye, edge);
     return {
@@ -174,10 +174,10 @@ for (const [name, angle, held] of [
     const paper = page.locator("[data-white] canvas.sticker-material");
     const foil = page.locator('[data-sticker="0"] .sticker-material');
     await expect(paper).toHaveAttribute("data-state", "ready");
-    // The same pose of the displayed screen in every turn. Inside the shoji's glare white paper
+    // The same pose of the displayed screen in every turn. Inside the light's glare white paper
     // clips evenly, so the paper straddles the glare's side edge, where the room puts it.
     await holdDisplayed(page, angle, held, 0);
-    const edge = await shojiEdge(page);
+    const edge = await lightEdge(page);
     const view = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }));
     const side = 240;
     const top = Math.min(Math.max(view.height / 2 + edge.y - side / 2, 0), view.height - side);

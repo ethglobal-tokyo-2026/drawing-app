@@ -25,6 +25,7 @@ import { formatNo, handleOf } from "../stickers/format";
 import { Handle } from "../stickers/Handle";
 import { boardFoil } from "../stickers/madeFoil";
 import { useLight } from "../stickers/light";
+import { boardDimmingLayer } from "../stickers/paperLight";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { LaminateActiveContext } from "../stickers/laminateActiveContext";
 import { ErrorLine } from "../ui/ErrorLine";
@@ -366,6 +367,7 @@ export function ArtistBoard({ person, onBack }: Props) {
 
   const front = (
     <div className="board visit" ref={face} data-resting={turned ? "" : undefined}>
+      <span ref={boardDimmingLayer} className="board-dimming" aria-hidden="true" />
       {/* Their name, the Explore chip and Give come before the stickers, so Tab reaches them first. A
           large screen has no chip: the Explore tab, lit while you visit, is the way back there. */}
       <button
