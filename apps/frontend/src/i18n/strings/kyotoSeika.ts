@@ -19,6 +19,28 @@ export const kyotoSeika = {
     /** Drawing screen, a sheet in Kyoto Seika Practice Mode: the line in place of the balloons when the subject list didn't load */
     loadFailed: { en: "Couldn’t load the subjects.", ja: "題材を読み込めませんでした。" },
   },
+  /** The operator's marks on dealt words to take out of the subject list, as an editor marks a proof. */
+  marks: {
+    /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin, the operator only: the red proofreader's mark on the edge of a cloud whose word is marked for deletion; a 3-second hold puts it on or takes it off */
+    tag: { en: "Cut", ja: "トル" },
+    /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin, the operator only: a marked cloud's name for screen readers; {{subject}} is the subject as they hear it, such as "風, wind" */
+    spoken: { en: "{{subject}}, marked for deletion", ja: "{{subject}}、削除候補" },
+    /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin, the operator only: the error line under the deal when a 3-second hold couldn't mark {{word}} for deletion, and the cloud went back as it was */
+    markFailed: {
+      en: "Couldn’t mark {{word}} for deletion.",
+      ja: "{{word}}を削除候補にできませんでした。",
+    },
+    /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin, the operator only: the error line under the deal when a 3-second hold couldn't take {{word}}'s deletion mark off, and the cloud went back as it was */
+    unmarkFailed: {
+      en: "Couldn’t take the deletion mark off {{word}}.",
+      ja: "{{word}}の削除候補を外せませんでした。",
+    },
+    /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin, the operator only: the error line under the deal when the words marked for deletion didn't load; the deal works without them */
+    loadFailed: {
+      en: "Couldn’t load the words marked for deletion.",
+      ja: "削除候補の題材を読み込めませんでした。",
+    },
+  },
   /** The key at the sheet's foot that locks the pair in and starts the clock. */
   begin: {
     /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: the yellow key at the sheet's foot, the proctor's word for starting the test */

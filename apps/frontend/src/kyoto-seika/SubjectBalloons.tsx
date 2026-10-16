@@ -50,6 +50,7 @@ import { spokenSubject } from "./spokenSubject";
 import { SubjectReroll } from "./SubjectReroll";
 import { SubjectWord } from "./SubjectWord";
 import { Inked, ThoughtTrail } from "./ThoughtCloud";
+import { HOLD_MS, useHold } from "./useHold";
 import "./subject-balloons.css";
 
 const onVisibility = (onChange: () => void) => {
@@ -252,6 +253,10 @@ interface BalloonProps {
   drifts: boolean;
   /** The page is hidden: the drift holds. */
   still: boolean;
+  /** Its word is marked for deletion from the subject list: it wears the editor's 「トル」. */
+  marked: boolean;
+  /** A held press marks or unmarks its word; without it, every press picks. */
+  onHold?: (subject: KyotoSeikaSubject) => void;
 }
 
 /**
@@ -270,7 +275,11 @@ function SubjectBalloon({
   reduced,
   drifts,
   still,
+  marked,
+  onHold,
 }: BalloonProps) {
+  const { t } = useTranslation();
+  const hold = useHold(HOLD_MS, () => onHold?.(subject), subject.ja);
   const { spec } = placed;
   const box = placed.cloudBox;
   const { inks } = useMemo(() => cloudShape(spec), [spec]);
@@ -424,6 +433,11 @@ function SubjectBalloon({
               </div>
             </div>
           )}
+          {marked && (
+            <span className="subject-balloon__cut" aria-hidden="true">
+              {t(($) => $.kyotoSeika.marks.tag)}
+            </span>
+          )}
         </div>
         {pops.map((pop) => (
           <PoppedCloud
@@ -441,9 +455,14 @@ function SubjectBalloon({
         type="button"
         className="subject-balloon__pick"
         style={{ left: -half.w, top: -half.h, width: half.w * 2, height: half.h * 2 }}
-        aria-label={spokenSubject(subject)}
+        aria-label={
+          marked
+            ? t(($) => $.kyotoSeika.marks.spoken, { subject: spokenSubject(subject) })
+            : spokenSubject(subject)
+        }
         aria-pressed={picked}
         aria-disabled={locked || undefined}
+        {...(onHold && hold)}
         onClick={(event) => {
           if (locked) return;
           tapped.current = clickedAt(drawnCloud.current, event);
@@ -472,6 +491,10 @@ interface Props {
   onPick: (place: number) => void;
   /** A picture of the deal, as Kyoto Seika Practice Mode's help shows it: the clouds arrive, then neither drift nor boil. */
   picture?: boolean;
+  /** The words marked for deletion from the subject list, by their `ja`: their clouds wear the tag. */
+  marked?: ReadonlySet<string>;
+  /** A press held on a cloud for `HOLD_MS` marks or unmarks its word; without it, every press picks. */
+  onHold?: (subject: KyotoSeikaSubject) => void;
 }
 
 /** The die's line, or its countdown's number, from the roll that earned it. */
@@ -486,7 +509,15 @@ interface Tease {
  * each a toggle that picks it, and one die that deals the ones not picked again. Each subject a roll
  * deals is read out.
  */
-export function SubjectBalloons({ deal, layout, onRoll, onPick, picture = false }: Props) {
+export function SubjectBalloons({
+  deal,
+  layout,
+  onRoll,
+  onPick,
+  picture = false,
+  marked,
+  onHold,
+}: Props) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
   const hidden = useSyncExternalStore(onVisibility, () => document.hidden);
@@ -561,6 +592,8 @@ export function SubjectBalloons({ deal, layout, onRoll, onPick, picture = false 
               reduced={reduced}
               drifts={!picture}
               still={hidden}
+              marked={marked?.has(subject.ja) ?? false}
+              onHold={onHold}
             />
           );
         })}

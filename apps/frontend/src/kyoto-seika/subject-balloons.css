@@ -133,6 +133,24 @@
   color: var(--ink);
 }
 
+/* A word marked for deletion: the editor's red-pen 「トル」 on the cloud's upper-right shoulder, off
+   the word area's corner and across the pen line, slanted against the cloud as a hand writes in a
+   margin. A white edge (白フチ) lets the red read over a picked cloud's ink as on the paper. */
+.subject-balloon__cut {
+  position: absolute;
+  left: calc(100% - 14px);
+  bottom: 100%;
+  font: 800 16px/1 var(--font-jp);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  /* The editor's red pen: a proofreading color, not a token. */
+  color: #d42a20;
+  paint-order: stroke fill;
+  -webkit-text-stroke: 4px var(--canvas);
+  rotate: -8deg;
+  pointer-events: none;
+}
+
 .subject-balloon__word {
   font-family: var(--font-jp);
   font-weight: 800;
