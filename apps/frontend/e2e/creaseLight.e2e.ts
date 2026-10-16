@@ -98,11 +98,12 @@ const GRAY = flatPrint("#808080");
 /** Black paper takes no light, so its coat is the reflection alone. */
 const BLACK = flatPrint("#000000");
 
-// Red when the shader stops shading by the room's light (CREASE_SHADING 0, or creaseLight left out), or
-// when its light stops following the pose (a fixed frame for irradianceSources).
+// Red when the shader stops shading by the room's light (CREASE_SHADING 0, or creaseLight left out),
+// when its light stops following the pose (a fixed roomFrame), or when creases are drawn at the bake's
+// own slope (CREASE_STEEPENING 1).
 test("the room's light shades a crease's slopes, more as the device rises", async ({ page }) => {
   await page.goto("/e2e/stickerLaminate.html?reload=1");
-  // At the screen's foot, off the shoji's glare, so the coat stays below its highlight shoulder.
+  // At the screen's foot, off the ceiling light's glare, so the coat stays below its highlight shoulder.
   await page.addStyleTag({
     content: "[data-reload]{position:fixed!important;left:50%;bottom:0;translate:-50% 0}",
   });
@@ -134,8 +135,9 @@ test("the room's light shades a crease's slopes, more as the device rises", asyn
     contrast[beta] = paper("bottom") / paper("belowBottom") - paper("top") / paper("aboveTop");
   }
   const report = JSON.stringify(contrast);
-  // Upright the shoji is above the sticker: bottom-facing slopes darken, more as the device rises.
-  expect(contrast[90], `upright, the bottom-facing ramp is darker: ${report}`).toBeLessThan(-0.004);
+  // Upright the ceiling light is above the sticker: bottom-facing slopes darken, more as the device
+  // rises. A real sticker's drape darkens them clearly upright, where the bake's own slope barely does.
+  expect(contrast[90], `upright, the bottom-facing ramp is darker: ${report}`).toBeLessThan(-0.07);
   expect(contrast[70], `raised, the bottom-facing ramp is darker: ${report}`).toBeLessThan(0);
   expect(
     Math.abs(contrast[90]),

@@ -4,16 +4,16 @@ import { about, compose, sendReading, type Rotation } from "./deviceRotation";
 import { ipad } from "./ipad";
 import { decodeScreenshot } from "./screenshotPixels";
 import {
+  bearingTurn,
+  expectHeldHeight,
   expectTravel,
   landOn,
-  latticeTurn,
   listPath,
   measureGlare,
-  wholeGlare,
   type Glare,
-} from "./shojiGlare";
+} from "./ceilingLightGlare";
 
-// A large black gloss sticker mirrors only the room, so the shoji's glare stands out on it.
+// A large black gloss sticker mirrors only the room, so the ceiling light's glare stands out on it.
 // With the light and the eye fixed in the room, a mirror's glare moves as the device turns under it:
 // these sweeps hold that against what the app draws.
 test.use({ ...ipad, deviceScaleFactor: 1 });
@@ -86,7 +86,7 @@ test("tilting forward and back moves the glare up and down the sticker", async (
   expectClimb(path, "Forward/back, β 30° to 80° at γ 0°");
 });
 
-test("tilting left and right moves the glare sideways without turning the lattice", async ({
+test("tilting left and right slides the glare sideways at one height", async ({
   page,
 }, testInfo) => {
   const clip = await openSticker(page, { pinAngle: true });
@@ -98,17 +98,10 @@ test("tilting left and right moves the glare sideways without turning the lattic
   // re-centering release and shows the tilt alone.
   const path = await sweep(page, clip, testInfo, "left-right", poses, about.x(47));
   expectTravel(path, "x", -1, "Left/right, γ −20° to 20° at β 47°");
-  const whole = wholeGlare(path);
-  const turns = whole.map((glare) => latticeTurn(whole[0].lattice, glare.lattice));
-  expect
-    .soft(
-      Math.max(...turns) - Math.min(...turns),
-      `The lattice turns as the device tilts sideways:\n${listPath(whole)}`,
-    )
-    .toBeLessThan(8);
+  expectHeldHeight(path, "Left/right, γ −20° to 20° at β 47°");
 });
 
-test("turning the device like a steering wheel turns the lattice by the turn", async ({
+test("turning the device like a steering wheel carries the glare around the sticker by the turn", async ({
   page,
 }, testInfo) => {
   const clip = await openSticker(page, { pinAngle: true });
@@ -123,11 +116,12 @@ test("turning the device like a steering wheel turns the lattice by the turn", a
   const level = path.find((glare) => glare.at === 0);
   if (!level) throw new Error(`No glare on the sticker at β 47°:\n${listPath(path)}`);
   for (const glare of path) {
-    // A device turned counterclockwise sees the room turn clockwise on its screen, by as much.
+    // A turn about the screen's normal carries the eye and the light around it together, so the
+    // glare's place turns around the screen's middle by as much, clockwise for a counterclockwise turn.
     expect
       .soft(
-        latticeTurn(level.lattice, glare.lattice),
-        `Turned ${glare.at}°, the lattice turns:\n${listPath(path)}`,
+        bearingTurn(level.bearing, glare.bearing),
+        `Turned ${glare.at}°, the glare turns around the sticker:\n${listPath(path)}`,
       )
       .toBeCloseTo(Number(glare.at), -1);
   }

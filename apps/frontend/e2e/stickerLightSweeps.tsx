@@ -4,7 +4,7 @@ import { StickerMaterial } from "../src/stickers/StickerMaterial";
 import "../src/styles/tokens.css";
 
 // One gloss sticker of black ink filling most of the screen, centered: its only light is the room's
-// reflection, so the shoji's glare stands out wherever the pose puts it.
+// reflection, so the ceiling light's glare stands out wherever the pose puts it.
 const svg = (body: string) =>
   `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800">${body}</svg>`)}`;
 const print = svg('<rect width="600" height="800" fill="black"/>');

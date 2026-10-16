@@ -5,16 +5,15 @@ import { ipad } from "./ipad";
 import { phone } from "./phone";
 import { decodeScreenshot } from "./screenshotPixels";
 import {
+  expectHeldHeight,
   expectTravel,
   landOn,
-  latticeTurn,
   listPath,
   measureGlare,
   STEP_SLACK,
-  wholeGlare,
   type Frame,
   type Glare,
-} from "./shojiGlare";
+} from "./ceilingLightGlare";
 
 // The light sweeps' black gloss sticker, held in every orientation its screen can be turned to. Each
 // reading is the screen's own tilt carried into the device's portrait axes, so the glare must cross
@@ -113,6 +112,11 @@ const held = (screen: Rotation, turn: Turn) => compose(screen, about.z(turn));
 
 /** The reading tilt: the still pose's beta, about the screen's horizontal axis. */
 const READING = 47;
+/**
+ * Where the glare sits on the device's sticker: the reading tilt on an iPad, and a little more upright
+ * on a phone, whose small sticker loses the glare off its top edge at the reading tilt.
+ */
+const tiltOf = (device: Device) => (device.upright === ipad.viewport ? READING : 40);
 
 /** Presents the page as `device` turned by `turn`, from before its first script runs. */
 async function presentAs(page: Page, device: Device, turn: Turn) {
@@ -252,11 +256,9 @@ for (const device of DEVICES)
         expectTravel(forwardBack, "y", -1, `Forward/back, ${turnName(turn)}`);
 
         // Turning the screen about its vertical axis at the reading tilt slides the glare across
-        // the displayed sticker without turning its lattice.
-        // A phone's small sticker loses the glare off its top edge at the reading tilt, so it sweeps
-        // where the glare sits mid-sticker.
+        // the displayed sticker at one height.
         const onIpad = device.upright === ipad.viewport;
-        const tilt = onIpad ? READING : 40;
+        const tilt = tiltOf(device);
         const range = onIpad ? 20 : 8;
         const leftRight = await sweep(
           page,
@@ -270,14 +272,9 @@ for (const device of DEVICES)
           held(about.x(tilt), turn),
         );
         expectTravel(leftRight, "x", -1, `Left/right, ${turnName(turn)}`);
-        const whole = wholeGlare(leftRight);
-        const turns = whole.map((glare) => latticeTurn(whole[0].lattice, glare.lattice));
-        expect
-          .soft(
-            Math.max(...turns) - Math.min(...turns),
-            `The lattice turns as the device tilts sideways:\n${listPath(whole)}`,
-          )
-          .toBeLessThan(8);
+        // A phone's sticker is smaller than the ceiling light's glare, whose centroid then follows
+        // where the round edge crosses the sticker's.
+        if (onIpad) expectHeldHeight(leftRight, `Left/right, ${turnName(turn)}`);
       });
 
     test("turned from upright onto its side, the settled glare is a fresh session's", async ({
@@ -292,13 +289,13 @@ for (const device of DEVICES)
         if (glare) frames.push({ at, ...glare });
       };
 
-      await landOn(page, await sendReading(page, held(about.x(READING), 0)), 3000);
+      await landOn(page, await sendReading(page, held(about.x(tiltOf(device)), 0)), 3000);
       note("upright", await capture(page, clip, testInfo, "turn-00-upright"));
       // A steering-wheel turn at the reading tilt, the UI still upright until the turn completes.
       for (const [i, wheel] of [15, 30, 45, 60, 75, 90].entries()) {
         await landOn(
           page,
-          await sendReading(page, compose(about.x(READING), about.z(wheel))),
+          await sendReading(page, compose(about.x(tiltOf(device)), about.z(wheel))),
           3000,
         );
         note(
@@ -308,7 +305,7 @@ for (const device of DEVICES)
       }
       await turnUi(page, device, 90);
       clip = await stickerClip(page);
-      const pose = held(about.x(READING), 90);
+      const pose = held(about.x(tiltOf(device)), 90);
       const reading = await sendReading(page, pose);
       await landOn(page, reading, 3000);
       // Through the viewer's re-centering, then once the light stops publishing.
@@ -352,9 +349,6 @@ for (const device of DEVICES)
         .toBeLessThan(0.002);
       expect.soft(Math.abs(settled.glare.x - target.x), detail).toBeLessThan(0.004);
       expect.soft(Math.abs(settled.glare.y - target.y), detail).toBeLessThan(0.004);
-      expect
-        .soft(Math.abs(latticeTurn(target.lattice, settled.glare.lattice)), detail)
-        .toBeLessThan(0.5);
       // No lasting jump: after the turn, every frame closes on the settled glare, never backing off.
       const distances = after
         .map(({ glare }) => glare && Math.hypot(glare.x - target.x, glare.y - target.y))

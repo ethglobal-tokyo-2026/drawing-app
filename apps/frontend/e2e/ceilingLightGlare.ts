@@ -2,20 +2,15 @@ import { expect, type Page } from "@playwright/test";
 import type { Reading } from "./deviceRotation";
 import type { ScreenshotPixels } from "./screenshotPixels";
 
-// The light sweeps' black gloss sticker mirrors only the room. The shoji's glare is the bright region
-// carrying its lattice; the room's round lights make glare of their own, which the sweeps ignore.
+// The light sweeps' black gloss sticker mirrors only the room, whose one source is the ceiling light:
+// its glare is the largest bright region on the sticker.
 
 /** Display luma, 0 to 1, above which a pixel of the black sticker is glare. */
 const GLARE = 0.35;
-/** The least share of the sticker the shoji's glare must cover to be measured. */
+/** The least share of the sticker the ceiling light's glare must cover to be measured. */
 const MIN_SHARE = 0.003;
-/** Glare pixels this close, in CSS px, are one region, so the shoji's panes join across its bars. */
+/** Glare pixels this close, in CSS px, are one region. */
 const JOIN_PX = 16;
-/**
- * How alike a region's edge directions are at 4θ, 0 to 1, for it to carry the lattice. A round
- * light's core spreads its edges' directions evenly, so it falls short.
- */
-const LATTICE_COHERENCE = 0.3;
 /** How far back, as a share of the sticker, a step may go before it breaks a monotonic path. */
 export const STEP_SLACK = 0.01;
 /** The glare's share of the sticker past which its centroid no longer tracks where it is. */
@@ -29,8 +24,8 @@ export interface Glare {
   /** The glare's centroid, as a share of the sticker's width and height from its top left. */
   x: number;
   y: number;
-  /** The lattice's orientation mod 90°, in degrees clockwise on screen. */
-  lattice: number;
+  /** Where the centroid lies around the sticker's center, in degrees clockwise on screen from up. */
+  bearing: number;
 }
 
 export interface Frame {
@@ -38,10 +33,7 @@ export interface Frame {
   glare: Omit<Glare, "at"> | null;
 }
 
-/**
- * The shoji's glare: of the glare regions, the one whose edges are most strongly squared, with its
- * centroid and the lattice's orientation from its edges' gradients, averaged at 4θ.
- */
+/** The ceiling light's glare: the largest glare region, with its centroid. */
 export function measureGlare({ width, height, data }: ScreenshotPixels): Frame {
   const luma = new Float32Array(width * height);
   for (let i = 0; i < width * height; i++)
@@ -74,53 +66,29 @@ export function measureGlare({ width, height, data }: ScreenshotPixels): Frame {
     }
     regions++;
   }
-  const stats = Array.from({ length: regions }, () => ({
-    count: 0,
-    sumX: 0,
-    sumY: 0,
-    cos: 0,
-    sin: 0,
-    weight: 0,
-  }));
+  const stats = Array.from({ length: regions }, () => ({ count: 0, sumX: 0, sumY: 0 }));
   for (let y = 0; y < height; y++)
     for (let x = 0; x < width; x++) {
       const region = stats[regionOf[cellOf(x, y)]];
-      if (!region) continue;
-      if (luma[y * width + x] > GLARE) {
-        region.count++;
-        region.sumX += x;
-        region.sumY += y;
-      }
-      if (x < 1 || y < 1 || x >= width - 1 || y >= height - 1) continue;
-      const at = (dx: number, dy: number) => luma[(y + dy) * width + x + dx];
-      const gx = at(1, -1) + 2 * at(1, 0) + at(1, 1) - at(-1, -1) - 2 * at(-1, 0) - at(-1, 1);
-      const gy = at(-1, 1) + 2 * at(0, 1) + at(1, 1) - at(-1, -1) - 2 * at(0, -1) - at(1, -1);
-      const weight = gx * gx + gy * gy;
-      if (!weight) continue;
-      const angle = 4 * Math.atan2(gy, gx);
-      region.cos += weight * Math.cos(angle);
-      region.sin += weight * Math.sin(angle);
-      region.weight += weight;
+      if (!region || luma[y * width + x] <= GLARE) continue;
+      region.count++;
+      region.sumX += x;
+      region.sumY += y;
     }
-  const squared = (region: (typeof stats)[number]) => Math.hypot(region.cos, region.sin);
-  const shoji = stats
-    .filter(
-      (region) =>
-        region.count >= MIN_SHARE * width * height &&
-        squared(region) >= LATTICE_COHERENCE * region.weight,
-    )
-    .reduce<(typeof stats)[number] | null>(
-      (best, region) => (!best || squared(region) > squared(best) ? region : best),
-      null,
-    );
-  if (!shoji) return { luma, glare: null };
+  const largest = stats.reduce<(typeof stats)[number] | null>(
+    (best, region) => (!best || region.count > best.count ? region : best),
+    null,
+  );
+  if (!largest || largest.count < MIN_SHARE * width * height) return { luma, glare: null };
+  const x = largest.sumX / largest.count;
+  const y = largest.sumY / largest.count;
   return {
     luma,
     glare: {
-      share: shoji.count / (width * height),
-      x: shoji.sumX / shoji.count / width,
-      y: shoji.sumY / shoji.count / height,
-      lattice: (Math.atan2(shoji.sin, shoji.cos) / 4) * (180 / Math.PI),
+      share: largest.count / (width * height),
+      x: x / width,
+      y: y / height,
+      bearing: Math.atan2(x - width / 2, height / 2 - y) * (180 / Math.PI),
     },
   };
 }
@@ -164,12 +132,12 @@ export async function landOn(page: Page, reading: Reading, deadlineMs: number, q
 }
 
 const describeGlare = (g: Glare) =>
-  `${g.at}: (${g.x.toFixed(3)}, ${g.y.toFixed(3)}) lattice ${g.lattice.toFixed(1)}° share ${g.share.toFixed(3)}`;
+  `${g.at}: (${g.x.toFixed(3)}, ${g.y.toFixed(3)}) bearing ${g.bearing.toFixed(1)}° share ${g.share.toFixed(3)}`;
 export const listPath = (path: Glare[]) => path.map(describeGlare).join("\n");
 
 /**
  * The poses where most of the glare is on the sticker. A sliver clipped by the sticker's edge has
- * too few lattice edges to orient, and its centroid sits wherever the tilted edge crosses first.
+ * its centroid wherever the tilted edge crosses first.
  */
 export const wholeGlare = (path: Glare[]) =>
   path.filter((glare) => glare.share >= 0.5 * Math.max(...path.map((other) => other.share)));
@@ -201,5 +169,21 @@ export function expectTravel(path: Glare[], along: "x" | "y", direction: 1 | -1,
   expect.soft(drift, `The glare drifts along ${across}: ${detail}`).toBeLessThan(0.25 * travel);
 }
 
-/** Lattice orientations differ by this much, in degrees, mod 90. */
-export const latticeTurn = (from: number, to: number) => ((((to - from + 45) % 90) + 90) % 90) - 45;
+/**
+ * A turn about the screen's vertical axis carries the eye and the light around it together, which
+ * slides the glare sideways at one height; a room that rolled with the tilt would swing it around the
+ * screen's middle, up or down as it goes.
+ */
+export function expectHeldHeight(path: Glare[], label: string) {
+  const heights = wholeGlare(path).map((glare) => glare.y);
+  expect
+    .soft(
+      Math.max(...heights) - Math.min(...heights),
+      `The glare's height wanders as the device tilts sideways: ${label}\n${listPath(path)}`,
+    )
+    .toBeLessThan(0.02);
+}
+
+/** Bearings differ by this much, in degrees, the short way round. */
+export const bearingTurn = (from: number, to: number) =>
+  ((((to - from + 180) % 360) + 360) % 360) - 180;
