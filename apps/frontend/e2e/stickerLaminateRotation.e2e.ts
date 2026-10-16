@@ -4,31 +4,33 @@ import { about, compose, sendReading } from "./deviceRotation.ts";
 
 test.use(ipad);
 
-/** Bright-source centroid, measured from the actual white-paper output rather than its reference. */
-async function reflection(paper: Locator) {
+/**
+ * The white paper's opaque mean level, and its right third's mean less its left third's: the
+ * ceiling light's soft edge is wider than the paper, so the paper holds a slope of it, not a spot.
+ */
+async function paperLevels(paper: Locator) {
   return paper.evaluate((element) => {
     if (!(element instanceof HTMLCanvasElement)) throw new Error("White paper is missing");
     const context = element.getContext("2d");
     if (!context) throw new Error("White-paper pixels are unavailable");
     const { width, height } = element;
     const pixels = context.getImageData(0, 0, width, height).data;
-    let minimum = 255;
-    for (let i = 0; i < pixels.length; i += 4)
-      if (pixels[i + 3] === 255) minimum = Math.min(minimum, pixels[i]);
-    let total = 0,
-      x = 0,
-      y = 0;
+    const sums = [0, 0, 0],
+      counts = [0, 0, 0];
     for (let row = 0; row < height; row++)
       for (let column = 0; column < width; column++) {
         const i = (row * width + column) * 4;
         if (pixels[i + 3] !== 255) continue;
-        const weight = Math.max(0, pixels[i] - minimum - 3);
-        total += weight;
-        x += (weight * (column + 0.5)) / width;
-        y += (weight * (row + 0.5)) / height;
+        const third = Math.min(2, Math.floor((3 * column) / width));
+        sums[third] += pixels[i];
+        counts[third]++;
       }
-    if (!total) throw new Error("The gloss has no measurable localized reflection");
-    return { x: x / total, y: y / total };
+    if (counts.includes(0)) throw new Error("The white paper has no opaque third");
+    const mean = (third: number) => sums[third] / counts[third];
+    return {
+      mean: (sums[0] + sums[1] + sums[2]) / (counts[0] + counts[1] + counts[2]),
+      tilt: mean(2) - mean(0),
+    };
   });
 }
 
@@ -187,21 +189,26 @@ for (const [name, angle, held] of [
     // A step away and back redraws the paper where it now sits.
     await holdDisplayed(page, angle, held + 1, 0);
     await holdDisplayed(page, angle, held, 0);
-    const neutral = await reflection(paper);
+    const neutral = await paperLevels(paper);
+    expect(Math.abs(neutral.tilt), "The paper holds a slope of the glare's edge").toBeGreaterThan(
+      1,
+    );
     const foilNeutral = await snapshot(foil);
     // A roll that carries the edge a third of the way across the paper.
     const roll = side / 3 / edge.perDegree;
     for (const sign of [-1, 1]) {
       // A wrist turn delivers coupled beta and gamma changes, not independent Euler sliders.
       await holdDisplayed(page, angle, held + (roll / 3) * sign, roll * sign);
-      const after = await reflection(paper);
+      const after = await paperLevels(paper);
       await expect.poll(() => snapshot(foil)).not.toBe(foilNeutral);
       // With the eye and room still, rolling the displayed right edge away carries the glare toward
-      // the left edge, which comes toward the eye, whichever way the screen is turned.
+      // the left edge, which comes toward the eye, whichever way the screen is turned. The slope
+      // sliding left a third of the paper, which its tilt spans two of, changes each point by half
+      // the tilt; the highlight shoulder may compress that, but not by half.
       expect(
-        (neutral.x - after.x) * sign,
-        "The laminate must travel with the foil under the same reading",
-      ).toBeGreaterThan(0.05);
+        ((after.mean - neutral.mean) * sign) / (neutral.tilt / 2),
+        `The laminate must travel with the foil under the same reading: ${JSON.stringify({ neutral, after })}`,
+      ).toBeGreaterThan(0.5);
     }
   });
 }

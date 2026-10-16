@@ -56,12 +56,12 @@ async function paperPixels(paper: Locator): Promise<PaperSnapshot> {
 }
 
 /**
- * The least step, in display levels, across the shoji's edge on white paper. Near white the glare's
- * lift rolls off into the highlight shoulder; inside the glare the lattice alone varies the paper by
- * less than this.
+ * The least step, in display levels, across the ceiling light's edge on white paper, from inside its
+ * glare to outside it in one pose. Near white the glare's lift rolls off into the highlight shoulder.
  */
 const EDGE_SPAN = 10;
 
+/** Where the glare's edge crosses the paper: neutral, near-white, and lit over only part of the cut. */
 async function readablePaper(snapshot: PaperSnapshot) {
   const { min, max, missingCoverage, tinted, brightFraction } = await snapshot.evaluate(
     async (pixels) => {
@@ -84,40 +84,6 @@ async function readablePaper(snapshot: PaperSnapshot) {
     brightFraction,
     "The source must leave a visible surrounding paper region",
   ).toBeLessThanOrEqual(0.45);
-  return { min, max, span: max - min, brightFraction };
-}
-
-/** A sharp gloss boundary must remain visible without relying on the artwork beneath it. */
-async function glossEdge(paper: Locator) {
-  return paper.evaluate((element) => {
-    if (!(element instanceof HTMLCanvasElement)) throw new Error("The paper canvas is missing");
-    const context = element.getContext("2d");
-    if (!context) throw new Error("The paper snapshot context is unavailable");
-    const left = Math.floor(element.width * 0.05),
-      top = Math.floor(element.height * 0.05),
-      width = Math.floor(element.width * 0.9),
-      height = Math.floor(element.height * 0.9);
-    const pixels = context.getImageData(left, top, width, height).data;
-    let best: number[] = [],
-      span = -1;
-    for (let y = 0; y < height; y++) {
-      const row = Array.from({ length: width }, (_, x) => pixels[(y * width + x) * 4]);
-      const difference = Math.max(...row) - Math.min(...row);
-      if (difference > span) {
-        best = row;
-        span = difference;
-      }
-    }
-    if (span <= 0) throw new Error("The gloss source has no measurable edge");
-    const min = Math.min(...best),
-      max = Math.max(...best),
-      peak = best.indexOf(max);
-    const rising = best.slice(0, peak + 1);
-    const start = rising.findIndex((value) => value >= min + span * 0.1);
-    const end = rising.findIndex((value) => value >= min + span * 0.9);
-    if (start < 0 || end < start) throw new Error("The gloss source edge cannot be read");
-    return (end - start) / Math.min(element.width, element.height);
-  });
 }
 
 async function paperChange(before: PaperSnapshot, after: PaperSnapshot) {
@@ -224,10 +190,11 @@ const reflectionOn = (paper: Locator) =>
     return { span, brightFraction };
   });
 
-test("the first iPad sensor reading glides the laminate to the device's pose, and the shoji's edge reads where it crosses the paper", async ({
+test("the first iPad sensor reading glides the laminate to the device's pose, and the ceiling light's glare reads on white paper", async ({
   page,
 }) => {
-  await page.goto("/e2e/stickerLaminate.html");
+  // White paper alone at the top, wide enough to hold the ceiling light's soft edge.
+  await page.goto("/e2e/stickerLaminate.html?count=0&side=600");
   const paper = page.locator("[data-white] canvas.sticker-material");
   await expect(paper).toHaveAttribute("data-state", "ready");
   const still = await settledPaper(page, paper);
@@ -258,8 +225,10 @@ test("the first iPad sensor reading glides the laminate to the device's pose, an
     "The device's real pose moves the reflection from the still pose's",
   ).toBeGreaterThanOrEqual(1.5);
 
-  // One eye sees the shoji at one place on screen: tilt until its edge crosses this sticker. Each
-  // step clears the light's half-degree tremor floor, which a step of exactly that drops to rounding.
+  // One eye sees the ceiling light at one place on screen: tilt until its edge crosses this paper,
+  // which is wide enough to hold the soft edge from inside the glare to outside it in one pose, so
+  // the paper's own light, which changes with tilt, can't stand in for the glare. Each step clears
+  // the light's half-degree tremor floor, which a step of exactly that drops to rounding.
   let crossing: number | null = null;
   const seen: string[] = [];
   for (let beta = 40; beta <= 80 && crossing === null; beta += 0.75) {
@@ -270,15 +239,12 @@ test("the first iPad sensor reading glides the laminate to the device's pose, an
   }
   expect(
     crossing,
-    `Some tilt must carry the shoji's edge across the paper:\n${seen.join("\n")}`,
+    `Some tilt must carry the glare's edge across the paper:\n${seen.join("\n")}`,
   ).not.toBeNull();
   await readablePaper(await settledPaper(page, paper));
-  expect(await glossEdge(paper), "Gloss should reveal a short source boundary").toBeLessThanOrEqual(
-    0.15,
-  );
 });
 
-test("a tilt sweep carries the shoji's reflection across full-cut gloss while preserving the ink", async ({
+test("a tilt sweep carries the ceiling light's reflection across full-cut gloss while preserving the ink", async ({
   page,
 }, info) => {
   await page.goto("/e2e/stickerLaminate.html");

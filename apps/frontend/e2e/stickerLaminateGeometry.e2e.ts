@@ -169,7 +169,7 @@ test("the draped ramp changes reflection by slope while raised plateaus stay fla
     image.width = image.height = 240;
     required(image.getContext("2d")).putImageData(new ImageData(ramp.normal, 240, 240), 0, 0);
     const normal = image.toDataURL();
-    // Gray paper inside the still glare, where the shoji's lattice shows any change in slope.
+    // Gray paper inside the still glare, where the ceiling light shows any change in slope.
     const host = document.createElement("div");
     host.className = "sticker-material-surface";
     host.style.cssText = "position:absolute;left:40px;top:20px;width:240px;height:240px";
@@ -217,7 +217,7 @@ test("the draped ramp changes reflection by slope while raised plateaus stay fla
   ).toBe(true);
 });
 
-test("Shop matte uses the same held light and broadens the shoji's reflection", async ({
+test("Shop matte uses the same held light and broadens the ceiling light's reflection", async ({
   page,
 }) => {
   await page.goto("/e2e/stickerLaminate.html");
@@ -226,17 +226,18 @@ test("Shop matte uses the same held light and broadens the shoji's reflection", 
   const profile = await page.evaluate(async () => {
     const { required, solidPng, twoFrames } = await import("./stickerMaterialFixture.ts");
     const api = await import("../src/stickers/stickerRenderer.ts");
-    // Gray paper across the still glare's upper edge, in gloss and then matte, in one place.
+    // Gray paper from inside the still glare down past its lower edge, in gloss and then matte, in
+    // one place: the light's soft edge is taller than a sticker, so the column must hold all of it.
     const host = document.createElement("div");
     host.className = "sticker-material-surface";
-    host.style.cssText = "position:absolute;left:75px;top:0;width:240px;height:240px";
+    host.style.cssText = "position:absolute;left:75px;top:0;width:240px;height:720px";
     const c = document.createElement("canvas");
     c.className = "sticker-material";
     host.append(c);
     document.body.append(host);
     const material = {
-      print: solidPng(240, 240, "#888"),
-      cut: solidPng(240, 240, "white"),
+      print: solidPng(240, 720, "#888"),
+      cut: solidPng(240, 720, "white"),
       turn: 0,
     };
     const release = api.mountSticker(c, { ...material, finish: "gloss" });
@@ -278,15 +279,16 @@ test("Shop matte uses the same held light and broadens the shoji's reflection", 
   });
   const report = JSON.stringify(profile);
   expect(profile.gloss.range, `Gloss shows the glare's edge: ${report}`).toBeGreaterThan(20);
-  // Matte mirrors the same shoji through a wide lobe: a soft highlight where gloss's glare is, its
+  // Matte mirrors the same light through a wide lobe: a soft highlight where gloss's glare is, its
   // edge spread over more rows than gloss's, and a rise over at least three eight-row spans, not flat.
   expect(
     profile.matte.lift,
     `Matte is brighter where gloss shows the glare: ${report}`,
   ).toBeGreaterThan(0);
-  expect(profile.matte.edge, `Matte spreads the edge gloss keeps crisp: ${report}`).toBeGreaterThan(
-    profile.gloss.edge,
-  );
+  expect(
+    profile.matte.edge,
+    `Matte spreads the light's edge wider than gloss does: ${report}`,
+  ).toBeGreaterThan(profile.gloss.edge);
   expect(
     profile.matte.range,
     `Matte's highlight is broad, not flat: ${report}`,

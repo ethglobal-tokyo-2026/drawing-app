@@ -98,8 +98,8 @@ void main(){
  }
  // The renderer's one eye, with the sample's center at the screen's center and its side in CSS px.
  vec3 v=normalize(roomEye-vec3(side*p,0.));
- vec2 shojiPoint=roomPlane(normalize(2.*dot(v,n)*n-v));
- roomFootprint=max(length(dFdx(shojiPoint)),length(dFdy(shojiPoint)));
+ vec2 lightPoint=roomPlane(normalize(2.*dot(v,n)*n-v));
+ roomFootprint=max(length(dFdx(lightPoint)),length(dFdy(lightPoint)));
  vec3 c=shadeFoil(uv*${tiles},polar,n,v,t,${tiles}/side,0.);
  gl_FragColor=vec4(display(c.r),display(c.g),display(c.b),1.);
 }`;
