@@ -32,8 +32,8 @@ const bandCrease = (page: Page) =>
   });
 
 /**
- * Rows of the 240 px sticker: the band's top edge ramps up to it, facing the screen's top, and its
- * bottom edge faces the bottom; flat paper lies beside each.
+ * Rows of the 240 px sticker: the band's top edge drapes down from it toward the screen's top, and its
+ * bottom edge toward the bottom; flat paper lies beside each.
  */
 const ROWS = {
   aboveTop: [62, 78],
@@ -43,22 +43,21 @@ const ROWS = {
 } as const;
 
 /**
- * Rows beside the band's two steps: each step's foot, where its contact shadow falls when the light is
- * on the band's side, and the ramp just past it, which the shadow can't reach.
+ * Rows with the light square across the band from the sticker's top: flat paper far from the band; the
+ * paper just past the bottom drape's foot, which the drape faces away from the light; and the paper
+ * above the top drape, which faces the light, so nothing stands between it and the light.
  */
-const STEP_ROWS = {
+const SHADOW_ROWS = {
   flat: [20, 40],
-  bottomFoot: [144, 146],
-  bottomRamp: [147, 150],
-  topFoot: [94, 96],
-  topRamp: [90, 93],
+  pastFoot: [156, 164],
+  facing: [70, 82],
 } as const;
 
 type Bands = Record<string, readonly [number, number]>;
 type Rows = Record<string, number>;
 
 /** Mean linear luminance of each set of rows across the sticker's middle, from the laminate snapshot. */
-const rowLuma = (page: Page, bands: Bands = ROWS) =>
+const rowLuma = (page: Page, bands: Bands) =>
   coatOf(page).evaluate((canvas, rows) => {
     if (!(canvas instanceof HTMLCanvasElement)) throw new Error("The laminate canvas is missing");
     const context = canvas.getContext("2d");
@@ -88,7 +87,7 @@ const rowLuma = (page: Page, bands: Bands = ROWS) =>
  * The coat's rows once it holds still at the pose it has landed on, repainted off `unlike`'s print,
  * which the first band, flat paper, tells.
  */
-async function settledRows(page: Page, unlike?: Rows, bands: Bands = ROWS) {
+async function settledRows(page: Page, bands: Bands, unlike?: Rows) {
   let previous = "";
   let settled: Rows | undefined;
   const reference = Object.keys(bands)[0];
@@ -110,15 +109,23 @@ async function settledRows(page: Page, unlike?: Rows, bands: Bands = ROWS) {
 const flatPrint = (fill: string) =>
   `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><rect width="240" height="240" fill="${fill}"/></svg>`)}`;
 const GRAY = flatPrint("#808080");
+/** White paper rounds finest in the 8-bit snapshot, and stays below the coat's highlight shoulder at raking light. */
+const WHITE = flatPrint("#ffffff");
 /** Black paper takes no light, so its coat is the reflection alone. */
 const BLACK = flatPrint("#000000");
 
+/** A coat to read: its print, and whether it carries the band's height image, which the self-shadow marches. */
+interface Coat {
+  print: string;
+  height: boolean;
+}
+
 /**
- * The band's sticker at the screen's foot, and the paper's own light in a set of rows at a pose: gray
- * paper's coat less black paper's, which is the reflection alone, since a reflection bending over a
- * crease outweighs the faint shading wherever a light's edge is near.
+ * The band's sticker at the screen's foot, turned `turn` degrees on screen: each coat's rows at β, γ 0,
+ * in order. The fixture loads afresh, so the viewer centers on the reading and can't re-center between
+ * the coats read there.
  */
-async function bandSticker(page: Page, bands: Bands) {
+async function coatsAt(page: Page, beta: number, bands: Bands, coats: Coat[], turn = 0) {
   await page.goto("/e2e/stickerLaminate.html?reload=1");
   // At the screen's foot, off the light's glare, so the coat stays below its highlight shoulder.
   await page.addStyleTag({
@@ -126,88 +133,173 @@ async function bandSticker(page: Page, bands: Bands) {
   });
   await expect(coatOf(page)).toHaveAttribute("data-state", "ready");
   const crease = await bandCrease(page);
-  let print = GRAY;
-  let turn = 0;
-  let turned = false;
-  let last: Rows | undefined;
-  const paint = (next: string) => {
-    print = next;
-    return page.evaluate((options) => window.laminateFixture.update(options), {
-      print: next,
-      ...crease,
+  // The fixture's own print is white where the first band reads, so the first coat repaints off it.
+  const read = [await settledRows(page, bands)];
+  for (const coat of coats) {
+    await page.evaluate((options) => window.laminateFixture.update(options), {
+      print: coat.print,
+      normal: crease.normal,
+      height: coat.height ? crease.height : undefined,
       turn,
     });
-  };
-  const repaint = () => paint(print === GRAY ? BLACK : GRAY);
-  await paint(print);
-  return {
-    /** Turns the sticker on screen with its next coats. */
-    turn: (degrees: number) => {
-      turn = degrees;
-      turned = true;
-    },
-    paperAt: async (beta: number) => {
-      const coats: Record<string, Rows> = {};
-      // A turn lands with the other print, so its first coat can't be the unturned one.
-      let unlike = turned ? last : undefined;
-      if (turned) await repaint();
-      turned = false;
-      for (let i = 0; i < 2; i++) {
-        if (i === 1) await repaint();
-        await expectLanded(page, [beta, 0]);
-        unlike = last = coats[print] = await settledRows(page, unlike, bands);
-      }
-      return (row: string) => coats[GRAY][row] - coats[BLACK][row];
-    },
-  };
+    await expectLanded(page, [beta, 0]);
+    read.push(await settledRows(page, bands, read.at(-1)));
+  }
+  return read.slice(1);
 }
 
-// Red when the shader stops shading by the room's light (CREASE_SHADING 0, or creaseLight left out),
-// when its light stops following the pose (a fixed frame for roomLight), or when creases are drawn at
-// the bake's own slope (CREASE_STEEPENING 1).
+/**
+ * In the page, so the room is its own device class's, with γ 0 and the viewer centered on the reading:
+ * at each β, the room's light on a ramp of the drape's mean slope over `rows` facing the screen's
+ * bottom, less one facing its top, against flat paper's: the contrast the shading predicts.
+ */
+const slopeLightAt = (page: Page, betas: number[], rows: number) =>
+  page.evaluate(
+    async ({ betas, rows }) => {
+      const { roomFrame } = await import("../src/stickers/sharedRoom.ts");
+      const { paperIrradiance } = await import("../src/stickers/roomIrradiance.ts");
+      const { STICKER_THICKNESS } = await import("../src/stickers/crease.ts");
+      // The drape falls one thickness across the rows; the shader's y runs down.
+      const slope = STICKER_THICKNESS / rows;
+      const facing = (y: number): [number, number, number] => {
+        const length = Math.hypot(y, 1);
+        return [0, y / length, 1 / length];
+      };
+      return betas.map((beta) => {
+        const frame = roomFrame({ beta, gamma: 0, screenAngle: 0 });
+        const light = (y: number) => paperIrradiance(frame, facing(y)).total;
+        return (light(slope) - light(-slope)) / light(0);
+      });
+    },
+    { betas, rows },
+  );
+
+/**
+ * In the page, so the room is its own device class's, with γ 0 and the viewer centered on the reading:
+ * the β past the reading pose whose ceiling light stands `elevation` degrees above the paper; the turn,
+ * clockwise on screen, that brings the light square across the band from the sticker's top; and the
+ * light's share of flat paper's light there.
+ */
+const lightAbovePaper = (page: Page, elevation: number) =>
+  page.evaluate(async (elevation) => {
+    const { roomFrame } = await import("../src/stickers/sharedRoom.ts");
+    const { paperIrradiance } = await import("../src/stickers/roomIrradiance.ts");
+    const { STILL_POSE } = await import("../src/stickers/lightMode.ts");
+    const DEGREES = 180 / Math.PI;
+    const frameAt = (beta: number) => roomFrame({ beta, gamma: 0, screenAngle: 0 });
+    const elevationAt = (beta: number) => Math.asin(frameAt(beta).light[2]) * DEGREES;
+    // The light sinks toward the paper as the screen turns past upright to face down.
+    let [low, high] = [STILL_POSE.beta, 180];
+    if (elevationAt(low) < elevation || elevationAt(high) > elevation)
+      throw new Error(`No β from ${low} to ${high} holds the light ${elevation}° above the paper`);
+    for (let i = 0; i < 40; i++) {
+      const middle = (low + high) / 2;
+      if (elevationAt(middle) > elevation) low = middle;
+      else high = middle;
+    }
+    const beta = (low + high) / 2;
+    const frame = frameAt(beta);
+    const { light, total } = paperIrradiance(frame);
+    return {
+      beta,
+      turn: Math.atan2(frame.light[0], -frame.light[1]) * DEGREES,
+      lightShare: light / total,
+    };
+  }, elevation);
+
+/** One 8-bit display level up from linear luminance `l`, in linear: the snapshot's rounding step. */
+const displayLevel = (l: number) => {
+  const display = l <= 0.0031308 ? l * 12.92 : 1.055 * l ** (1 / 2.4) - 0.055;
+  const up = display + 1 / 255;
+  return (up <= 0.04045 ? up / 12.92 : ((up + 0.055) / 1.055) ** 2.4) - l;
+};
+
+// Red when the shader stops shading by the room's light (CREASE_SHADING 0).
 test("the room's light shades a crease's slopes, more as the device rises", async ({ page }) => {
-  const band = await bandSticker(page, ROWS);
-  // D: the bottom-facing ramp against the top-facing one, each relative to the flat paper beside it.
+  await page.goto("/e2e/stickerLaminate.html?reload=1");
+  const reading = await page.evaluate(
+    async () => (await import("../src/stickers/lightMode.ts")).STILL_POSE.beta,
+  );
+  const betas = [0, 20, reading, 70, 90];
+  const model = await slopeLightAt(page, betas, ROWS.bottom[1] - ROWS.bottom[0]);
+  // D: the bottom-facing drape against the top-facing one, each relative to the flat paper beside it.
   // Faint at the physical strength, so each side averages thousands of pixels.
   const contrast: Record<number, number> = {};
-  for (const beta of [0, 20, 47, 70, 90]) {
-    const paper = await band.paperAt(beta);
+  for (const beta of betas) {
+    const [gray, black] = await coatsAt(page, beta, ROWS, [
+      { print: GRAY, height: true },
+      { print: BLACK, height: true },
+    ]);
+    const paper = (row: string) => gray[row] - black[row];
     contrast[beta] = paper("bottom") / paper("belowBottom") - paper("top") / paper("aboveTop");
   }
-  const report = JSON.stringify(contrast);
+  const report = JSON.stringify({ contrast, model });
+  const upright = betas.indexOf(90);
   // Upright the ceiling light is above the sticker: bottom-facing slopes darken, more as the device
-  // rises. A real sticker's drape darkens them clearly upright, where the bake's own slope barely does.
-  expect(contrast[90], `upright, the bottom-facing ramp is darker: ${report}`).toBeLessThan(-0.07);
-  expect(contrast[70], `raised, the bottom-facing ramp is darker: ${report}`).toBeLessThan(0);
+  // rises and the light lies lower across them, each by at least half what the room predicts.
+  expect(contrast[90], `upright, the bottom-facing drape is darker: ${report}`).toBeLessThan(
+    model[upright] / 2,
+  );
+  expect(contrast[70], `raised, the bottom-facing drape is darker: ${report}`).toBeLessThan(0);
   expect(
-    Math.abs(contrast[90]),
+    contrast[90] - contrast[reading],
     `upright shades more than the reading pose: ${report}`,
-  ).toBeGreaterThan(Math.abs(contrast[47]) + 0.002);
+  ).toBeLessThan((model[upright] - model[betas.indexOf(reading)]) / 2);
 });
 
-// Red when the shader drops the contact shadow's march (creaseContactShadow returning 0): a step's
-// foot is then only as much darker than the ramp past it as its slope is steeper.
-test("a crease's step casts a short contact shadow away from the light", async ({ page }) => {
-  const band = await bandSticker(page, STEP_ROWS);
-  /** How much darker a step's foot is than the ramp just past it. */
-  const footShade = (paper: (row: string) => number, step: "bottom" | "top") =>
-    1 - paper(`${step}Foot`) / paper(`${step}Ramp`);
-  // Upright the light is above the sticker, so the band's bottom step faces away from it.
-  const lightAbove = await band.paperAt(90);
-  // Turned over, the light falls from the sticker's own bottom, so its top step faces away.
-  band.turn(180);
-  const lightBelow = await band.paperAt(90);
-  const shades = {
-    above: { bottom: footShade(lightAbove, "bottom"), top: footShade(lightAbove, "top") },
-    below: { bottom: footShade(lightBelow, "bottom"), top: footShade(lightBelow, "top") },
+// Red when the self-shadow is dropped (creaseSelfShadow returning 0, or CREASE_SHADING 0), when the
+// height image's march flag leaves the paper past the foot unmarked, or when any rise toward the light
+// hides the whole disc, however high it stands.
+test("a crease's drape shadows itself only at raking light", async ({ page }) => {
+  await page.goto("/e2e/stickerLaminate.html?reload=1");
+  const rakingPose = await lightAbovePaper(page, 4);
+  const highPose = await lightAbovePaper(page, 24);
+  /**
+   * With the light square across the band: how much darker each set of rows' paper is with the height
+   * image than without, and one display level, each against the paper's light without it.
+   */
+  const shadowAt = async ({ beta, turn }: { beta: number; turn: number }) => {
+    const [without, black, height] = await coatsAt(
+      page,
+      beta,
+      SHADOW_ROWS,
+      [
+        { print: WHITE, height: false },
+        { print: BLACK, height: false },
+        { print: WHITE, height: true },
+      ],
+      turn,
+    );
+    return Object.fromEntries(
+      Object.keys(SHADOW_ROWS).map((row) => {
+        const paper = without[row] - black[row];
+        return [
+          row,
+          {
+            darker: 1 - (height[row] - black[row]) / paper,
+            level: displayLevel(without[row]) / paper,
+          },
+        ];
+      }),
+    );
   };
-  const report = JSON.stringify(shades);
-  expect(shades.above.bottom, `the bottom step shades its foot: ${report}`).toBeGreaterThan(0.05);
-  expect(shades.above.top, `the top step faces the light: ${report}`).toBeLessThan(0.02);
-  expect(shades.below.top, `turned over, the top step shades its foot: ${report}`).toBeGreaterThan(
-    0.05,
-  );
-  expect(shades.below.bottom, `turned over, the bottom step faces it: ${report}`).toBeLessThan(
-    0.02,
-  );
+  const raking = await shadowAt(rakingPose);
+  const high = await shadowAt(highPose);
+  const report = JSON.stringify({ rakingPose, highPose, raking, high });
+  // Raking, the drape hides much of the light's disc from the paper past its foot: that paper loses at
+  // least a quarter of the light's part of its light, and more than a display level.
+  expect(
+    raking.pastFoot.darker,
+    `raking, the paper past the foot is shadowed: ${report}`,
+  ).toBeGreaterThan(Math.max(raking.pastFoot.level, rakingPose.lightShare / 4));
+  expect(
+    Math.abs(raking.facing.darker),
+    `raking, paper facing the light is lit: ${report}`,
+  ).toBeLessThan(raking.facing.level / 2);
+  // High enough, the whole disc clears the drape's slopes.
+  for (const row of ["pastFoot", "facing"])
+    expect(
+      Math.abs(high[row].darker),
+      `high, ${row} matches without the height: ${report}`,
+    ).toBeLessThan(high[row].level / 2);
 });

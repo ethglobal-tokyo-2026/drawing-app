@@ -3,7 +3,6 @@ import { expect, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
 import { drawAndSeal, drawKeyName, openDetail, say, signIn, test } from "./helpers.ts";
 import { ipad } from "./ipad.ts";
-import { STILL_POSE } from "../src/stickers/lightMode.ts";
 
 const { ui } = strings;
 const language = "en";
@@ -112,11 +111,14 @@ test("a foil follows only device tilt, holding still through mouse and Apple Pen
   // A copy of the sticker flies from the board to its place in the detail, over it, until it lands.
   await expect(page.locator(".detail-lift__flyer")).toHaveCount(0);
 
-  // Before the sensor shares a tilt, the foil holds the still pose's light.
+  // Before the sensor shares a tilt, the foil holds the still pose's light, the page's own: an iPad
+  // holds a tablet's, where this runner, with no screen, holds a phone's.
   await lightAtRest(page);
-  expect(
-    await page.evaluate(async () => (await import("../src/stickers/light.ts")).currentLight()),
-  ).toEqual(STILL_POSE);
+  const light = await page.evaluate(async () => ({
+    shown: (await import("../src/stickers/light.ts")).currentLight(),
+    still: (await import("../src/stickers/lightMode.ts")).STILL_POSE,
+  }));
+  expect(light.shown).toEqual(light.still);
   const still = await bandPixels(page, foil);
   await page.waitForTimeout(500);
   expect((await bandPixels(page, foil)).equals(still)).toBe(true);

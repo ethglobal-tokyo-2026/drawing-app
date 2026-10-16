@@ -1,5 +1,4 @@
 import { expect, test, type Page } from "@playwright/test";
-import { STILL_POSE } from "../src/stickers/lightMode.ts";
 import { expectLanded, holdPortrait } from "./screenTilt.ts";
 
 test.beforeEach(({ page }) => holdPortrait(page));
@@ -52,6 +51,18 @@ const BLACK = flatPrint("#000000");
 /** The snapshot's rounding, as a share of the white paper's light. */
 const ROUNDING = 0.02;
 
+/**
+ * Lands the light on [beta, 0], then waits for the viewer to re-center there, as it does once a held
+ * device's pose lasts. The eye then faces the screen square-on, as at the still pose, and holds still,
+ * so white less black is the paper's own light, not the coat's Fresnel at an oblique eye.
+ */
+async function landCentered(page: Page, beta: number) {
+  await expectLanded(page, [beta, 0]);
+  await expect
+    .poll(() => page.evaluate(() => window.laminateFixture.getPose().turn?.[0] ?? 1))
+    .toBeCloseTo(1, 9);
+}
+
 // Red when the print stops following the light: paperLight fixed at 1, in paperLight.ts or as the
 // renderer's uniform, or the shader leaving it out of the print. The minimum's check is red when the
 // clamp loses its floor.
@@ -70,14 +81,18 @@ test("white paper takes more of the room's light at the still pose than upright,
     return page.evaluate((options) => window.laminateFixture.update(options), { print: next });
   };
   await paint(print);
+  // The page's own still pose, its class's, which the first reading holds.
+  const stillBeta = await page.evaluate(
+    async () => (await import("../src/stickers/lightMode.ts")).STILL_POSE.beta,
+  );
   // White paper's coat less black paper's: the paper's own light, without the reflection both carry.
   const paper: Record<number, number> = {};
-  for (const beta of [STILL_POSE.beta, 90, 120]) {
-    await expectLanded(page, [beta, 0]);
+  for (const beta of [stillBeta, 90, 120]) {
+    await landCentered(page, beta);
     const first = await settledLuma(page);
     const firstPrint = print;
     await paint(print === WHITE ? BLACK : WHITE);
-    await expectLanded(page, [beta, 0]);
+    await landCentered(page, beta);
     const second = await settledLuma(page, first);
     const [white, black] = firstPrint === WHITE ? [first, second] : [second, first];
     paper[beta] = white - black;
@@ -86,7 +101,7 @@ test("white paper takes more of the room's light at the still pose than upright,
   const minimum = await page.evaluate(
     async () => (await import("../src/stickers/paperLight.ts")).PAPER_LIGHT.min,
   );
-  const still = paper[STILL_POSE.beta];
+  const still = paper[stillBeta];
   const report = JSON.stringify(paper);
   expect(paper[90] / still, `upright, white paper takes less light: ${report}`).toBeLessThan(
     1 - ROUNDING,

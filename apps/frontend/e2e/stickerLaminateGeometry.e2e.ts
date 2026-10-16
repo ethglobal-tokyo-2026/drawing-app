@@ -1,5 +1,14 @@
-import { expect, test, type JSHandle, type Locator } from "@playwright/test";
-import { emptyLaminatePage, holdRoute, solidSvg } from "./stickerMaterialFixture";
+import { expect, test, type JSHandle, type Locator, type Page } from "@playwright/test";
+import {
+  glarePoint,
+  glareReading,
+  RIGHT_RIM,
+  screenPointOf,
+  type LightPoint,
+  type ScreenPoint,
+} from "./glarePose";
+import { expectLanded, holdPortrait } from "./screenTilt";
+import { holdRoute, solidSvg, waitTwoFrames } from "./stickerMaterialFixture";
 
 /** Plain gray paper the fixture's size: a quarter turn moves no print, only the reflection can change. */
 const GRAY_PRINT = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><rect width="240" height="240" fill="#888"/></svg>')}`;
@@ -56,13 +65,31 @@ const againstQuarterTurn = (canvas: Locator, before: JSHandle<ImageData>) =>
     return { onScreen, turnedWithIt };
   }, before);
 
+/**
+ * On the laminate fixture: centers the viewer on the still pose, the first reading, then tilts until
+ * the glare puts `at` of the ceiling light at `target`, and waits for the light to land there and the
+ * stickers to draw it. The still glare is off the screen, so the paper a test measures sits near it:
+ * a small tilt stays inside the viewer's re-centering release, and the light then holds.
+ */
+async function holdGlare(page: Page, target: ScreenPoint, at?: LightPoint) {
+  const still = await page.evaluate(() => window.laminateFixture.getPose());
+  const rest = { alpha: 0, beta: still.beta, gamma: still.gamma };
+  await page.evaluate(({ beta, gamma }) => window.laminateFixture.tilt(beta, gamma), rest);
+  const reading = await glareReading(page, rest, 0, target, at);
+  await expectLanded(page, [reading.beta, reading.gamma]);
+  await waitTwoFrames(page);
+}
+
 test("a turn-only React update redraws the held reflection in the sticker's new axes", async ({
   page,
 }) => {
-  // Alone at the top of the page, the reload sticker reaches across the still glare's lower edge.
+  await holdPortrait(page);
   await page.goto("/e2e/stickerLaminate.html?reload=1&board=1&count=0&side=300");
   const coat = page.locator("[data-reload] canvas.sticker-material");
   await expect(coat).toHaveAttribute("data-state", "ready");
+  // The glare's rim across the sticker's middle and its body beside it: a reflection a quarter turn
+  // would carry with it.
+  await holdGlare(page, await screenPointOf(page.locator("[data-reload]")), RIGHT_RIM);
   const diagnostic = await pixelsOf(coat);
   await page.evaluate((print) => window.laminateFixture.update({ print }), GRAY_PRINT);
   // Under the glare the diagnostic print's black ink reads bright, so a changed coat, not a bright
@@ -82,20 +109,27 @@ test("a turn-only React update redraws the held reflection in the sticker's new 
 });
 
 test("a tilted flight reflects in the same axes as its turned sticker", async ({ page }) => {
-  await emptyLaminatePage(page);
-  await page.goto("/e2e/stickerLaminate.html");
-  const result = await page.evaluate(async () => {
-    const { required, solidPng, twoFrames } = await import("./stickerMaterialFixture.ts");
-    const api = await import("../src/stickers/stickerRenderer.ts");
+  await holdPortrait(page);
+  // The fixture with none of its own stickers, for its light.
+  await page.goto("/e2e/stickerLaminate.html?board=1&count=0");
+  await page.evaluate(() => {
     const host = document.createElement("div");
     host.className = "sticker-material-surface";
+    host.dataset.flight = "";
     host.style.cssText =
       "position:absolute;left:60px;top:170px;width:240px;height:240px;rotate:90deg";
     const c = document.createElement("canvas");
     c.className = "sticker-material";
     host.append(c);
     document.body.append(host);
-    // Gray paper across the still glare's lower edge, which a slight tip moves one way or another.
+  });
+  // Gray paper across the glare's rim, which a slight tip moves one way or another.
+  await holdGlare(page, await screenPointOf(page.locator("[data-flight]")), RIGHT_RIM);
+  const result = await page.evaluate(async () => {
+    const { required, solidPng, twoFrames } = await import("./stickerMaterialFixture.ts");
+    const api = await import("../src/stickers/stickerRenderer.ts");
+    const host = required(document.querySelector<HTMLElement>("[data-flight]"));
+    const c = required(host.querySelector("canvas"));
     const release = api.mountSticker(c, {
       print: solidPng(240, 240, "#888"),
       cut: solidPng(240, 240, "white"),
@@ -147,16 +181,22 @@ test("a tilted flight reflects in the same axes as its turned sticker", async ({
 test("the draped ramp changes reflection by slope while raised plateaus stay flat", async ({
   page,
 }) => {
-  await emptyLaminatePage(page);
-  await page.goto("/e2e/stickerLaminate.html");
-  const sample = await page.evaluate(async () => {
-    const { required, solidPng, twoFrames } = await import("./stickerMaterialFixture.ts");
-    const api = await import("../src/stickers/stickerRenderer.ts");
-    const { creasePixels } = await import("../src/stickers/crease.ts");
-    // A step down at the middle, which the drape turns into a ramp between two plateaus.
+  await holdPortrait(page);
+  // The fixture with none of its own stickers, for its light.
+  await page.goto("/e2e/stickerLaminate.html?board=1&count=0");
+  // A step down at the middle, which the drape turns into a ramp between two plateaus. The drape's own
+  // height gives the ramp's columns along the middle row, and the plateaus' middles either side.
+  const columns = await page.evaluate(async () => {
+    const { required } = await import("./stickerMaterialFixture.ts");
+    const { creasePixels, drape } = await import("../src/stickers/crease.ts");
     const field = new Float32Array(240 * 240);
     for (let y = 0; y < 240; y++) field.fill(2, y * 240, y * 240 + 120);
-    const ramp = required(
+    const surface = drape(field, 240, 240, 1);
+    const ramp = Array.from({ length: 238 }, (_, i) => i + 1).filter(
+      (x) => surface[120 * 240 + x + 1] !== surface[120 * 240 + x - 1],
+    );
+    if (!ramp.length) throw new Error("The drape made no ramp");
+    const { normal } = required(
       creasePixels({
         width: 240,
         height: 240,
@@ -167,29 +207,38 @@ test("the draped ramp changes reflection by slope while raised plateaus stay fla
     );
     const image = document.createElement("canvas");
     image.width = image.height = 240;
-    required(image.getContext("2d")).putImageData(new ImageData(ramp.normal, 240, 240), 0, 0);
-    const normal = image.toDataURL();
-    // Gray paper inside the still glare, where the ceiling light shows any change in slope.
+    required(image.getContext("2d")).putImageData(new ImageData(normal, 240, 240), 0, 0);
     const host = document.createElement("div");
     host.className = "sticker-material-surface";
+    host.dataset.draped = image.toDataURL();
     host.style.cssText = "position:absolute;left:40px;top:20px;width:240px;height:240px";
     const c = document.createElement("canvas");
     c.className = "sticker-material";
     host.append(c);
     document.body.append(host);
+    return [ramp[0] >> 1, ...ramp, (ramp[ramp.length - 1] + 240) >> 1];
+  });
+  // Gray paper with the glare's middle on the ramp: flat paper there mirrors the ceiling light, and
+  // the ramp's slope turns its reflection away.
+  const host = await screenPointOf(page.locator("[data-draped]"));
+  const middle = (columns[1] + columns[columns.length - 2] + 1) / 2;
+  await holdGlare(page, { x: host.x + middle - 120, y: host.y });
+  const sample = await page.evaluate(async (columns) => {
+    const { required, solidPng, twoFrames } = await import("./stickerMaterialFixture.ts");
+    const api = await import("../src/stickers/stickerRenderer.ts");
+    const host = required(document.querySelector<HTMLElement>("[data-draped]"));
+    const c = required(host.querySelector("canvas"));
     const gray = solidPng(240, 240, "#888");
     const material = { print: gray, cut: solidPng(240, 240, "white"), finish: "gloss" as const };
-    const release = api.mountSticker(c, { ...material, normal, turn: 0 });
+    const release = api.mountSticker(c, { ...material, normal: host.dataset.draped, turn: 0 });
     const row = () => {
       const data = required(c.getContext("2d")).getImageData(
         0,
-        Math.floor((100.5 / 240) * c.height),
+        Math.floor((120.5 / 240) * c.height),
         c.width,
         1,
       ).data;
-      return [40, 110, 114, 118, 122, 126, 200].map(
-        (x) => data[Math.floor(((x + 0.5) / 240) * c.width) * 4],
-      );
+      return columns.map((x) => data[Math.floor(((x + 0.5) / 240) * c.width) * 4]);
     };
     try {
       await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
@@ -200,41 +249,52 @@ test("the draped ramp changes reflection by slope while raised plateaus stay fla
       await api.whenStickerSettled(c, undefined, AbortSignal.timeout(5000));
       await twoFrames();
       const flat = row();
-      return draped.map((color, i) => ({ color, flat: flat[i] }));
+      return draped.map((color, i) => ({ x: columns[i], color, flat: flat[i] }));
     } finally {
       release();
       host.remove();
     }
-  });
+  }, columns);
+  const report = JSON.stringify(sample);
   // The plateaus either side of the ramp, raised and not, face the room as flat paper does.
-  expect(sample[0].color, JSON.stringify(sample)).toBe(sample[0].flat);
-  expect(sample[sample.length - 1].color, JSON.stringify(sample)).toBe(
-    sample[sample.length - 1].flat,
-  );
+  expect(sample[0].color, report).toBe(sample[0].flat);
+  expect(sample[sample.length - 1].color, report).toBe(sample[sample.length - 1].flat);
   expect(
-    sample.some((p) => Math.abs(p.color - p.flat) > 2),
-    JSON.stringify(sample),
+    sample.slice(1, -1).some((p) => Math.abs(p.color - p.flat) > 2),
+    `The ramp's slope turns its reflection: ${report}`,
   ).toBe(true);
 });
 
 test("Shop matte uses the same held light and broadens the ceiling light's reflection", async ({
   page,
 }) => {
+  await holdPortrait(page);
   await page.goto("/e2e/stickerLaminate.html");
   const matte = page.locator("[data-matte] canvas.sticker-material");
   await expect(matte).toHaveAttribute("data-state", "ready");
-  const profile = await page.evaluate(async () => {
-    const { required, solidPng, twoFrames } = await import("./stickerMaterialFixture.ts");
-    const api = await import("../src/stickers/stickerRenderer.ts");
-    // Gray paper from inside the still glare down past its lower edge, in gloss and then matte, in
-    // one place: the light's soft edge is taller than a sticker, so the column must hold all of it.
+  // Gray paper from the glare's middle down past its rim, in gloss and then matte, in one place:
+  // matte's edge is taller than a sticker, so the column must hold all of it. It sits as near as the
+  // page allows to where the room puts the still glare, and a tilt brings the glare's middle to its top.
+  const still = await glarePoint(page, await page.evaluate(() => window.laminateFixture.getPose()));
+  await page.evaluate(({ x, y }) => {
     const host = document.createElement("div");
     host.className = "sticker-material-surface";
-    host.style.cssText = "position:absolute;left:75px;top:0;width:240px;height:720px";
+    host.dataset.column = "";
+    const left = Math.min(Math.max(innerWidth / 2 + x - 120, 0), innerWidth - 240);
+    const top = Math.min(Math.max(innerHeight / 2 + y, 0), innerHeight - 720);
+    host.style.cssText = `position:absolute;left:${left}px;top:${top}px;width:240px;height:720px`;
     const c = document.createElement("canvas");
     c.className = "sticker-material";
     host.append(c);
     document.body.append(host);
+  }, still);
+  const column = await screenPointOf(page.locator("[data-column]"));
+  await holdGlare(page, { x: column.x, y: column.y - 360 });
+  const profile = await page.evaluate(async () => {
+    const { required, solidPng, twoFrames } = await import("./stickerMaterialFixture.ts");
+    const api = await import("../src/stickers/stickerRenderer.ts");
+    const host = required(document.querySelector<HTMLElement>("[data-column]"));
+    const c = required(host.querySelector("canvas"));
     const material = {
       print: solidPng(240, 720, "#888"),
       cut: solidPng(240, 720, "white"),
@@ -298,15 +358,7 @@ test("Shop matte uses the same held light and broadens the ceiling light's refle
       if (!(el instanceof HTMLCanvasElement)) throw new Error("The matte snapshot is not a canvas");
       return el.toDataURL();
     });
-  await page.evaluate(() => window.laminateFixture.tilt(40, 0));
-  // Inside the viewer's re-centering release, so the light lands and then holds still.
-  await page.evaluate(() => window.laminateFixture.tilt(40, 20));
-  await expect
-    .poll(() => page.evaluate(() => window.laminateFixture.getPose()))
-    .toMatchObject({ beta: 40, gamma: 20 });
-  await page.evaluate(
-    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
-  );
+  // The light has landed on the glare's reading and holds there.
   const held = await image();
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.evaluate(() => window.laminateFixture.tilt(10, -28));

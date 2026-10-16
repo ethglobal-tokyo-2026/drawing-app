@@ -1,23 +1,33 @@
 import { writeFile } from "node:fs/promises";
-import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { about, compose, sendReading, type Rotation } from "./deviceRotation";
+import { glareReading } from "./glarePose";
 import { ipad } from "./ipad";
 import { phone } from "./phone";
-import { decodeScreenshot } from "./screenshotPixels";
 import {
+  capture,
   expectHeldHeight,
   expectTravel,
+  glareLevels,
+  glarePath,
   landOn,
   listPath,
+  lumaDifference,
   measureGlare,
-  STEP_SLACK,
-  type Frame,
+  rotationOf,
+  stickerPoint,
+  steps,
+  stillBetaOf,
+  sweep,
+  viewerTurn,
   type Glare,
 } from "./ceilingLightGlare";
 
 // The light sweeps' black gloss sticker, held in every orientation its screen can be turned to. Each
 // reading is the screen's own tilt carried into the device's portrait axes, so the glare must cross
-// the displayed sticker the same way whichever way the device is held.
+// the displayed sticker the same way whichever way the device is held. The still pose's glare falls
+// off the screen, so each sweep is a look from the still pose, around the pose that puts the glare on
+// the sticker.
 test.use({ deviceScaleFactor: 1 });
 
 /** How far the device is turned from portrait, counterclockwise as its screen faces you, in degrees. */
@@ -110,14 +120,6 @@ const sizeAt = ({ upright }: Device, turn: Turn) =>
 /** The reading of a device turned by `turn` whose screen is posed at `screen`, in the screen's axes. */
 const held = (screen: Rotation, turn: Turn) => compose(screen, about.z(turn));
 
-/** The reading tilt: the still pose's beta, about the screen's horizontal axis. */
-const READING = 47;
-/**
- * Where the glare sits on the device's sticker: the reading tilt on an iPad, and a little more upright
- * on a phone, whose small sticker loses the glare off its top edge at the reading tilt.
- */
-const tiltOf = (device: Device) => (device.upright === ipad.viewport ? READING : 40);
-
 /** Presents the page as `device` turned by `turn`, from before its first script runs. */
 async function presentAs(page: Page, device: Device, turn: Turn) {
   await page.addInitScript(
@@ -164,45 +166,14 @@ async function stickerClip(page: Page) {
   return { x: box.x + 2, y: box.y + 2, width: box.width - 4, height: box.height - 4 };
 }
 
-type Clip = Awaited<ReturnType<typeof stickerClip>>;
-
-async function capture(page: Page, clip: Clip, testInfo: TestInfo, name: string): Promise<Frame> {
-  const png = await page.screenshot({ clip, scale: "css" });
-  await writeFile(testInfo.outputPath(`${name}.png`), png);
-  return measureGlare(await decodeScreenshot(png));
-}
+/** How far each sweep tilts either way of the look, in degrees: past where the glare leaves the sticker. */
+const SPAN = { ipad: 10, phone: 7 } as const;
 
 /**
- * Rests the light on `centered`, so the viewer is centered there, then moves through the poses,
- * capturing each once the light has landed.
+ * Where a look from the settled pose puts the glare: on the sticker's top edge, so its rim crosses
+ * the sticker even where the glare outgrows it, and moves with any difference in the viewer.
  */
-async function sweep(
-  page: Page,
-  clip: Clip,
-  testInfo: TestInfo,
-  name: string,
-  poses: { at: number; rotation: Rotation }[],
-  centered: Rotation,
-) {
-  await landOn(page, await sendReading(page, centered), 3000);
-  const path: (Glare | null)[] = [];
-  for (const [i, { at, rotation }] of poses.entries()) {
-    await landOn(page, await sendReading(page, rotation), 3000);
-    const { glare } = await capture(
-      page,
-      clip,
-      testInfo,
-      `${name}-${String(i).padStart(2, "0")}-${at}`,
-    );
-    path.push(glare && { at, ...glare });
-  }
-  await writeFile(testInfo.outputPath(`${name}.json`), JSON.stringify(path, null, 1));
-  return path.filter((glare): glare is Glare => glare !== null);
-}
-
-/** A sweep's steps, evenly from `from` to `to`. */
-const steps = (from: number, to: number, count: number) =>
-  Array.from({ length: count }, (_, i) => from + ((to - from) * i) / (count - 1));
+const LOOK_OFFSET = { x: 0, y: -0.5 };
 
 const turnName = (turn: Turn) =>
   turn === 0
@@ -243,38 +214,47 @@ for (const device of DEVICES)
         }));
         testInfo.annotations.push({ type: "reported", description: JSON.stringify(reported) });
 
-        // Leaning the screen back from 30° to 56°, centered on 43° so the viewer stays put: the
-        // glare climbs the displayed sticker in every orientation.
-        const forwardBack = await sweep(
+        // The still pose in the screen's axes centers the viewer; the look puts the glare on the
+        // sticker's middle, and the tilts turn the screen about its own axes from there.
+        const rest = await sendReading(page, held(about.x(await stillBetaOf(page)), turn));
+        await landOn(page, rest, 3000);
+        const still = await capture(page, clip, testInfo, "still");
+        const look = rotationOf(
+          await glareReading(page, rest, turn, await stickerPoint(page, clip)),
+        );
+        const onIpad = device.upright === ipad.viewport;
+        const span = SPAN[onIpad ? "ipad" : "phone"];
+        const tilts = (tilt: (degrees: number) => Rotation) =>
+          steps(-span, span, 11).map((degrees) => ({
+            at: degrees,
+            rotation: held(compose(look, about.z(-turn), tilt(degrees)), turn),
+          }));
+
+        // Leaning the screen back climbs the glare up the displayed sticker in every orientation.
+        const forwardBackFrames = await sweep(
           page,
           clip,
           testInfo,
           "forward-back",
-          steps(30, 56, 14).map((beta) => ({ at: beta, rotation: held(about.x(beta), turn) })),
-          held(about.x(43), turn),
+          tilts(about.x),
+          rest,
         );
+        const levels = glareLevels(still, forwardBackFrames[5].pixels);
+        const forwardBack = await glarePath(testInfo, "forward-back", forwardBackFrames, levels);
         expectTravel(forwardBack, "y", -1, `Forward/back, ${turnName(turn)}`);
 
-        // Turning the screen about its vertical axis at the reading tilt slides the glare across
-        // the displayed sticker at one height.
-        const onIpad = device.upright === ipad.viewport;
-        const tilt = tiltOf(device);
-        const range = onIpad ? 20 : 8;
-        const leftRight = await sweep(
-          page,
-          clip,
+        // Turning the screen about its vertical axis slides the glare across the displayed sticker.
+        const leftRight = await glarePath(
           testInfo,
           "left-right",
-          steps(-range, range, 11).map((gamma) => ({
-            at: gamma,
-            rotation: held(compose(about.x(tilt), about.y(gamma)), turn),
-          })),
-          held(about.x(tilt), turn),
+          await sweep(page, clip, testInfo, "left-right", tilts(about.y), rest),
+          levels,
         );
         expectTravel(leftRight, "x", -1, `Left/right, ${turnName(turn)}`);
-        // A phone's sticker is smaller than the ceiling light's glare, whose centroid then follows
-        // where the round edge crosses the sticker's.
-        if (onIpad) expectHeldHeight(leftRight, `Left/right, ${turnName(turn)}`);
+        // A phone's sticker, and an iPad's on its side, is narrower than the ceiling light's glare,
+        // whose centroid then follows where the round edge crosses the sticker's.
+        if (onIpad && Math.abs(turn) !== 90)
+          expectHeldHeight(leftRight, `Left/right, ${turnName(turn)}`);
       });
 
     test("turned from upright onto its side, the settled glare is a fresh session's", async ({
@@ -284,78 +264,89 @@ for (const device of DEVICES)
       await presentAs(page, device, 0);
       await page.goto("/e2e/stickerLightSweeps.html");
       let clip = await stickerClip(page);
-      const frames: Glare[] = [];
-      const note = (at: string, { glare }: Frame) => {
-        if (glare) frames.push({ at, ...glare });
-      };
+      const stillBeta = await stillBetaOf(page);
 
-      await landOn(page, await sendReading(page, held(about.x(tiltOf(device)), 0)), 3000);
-      note("upright", await capture(page, clip, testInfo, "turn-00-upright"));
-      // A steering-wheel turn at the reading tilt, the UI still upright until the turn completes.
-      for (const [i, wheel] of [15, 30, 45, 60, 75, 90].entries()) {
+      await landOn(page, await sendReading(page, held(about.x(stillBeta), 0)), 3000);
+      // A steering-wheel turn at the still pose, the UI still upright until the turn completes.
+      for (const wheel of [15, 30, 45, 60, 75, 90])
         await landOn(
           page,
-          await sendReading(page, compose(about.x(tiltOf(device)), about.z(wheel))),
+          await sendReading(page, compose(about.x(stillBeta), about.z(wheel))),
           3000,
         );
-        note(
-          `wheel ${wheel}°`,
-          await capture(page, clip, testInfo, `turn-0${i + 1}-wheel-${wheel}`),
-        );
-      }
       await turnUi(page, device, 90);
       clip = await stickerClip(page);
-      const pose = held(about.x(tiltOf(device)), 90);
+      // Leaned back as it lands, since a viewer turned only about the screen's normal sees the same
+      // room: the settled viewer's eye has moved, so a viewer that lands anywhere else shows.
+      const pose = held(about.x(stillBeta + 10), 90);
       const reading = await sendReading(page, pose);
       await landOn(page, reading, 3000);
-      // Through the viewer's re-centering, then once the light stops publishing.
-      const after: Frame[] = [];
+      // Through the viewer's re-centering, then once the light stops publishing. The glare is off
+      // the sticker all the while, so the viewer's own turn from the device shows how it closes.
+      const turned: number[] = [];
       for (let i = 0; i < 6; i++) {
-        const frame = await capture(page, clip, testInfo, `turn-1${i}-on-its-side`);
-        note(`on its side ${i}`, frame);
-        after.push(frame);
+        turned.push(await viewerTurn(page));
         await page.waitForTimeout(1000);
       }
       const settledMs = await landOn(page, reading, 20_000, 1500);
+      turned.push(await viewerTurn(page));
       const settled = await capture(page, clip, testInfo, "turn-20-settled");
-      note(`settled after ${Math.round(settledMs)} ms`, settled);
-      after.push(settled);
+      // A settled viewer's glare is off the sticker, so a look from the settled pose shows it.
+      const look = rotationOf(
+        await glareReading(page, reading, 90, await stickerPoint(page, clip, LOOK_OFFSET)),
+      );
+      await landOn(page, await sendReading(page, look), 3000);
+      const settledLook = await capture(page, clip, testInfo, "turn-21-settled-look");
 
-      // A fresh session opened on its side, at the same pose.
+      // A fresh session opened on its side, at the same pose, then the same look.
       const freshPage = await page.context().newPage();
       await freshPage.setViewportSize(sizeAt(device, 90));
       await presentAs(freshPage, device, 90);
       await freshPage.goto("/e2e/stickerLightSweeps.html");
-      clip = await stickerClip(freshPage);
+      const freshClip = await stickerClip(freshPage);
       await landOn(freshPage, await sendReading(freshPage, pose), 5000, 1500);
-      const fresh = await capture(freshPage, clip, testInfo, "turn-30-fresh-on-its-side");
-      note("fresh on its side", fresh);
-      await writeFile(testInfo.outputPath("turn.json"), JSON.stringify(frames, null, 1));
-      const detail = listPath(frames);
+      const fresh = await capture(freshPage, freshClip, testInfo, "turn-30-fresh-on-its-side");
+      await landOn(freshPage, await sendReading(freshPage, look), 3000);
+      const freshLook = await capture(freshPage, freshClip, testInfo, "turn-31-fresh-look");
 
-      expect(settled.glare, `No glare once settled:\n${detail}`).not.toBeNull();
-      expect(fresh.glare, `No glare in the fresh session:\n${detail}`).not.toBeNull();
-      const target = fresh.glare;
-      if (!settled.glare || !target) return;
-      // A settled viewer depends only on the pose, so the two frames match to the pixel.
-      let difference = 0;
-      for (let i = 0; i < fresh.luma.length; i++)
-        difference += Math.abs(settled.luma[i] - fresh.luma[i]);
+      const levels = glareLevels(fresh, freshLook);
+      const [heldSettled, heldFresh, lookSettled, lookFresh] = [
+        settled,
+        fresh,
+        settledLook,
+        freshLook,
+      ].map((pixels) => measureGlare(pixels, levels));
+      const glares: Glare[] = [];
+      if (lookSettled.glare) glares.push({ at: "settled look", ...lookSettled.glare });
+      if (lookFresh.glare) glares.push({ at: "fresh look", ...lookFresh.glare });
+      await writeFile(
+        testInfo.outputPath("turn.json"),
+        JSON.stringify({ settledMs, turned, glares }, null, 1),
+      );
+      const detail = `${listPath(glares)}\nSettled after ${Math.round(settledMs)} ms; the viewer's turn each second: ${turned.map((t) => t.toFixed(1)).join(", ")}`;
+
+      // No lasting jump: once the device has turned, the viewer only closes on it, and lands.
+      const backOffs = turned.slice(1).filter((t, i) => t > turned[i] + 0.5);
+      expect.soft(backOffs, `The viewer turns away from the device:\n${detail}`).toEqual([]);
       expect
-        .soft(
-          difference / fresh.luma.length,
-          `The settled frame differs from a fresh one:\n${detail}`,
-        )
-        .toBeLessThan(0.002);
-      expect.soft(Math.abs(settled.glare.x - target.x), detail).toBeLessThan(0.004);
-      expect.soft(Math.abs(settled.glare.y - target.y), detail).toBeLessThan(0.004);
-      // No lasting jump: after the turn, every frame closes on the settled glare, never backing off.
-      const distances = after
-        .map(({ glare }) => glare && Math.hypot(glare.x - target.x, glare.y - target.y))
-        .filter((distance): distance is number => distance !== null);
-      const backOffs = distances
-        .slice(1)
-        .filter((distance, i) => distance > distances[i] + STEP_SLACK);
-      expect.soft(backOffs, `The glare moves away from where it settles:\n${detail}`).toEqual([]);
+        .soft(turned[turned.length - 1], `The viewer never lands:\n${detail}`)
+        .toBeLessThan(0.01);
+      expect(lookSettled.glare, `No glare in the look once settled:\n${detail}`).not.toBeNull();
+      expect(lookFresh.glare, `No glare in the fresh session's look:\n${detail}`).not.toBeNull();
+      const target = lookFresh.glare;
+      if (!lookSettled.glare || !target) return;
+      // A settled viewer depends only on the pose, so the frames match to the pixel, held or looking.
+      for (const [label, a, b] of [
+        ["held", heldSettled, heldFresh],
+        ["looking", lookSettled, lookFresh],
+      ] as const)
+        expect
+          .soft(
+            lumaDifference(a, b),
+            `The settled frame, ${label}, differs from a fresh one:\n${detail}`,
+          )
+          .toBeLessThan(0.002);
+      expect.soft(Math.abs(lookSettled.glare.x - target.x), detail).toBeLessThan(0.004);
+      expect.soft(Math.abs(lookSettled.glare.y - target.y), detail).toBeLessThan(0.004);
     });
   });

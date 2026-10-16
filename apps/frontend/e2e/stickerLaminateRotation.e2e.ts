@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { ipad } from "./ipad.ts";
-import { about, compose, sendReading } from "./deviceRotation.ts";
+import { about, compose, sendReading, type Rotation } from "./deviceRotation.ts";
+import { glarePoint, glareReading, RIGHT_RIM, screenPointOf } from "./glarePose.ts";
 
 test.use(ipad);
 
@@ -119,49 +120,52 @@ test("turning a flat iPad about gravity turns the room on screen, then holds wit
 });
 
 /**
- * Delivers the reading a device turned to `screenAngle` reports when its displayed screen is held
- * `held` degrees up from flat and rolled `roll` degrees about the displayed vertical. The whole
- * attitude, heading included: on its side, a roll about the displayed vertical turns the device's
- * alpha too, and the room holds still in the world, so a reading that kept alpha would also turn it.
+ * Delivers the reading a device turned to `screenAngle` reports when its displayed screen, at the
+ * attitude `screen`, is pitched `pitch` degrees about its own horizontal and then rolled `roll` degrees
+ * about its own vertical; waits for the light to land and returns the reading. The whole attitude,
+ * heading included: on its side, a roll about the displayed vertical turns the device's alpha too, and
+ * the room holds still in the world, so a reading that kept alpha would also turn it.
  */
-async function holdDisplayed(page: Page, screenAngle: number, held: number, roll: number) {
-  await sendReading(
+async function holdDisplayed(
+  page: Page,
+  screen: Rotation,
+  screenAngle: number,
+  pitch: number,
+  roll: number,
+) {
+  const reading = await sendReading(
     page,
-    compose(about.z(123), about.x(held), about.y(roll), about.z(screenAngle)),
+    compose(screen, about.x(pitch), about.y(roll), about.z(screenAngle)),
   );
   await landed(page);
+  return reading;
 }
 
 /**
- * The ceiling light's side edge nearer the screen's middle, from the room at the landed pose: where
- * it mirrors on screen, in CSS px from the viewport's center (y down, at the light's middle), and how
- * far a degree of roll about the displayed vertical carries it. A direction d mirrors for the eye e
- * at e.xy + e.z·d.xy / d.z, and a roll turns the eye and the room together, since both stay put.
+ * How far, in CSS px, a degree of roll about the displayed vertical carries the ceiling light's right
+ * rim on screen, from the room at the landed pose: a roll turns the eye and the room together, since
+ * both stay put in the world.
  */
-const lightEdge = (page: Page) =>
+const rimPerDegree = (page: Page) =>
   page.evaluate(async () => {
     const { roomFrame, ROOM } = await import("../src/stickers/sharedRoom.ts");
+    const { mirrored, RIGHT_RIM } = await import("./glarePose.ts");
     const frame = roomFrame(window.laminateFixture.getPose());
-    type Vector = readonly number[];
-    const mirror = (eye: Vector, d: Vector) => [
-      eye[0] + (eye[2] * d[0]) / d[2],
-      eye[1] + (eye[2] * d[1]) / d[2],
-    ];
     const a = Math.PI / 180;
-    const roll = (v: Vector) => [
+    const roll = (v: readonly number[]) => [
       v[0] * Math.cos(a) + v[2] * Math.sin(a),
       v[1],
       -v[0] * Math.sin(a) + v[2] * Math.cos(a),
     ];
-    const [edge] = [-1, 1]
-      .map((side) => frame.light.map((l, i) => l + side * ROOM.light.radius * frame.across[i]))
-      .toSorted((p, q) => Math.abs(mirror(frame.eye, p)[0]) - Math.abs(mirror(frame.eye, q)[0]));
-    const [x] = mirror(frame.eye, edge);
-    return {
-      x,
-      y: mirror(frame.eye, frame.light)[1],
-      perDegree: Math.abs(mirror(roll(frame.eye), roll(edge))[0] - x),
+    const rolled = {
+      eye: roll(frame.eye),
+      light: roll(frame.light),
+      across: roll(frame.across),
+      down: roll(frame.down),
     };
+    const [before, after] = [frame, rolled].map((f) => mirrored(f, ROOM.light, RIGHT_RIM));
+    if (!before || !after) throw new Error("The ceiling light's right rim is behind the screen");
+    return Math.abs(after.x - before.x);
   });
 
 for (const [name, angle, held] of [
@@ -176,29 +180,39 @@ for (const [name, angle, held] of [
     const paper = page.locator("[data-white] canvas.sticker-material");
     const foil = page.locator('[data-sticker="0"] .sticker-material');
     await expect(paper).toHaveAttribute("data-state", "ready");
-    // The same pose of the displayed screen in every turn. Inside the light's glare white paper
-    // clips evenly, so the paper straddles the glare's side edge, where the room puts it.
-    await holdDisplayed(page, angle, held, 0);
-    const edge = await lightEdge(page);
+    // The same pose of the displayed screen in every turn, which the viewer centers on.
+    const rest = await holdDisplayed(page, about.z(123), angle, held, 0);
+    // Inside the light's glare white paper clips evenly, so the paper straddles the glare's right
+    // rim: placed as near as the page allows to where the room puts it, then the rim tilted onto it.
+    const pose = await page.evaluate(() => window.laminateFixture.getPose());
+    const rim = await glarePoint(page, pose, RIGHT_RIM);
     const view = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }));
     const side = 240;
-    const top = Math.min(Math.max(view.height / 2 + edge.y - side / 2, 0), view.height - side);
+    const inside = (v: number, length: number) =>
+      Math.min(Math.max(length / 2 + v - side / 2, 0), length - side);
     await page.addStyleTag({
-      content: `[data-white]{position:fixed!important;left:${view.width / 2 + edge.x - side / 2}px;top:${top}px}`,
+      content: `[data-white]{position:fixed!important;left:${inside(rim.x, view.width)}px;top:${inside(rim.y, view.height)}px}`,
     });
-    // A step away and back redraws the paper where it now sits.
-    await holdDisplayed(page, angle, held + 1, 0);
-    await holdDisplayed(page, angle, held, 0);
+    const target = await screenPointOf(page.locator("[data-white]"));
+    const reading = await glareReading(page, rest, angle, target, RIGHT_RIM);
+    // The displayed screen's attitude at that reading, which the wrist turns below start from.
+    const glare = compose(
+      about.z(reading.alpha),
+      about.x(reading.beta),
+      about.y(reading.gamma),
+      about.z(-angle),
+    );
+    await holdDisplayed(page, glare, angle, 0, 0);
     const neutral = await paperLevels(paper);
     expect(Math.abs(neutral.tilt), "The paper holds a slope of the glare's edge").toBeGreaterThan(
       1,
     );
     const foilNeutral = await snapshot(foil);
-    // A roll that carries the edge a third of the way across the paper.
-    const roll = side / 3 / edge.perDegree;
+    // A roll that carries the rim a third of the way across the paper.
+    const roll = side / 3 / (await rimPerDegree(page));
     for (const sign of [-1, 1]) {
       // A wrist turn delivers coupled beta and gamma changes, not independent Euler sliders.
-      await holdDisplayed(page, angle, held + (roll / 3) * sign, roll * sign);
+      await holdDisplayed(page, glare, angle, (roll / 3) * sign, roll * sign);
       const after = await paperLevels(paper);
       await expect.poll(() => snapshot(foil)).not.toBe(foilNeutral);
       // With the eye and room still, rolling the displayed right edge away carries the glare toward

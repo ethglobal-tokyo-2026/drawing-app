@@ -83,7 +83,9 @@ test("the window's source grid matches independently integrated diffraction", as
   }
 });
 
-test("the window adds light, back views and a dark room render nothing", async ({ page }) => {
+test("the ceiling light adds light, back views and a dark room render nothing", async ({
+  page,
+}) => {
   await page.goto("/e2e/stickerFoil.html");
   await expect(page.locator("#foil")).toHaveAttribute("data-ready", "true");
   const result = await page.evaluate(() => {

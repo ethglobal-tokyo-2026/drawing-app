@@ -521,7 +521,10 @@ test("actual worker registered narrow bands show color without green through the
       contentType: "image/png",
     });
     expect(row.returned).toBe(true);
-    expect(row.samples.every((sample) => sample.eligible > 0 && sample.green === 0)).toBe(true);
+    expect(
+      row.samples.filter((sample) => !(sample.eligible > 0 && sample.green === 0)),
+      `${row.style}'s band samples with no eligible pixels or with green`,
+    ).toEqual([]);
     if (row.style === "holo") {
       // Holo reads as holo before any motion: the held pose already shows color on the band.
       expect(row.samples[0].chromatic).toBeGreaterThan(0);

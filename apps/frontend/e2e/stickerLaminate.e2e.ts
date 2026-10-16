@@ -1,23 +1,23 @@
 import { expect, test } from "@playwright/test";
-import { emptyLaminatePage } from "./stickerMaterialFixture";
+import { COAT, coatDarkened } from "../src/stickers/coat";
+import { highlightCompress, TONE } from "../src/stickers/tone";
+import { glarePoint, glareReading, RIGHT_RIM } from "./glarePose";
+import { expectLanded, holdPortrait } from "./screenTilt";
+import { waitTwoFrames } from "./stickerMaterialFixture";
 
 const decode = (v: number) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
 const encode = (v: number) => (v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055);
-/** Paper's highlight shoulder: identity below its knee, then a roll toward the display's peak. */
-const shoulder = (c: number[], knee = 0.88) => {
-  const peak = Math.max(...c);
-  if (peak <= knee) return c;
-  const rolled = knee + (1 - knee) * (1 - Math.exp(-(peak - knee) / (1 - knee)));
-  return c.map((v) => (v * rolled) / peak);
-};
-/** Air to film at the near-normal view of an eye far in front of the screen. */
-const FRESNEL = 0.04;
 
 test("the displayed full-cut coat is the print's transmitted light plus the reflection black ink shows", async ({
   page,
 }) => {
-  await emptyLaminatePage(page);
-  await page.goto("/e2e/stickerLaminate.html");
+  await holdPortrait(page);
+  // The fixture with none of its own stickers, for its light.
+  await page.goto("/e2e/stickerLaminate.html?board=1&count=0");
+  // The first reading is the still pose, so the viewer centers there.
+  const still = await page.evaluate(() => window.laminateFixture.getPose());
+  const rest = { alpha: 0, beta: still.beta, gamma: still.gamma };
+  await page.evaluate(({ beta, gamma }) => window.laminateFixture.tilt(beta, gamma), rest);
   const prints = { black: [0, 0, 0], white: [255, 255, 255], gray: [136, 136, 136] } as const;
   const colored = [208, 55, 113] as const;
   for (const [side, height, turn] of [
@@ -25,18 +25,50 @@ test("the displayed full-cut coat is the print's transmitted light plus the refl
     [240, 240, 90],
     [480, 320, -27],
   ]) {
-    // Each print in turn on one sticker, so every sample sees the same room from the same place.
-    const samples = await page.evaluate(
-      async ({ side, height, turn, colors }) => {
-        const { required, solidPng, twoFrames } = await import("./stickerMaterialFixture.ts");
-        const api = await import("../src/stickers/stickerRenderer.ts");
+    const corners = await page.evaluate(
+      ({ side, height, turn }) => {
         const host = document.createElement("div");
         host.className = "sticker-material-surface";
+        host.dataset.coat = "";
         host.style.cssText = `position:absolute;left:20px;top:20px;width:${side}px;height:${height}px;rotate:${turn}deg`;
         const c = document.createElement("canvas");
         c.className = "sticker-material";
         host.append(c);
         document.body.append(host);
+        const box = host.getBoundingClientRect();
+        const viewport = visualViewport;
+        if (!viewport) throw new Error("The visual viewport is missing");
+        const x = (box.left + box.right) / 2 - (viewport.offsetLeft + viewport.width / 2),
+          y = (box.top + box.bottom) / 2 - (viewport.offsetTop + viewport.height / 2);
+        const [cos, sin] = [Math.cos((turn * Math.PI) / 180), Math.sin((turn * Math.PI) / 180)];
+        return [-1, 1].flatMap((across) =>
+          [-1, 1].map((down) => {
+            const [u, v] = [(across * side) / 2, (down * height) / 2];
+            return { x: x + u * cos - v * sin, y: y + u * sin + v * cos };
+          }),
+        );
+      },
+      { side, height, turn },
+    );
+    // The still glare is off the screen. The light's rim at the sticker's corner nearest its middle:
+    // its blurred edge falls off across the sticker, so the room differs sample to sample.
+    const middle = await glarePoint(page, still);
+    const [corner] = corners.toSorted(
+      (a, b) =>
+        Math.hypot(a.x - middle.x, a.y - middle.y) - Math.hypot(b.x - middle.x, b.y - middle.y),
+    );
+    const reading = await glareReading(page, rest, 0, corner, RIGHT_RIM);
+    await expectLanded(page, [reading.beta, reading.gamma]);
+    await waitTwoFrames(page);
+    // Each print in turn on one sticker, so every sample sees the same room from the same place.
+    const { samples, paperLight } = await page.evaluate(
+      async ({ side, height, turn, colors }) => {
+        const { required, solidPng, twoFrames } = await import("./stickerMaterialFixture.ts");
+        const api = await import("../src/stickers/stickerRenderer.ts");
+        const { paperLight } = await import("../src/stickers/paperLight.ts");
+        const { roomFrame } = await import("../src/stickers/sharedRoom.ts");
+        const host = required(document.querySelector<HTMLElement>("[data-coat]"));
+        const c = required(host.querySelector("canvas"));
         const cut = solidPng(side, height, "white");
         const solid = (rgb: readonly number[]) => solidPng(side, height, `rgb(${rgb.join(",")})`);
         const release = api.mountSticker(c, {
@@ -61,7 +93,10 @@ test("the displayed full-cut coat is the print's transmitted light plus the refl
               ),
             );
           }
-          return out;
+          return {
+            samples: out,
+            paperLight: paperLight(roomFrame(window.laminateFixture.getPose())),
+          };
         } finally {
           release();
           host.remove();
@@ -71,16 +106,26 @@ test("the displayed full-cut coat is the print's transmitted light plus the refl
     );
     const [black, ...others] = samples;
     const reflections = black.map((pixel) => pixel.slice(0, 3).map((v) => decode(v / 255)));
-    // The room shows in black ink: the glare and the bounce differ across the sticker.
+    // Black ink shows the reflection itself below the tone's knee, which passes it unchanged; nearer
+    // the light it shows compressed, and can't be read back to add to the other prints.
+    const kept = reflections.flatMap((rgb, i) => (Math.max(...rgb) < TONE.start ? [i] : []));
+    const keptBlack = kept.map((i) => black[i][0]);
+    // The room shows in black ink: the light's edge falls off across the samples kept.
     expect(
-      Math.max(...black.map((p) => p[0])) - Math.min(...black.map((p) => p[0])),
+      Math.max(...keptBlack) - Math.min(...keptBlack),
+      `black ink's samples: ${JSON.stringify(black)}`,
     ).toBeGreaterThan(5);
     for (const [k, rgb] of [prints.white, prints.gray, colored].entries())
       others[k].forEach((pixel, i) => {
-        const expected = shoulder(
-          rgb.map((v, c) => decode(v / 255) * 0.9 * (1 - FRESNEL) + reflections[i][c]),
-        );
         expect(pixel[3]).toBe(255);
+        if (!kept.includes(i)) return;
+        // The eye sees every sample near square-on, where the coat passes the print's light as it does
+        // square-on, and white paper shows paper white in the pose's paper light.
+        const lit = rgb.map(
+          (v, c) =>
+            coatDarkened(decode(v / 255)) * COAT.paperWhite * paperLight + reflections[i][c],
+        );
+        const expected = highlightCompress([lit[0], lit[1], lit[2]]);
         for (let c = 0; c < 3; c++)
           expect(
             Math.abs(pixel[c] - encode(expected[c]) * 255),

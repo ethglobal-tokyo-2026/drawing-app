@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { acquireLight, currentLight, installLight } from "../src/stickers/light";
+import { STILL_POSE } from "../src/stickers/lightMode";
 import { StickerMaterial } from "../src/stickers/StickerMaterial";
 import "../src/styles/tokens.css";
 
@@ -24,10 +25,11 @@ window.addEventListener(
 );
 declare global {
   interface Window {
-    lightSweepsFixture: { getPose: typeof currentLight };
+    /** The still pose is the page's own device class's, which a spec can't read outside it. */
+    lightSweepsFixture: { getPose: typeof currentLight; stillPose: typeof STILL_POSE };
   }
 }
-window.lightSweepsFixture = { getPose: currentLight };
+window.lightSweepsFixture = { getPose: currentLight, stillPose: STILL_POSE };
 
 const root = document.getElementById("root");
 if (!root) throw new Error("The light sweeps fixture root is missing");
