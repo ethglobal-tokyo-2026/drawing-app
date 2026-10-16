@@ -19,7 +19,7 @@ export interface StickerSurface {
   print: string;
   cut: string;
   normal?: string;
-  /** The crease's steps' height, registered with its normal; it loads and commits with the normal. */
+  /** The drape's height, registered with its normal; it loads and commits with the normal. */
   height?: string;
   turn: number;
   finish: LaminateFinish;

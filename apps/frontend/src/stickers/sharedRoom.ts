@@ -1,64 +1,34 @@
 import { createFoilDiscSamples } from "./foilMaterial";
 import { currentLight, type DevicePose } from "./light";
-import { IDENTITY, inverse, rotate, STILL_POSE, upOnScreen } from "./lightMode";
-import { OVERHEAD_WINDOW } from "./overheadWindow";
+import { IDENTITY, inverse, rotate, upOnScreen } from "./lightMode";
+import { LIGHT_ASPECT, LIGHT_AZIMUTH, LIGHT_ELEVATION, LIGHT_RADIUS } from "./roomGeometry";
+import { VIEWING, VIEWING_CLASS } from "./viewing";
 
 /** One room fixed in the world, seen from one eye that stays put while the hand turns the device. */
 
-/** The ceiling light's radiance as paper and gloss see it; foil sees it at the overhead window's. */
-const LIGHT_RADIANCE = 1.5 * OVERHEAD_WINDOW.radiance;
-const glossBounce = {
-  ceiling: 0.124,
-  litWall: 0.112,
-  walls: 0.072,
-  floor: 0.072,
-  litWallFade: 0.35,
-} as const;
-/**
- * The same room at foil's light level. Metal mirrors the room's own radiance, and the conductor in
- * foil's shader is the metal's reflectance, so only the light's scale changes.
- */
-const foilBounce = (() => {
-  const scale = OVERHEAD_WINDOW.radiance / LIGHT_RADIANCE;
-  return {
-    ceiling: glossBounce.ceiling * scale,
-    litWall: glossBounce.litWall * scale,
-    walls: glossBounce.walls * scale,
-    floor: glossBounce.floor * scale,
-    litWallFade: glossBounce.litWallFade,
-  };
-})();
+const RAD = Math.PI / 180;
 
 /**
- * The room. The eye's distance in CSS px (an unverified guess for about 32 cm), and its elevation
- * above the bottom edge once the device lies flat. Its one light, a round, soft ceiling light above
- * and behind the viewer: its elevation above the still pose's screen normal, so only a band of tilts
- * mirrors it, as a real one does, and its azimuth to the viewer's left, in degrees; its radius on the
- * plane one unit along it, and its edge blur, a logistic scale every coat's lobe widens; its halo, the
- * ceiling it lights, the coat's haze and the eye's veiling glare, as the disc blurred at a wide
- * logistic scale, at a level against its body; and its radiance. The bounce off the ceiling, the
- * wall beyond the device, the other walls and the floor, which gloss and foil each mirror, and how far
- * the lit wall fades toward the ceiling: the fill a real room gives under one light, its floor lit as
- * its walls are.
+ * The room. The eye's distance in CSS px for the device's class, and its elevation above the bottom
+ * edge once the device lies flat. Its one light, the ceiling light roomGeometry.ts hangs: its
+ * elevation and its azimuth to the viewer's left of straight behind, in degrees; its radius on the
+ * plane one unit along it, and its aspect, the level disc's foreshortened height against its width;
+ * and its rim's logistic blur, a diffuser's crisp edge, which every coat's lobe widens. Its radiance
+ * follows the exposure, and the room's bounce is roomLight.json's solve: both are in roomIrradiance.ts.
  */
 export const ROOM = {
-  eyeDistance: 1900,
+  eyeDistance: VIEWING[VIEWING_CLASS].eyeDistance,
   flatEyeElevation: 55,
   light: {
-    elevation: 90 - STILL_POSE.beta + 17,
-    azimuth: 6,
-    radius: 0.19,
-    feather: 0.045,
-    haloLevel: 0.12,
-    haloScale: 0.12,
-    radiance: LIGHT_RADIANCE,
+    elevation: LIGHT_ELEVATION,
+    azimuth: LIGHT_AZIMUTH,
+    radius: LIGHT_RADIUS,
+    aspect: LIGHT_ASPECT,
+    feather: Math.tan(0.5 * RAD),
   },
-  glossBounce,
-  foilBounce,
 } as const;
 
 type Vec3 = [number, number, number];
-const RAD = Math.PI / 180;
 const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const scale = (a: Vec3, k: number): Vec3 => [a[0] * k, a[1] * k, a[2] * k];
 const add = (a: Vec3, b: Vec3): Vec3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
@@ -89,9 +59,10 @@ const toward = (ahead: Vec3, left: Vec3, up: Vec3, azimuth: number, elevation: n
 
 /**
  * The room's frame in the shader's screen axes (x right, y down, z toward the viewer): up, toward the
- * viewer, the ceiling light's direction and its plane's across (viewer's right) and down axes, and the
- * eye in CSS px from the screen's center. The eye and room are placed for the attitude the viewer is
- * centered on, then carried into the device's axes by the pose's turn, so they hold still in the world.
+ * viewer, the ceiling light's direction and its plane's across (level, to the viewer's right) and down
+ * (the plumb line seen on the plane) axes, and the eye in CSS px from the screen's center. The eye and
+ * room are placed for the attitude the viewer is centered on, then carried into the device's axes by
+ * the pose's turn, so they hold still in the world.
  */
 export function roomFrame(pose: DevicePose = currentLight()) {
   const turn = pose.turn ?? IDENTITY;
@@ -118,16 +89,9 @@ export function roomFrame(pose: DevicePose = currentLight()) {
   const h = unit(level);
   const left = cross(h, up);
   const light = toward(h, left, up, ROOM.light.azimuth, ROOM.light.elevation);
-  // The light's plane squared to the view, where foil places its panels and samples: across along the
-  // level line and down along the screen's own down across that line, each seen on the plane, then
-  // split evenly to a right angle, so at the still pose across reads level and down plumb in the mirror.
-  const onPlane = (v: Vec3) => unit(add(v, scale(light, -dot(v, light))));
-  const levelAxis = onPlane(scale(left, -1));
-  const plumbAxis = onPlane(cross(scale(left, -1), [0, 0, 1]));
-  const skew = dot(levelAxis, plumbAxis);
-  const split = Math.abs(skew) > 1e-9 ? (1 - Math.sqrt(1 - skew * skew)) / skew : 0;
-  const across = unit(add(levelAxis, scale(plumbAxis, -split)));
-  const down = unit(add(plumbAxis, scale(levelAxis, -split)));
+  // The light's plane held in the world: the level disc keeps its width across and foreshortens down.
+  const across = unit(cross(up, light));
+  const down = unit(add(scale(up, -1), scale(light, dot(up, light))));
   // Carried into the device's axes now, with y turned down for the shader.
   const flip = (v: Vec3): Vec3 => {
     const [x, y, z] = toScreen(rotate(turn, toDevice(v)));
@@ -147,7 +111,7 @@ export type RoomFrame = ReturnType<typeof roomFrame>;
 
 const lightSources = createFoilDiscSamples(ROOM.light);
 
-/** The foil's sources in screen axes: the ceiling light's round quadrature, laid out around the light. */
+/** The foil's sources in screen axes: the ceiling light's quadrature over its ellipse, laid out around the light. */
 export function roomFoilSources(frame: RoomFrame) {
   const out = new Float32Array(64);
   for (let i = 0; i < out.length; i += 4) {

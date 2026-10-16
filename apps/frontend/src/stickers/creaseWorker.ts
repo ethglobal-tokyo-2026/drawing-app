@@ -69,7 +69,7 @@ export interface CreaseTimings {
   total: number;
 }
 
-/** A baked crease, its base, geometric normals and steps' height; null when nothing rises. */
+/** A baked crease, its base, geometric normals and the drape's height; null when nothing rises. */
 export type CreaseReply =
   | {
       ok: true;
@@ -283,8 +283,8 @@ async function bakeExpanded(
   t0: number,
   t1: number,
 ): Promise<CreaseReply> {
-  // At most one thickness per lower sticker. The height minimum also samples a rounded ramp;
-  // one further pixel supplies central differences at every output edge.
+  // At most one thickness per lower sticker. The height range and the self-shadow's reach sample a
+  // neighborhood as wide again; one further pixel supplies central differences at every output edge.
   const context = drapeReach(job.scale, job.under.length) + creaseNormalReach(job.scale) + 1;
   const originX = output.x - context,
     originY = output.y - context;

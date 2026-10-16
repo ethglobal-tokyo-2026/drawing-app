@@ -18,7 +18,7 @@ import "./sticker-figure.css";
 
 /**
  * A sticker's crease, baked: its base; its geometric normal data, which the sticker material lights
- * and reflects; and its steps' height, from which it casts their contact shadows.
+ * and reflects; and the drape's height, over which it casts its own shadow.
  */
 export type Crease = Record<CreaseImage, string> & { normalBounds?: CreaseBounds };
 

@@ -4,6 +4,7 @@ import {
   NORMAL_RANGE_LEVELS,
   NORMAL_SLOPE,
   RAMP,
+  SELF_SHADOW_REACH,
   STICKER_THICKNESS,
   creaseHeight,
   creasePixels,
@@ -156,7 +157,7 @@ describe("crease", () => {
     expect(pixels?.base[center + 3]).toBe(0);
   });
 
-  it("keeps the steps' height in an opaque image of its own, within a level, flat where they are", () => {
+  it("keeps the drape's height in an opaque image of its own, within a level, flat on each tread", () => {
     // Stairs two stickers high: each tread is flat, and each riser a sharp step.
     const stairs = field((x) => (x < 40 ? 2 : x < 80 ? 1 : 0));
     const pixels = creasePixels({
@@ -168,16 +169,31 @@ describe("crease", () => {
     });
     if (!pixels) throw new Error("The stairs raised no crease");
     const heightAt = (x: number, y = H / 2) => creaseHeight(pixels.height[(y * W + x) * 4]);
+    const surface = drape(stairs, W, H, 1);
+    for (let x = 0; x < W; x++)
+      expect(Math.abs(heightAt(x) - surface[(H / 2) * W + x]), `at ${x}`).toBeLessThanOrEqual(
+        0.5 / HEIGHT_LEVELS,
+      );
     for (const [x, tread] of [
       [20, 2],
       [60, 1],
       [100, 0],
-      [0, 2],
-      [W - 1, 0],
     ])
-      expect(Math.abs(heightAt(x) - tread)).toBeLessThanOrEqual(1 / HEIGHT_LEVELS);
+      expect(heightAt(x)).toBe(tread);
     expect(heightAt(30, 5)).toBe(heightAt(10, H - 5));
     expect(new Set(pixels.height.filter((_, i) => i % 4 === 3))).toEqual(new Set([255]));
+  });
+
+  it("marks where something higher within the self-shadow's reach could shade the paper", () => {
+    const step = field((x) => (x < 40 ? 1 : 0));
+    const pixels = pixelsOver([step]);
+    const marked = (x: number) => pixels.height[((H / 2) * W + x) * 4 + 1] === 255;
+    // The step's top and the far paper have nothing higher in reach; the drape and the paper past
+    // its foot, within reach of the shoulder, do.
+    expect(marked(20)).toBe(false);
+    expect(marked(45)).toBe(true);
+    expect(marked(Math.floor(39 + SELF_SHADOW_REACH))).toBe(true);
+    expect(marked(Math.ceil(39 + RAMP + SELF_SHADOW_REACH) + 1)).toBe(false);
   });
 
   it("bridges nearby supports and dips into a clearly separated gap", () => {
@@ -429,10 +445,82 @@ describe("crease", () => {
 
   it("keeps a step's shoulder and foot in the base, which shows with the light overhead", () => {
     const step = field((x) => (x < W / 2 ? 1 : 0));
-    const ramp = tones(creaseOver([step], "base"), W / 2 - RAMP, W / 2 + 2 * RAMP, 5, H - 5);
+    const reach = Math.ceil(RAMP);
+    const ramp = tones(creaseOver([step], "base"), W / 2 - reach, W / 2 + 2 * reach, 5, H - 5);
     expect(ramp.lit).toBeGreaterThan(0);
     expect(ramp.shade).toBeGreaterThan(0);
   });
+});
+
+describe("the drape's profile", () => {
+  const LONG = 200;
+  /** The draped profile across a row of stairs, `levels[n]` high from `edges[n − 1]` px on. */
+  const profileOver = (levels: number[], edges: number[], scale: number) => {
+    const stairs = field((x) => levels[edges.filter((edge) => x >= edge).length], LONG, 5);
+    return [...drape(stairs, LONG, 5, scale).slice(2 * LONG, 3 * LONG)];
+  };
+  /** The slope down the profile at each pixel, by central differences, in thicknesses per pixel. */
+  const slopesOf = (profile: number[]) =>
+    profile.map((_, x) => (profile[Math.max(0, x - 1)] - profile[Math.min(LONG - 1, x + 1)]) / 2);
+
+  it.each([
+    [1, 1],
+    [1, 2],
+    [0.75, 1],
+    [0.5, 1],
+  ])(
+    "at scale %s, drapes a step %s high flat at the shoulder, steepest at 1.5·height/run mid-run",
+    (scale, high) => {
+      // The shoulder is the step's last pixel; a pixel past the foot, the paper lies flat.
+      const shoulder = 59;
+      const run = RAMP * scale * Math.sqrt(high);
+      const slopes = slopesOf(profileOver([high, 0], [shoulder + 1], scale));
+      const peak = (1.5 * high) / run;
+      expect(slopes[shoulder]).toBeLessThan(0.25 * peak);
+      expect(slopes[Math.ceil(shoulder + run) + 1]).toBeLessThan(0.25 * peak);
+      expect(Math.abs(Math.max(...slopes) / peak - 1)).toBeLessThan(0.1);
+      const steepest = slopes.indexOf(Math.max(...slopes));
+      expect(Math.abs(steepest - (shoulder + run / 2))).toBeLessThanOrEqual(1);
+    },
+  );
+
+  it.each([1, 0.5])(
+    "at scale %s, bends the shoulder convex and the foot concave, equally",
+    (scale) => {
+      const corner = 59;
+      const run = RAMP * scale;
+      const slopes = slopesOf(profileOver([1, 0], [corner + 1], scale));
+      /** The slope at `x`, between pixels too. */
+      const slopeAt = (x: number) =>
+        slopes[Math.floor(x)] + (x % 1) * (slopes[Math.floor(x) + 1] - slopes[Math.floor(x)]);
+      // Each third's bend is its change of slope from the flat beside it: the shoulder's steepens,
+      // the foot's eases off.
+      const shoulder = slopeAt(corner + run / 3) - slopes[corner - 1];
+      const foot = slopeAt(corner + (2 * run) / 3) - slopes[Math.ceil(corner + run) + 1];
+      expect(shoulder).toBeGreaterThan(0);
+      expect(foot).toBeGreaterThan(0);
+      expect(Math.abs(shoulder / foot - 1)).toBeLessThan(0.15);
+    },
+  );
+
+  it.each([1, 0.5])(
+    "at scale %s, keeps two stacked steps monotonic, within their supports, and resting on a wide tread",
+    (scale) => {
+      const run = RAMP * scale;
+      for (let spacing = 0; spacing <= 48; spacing += 2) {
+        const tread = spacing * scale;
+        const profile = profileOver([2, 1, 0], [60, 60 + tread], scale);
+        for (let x = 1; x < LONG; x++)
+          expect(profile[x], `spacing ${spacing} at ${x}`).toBeLessThanOrEqual(
+            profile[x - 1] + 1e-6,
+          );
+        expect(Math.max(...profile)).toBeLessThanOrEqual(2 + 1e-6);
+        expect(Math.min(...profile)).toBeGreaterThanOrEqual(-1e-6);
+        if (tread > 2 * run + 2)
+          expect(profile[Math.round(60 + tread - 1)], `spacing ${spacing}`).toBeCloseTo(1, 3);
+      }
+    },
+  );
 });
 
 describe("registered crease support", () => {

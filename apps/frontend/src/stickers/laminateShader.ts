@@ -1,4 +1,3 @@
-import { FOIL_ROOM } from "./foilMaterial";
 import { glslFloat as f } from "./glsl";
 import { LAMINATE_FINISHES } from "./laminate";
 
@@ -73,8 +72,8 @@ const facetChain = prismFacetChain();
  * Glitter and prism laminates, which only the Shop previews today. Both read the coat's oriented
  * normal and reflection, so the shared light, pose and crease move them as they move gloss.
  * laminateStyle is the finish's index in LAMINATE_FINISHES; laminatePalette is the holo foil's six
- * palette colors in sRGB. Needs foilFragment (foilAllowedHue, foilRoom, foilCoat), windowAxes,
- * environment, linear, and the normalTransform and pointTurn uniforms before it.
+ * palette colors in sRGB. Needs coatFragment (coatFresnel), foilFragment (foilAllowedHue, foilMetal),
+ * roomBounce, roomSources, environment, linear, and the normalTransform uniform before it.
  */
 export const laminateFragment = `
 uniform float laminateStyle;
@@ -94,9 +93,9 @@ vec3 laminateHue(float t){
  c=mix(c,laminatePalette[4],step(4.,t));
  return foilAllowedHue(mix(c,laminatePalette[5],step(5.,t)));
 }
-// Flakes fixed in the coat, one cell at most each, every flake a tiny mirror at its own tilt: it shows
-// its hue lit by the room it reflects, and flashes white where that reflection meets the ceiling
-// light, so a tilt changes which flakes flash. The coat's own reflection stays over it.
+// Flakes fixed in the coat, one cell at most each, every flake a tiny mirror of foil's metal at its
+// own tilt: it shows its hue lit by the room it reflects, and flashes white where that reflection meets
+// the ceiling light, so a tilt changes which flakes flash. The coat's own reflection stays over it.
 // Linear RGB.
 vec3 laminateGlitter(vec3 coat,vec2 cellPoint,float footprint,float scale,vec3 surfaceNormal,vec3 view){
  vec2 cell=floor(cellPoint);
@@ -112,10 +111,10 @@ vec3 laminateGlitter(vec3 coat,vec2 cellPoint,float footprint,float scale,vec3 s
  float flash=roomSources(r,${f(GLITTER.lobe)});
  vec3 hue=laminateHue(facet.z);
  vec3 tint=mix(vec3(1.),vec3(linear(hue.r),linear(hue.g),linear(hue.b)),${f(GLITTER.tint)});
- vec3 mirror=tint*roomFoil(r)*${f(FOIL_ROOM.level)}+flash;
+ vec3 mirror=foilMetal(clamp(dot(view,n),0.,1.))*(tint*roomBounce(r)+flash);
  vec3 coatNormal=normalize(normalTransform*surfaceNormal);
  float cosine=clamp(dot(coatNormal,view),0.,1.);
- float sheen=foilCoat(cosine);
+ float sheen=coatFresnel(cosine);
  vec3 under=mirror*(1.-sheen)*(1.-sheen)+sheen*environment(2.*cosine*coatNormal-view);
  return mix(coat,under,flake);
 }

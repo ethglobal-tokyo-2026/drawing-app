@@ -15,6 +15,7 @@
     "chat-menus": "tsx --tsconfig tsconfig.scripts.json scripts/renderChatMenus.tsx",
     "croquis-sans": "uv run --script scripts/buildCroquisSans.py",
     "foil-lookup": "tsx --tsconfig tsconfig.scripts.json scripts/generateFoilLookup.ts",
+    "room-light": "tsx --tsconfig tsconfig.scripts.json scripts/generateRoomLight.ts",
     "test:ipad-safari": "tsx --tsconfig tsconfig.scripts.json scripts/ipadSafari.ts",
     "preview": "vite preview",
     "demo:build": "vite build --config vite.demo.config.ts",

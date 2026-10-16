@@ -251,7 +251,7 @@ it("pauses the pile's tilt under an artist's board and resumes it with the loade
   /** A device pose that leans Explore's pile all the way: -1 or 1 across, and down. */
   const publish = (x: -1 | 1) =>
     act(() => {
-      pose = { beta: 15, gamma: 60 * x, screenAngle: 0 };
+      pose = { beta: 0, gamma: 60 * x, screenAngle: 0 };
       for (const listener of listeners) listener(pose);
     });
   const today = sticker({ sealedAt: "2026-09-26T11:00:00.000Z" });

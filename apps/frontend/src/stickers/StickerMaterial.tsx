@@ -32,7 +32,7 @@ export function StickerMaterial({
   print: string;
   cut: string;
   normal?: string;
-  /** The crease's steps' height, registered with its normal. */
+  /** The drape's height, registered with its normal. */
   height?: string;
   normalBounds?: StickerSurface["normalBounds"];
   foil?: StickerFoilMaterial;

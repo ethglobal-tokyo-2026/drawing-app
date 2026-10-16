@@ -1,5 +1,6 @@
 import type { DeviceForLight } from "../ui/deviceForLight";
 import type { MotionPermission } from "../ui/motionPermission";
+import { VIEWING, VIEWING_CLASS } from "./viewing";
 
 export type RotationInput = "unknown" | "usable" | "unavailable";
 export type LightMode = "still" | "device-tilt" | "fallback-wave";
@@ -65,12 +66,15 @@ export interface DevicePose {
 }
 
 /**
- * The usual reading angle, the screen leaned back about halfway from upright toward flat, which the
- * light assumes without tilt.
+ * The usual reading angle for the device's class, which the light assumes without tilt.
  * Its screen angle of 0 makes the device's axes the screen's, so it reads the same whichever way the
  * screen is turned.
  */
-export const STILL_POSE: DevicePose = { beta: 47, gamma: 0, screenAngle: 0 };
+export const STILL_POSE: DevicePose = {
+  beta: VIEWING[VIEWING_CLASS].stillBeta,
+  gamma: 0,
+  screenAngle: 0,
+};
 
 const RAD = Math.PI / 180;
 const clamp11 = (v: number) => Math.max(-1, Math.min(1, v));

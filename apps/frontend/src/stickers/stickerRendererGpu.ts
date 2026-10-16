@@ -1,4 +1,5 @@
 import { createFoilLookup, FOIL_STYLES, type Rgb } from "./foilMaterial";
+import { ROOM_LIGHT } from "./roomIrradiance";
 import { roomFoilSources, roomFrame } from "./sharedRoom";
 import {
   acquireFoilCoverage,
@@ -29,6 +30,14 @@ const TEXTURE_LOAD_TIMEOUT_MS = 20_000;
 const MAX_TEXTURE_ERROR_CHECKS = 8;
 /** A scroller quiet this long has stopped; its surfaces then reflect the room from their new spots. */
 const SCROLL_SETTLE_MS = 120;
+/**
+ * Each laminate's lobe, as the spread the room's shader blurs the ceiling light's edge by. Gloss is
+ * measured glossy paper's half-vector σ of 0.5° (Akao 2010, Nakamura 2022): a reflection's σ is twice
+ * that, and the rim's logistic blur (RIM_BLUR_SHARE·spread) has a σ of π/√3 times its scale. Matte's
+ * is a design decision.
+ */
+export const GLOSS_ROUGHNESS = 0.024;
+const MATTE_ROUGHNESS = 0.16;
 
 interface TextureValidation {
   url: string;
@@ -106,8 +115,10 @@ export class StickerRenderer {
   refreshFrame = 0;
   revealFrame = 0;
   readonly flat: WebGLTexture;
-  /** A height without steps, so a sticker without a crease casts no contact shadow. */
+  /** A flat height, so a sticker without a crease casts no shadow on itself. */
   readonly flatHeight: WebGLTexture;
+  /** The room's bounce seen from the device, which every finish mirrors. */
+  readonly roomLightMap: WebGLTexture;
   /** The holo foil's palette in sRGB, read once, for the glitter and prism laminates. */
   laminatePalette: Float32Array | null = null;
   readonly buffer: WebGLBuffer;
@@ -206,6 +217,7 @@ export class StickerRenderer {
         "roomLight",
         "roomAcross",
         "roomDown",
+        "roomLightMap",
       ])
         this.uniforms.set(name, gl.getUniformLocation(program, name));
       gl.useProgram(program);
@@ -223,11 +235,15 @@ export class StickerRenderer {
       gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
       this.flat = this.texture(new Uint8Array([128, 128, 255, 255]));
       this.flatHeight = this.texture(new Uint8Array([0, 0, 0, 255]));
-      // The flat normal and height validate immediately; every later upload validates as a batch.
+      this.roomLightMap = this.texture(ROOM_LIGHT.pixels, ROOM_LIGHT.width, ROOM_LIGHT.height);
+      // Still bound: the map's azimuth wraps around, so its seam filters across.
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+      // The flat normal and height and the room's map validate immediately; every later upload
+      // validates as a batch.
       const flatError = gl.getError();
       if (flatError !== gl.NO_ERROR || gl.isContextLost())
         throw new Error(
-          `Uploading the sticker material flat normal and height textures failed (${flatError})`,
+          `Uploading the sticker material flat normal and height textures and the room's light map failed (${flatError})`,
         );
       this.stopLight = subscribeLight(() =>
         timeOurWork("laminate", () => {
@@ -902,6 +918,10 @@ export class StickerRenderer {
     gl.uniform3fv(this.uniforms.get("roomLight") ?? null, room.light);
     gl.uniform3fv(this.uniforms.get("roomAcross") ?? null, room.across);
     gl.uniform3fv(this.uniforms.get("roomDown") ?? null, room.down);
+    // Bound with every batch, as each tile's textures are, so no upload's unit can leave it unbound.
+    gl.activeTexture(gl.TEXTURE6);
+    gl.bindTexture(gl.TEXTURE_2D, this.roomLightMap);
+    gl.uniform1i(this.uniforms.get("roomLightMap") ?? null, 6);
     const foilSources = roomFoilSources(room);
     const normalTransform = this.normalTransform;
     const writeNormalColumn = (column: number, x: number, y: number, z: number) => {
@@ -929,7 +949,7 @@ export class StickerRenderer {
         gl.bindTexture(gl.TEXTURE_2D, i === 2 && tile.flat ? this.flat : textures[i]);
         gl.uniform1i(this.uniforms.get(["printImage", "cutImage", "normalImage"][i]) ?? null, i);
       }
-      // The flat snapshot casts no contact shadow either, as a sticker without a crease casts none.
+      // The flat snapshot casts no self-shadow either, as a sticker without a crease casts none.
       gl.activeTexture(gl.TEXTURE5);
       gl.bindTexture(gl.TEXTURE_2D, tile.flat ? this.flatHeight : textures[3]);
       gl.uniform1i(this.uniforms.get("heightImage") ?? null, 5);
@@ -1000,7 +1020,7 @@ export class StickerRenderer {
       gl.uniform2f(this.uniforms.get("pointTurn") ?? null, cosTurn, sinTurn);
       gl.uniform1f(
         this.uniforms.get("roughness") ?? null,
-        material?.finish === "matte" ? 0.16 : 0.002,
+        material?.finish === "matte" ? MATTE_ROUGHNESS : GLOSS_ROUGHNESS,
       );
       const laminate = material?.finish ?? "gloss";
       gl.uniform1f(this.uniforms.get("laminateStyle") ?? null, LAMINATE_FINISHES.indexOf(laminate));
@@ -1150,6 +1170,7 @@ export class StickerRenderer {
     if (!this.lost) {
       this.gl.deleteTexture(this.flat);
       this.gl.deleteTexture(this.flatHeight);
+      this.gl.deleteTexture(this.roomLightMap);
       this.gl.deleteBuffer(this.buffer);
       this.gl.deleteProgram(this.program);
     }

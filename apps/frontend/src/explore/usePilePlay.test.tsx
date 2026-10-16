@@ -150,7 +150,7 @@ function swipe(id: string, x: number, y: number, by: number) {
 /** Shares a device pose that leans the pile all the way: -1, 0 or 1 across, and 0 or -1 up. */
 const publish = (x: -1 | 0 | 1, y: -1 | 0) =>
   act(() => {
-    motion.pose = { beta: y ? 15 : STILL_POSE.beta, gamma: 60 * x, screenAngle: 0 };
+    motion.pose = { beta: y ? 0 : STILL_POSE.beta, gamma: 60 * x, screenAngle: 0 };
     for (const listener of motion.lightListeners) listener(motion.pose);
   });
 

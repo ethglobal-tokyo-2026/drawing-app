@@ -1,15 +1,15 @@
 /**
  * A sticker's crease. A sticker is a stiff sheet: it can't follow a sharp step, so beside the edge of
- * a sticker beneath it lifts off and ramps down to the lower level. The sticker shader shades its
- * slopes by the room's light; the bake adds the shoulder and foot. A sticker shows only the edges
- * directly beneath it: one pressed over others hides theirs. Pure functions over pixel arrays; the
- * crease worker draws the stickers underneath and hands their silhouettes here. Heights are in
- * sticker thicknesses.
+ * a sticker beneath it drapes down to the lower level as a thin plate does. The sticker shader shades
+ * its slopes by the room's light and casts its own shadow; the bake adds a line at the shoulder and
+ * foot. A sticker shows only the edges directly beneath it: one pressed over others hides theirs. Pure
+ * functions over pixel arrays; the crease worker draws the stickers underneath and hands their
+ * silhouettes here. Heights are in sticker thicknesses.
  */
 
 /**
- * A crease's images: its base, the shoulder and foot, which no light moves; geometric normals, which
- * the sticker shader lights and reflects; and the steps' height, whose contact shadows it casts.
+ * A crease's images: its base, the shoulder and foot lines, which no light moves; geometric normals,
+ * which the sticker shader lights and reflects; and the drape's height, over which it casts its shadow.
  */
 export type CreaseImage = "base" | "normal" | "height";
 
@@ -21,34 +21,52 @@ export interface CreaseBounds {
   height: number;
 }
 
-/** The illustrative paper and film thickness, in CSS px, used only for geometric normals. */
-export const STICKER_THICKNESS = 0.35;
+/** A laminated sticker's thickness, in mm: 3M IJ180 film with its adhesive and laminate. */
+const STICKER_THICKNESS_MM = 0.175;
 
-/** How far a sticker's ramp reaches beside a step one sticker high, in CSS px. */
-export const RAMP = 12;
+/**
+ * How far a sticker drapes beside a step one sticker high, in mm. A thin plate's run over a step is
+ * computed at 1.5–2.6 mm for laminated vinyl; 2 mm within that is a design decision.
+ */
+const DRAPE_LENGTH_MM = 2;
+
+/**
+ * CSS px per mm on an iPhone 17, where the board is life size. An iPad draws creases at the phone's
+ * scale, about 15% larger than life, so one bake serves both: a design decision.
+ */
+const CSS_PX_PER_MM = 6.04;
+
+/** The sticker's thickness, in CSS px. */
+export const STICKER_THICKNESS = STICKER_THICKNESS_MM * CSS_PX_PER_MM;
+
+/** How far a sticker drapes beside a step one sticker high, in CSS px; a taller step's run grows as √height. */
+export const RAMP = DRAPE_LENGTH_MM * CSS_PX_PER_MM;
 
 /** Height changes below a quarter of a sticker do not bend or shade its laminate. */
 const MIN_CREASE_HEIGHT = 0.25;
 
-/** How much the ramp's corners are rounded off, as a blur, in CSS px. */
-const ROUND = 1;
-
-/** The neighborhood of one ramp, including its rounded ends, in CSS px. */
-const ROUNDED_REACH = RAMP + 4 * ROUND;
+/**
+ * Supports nearer than twice this, in CSS px, are bridged level, so nearby stickers beneath read as one
+ * surface: a design decision, past the two drapes a narrower gap couldn't hold anyway.
+ */
+const BRIDGE_REACH = 16;
 
 /** Include rotated antialiased boundary cells in the circular bridge footprint, in pixels. */
-const bridgeRadiusAt = (scale: number) => ROUNDED_REACH * scale + 1;
+const bridgeRadiusAt = (scale: number) => BRIDGE_REACH * scale + 1;
 
 /**
- * Each part's tone where one sticker's step beneath peaks, the rest shaded in proportion. STRENGTH
- * scales it, then FLOOR takes its share and MOST caps it, so a part shows less than its value here.
+ * How far toward the light the shader looks for the drape that shades a point, in CSS px: a drape one
+ * sticker high, and the shadow it casts past its foot at raking light.
  */
-const CREASE_TONE = {
-  /** The shoulder at the top of the ramp. */
-  shoulder: 0.14,
-  /** The foot of the ramp. */
-  foot: 0.2,
-};
+export const SELF_SHADOW_REACH = 16;
+
+/**
+ * The line's tone where one sticker's step beneath bends most, the rest in proportion. STRENGTH scales
+ * it, then FLOOR takes its share and MOST caps it, so a line shows less than this. A design decision:
+ * the line keeps a crease legible where the room's light shows it faintly, the same at the shoulder
+ * and foot because the drape bends them equally.
+ */
+const CREASE_TONE = 0.144;
 
 /** The ink the shade is drawn in. */
 const INK = [28, 24, 36];
@@ -68,45 +86,6 @@ const ease = (v: number, most: number) => most * (1 - Math.exp(-v / most));
 /** Rows or columns: how many lines, how long each is, and the index steps along and between them. */
 const linesOf = (width: number, height: number, across: boolean) =>
   across ? ([height, width, 1, width] as const) : ([width, height, width, 1] as const);
-
-/** One pass of a box blur `r` wide each way, along rows or columns, from `src` into `dst`. */
-function boxPass(
-  src: Float32Array,
-  dst: Float32Array,
-  width: number,
-  height: number,
-  r: number,
-  across: boolean,
-) {
-  const [lines, length, step, stride] = linesOf(width, height, across);
-  const n = 2 * r + 1;
-  for (let line = 0; line < lines; line++) {
-    const base = line * stride;
-    let sum = 0;
-    // Clamped at the ends, so the edge of the canvas reads as more of the same.
-    for (let i = -r; i <= r; i++) sum += src[base + Math.min(length - 1, Math.max(0, i)) * step];
-    for (let i = 0; i < length; i++) {
-      dst[base + i * step] = sum / n;
-      const out = Math.max(0, i - r);
-      const into = Math.min(length - 1, i + r + 1);
-      sum += src[base + into * step] - src[base + out * step];
-    }
-  }
-}
-
-/** The radius of each box pass for a Gaussian spread, in pixels. */
-const boxRadius = (sigma: number) =>
-  Math.max(1, Math.round(Math.sqrt(sigma * sigma + 1 / 4) - 1 / 2));
-
-/** Three box passes each way, in place: close to a Gaussian of spread `sigma`, in pixels. */
-function blur(field: Float32Array, width: number, height: number, sigma: number) {
-  const r = boxRadius(sigma);
-  const tmp = new Float32Array(field.length);
-  for (let pass = 0; pass < 3; pass++) {
-    boxPass(field, tmp, width, height, r, true);
-    boxPass(tmp, field, width, height, r, false);
-  }
-}
 
 /** A sliding maximum or minimum over a row or column, with the ends clamped. */
 function extremumPass(
@@ -236,16 +215,16 @@ function envelopePass(
   }
 }
 
-/** The height-minimum neighborhood used by normals, in pixels. */
-export const creaseNormalReach = (scale: number) => Math.max(1, Math.ceil(ROUNDED_REACH * scale));
+/**
+ * The neighborhood whose height range tells a crease from a flat plane, and whose highest point the
+ * self-shadow's flag looks for, in pixels: a whole ramp and the shadow past it.
+ */
+export const creaseNormalReach = (scale: number) =>
+  Math.max(1, Math.ceil(SELF_SHADOW_REACH * scale));
 
-/** Full drape dependency reach, including both closings and the rounded ends, in pixels. */
+/** Full drape dependency reach, the bridge and both halves of each step's closing, in pixels. */
 export function drapeReach(scale: number, heightRange: number): number {
-  return Math.ceil(
-    2 * bridgeRadiusAt(scale) +
-      2 * RAMP * scale * Math.sqrt(heightRange) +
-      3 * boxRadius(ROUND * scale),
-  );
+  return Math.ceil(2 * bridgeRadiusAt(scale) + 2 * RAMP * scale * Math.sqrt(heightRange) + 1);
 }
 
 /** The `width`×`height` middle of a field padded by `padding` on every side, into `into`. */
@@ -263,17 +242,49 @@ function cropInto(
   }
 }
 
+/** Plane levels apart by less than this, in sticker thicknesses, drape as one. */
+const LEVEL_QUANTUM = 1 / 64;
+
 /**
- * A stiff sheet laid over `field`: narrow gaps are bridged level with their supports, then a
- * closing by a parabola ramps down over RAMP beside a step and rounds the corners. `steps`, when
- * given, receives the bridged supports before the ramp: the sheet's steps, sharp at their edges.
+ * The support planes' levels, lowest first: the lowest point, the level of every flat stretch, and the
+ * highest point, so antialiased edges fall between two planes.
+ */
+function plateauLevels(field: Float32Array, width: number, height: number) {
+  const found = new Set<number>();
+  let lowest = Infinity;
+  let highest = -Infinity;
+  for (let y = 1; y < height - 1; y++)
+    for (let x = 1; x < width - 1; x++) {
+      const i = y * width + x;
+      const v = field[i];
+      lowest = Math.min(lowest, v);
+      highest = Math.max(highest, v);
+      if (
+        field[i - 1] === v &&
+        field[i + 1] === v &&
+        field[i - width] === v &&
+        field[i + width] === v
+      )
+        found.add(Math.round(v / LEVEL_QUANTUM));
+    }
+  const levels = [lowest];
+  for (const level of [...found].sort((a, b) => a - b).map((q) => q * LEVEL_QUANTUM))
+    if (level > levels[levels.length - 1] + LEVEL_QUANTUM / 2) levels.push(level);
+  if (highest > levels[levels.length - 1] + LEVEL_QUANTUM / 2) levels.push(highest);
+  return levels;
+}
+
+/**
+ * A stiff sheet laid over `field`: narrow gaps are bridged level with their supports, then beside a
+ * step the sheet drapes as a thin plate clamped at both ends does, H·(1 − smoothstep(d/run)), flat at
+ * the shoulder and the foot and bending equally at each. The run is RAMP beside a step one sticker
+ * high and grows as √height.
  */
 export function drape(
   field: Float32Array,
   width: number,
   height: number,
   scale: number,
-  steps?: Float32Array,
 ): Float32Array {
   let lowest = Infinity;
   let highest = -Infinity;
@@ -281,12 +292,9 @@ export function drape(
     lowest = Math.min(lowest, value);
     highest = Math.max(highest, value);
   }
-  if (highest <= lowest) {
-    steps?.set(field);
-    return Float32Array.from(field);
-  }
+  if (highest <= lowest) return Float32Array.from(field);
   const reach = RAMP * scale;
-  // Each closing samples twice; keep its full reach and the blur's footprint beyond the crop.
+  // Each closing samples twice; keep its full reach beyond the crop.
   const padding = drapeReach(scale, highest - lowest);
   const extendedWidth = width + 2 * padding;
   const extendedHeight = height + 2 * padding;
@@ -300,16 +308,29 @@ export function drape(
     out.fill(field[source + width - 1], start + padding + width, start + extendedWidth);
   }
   bridgeGaps(out, extendedWidth, extendedHeight, scale);
-  if (steps) cropInto(out, extendedWidth, padding, width, height, steps);
-  // The parabola falls one sticker's thickness over the ramp.
-  const k = 1 / (reach * reach);
-  envelopePass(out, extendedWidth, extendedHeight, k, -1, true);
-  envelopePass(out, extendedWidth, extendedHeight, k, -1, false);
-  envelopePass(out, extendedWidth, extendedHeight, k, 1, true);
-  envelopePass(out, extendedWidth, extendedHeight, k, 1, false);
-  blur(out, extendedWidth, extendedHeight, ROUND * scale);
+  const levels = plateauLevels(out, extendedWidth, extendedHeight);
+  // Each support plane's step drapes on its own, and the drapes stack: every sum of them stays
+  // continuous and monotone beside stairs, wherever their edges fall.
+  const layer = new Float32Array(out.length);
+  const draped = new Float32Array(out.length).fill(levels[0]);
+  for (let n = 1; n < levels.length; n++) {
+    const step = levels[n] - levels[n - 1];
+    for (let i = 0; i < out.length; i++)
+      layer[i] = Math.min(1, Math.max(0, (out[i] - levels[n - 1]) / step));
+    // A closing by a parabola ramps the step down as (1 − d/run)², over RAMP·√step, as a plate's run
+    // grows, and fills the foot in 2D. With u that parabola, 1 − smoothstep(d/run) is 3u − 2u^1.5.
+    const k = 1 / (step * reach * reach);
+    envelopePass(layer, extendedWidth, extendedHeight, k, -1, true);
+    envelopePass(layer, extendedWidth, extendedHeight, k, -1, false);
+    envelopePass(layer, extendedWidth, extendedHeight, k, 1, true);
+    envelopePass(layer, extendedWidth, extendedHeight, k, 1, false);
+    for (let i = 0; i < out.length; i++) {
+      const u = Math.min(1, Math.max(0, layer[i]));
+      draped[i] += step * u * (3 - 2 * Math.sqrt(u));
+    }
+  }
   const crop = new Float32Array(width * height);
-  cropInto(out, extendedWidth, padding, width, height, crop);
+  cropInto(draped, extendedWidth, padding, width, height, crop);
   return crop;
 }
 
@@ -367,8 +388,8 @@ export function stackedSurface(
 }
 
 /**
- * A draped step one sticker high: its steepest slope, and its sharpest bend, where it's rolled over
- * the step's top edge; the foot's bend is spread down the ramp, so it shades softly.
+ * A draped step one sticker high, per pixel: its steepest slope, at mid-run, and its sharpest bend,
+ * at the shoulder and the foot alike.
  */
 interface StepResponse {
   slope: number;
@@ -381,7 +402,7 @@ const stepResponses = new Map<number, StepResponse>();
 function stepResponse(scale: number): StepResponse {
   const known = stepResponses.get(scale);
   if (known) return known;
-  const half = Math.ceil(ROUNDED_REACH * scale) + 2;
+  const half = Math.ceil(RAMP * scale) + 2;
   const width = 2 * half + 1;
   // A few rows, every one the same: the step runs down the columns.
   const step = new Float32Array(width * 3);
@@ -426,12 +447,13 @@ function encodeNormal(out: Uint8ClampedArray, q: number, dx: number, dy: number)
 }
 
 /**
- * The height image's gray levels per sticker thickness, 0 at the lowest support. It is an opaque image
- * of its own: a canvas premultiplies alpha, which would move the normal's colors.
+ * The height image's levels per sticker thickness in R, 0 at the drape's lowest point. G is 255 where a
+ * higher surface lies within SELF_SHADOW_REACH, which could shade the point, and 0 where none does. It
+ * is an opaque image of its own: a canvas premultiplies alpha, which would move the normal's colors.
  */
 export const HEIGHT_LEVELS = 16;
 
-/** A height above the lowest support, in sticker thicknesses, from its gray level; the shader decodes alike. */
+/** A height above the lowest point, in sticker thicknesses, from its level; the shader decodes alike. */
 export const creaseHeight = (level: number) => level / HEIGHT_LEVELS;
 
 export interface CreaseInput {
@@ -450,7 +472,7 @@ export interface CreaseInput {
 /**
  * The crease's images, as RGBA, not premultiplied: the base white on the shoulder and ink at the foot.
  * Normal RGB describes the raw draped surface independently of the cut, as encodeNormal packs it, and
- * the height the steps beneath, as creaseHeight reads it.
+ * the height the draped surface too, as creaseHeight reads it.
  */
 export type CreasePixels = Record<CreaseImage, Uint8ClampedArray<ArrayBuffer>>;
 
@@ -463,9 +485,8 @@ export function creasePixels({
   scale,
   normalRegion,
 }: CreaseInput): CreasePixels | null {
-  const steps = new Float32Array(width * height);
-  const field = drape(surface, width, height, scale, steps);
-  // Include both plateaus of a complete ramp, with its rounded ends, when measuring its height.
+  const field = drape(surface, width, height, scale);
+  // Both plateaus of a complete ramp, and the shadow past it, in a square that holds its circle.
   const reach = creaseNormalReach(scale);
   const scratch = new Float32Array(field.length);
   const highest = new Float32Array(field.length);
@@ -520,11 +541,10 @@ export function creasePixels({
       // A flat raised plane still supplies normal data without inventing a visible crease.
       if (h > 0.004 && Math.round((h / (h + 1)) * o * 255) > 0) any = true;
       if (!bends) continue;
+      // Lit where it rolls over a shoulder, inked where it bends into a foot.
       const bend =
         (field[i + 1] + field[i - 1] + field[i + width] + field[i - width] - 4 * h) / unitStep.bend;
-      const ridge =
-        Math.max(0, -bend) * CREASE_TONE.shoulder - Math.max(0, bend) * CREASE_TONE.foot;
-      shade(base, q, ridge * o * STRENGTH);
+      shade(base, q, -bend * CREASE_TONE * o * STRENGTH);
     }
   }
   if (!any) return null;
@@ -535,12 +555,13 @@ export function creasePixels({
       const q = (y * width + x) * 4;
       normal.set([128, 128, 255, 255], q);
     }
-  let lowestStep = Infinity;
-  for (const level of steps) lowestStep = Math.min(lowestStep, level);
+  let lowestPoint = Infinity;
+  for (const level of field) lowestPoint = Math.min(lowestPoint, level);
   const heights = image();
-  for (let i = 0; i < steps.length; i++) {
-    heights.fill(Math.round((steps[i] - lowestStep) * HEIGHT_LEVELS), i * 4, i * 4 + 3);
-    heights[i * 4 + 3] = 255;
+  for (let i = 0; i < field.length; i++) {
+    const level = Math.round((field[i] - lowestPoint) * HEIGHT_LEVELS);
+    const shaded = Math.round((highest[i] - lowestPoint) * HEIGHT_LEVELS) > level;
+    heights.set([level, shaded ? 255 : 0, level, 255], i * 4);
   }
   return { base, normal, height: heights };
 }

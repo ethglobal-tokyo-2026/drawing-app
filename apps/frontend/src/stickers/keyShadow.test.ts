@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DevicePose } from "./light";
 import { keyShadow, keyShadowLayer, rereadKeyShadowElevation } from "./keyShadow";
+import { STILL_POSE } from "./lightMode";
 
 /** The light the layers follow: what it holds and the one listener a mounted layer subscribes. */
 const light = vi.hoisted(() => ({
@@ -23,10 +24,11 @@ const at = (beta: number, gamma = 0) => keyShadow({ beta, gamma, screenAngle: 0 
 const reach = ({ x, y }: { x: number; y: number }) => Math.hypot(x, y);
 
 describe("keyShadow", () => {
-  it("falls down from the reading pose, and further and softer upright", () => {
-    const reading = at(47);
+  it("falls down and right from the reading pose, under a light at the top left, and further and softer upright", () => {
+    const reading = at(STILL_POSE.beta);
     const upright = at(90);
     expect(reading.y).toBeGreaterThan(0);
+    expect(reading.x).toBeGreaterThan(0);
     expect(upright.y).toBeGreaterThan(reading.y);
     expect(upright.soft).toBeGreaterThan(reading.soft);
     expect(upright.sharp + upright.soft).toBeLessThan(reading.sharp + reading.soft);
@@ -37,7 +39,9 @@ describe("keyShadow", () => {
   });
 
   it("swings across as the device turns sideways, and never throws past its reach", () => {
-    expect(Math.sign(at(47, 25).x)).toBe(-Math.sign(at(47, -25).x));
+    const still = at(STILL_POSE.beta).x;
+    const swing = (gamma: number) => at(STILL_POSE.beta, gamma).x - still;
+    expect(swing(25) * swing(-25)).toBeLessThan(0);
     for (const beta of [0, 20, 47, 70, 90, 110]) expect(reach(at(beta))).toBeLessThan(1.5 + 1e-9);
   });
 });

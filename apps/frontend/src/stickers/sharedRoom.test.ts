@@ -9,7 +9,8 @@ import {
   type DevicePose,
   type Quaternion,
 } from "./lightMode";
-import { roomFrame } from "./sharedRoom";
+import { DIFFUSER_RADIUS, LIGHT_AZIMUTH, LIGHT_DISTANCE, LIGHT_ELEVATION } from "./roomGeometry";
+import { ROOM, roomFrame } from "./sharedRoom";
 
 type Vec3 = readonly number[];
 const RAD = Math.PI / 180;
@@ -47,25 +48,45 @@ const mirrored = (pose: DevicePose) => {
   return [dot(mirror, side), dot(mirror, frame.up), dot(mirror, frame.toward)];
 };
 
-/** Where a point on a flat screen, in CSS px from its center, mirrors on the light's plane, in its axes. */
-const planeAt = (frame: ReturnType<typeof roomFrame>, x: number, y: number) => {
-  const view = unit([frame.eye[0] - x, frame.eye[1] - y, frame.eye[2]]);
-  const r = [-view[0], -view[1], view[2]];
-  return [dot(r, frame.across), dot(r, frame.down)].map((v) => v / dot(r, frame.light));
+/**
+ * The diffuser's rim, hung where roomGeometry.ts puts it from gravity and the viewer alone, seen from
+ * the device on the light's plane, in its axes.
+ */
+const rimOnPlane = (frame: ReturnType<typeof roomFrame>) => {
+  // Shader axes are y down, so this cross product points to the viewer's left.
+  const left = cross(frame.up, frame.toward);
+  const [e, a] = [LIGHT_ELEVATION * RAD, LIGHT_AZIMUTH * RAD];
+  const middle = [0, 1, 2].map(
+    (i) =>
+      LIGHT_DISTANCE *
+      (Math.cos(e) * (Math.cos(a) * frame.toward[i] + Math.sin(a) * left[i]) +
+        Math.sin(e) * frame.up[i]),
+  );
+  return Array.from({ length: 720 }, (_, k) => {
+    const t = (k / 2) * RAD;
+    const r = unit(
+      middle.map(
+        (m, i) => m + DIFFUSER_RADIUS * (Math.cos(t) * frame.toward[i] + Math.sin(t) * left[i]),
+      ),
+    );
+    return [dot(r, frame.across), dot(r, frame.down)].map((v) => v / dot(r, frame.light));
+  });
 };
 
 describe("roomFrame", () => {
-  it("squares the light's plane so its across axis reads level and its down axis plumb at the still pose", () => {
-    const frame = roomFrame(turnedBy(attitudeOf(0, 0, 0)));
-    const step = 60;
-    const [acrossX, downX] = [0, 1].map(
-      (i) => planeAt(frame, step, 0)[i] - planeAt(frame, -step, 0)[i],
-    );
-    const [acrossY, downY] = [0, 1].map(
-      (i) => planeAt(frame, 0, step)[i] - planeAt(frame, 0, -step)[i],
-    );
-    expect(Math.abs(Math.atan2(downX, acrossX) / RAD)).toBeLessThan(0.5);
-    expect(Math.abs(Math.atan2(acrossY, downY) / RAD)).toBeLessThan(0.5);
+  it("lays the light's plane level across and plumb down, where the diffuser's rim spans the shader's ellipse", () => {
+    const { radius, aspect } = ROOM.light;
+    for (const by of [attitudeOf(0, 0, 0), attitudeOf(0, 25, 0), attitudeOf(15, -10, 12)]) {
+      const rim = rimOnPlane(roomFrame(turnedBy(by)));
+      const [across, down] = [0, 1].map((i) => rim.map((point) => point[i]));
+      const half = (v: number[]) => (Math.max(...v) - Math.min(...v)) / 2;
+      const middle = (v: number[]) => (Math.max(...v) + Math.min(...v)) / 2;
+      expect(Math.abs(half(across) / radius - 1)).toBeLessThan(0.01);
+      expect(Math.abs(half(down) / (radius * aspect) - 1)).toBeLessThan(0.01);
+      expect(Math.abs(middle(across))).toBeLessThan(0.01 * radius);
+      // The near side of a level disc looks larger, which shifts its middle a little down the plane.
+      expect(Math.abs(middle(down))).toBeLessThan(0.1 * radius);
+    }
   });
 
   it("turns the reflection twice as far as a forward tilt, up the screen's vertical plane", () => {

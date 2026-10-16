@@ -8,11 +8,16 @@ const MAX_REACH = 1.5;
 /** The light's height over the screen upright, where its shadow is softest: the soft layer's blur is set for it. */
 const UPRIGHT_LIGHT_Z = roomFrame({ ...STILL_POSE, beta: 90 }).light[2];
 /**
- * The ceiling light's spread: the standard deviation of its light across its plane one unit along it,
- * one way, which is half the mean square distance for a round light. A sticker h up casts it h/L_z
- * along the light, so its penumbra is h·spread/L_z across the throw and h·spread/L_z² along it.
+ * The ceiling light's spread: the standard deviation of its light on its plane one unit along it, the
+ * mean of its ellipse's two axes, since one blur stands for both. A sticker h up casts it h/L_z along
+ * the light, so its penumbra is h·spread/L_z across the throw and h·spread/L_z² along it.
  */
-const LIGHT_SPREAD = Math.sqrt(overLightBody((d) => d * d) / overLightBody(() => 1) / 2);
+const LIGHT_SPREAD = (() => {
+  const solidAngle = overLightBody(() => 1);
+  const across = Math.sqrt(overLightBody((x) => x * x) / solidAngle);
+  const down = Math.sqrt(overLightBody((_, y) => y * y) / solidAngle);
+  return (across + down) / 2;
+})();
 /**
  * The two layers' blurs per px of elevation: head-on, and upright along the throw, the edge the throw
  * shows. The soft mix grows as 1/L_z², so between them the pair tracks the penumbra along the throw;
