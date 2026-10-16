@@ -69,7 +69,7 @@ export interface CreaseTimings {
   total: number;
 }
 
-/** A baked crease, its base and geometric normals; null when nothing rises. */
+/** A baked crease, its base, geometric normals and steps' height; null when nothing rises. */
 export type CreaseReply =
   | {
       ok: true;
@@ -221,6 +221,7 @@ async function bake(board: string, job: CreaseJob): Promise<CreaseReply> {
     const crease = pixels && {
       base: await pngOf(canvas, pixels.base),
       normal: await pngOf(canvas, pixels.normal),
+      height: await pngOf(canvas, pixels.height),
     };
     const t4 = performance.now();
     return {
@@ -348,12 +349,13 @@ async function bakeExpanded(
       const painted = { base: await paint("base") };
       encoded.width = output.width;
       encoded.height = output.height;
+      // The height shares the normal's registration, so the shader reads both through normalBounds.
+      const registered = (name: CreaseImage) =>
+        pngOf(encoded, crop(pixels[name], context, context, output.width, output.height));
       crease = {
         ...painted,
-        normal: await pngOf(
-          encoded,
-          crop(pixels.normal, context, context, output.width, output.height),
-        ),
+        normal: await registered("normal"),
+        height: await registered("height"),
       };
     }
     const t4 = performance.now();

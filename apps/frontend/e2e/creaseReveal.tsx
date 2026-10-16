@@ -46,7 +46,7 @@ const image = (name: CreaseImage) => {
   context.putImageData(new ImageData(pixels[name], side, side), 0, 0);
   return canvas.toDataURL();
 };
-const images: Crease = { base: image("base"), normal: image("normal") };
+const images: Crease = { base: image("base"), normal: image("normal"), height: image("height") };
 document.body.style.cssText = "margin:0;padding:20px;background:#ddd";
 const uninstall = installLight(document.documentElement);
 const release = acquireLight();
@@ -69,7 +69,7 @@ const startedNormals: string[] = [];
 const nextCrease = (): Crease => {
   ++generation;
   const url = (name: CreaseImage) => `/e2e/crease-reveal-${name}.png?bake=${generation}`;
-  return { base: url("base"), normal: url("normal") };
+  return { base: url("base"), normal: url("normal"), height: url("height") };
 };
 const canRevealCrease = (normal: string) => placementIntents.has(normal);
 const startCreaseReveal = (normal: string) => {

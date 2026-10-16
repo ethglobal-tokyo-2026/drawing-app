@@ -109,13 +109,19 @@ export function paperIrradiance(frame: RoomFrame, n: Vec3 = [0, 0, 1]) {
   return { light, total: bounceLight + light };
 }
 
-/** roomIrradiance(n): the irradiance on paper facing n, in screen axes. Needs roomFragment first. */
+/**
+ * roomIrradiance(n): the irradiance on paper facing n, in screen axes; roomLightIrradiance(n), the
+ * ceiling light's part, which a shadow takes away. Needs roomFragment first.
+ */
 export const roomIrradianceFragment = `
+float roomLightIrradiance(vec3 n){
+ return ${f(LIGHT_POWER)}*max(dot(n,roomLight),0.);
+}
 float roomIrradiance(vec3 n){
  float y=dot(n,roomUp);
  float z=dot(n,roomToward);
  float x2=max(1.-y*y-z*z,0.);
  return ${f(c.c0)}+${f(c.cy)}*y+${f(c.cz)}*z+${f(c.cyz)}*y*z+${f(c.czz)}*(3.*z*z-1.)+${f(c.cxy)}*(x2-y*y)
-  +${f(LIGHT_POWER)}*max(dot(n,roomLight),0.);
+  +roomLightIrradiance(n);
 }
 `;

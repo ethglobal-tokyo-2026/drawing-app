@@ -106,6 +106,8 @@ export class StickerRenderer {
   refreshFrame = 0;
   revealFrame = 0;
   readonly flat: WebGLTexture;
+  /** A height without steps, so a sticker without a crease casts no contact shadow. */
+  readonly flatHeight: WebGLTexture;
   /** The holo foil's palette in sRGB, read once, for the glitter and prism laminates. */
   laminatePalette: Float32Array | null = null;
   readonly buffer: WebGLBuffer;
@@ -177,6 +179,7 @@ export class StickerRenderer {
         "printImage",
         "cutImage",
         "normalImage",
+        "heightImage",
         "size",
         "normalTransform",
         "pointTurn",
@@ -219,10 +222,13 @@ export class StickerRenderer {
       gl.enableVertexAttribArray(position);
       gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
       this.flat = this.texture(new Uint8Array([128, 128, 255, 255]));
-      // The flat normal validates immediately; every later upload validates as a batch.
+      this.flatHeight = this.texture(new Uint8Array([0, 0, 0, 255]));
+      // The flat normal and height validate immediately; every later upload validates as a batch.
       const flatError = gl.getError();
       if (flatError !== gl.NO_ERROR || gl.isContextLost())
-        throw new Error(`Uploading the sticker material flat normal texture failed (${flatError})`);
+        throw new Error(
+          `Uploading the sticker material flat normal and height textures failed (${flatError})`,
+        );
       this.stopLight = subscribeLight(() =>
         timeOurWork("laminate", () => {
           this.cancelRefresh();
@@ -923,6 +929,10 @@ export class StickerRenderer {
         gl.bindTexture(gl.TEXTURE_2D, i === 2 && tile.flat ? this.flat : textures[i]);
         gl.uniform1i(this.uniforms.get(["printImage", "cutImage", "normalImage"][i]) ?? null, i);
       }
+      // The flat snapshot casts no contact shadow either, as a sticker without a crease casts none.
+      gl.activeTexture(gl.TEXTURE5);
+      gl.bindTexture(gl.TEXTURE_2D, tile.flat ? this.flatHeight : textures[3]);
+      gl.uniform1i(this.uniforms.get("heightImage") ?? null, 5);
       const coverage = foil?.coverage;
       gl.activeTexture(gl.TEXTURE3);
       gl.bindTexture(gl.TEXTURE_2D, foil?.outer ?? this.flat);
@@ -1069,6 +1079,7 @@ export class StickerRenderer {
           foil: surface.printCut?.foil?.description.material,
           finish: surface.printCut?.finish ?? surface.options.finish,
           normal: surface.normalUrl,
+          height: surface.heightUrl,
           normalBounds: surface.normalBounds,
         };
         surface.snapshotCoverageFrame = surface.printCut?.foil?.description.frame;
@@ -1138,6 +1149,7 @@ export class StickerRenderer {
     // Loss already destroyed these resources. Deleting invalid handles after restoration is an error.
     if (!this.lost) {
       this.gl.deleteTexture(this.flat);
+      this.gl.deleteTexture(this.flatHeight);
       this.gl.deleteBuffer(this.buffer);
       this.gl.deleteProgram(this.program);
     }

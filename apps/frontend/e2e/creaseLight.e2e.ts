@@ -5,8 +5,8 @@ test.beforeEach(({ page }) => holdPortrait(page));
 
 const coatOf = (page: Page) => page.locator("[data-reload] canvas.sticker-material");
 
-/** One horizontal support band under the sticker: its crease's normal, from the real bake. */
-const bandNormal = (page: Page) =>
+/** One horizontal support band under the sticker: its crease's normal and height, from the real bake. */
+const bandCrease = (page: Page) =>
   page.evaluate(async () => {
     const { creasePixels } = await import("../src/stickers/crease.ts");
     const side = 240;
@@ -23,9 +23,12 @@ const bandNormal = (page: Page) =>
     const canvas = document.createElement("canvas");
     canvas.width = canvas.height = side;
     const context = canvas.getContext("2d");
-    if (!context) throw new Error("The band normal's context is missing");
-    context.putImageData(new ImageData(pixels.normal, side, side), 0, 0);
-    return canvas.toDataURL();
+    if (!context) throw new Error("The band crease's context is missing");
+    const image = (data: Uint8ClampedArray<ArrayBuffer>) => {
+      context.putImageData(new ImageData(data, side, side), 0, 0);
+      return canvas.toDataURL();
+    };
+    return { normal: image(pixels.normal), height: image(pixels.height) };
   });
 
 /**
@@ -39,10 +42,23 @@ const ROWS = {
   belowBottom: [162, 178],
 } as const;
 
-type Rows = Record<keyof typeof ROWS, number>;
+/**
+ * Rows beside the band's two steps: each step's foot, where its contact shadow falls when the light is
+ * on the band's side, and the ramp just past it, which the shadow can't reach.
+ */
+const STEP_ROWS = {
+  flat: [20, 40],
+  bottomFoot: [144, 146],
+  bottomRamp: [147, 150],
+  topFoot: [94, 96],
+  topRamp: [90, 93],
+} as const;
+
+type Bands = Record<string, readonly [number, number]>;
+type Rows = Record<string, number>;
 
 /** Mean linear luminance of each set of rows across the sticker's middle, from the laminate snapshot. */
-const rowLuma = (page: Page) =>
+const rowLuma = (page: Page, bands: Bands = ROWS) =>
   coatOf(page).evaluate((canvas, rows) => {
     if (!(canvas instanceof HTMLCanvasElement)) throw new Error("The laminate canvas is missing");
     const context = canvas.getContext("2d");
@@ -65,25 +81,24 @@ const rowLuma = (page: Page) =>
         }
       return sum / count;
     };
-    return {
-      aboveTop: mean(rows.aboveTop),
-      top: mean(rows.top),
-      bottom: mean(rows.bottom),
-      belowBottom: mean(rows.belowBottom),
-    };
-  }, ROWS);
+    return Object.fromEntries(Object.entries(rows).map(([name, band]) => [name, mean(band)]));
+  }, bands);
 
-/** The coat's rows once it holds still at the pose it has landed on, repainted off `unlike`'s print. */
-async function settledRows(page: Page, unlike?: Rows) {
+/**
+ * The coat's rows once it holds still at the pose it has landed on, repainted off `unlike`'s print,
+ * which the first band, flat paper, tells.
+ */
+async function settledRows(page: Page, unlike?: Rows, bands: Bands = ROWS) {
   let previous = "";
   let settled: Rows | undefined;
+  const reference = Object.keys(bands)[0];
   await expect
     .poll(async () => {
       await expect(coatOf(page)).toHaveAttribute("data-state", "ready");
-      const now = await rowLuma(page);
+      const now = await rowLuma(page, bands);
       const same = JSON.stringify(now) === previous;
       previous = JSON.stringify(now);
-      const repainted = !unlike || Math.abs(now.aboveTop - unlike.aboveTop) > 0.05;
+      const repainted = !unlike || Math.abs(now[reference] - unlike[reference]) > 0.05;
       if (same && repainted) settled = now;
       return same && repainted;
     })
@@ -98,40 +113,65 @@ const GRAY = flatPrint("#808080");
 /** Black paper takes no light, so its coat is the reflection alone. */
 const BLACK = flatPrint("#000000");
 
-// Red when the shader stops shading by the room's light (CREASE_SHADING 0, or creaseLight left out),
-// when its light stops following the pose (a fixed roomFrame), or when creases are drawn at the bake's
-// own slope (CREASE_STEEPENING 1).
-test("the room's light shades a crease's slopes, more as the device rises", async ({ page }) => {
+/**
+ * The band's sticker at the screen's foot, and the paper's own light in a set of rows at a pose: gray
+ * paper's coat less black paper's, which is the reflection alone, since a reflection bending over a
+ * crease outweighs the faint shading wherever a light's edge is near.
+ */
+async function bandSticker(page: Page, bands: Bands) {
   await page.goto("/e2e/stickerLaminate.html?reload=1");
-  // At the screen's foot, off the ceiling light's glare, so the coat stays below its highlight shoulder.
+  // At the screen's foot, off the light's glare, so the coat stays below its highlight shoulder.
   await page.addStyleTag({
     content: "[data-reload]{position:fixed!important;left:50%;bottom:0;translate:-50% 0}",
   });
   await expect(coatOf(page)).toHaveAttribute("data-state", "ready");
-  const normal = await bandNormal(page);
+  const crease = await bandCrease(page);
   let print = GRAY;
+  let turn = 0;
+  let turned = false;
+  let last: Rows | undefined;
   const paint = (next: string) => {
     print = next;
     return page.evaluate((options) => window.laminateFixture.update(options), {
       print: next,
-      normal,
+      ...crease,
+      turn,
     });
   };
+  const repaint = () => paint(print === GRAY ? BLACK : GRAY);
   await paint(print);
-  // D: the bottom-facing ramp against the top-facing one, each relative to the flat paper beside it,
-  // in the paper's own light: gray paper's coat less black paper's, which is the reflection alone, since
-  // a reflection bending over a crease outweighs the faint shading wherever a light's edge is near.
+  return {
+    /** Turns the sticker on screen with its next coats. */
+    turn: (degrees: number) => {
+      turn = degrees;
+      turned = true;
+    },
+    paperAt: async (beta: number) => {
+      const coats: Record<string, Rows> = {};
+      // A turn lands with the other print, so its first coat can't be the unturned one.
+      let unlike = turned ? last : undefined;
+      if (turned) await repaint();
+      turned = false;
+      for (let i = 0; i < 2; i++) {
+        if (i === 1) await repaint();
+        await expectLanded(page, [beta, 0]);
+        unlike = last = coats[print] = await settledRows(page, unlike, bands);
+      }
+      return (row: string) => coats[GRAY][row] - coats[BLACK][row];
+    },
+  };
+}
+
+// Red when the shader stops shading by the room's light (CREASE_SHADING 0, or creaseLight left out),
+// when its light stops following the pose (a fixed frame for roomLight), or when creases are drawn at
+// the bake's own slope (CREASE_STEEPENING 1).
+test("the room's light shades a crease's slopes, more as the device rises", async ({ page }) => {
+  const band = await bandSticker(page, ROWS);
+  // D: the bottom-facing ramp against the top-facing one, each relative to the flat paper beside it.
   // Faint at the physical strength, so each side averages thousands of pixels.
   const contrast: Record<number, number> = {};
   for (const beta of [0, 20, 47, 70, 90]) {
-    await expectLanded(page, [beta, 0]);
-    const first = await settledRows(page);
-    const firstPrint = print;
-    await paint(print === GRAY ? BLACK : GRAY);
-    await expectLanded(page, [beta, 0]);
-    const second = await settledRows(page, first);
-    const [gray, black] = firstPrint === GRAY ? [first, second] : [second, first];
-    const paper = (row: keyof Rows) => gray[row] - black[row];
+    const paper = await band.paperAt(beta);
     contrast[beta] = paper("bottom") / paper("belowBottom") - paper("top") / paper("aboveTop");
   }
   const report = JSON.stringify(contrast);
@@ -143,4 +183,31 @@ test("the room's light shades a crease's slopes, more as the device rises", asyn
     Math.abs(contrast[90]),
     `upright shades more than the reading pose: ${report}`,
   ).toBeGreaterThan(Math.abs(contrast[47]) + 0.002);
+});
+
+// Red when the shader drops the contact shadow's march (creaseContactShadow returning 0): a step's
+// foot is then only as much darker than the ramp past it as its slope is steeper.
+test("a crease's step casts a short contact shadow away from the light", async ({ page }) => {
+  const band = await bandSticker(page, STEP_ROWS);
+  /** How much darker a step's foot is than the ramp just past it. */
+  const footShade = (paper: (row: string) => number, step: "bottom" | "top") =>
+    1 - paper(`${step}Foot`) / paper(`${step}Ramp`);
+  // Upright the light is above the sticker, so the band's bottom step faces away from it.
+  const lightAbove = await band.paperAt(90);
+  // Turned over, the light falls from the sticker's own bottom, so its top step faces away.
+  band.turn(180);
+  const lightBelow = await band.paperAt(90);
+  const shades = {
+    above: { bottom: footShade(lightAbove, "bottom"), top: footShade(lightAbove, "top") },
+    below: { bottom: footShade(lightBelow, "bottom"), top: footShade(lightBelow, "top") },
+  };
+  const report = JSON.stringify(shades);
+  expect(shades.above.bottom, `the bottom step shades its foot: ${report}`).toBeGreaterThan(0.05);
+  expect(shades.above.top, `the top step faces the light: ${report}`).toBeLessThan(0.02);
+  expect(shades.below.top, `turned over, the top step shades its foot: ${report}`).toBeGreaterThan(
+    0.05,
+  );
+  expect(shades.below.bottom, `turned over, the bottom step faces it: ${report}`).toBeLessThan(
+    0.02,
+  );
 });

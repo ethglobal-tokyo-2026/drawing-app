@@ -60,6 +60,7 @@ describe("StickerFigure's laminate", () => {
         crease={{
           base: "base.png",
           normal: "normal.png",
+          height: "height.png",
           normalBounds: { x: -0.1, y: 0, width: 1.1, height: 1 },
         }}
       />,

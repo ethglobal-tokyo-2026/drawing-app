@@ -179,6 +179,7 @@ describe("CreaseStore", () => {
       ? {
           base: new Blob(["base"]),
           normal: new Blob(["normal"]),
+          height: new Blob(["height"]),
         }
       : null,
     timings: { decode: 0, draw: 0, shade: 0, encode: 0, total: 0 },
@@ -433,7 +434,7 @@ describe("CreaseStore", () => {
     expect(store.creaseOf(job.id)).toBeUndefined();
 
     store.land(bake(job));
-    expect(Object.keys(store.creaseOf(job.id) ?? {}).sort()).toEqual(["base", "normal"]);
+    expect(Object.keys(store.creaseOf(job.id) ?? {}).sort()).toEqual(["base", "height", "normal"]);
     expect(changed).toHaveBeenCalledTimes(1);
 
     const restacked = { ...job, key: "another stack" };

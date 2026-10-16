@@ -77,9 +77,16 @@ const creaseImage = (pixels: Uint8ClampedArray<ArrayBuffer>) => {
 const creaseFoil = {
   normal: rampNormal,
   base: creaseImage(rampPixels.base),
+  height: creaseImage(rampPixels.height),
 };
 const reload = new URLSearchParams(location.search).has("reload");
-const replacement: { print: string; normal?: string; turn: number; veiled: boolean } = {
+const replacement: {
+  print: string;
+  normal?: string;
+  height?: string;
+  turn: number;
+  veiled: boolean;
+} = {
   print,
   turn,
   veiled: false,

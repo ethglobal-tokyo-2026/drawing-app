@@ -19,6 +19,8 @@ export interface StickerSurface {
   print: string;
   cut: string;
   normal?: string;
+  /** The crease's steps' height, registered with its normal; it loads and commits with the normal. */
+  height?: string;
   turn: number;
   finish: LaminateFinish;
   foil?: StickerFoilMaterial;
@@ -105,8 +107,11 @@ export class MountedSurface {
   normalFailure: { url: string } | null = null;
   normalUrl?: string;
   normalTexture: WebGLTexture | null = null;
+  heightUrl?: string;
+  heightTexture: WebGLTexture | null = null;
   pendingNormal: {
     url?: string;
+    height?: string;
     material?: NonNullable<MountedSurface["pendingPrintCut"]>;
     gpu: StickerRenderer;
     bounds?: StickerSurface["normalBounds"];
@@ -157,6 +162,8 @@ export class MountedSurface {
     this.normalUrl = undefined;
     this.normalBounds = undefined;
     this.normalTexture = null;
+    this.heightUrl = undefined;
+    this.heightTexture = null;
     this.pendingNormal = null;
     this.initialize();
   }
@@ -262,6 +269,7 @@ export class MountedSurface {
         return;
       }
       this.normalTexture = gpu.flat;
+      this.heightTexture = gpu.flatHeight;
       this.replaceNormal(this.options.normal);
       this.replacePrintCut(this.options.print, this.options.cut);
     } catch (error) {
@@ -432,6 +440,7 @@ export class MountedSurface {
           const normal = this.pendingNormal;
           this.pendingNormal = null;
           if (normal.url) normal.gpu.release(normal.url);
+          if (normal.height) normal.gpu.release(normal.height);
         }
         gpu.release(print);
         gpu.release(cut);
@@ -486,7 +495,12 @@ export class MountedSurface {
           console.error(`Rendering the sticker material for ${print} failed: ${foilFailure}`);
           notePerformance("sticker material", foilFailure);
         }
-        this.textures = [printTexture, cutTexture, this.normalTexture ?? gpu.flat];
+        this.textures = [
+          printTexture,
+          cutTexture,
+          this.normalTexture ?? gpu.flat,
+          this.heightTexture ?? gpu.flatHeight,
+        ];
         this.snapshotPending = true;
         if (old) {
           gpu.release(old.print);
@@ -518,12 +532,14 @@ export class MountedSurface {
   /** A crease rebake keeps its last ready snapshot until the replacement normal is uploaded. */
   replaceNormal(url?: string) {
     const gpu = this.gpu;
+    const height = url ? this.options.height : undefined;
     if (
       !gpu ||
       gpu.disposed ||
       !this.live ||
       (this.pendingNormal &&
         this.pendingNormal.url === url &&
+        this.pendingNormal.height === height &&
         JSON.stringify(this.pendingNormal.bounds) === JSON.stringify(this.options.normalBounds))
     )
       return;
@@ -531,6 +547,7 @@ export class MountedSurface {
       const old = this.pendingNormal;
       this.pendingNormal = null;
       if (old.url) old.gpu.release(old.url);
+      if (old.height) old.gpu.release(old.height);
     }
     const changingMaterial =
       this.pendingPrintCut && this.pendingPrintCut.identity !== this.printCut?.identity;
@@ -542,6 +559,7 @@ export class MountedSurface {
     }
     if (
       this.normalUrl === url &&
+      this.heightUrl === height &&
       JSON.stringify(this.normalBounds) === JSON.stringify(this.options.normalBounds)
     ) {
       this.normalFailure = null;
@@ -555,14 +573,21 @@ export class MountedSurface {
         this.pendingNormal = null;
         this.finishCreaseReveal();
         const old = this.normalUrl;
+        const oldHeight = this.heightUrl;
         this.normalUrl = undefined;
+        this.heightUrl = undefined;
         this.normalBounds = undefined;
         this.normalTexture = gpu.flat;
+        this.heightTexture = gpu.flatHeight;
         this.normalFailure = null;
-        if (this.textures) this.textures[2] = gpu.flat;
+        if (this.textures) {
+          this.textures[2] = gpu.flat;
+          this.textures[3] = gpu.flatHeight;
+        }
         this.snapshotPending = true;
         this.renderFailed = false;
         if (old) gpu.release(old);
+        if (oldHeight) gpu.release(oldHeight);
         this.loadError("normal", null);
         this.draw();
       };
@@ -581,6 +606,7 @@ export class MountedSurface {
     }
     const pending: NonNullable<MountedSurface["pendingNormal"]> = {
       url,
+      height,
       gpu,
       bounds: this.options.normalBounds,
     };
@@ -588,8 +614,16 @@ export class MountedSurface {
     this.renderFailed = false;
     this.normalFailure = null;
     this.pendingNormal = pending;
-    gpu.acquire(url).then(
-      (texture) => {
+    /** Lets go of this generation's textures, which commit or fail together. */
+    const releasePending = () => {
+      gpu.release(url);
+      if (height) gpu.release(height);
+    };
+    Promise.all([
+      gpu.acquire(url),
+      height ? gpu.acquire(height) : Promise.resolve(gpu.flatHeight),
+    ]).then(
+      ([texture, heightTexture]) => {
         if (!this.live || this.gpu !== gpu || gpu.disposed || this.pendingNormal !== pending)
           return;
         const changingMaterial =
@@ -597,7 +631,7 @@ export class MountedSurface {
         const geometryError = changingMaterial ? null : this.geometryError(url);
         if (geometryError) {
           this.pendingNormal = null;
-          gpu.release(url);
+          releasePending();
           this.normalFailure = { url };
           this.loadError("normal", geometryError);
           return;
@@ -605,13 +639,20 @@ export class MountedSurface {
         pending.commit = () => {
           this.pendingNormal = null;
           const old = this.normalUrl;
+          const oldHeight = this.heightUrl;
           this.normalUrl = url;
+          this.heightUrl = height;
           this.normalBounds = normalBounds;
           this.normalTexture = texture;
+          this.heightTexture = heightTexture;
           this.normalFailure = null;
-          if (this.textures) this.textures[2] = texture;
+          if (this.textures) {
+            this.textures[2] = texture;
+            this.textures[3] = heightTexture;
+          }
           this.snapshotPending = true;
           if (old) gpu.release(old);
+          if (oldHeight) gpu.release(oldHeight);
           this.loadError("normal", null);
           gpu.stopReveal(this);
           this.reveal =
@@ -633,7 +674,8 @@ export class MountedSurface {
           return;
         this.pendingNormal = null;
         this.normalFailure = { url };
-        gpu.release(url);
+        releasePending();
+        // The height belongs to the normal's generation; the error names whichever URL failed.
         const why = `Replacing crease normal ${url} failed: ${String(error)}`;
         // Keep the ready laminate visible; its last normal remains valid after a failed rebake.
         this.loadError("normal", why);
@@ -743,10 +785,14 @@ export class MountedSurface {
     this.printCut = null;
     this.pendingPrintCut = null;
     if (this.normalUrl) gpu.release(this.normalUrl);
+    if (this.heightUrl) gpu.release(this.heightUrl);
     if (this.pendingNormal?.url) this.pendingNormal.gpu.release(this.pendingNormal.url);
+    if (this.pendingNormal?.height) this.pendingNormal.gpu.release(this.pendingNormal.height);
     this.normalUrl = undefined;
+    this.heightUrl = undefined;
     this.normalBounds = undefined;
     this.normalTexture = null;
+    this.heightTexture = null;
     this.pendingNormal = null;
     if (!gpu.surfaces.size) destroyRenderer(gpu);
   }
@@ -797,7 +843,10 @@ export function stickerTurn(canvas: HTMLCanvasElement): number | undefined {
 /** Material changes preserve the print, cut and ready snapshot owned by this surface. */
 export function updateSticker(
   canvas: HTMLCanvasElement,
-  options: Pick<StickerSurface, "print" | "cut" | "normal" | "finish" | "foil" | "normalBounds">,
+  options: Pick<
+    StickerSurface,
+    "print" | "cut" | "normal" | "height" | "finish" | "foil" | "normalBounds"
+  >,
   requestedCoverageFrame?: { width: number; height: number },
 ) {
   if (
@@ -821,6 +870,7 @@ export function updateSticker(
   try {
     Object.assign(surface.options, options, {
       foil: options.foil,
+      height: options.height,
       normalBounds: options.normalBounds,
     });
     if (surface.gpu?.textureValidationFailure) {

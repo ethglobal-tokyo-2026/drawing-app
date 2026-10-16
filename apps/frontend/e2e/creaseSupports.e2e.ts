@@ -68,8 +68,8 @@ async function bakeSupports(page: Page, gap: number | null) {
     if (!reply.crease) throw new Error("The raised supports lost their laminate geometry");
     let paintedPeak = 0;
     let normalDeviation = 0;
-    for (const [name, blob] of Object.entries(reply.crease)) {
-      const bitmap = await createImageBitmap(blob);
+    for (const name of ["base", "normal"] as const) {
+      const bitmap = await createImageBitmap(reply.crease[name]);
       const canvas = document.createElement("canvas");
       canvas.width = canvas.height = side;
       const context = canvas.getContext("2d");
@@ -341,8 +341,8 @@ test.describe("finite supports on an iPad-sized board", () => {
           edgeNormal = 0;
         const support = job.under[1];
         const [a, b, c, d, e, f] = support.at;
-        for (const [name, blob] of Object.entries(reply.crease)) {
-          const bitmap = await createImageBitmap(blob);
+        for (const name of ["base", "normal"] as const) {
+          const bitmap = await createImageBitmap(reply.crease[name]);
           const canvas = document.createElement("canvas");
           canvas.width = job.width;
           canvas.height = job.height;

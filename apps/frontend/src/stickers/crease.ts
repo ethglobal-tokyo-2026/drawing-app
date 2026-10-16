@@ -8,10 +8,10 @@
  */
 
 /**
- * A crease's images: its base, the shoulder and foot, which no light moves; and geometric normals,
- * which the sticker shader lights and reflects.
+ * A crease's images: its base, the shoulder and foot, which no light moves; geometric normals, which
+ * the sticker shader lights and reflects; and the steps' height, whose contact shadows it casts.
  */
-export type CreaseImage = "base" | "normal";
+export type CreaseImage = "base" | "normal" | "height";
 
 /** A rectangle in the raster or normalized source frame, as its caller specifies. */
 export interface CreaseBounds {
@@ -248,15 +248,32 @@ export function drapeReach(scale: number, heightRange: number): number {
   );
 }
 
+/** The `width`×`height` middle of a field padded by `padding` on every side, into `into`. */
+function cropInto(
+  padded: Float32Array,
+  paddedWidth: number,
+  padding: number,
+  width: number,
+  height: number,
+  into: Float32Array,
+) {
+  for (let y = 0; y < height; y++) {
+    const start = (y + padding) * paddedWidth + padding;
+    into.set(padded.subarray(start, start + width), y * width);
+  }
+}
+
 /**
  * A stiff sheet laid over `field`: narrow gaps are bridged level with their supports, then a
- * closing by a parabola ramps down over RAMP beside a step and rounds the corners.
+ * closing by a parabola ramps down over RAMP beside a step and rounds the corners. `steps`, when
+ * given, receives the bridged supports before the ramp: the sheet's steps, sharp at their edges.
  */
 export function drape(
   field: Float32Array,
   width: number,
   height: number,
   scale: number,
+  steps?: Float32Array,
 ): Float32Array {
   let lowest = Infinity;
   let highest = -Infinity;
@@ -264,7 +281,10 @@ export function drape(
     lowest = Math.min(lowest, value);
     highest = Math.max(highest, value);
   }
-  if (highest <= lowest) return Float32Array.from(field);
+  if (highest <= lowest) {
+    steps?.set(field);
+    return Float32Array.from(field);
+  }
   const reach = RAMP * scale;
   // Each closing samples twice; keep its full reach and the blur's footprint beyond the crop.
   const padding = drapeReach(scale, highest - lowest);
@@ -280,6 +300,7 @@ export function drape(
     out.fill(field[source + width - 1], start + padding + width, start + extendedWidth);
   }
   bridgeGaps(out, extendedWidth, extendedHeight, scale);
+  if (steps) cropInto(out, extendedWidth, padding, width, height, steps);
   // The parabola falls one sticker's thickness over the ramp.
   const k = 1 / (reach * reach);
   envelopePass(out, extendedWidth, extendedHeight, k, -1, true);
@@ -288,10 +309,7 @@ export function drape(
   envelopePass(out, extendedWidth, extendedHeight, k, 1, false);
   blur(out, extendedWidth, extendedHeight, ROUND * scale);
   const crop = new Float32Array(width * height);
-  for (let y = 0; y < height; y++) {
-    const start = (y + padding) * extendedWidth + padding;
-    crop.set(out.subarray(start, start + width), y * width);
-  }
+  cropInto(out, extendedWidth, padding, width, height, crop);
   return crop;
 }
 
@@ -407,6 +425,15 @@ function encodeNormal(out: Uint8ClampedArray, q: number, dx: number, dy: number)
   out[q + 3] = 255;
 }
 
+/**
+ * The height image's gray levels per sticker thickness, 0 at the lowest support. It is an opaque image
+ * of its own: a canvas premultiplies alpha, which would move the normal's colors.
+ */
+export const HEIGHT_LEVELS = 16;
+
+/** A height above the lowest support, in sticker thicknesses, from its gray level; the shader decodes alike. */
+export const creaseHeight = (level: number) => level / HEIGHT_LEVELS;
+
 export interface CreaseInput {
   width: number;
   height: number;
@@ -422,7 +449,8 @@ export interface CreaseInput {
 
 /**
  * The crease's images, as RGBA, not premultiplied: the base white on the shoulder and ink at the foot.
- * Normal RGB describes the raw draped surface independently of the cut, as encodeNormal packs it.
+ * Normal RGB describes the raw draped surface independently of the cut, as encodeNormal packs it, and
+ * the height the steps beneath, as creaseHeight reads it.
  */
 export type CreasePixels = Record<CreaseImage, Uint8ClampedArray<ArrayBuffer>>;
 
@@ -435,7 +463,8 @@ export function creasePixels({
   scale,
   normalRegion,
 }: CreaseInput): CreasePixels | null {
-  const field = drape(surface, width, height, scale);
+  const steps = new Float32Array(width * height);
+  const field = drape(surface, width, height, scale, steps);
   // Include both plateaus of a complete ramp, with its rounded ends, when measuring its height.
   const reach = creaseNormalReach(scale);
   const scratch = new Float32Array(field.length);
@@ -506,5 +535,12 @@ export function creasePixels({
       const q = (y * width + x) * 4;
       normal.set([128, 128, 255, 255], q);
     }
-  return { base, normal };
+  let lowestStep = Infinity;
+  for (const level of steps) lowestStep = Math.min(lowestStep, level);
+  const heights = image();
+  for (let i = 0; i < steps.length; i++) {
+    heights.fill(Math.round((steps[i] - lowestStep) * HEIGHT_LEVELS), i * 4, i * 4 + 3);
+    heights[i * 4 + 3] = 255;
+  }
+  return { base, normal, height: heights };
 }

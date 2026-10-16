@@ -96,6 +96,7 @@ function overlaps(a: Box, b: Box, reach: number) {
 const byImage = <T>(of: (image: CreaseImage) => T): Record<CreaseImage, T> => ({
   base: of("base"),
   normal: of("normal"),
+  height: of("height"),
 });
 
 const r2 = (v: number) => Math.round(v * 100) / 100;

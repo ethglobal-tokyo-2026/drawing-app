@@ -17,8 +17,8 @@ import "./nsfw-mark.css";
 import "./sticker-figure.css";
 
 /**
- * A sticker's crease, baked: its base, and its geometric normal data, which the sticker material
- * lights and reflects.
+ * A sticker's crease, baked: its base; its geometric normal data, which the sticker material lights
+ * and reflects; and its steps' height, from which it casts their contact shadows.
  */
 export type Crease = Record<CreaseImage, string> & { normalBounds?: CreaseBounds };
 
@@ -163,6 +163,7 @@ export const StickerFigure = memo(function StickerFigure({
         print={src}
         cut={mask}
         normal={readyCrease === crease ? crease?.normal : undefined}
+        height={readyCrease === crease ? crease?.height : undefined}
         normalBounds={readyCrease === crease ? crease?.normalBounds : undefined}
         turn={turn}
         finish={laminate}

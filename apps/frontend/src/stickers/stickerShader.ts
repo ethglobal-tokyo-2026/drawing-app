@@ -1,10 +1,11 @@
-import { NORMAL_RANGE_LEVELS, NORMAL_SLOPE } from "./crease";
+import { HEIGHT_LEVELS, NORMAL_RANGE_LEVELS, NORMAL_SLOPE } from "./crease";
 import { foilFragment } from "./foilShader";
 import { glslFloat as f } from "./glsl";
 import { laminateFragment } from "./laminateShader";
 import { roomIrradianceFragment } from "./roomIrradiance";
 import { roomFragment } from "./roomShader";
 import { SCREENTONE } from "./screentone";
+import { ROOM } from "./sharedRoom";
 
 /**
  * How strongly the room's light shades a crease's slopes: 1 is physical, the change in the light
@@ -17,6 +18,47 @@ export const CREASE_SHADING = 1;
  * a real sticker drapes over about a millimeter, steeper than the app's geometry.
  */
 const CREASE_STEEPENING = 3;
+
+/** A step's height under its contact shadow, in CSS px per sticker thickness: a laminated sticker's real thickness. */
+const STEP_HEIGHT = 1;
+
+/** The farthest a step's contact shadow reaches from the step, in CSS px. */
+const CONTACT_SHADOW_REACH = 3;
+
+/** How many points a contact shadow samples toward the light, evenly out to CONTACT_SHADOW_REACH. */
+const CONTACT_SHADOW_SAMPLES = 6;
+
+/** The room's light's angular radius, from its radius one unit along it: it softens a shadow's edge. */
+const LIGHT_RADIUS = Math.atan(ROOM.light.radius);
+
+/**
+ * A step's contact shadow: the share of the room's light hidden by the steps toward it, from the height
+ * image crease.ts bakes. Its length is the step's height times the cotangent of the light's elevation
+ * above the paper. Flat paper has no step and skips the march.
+ */
+const contactShadowFragment = `
+float creaseStepHeight(vec2 sourceUv){
+  return texture2D(heightImage,(sourceUv-normalBounds.xy)/normalBounds.zw).r*${f((255 / HEIGHT_LEVELS) * STEP_HEIGHT)};
+}
+float creaseContactShadow(vec2 sourceUv,vec3 encoded){
+  if(dot(abs(encoded-vec3(128.,128.,255.)),vec3(1.))<.5)return 0.;
+  // The light in the sticker's own axes: normalTransform is a rotation, so its transpose undoes it.
+  vec3 light=roomLight*normalTransform;
+  float across=length(light.xy);
+  if(light.z<=0.||across<.0001)return 0.;
+  vec2 toward=light.xy/(across*size);
+  float here=creaseStepHeight(sourceUv);
+  float horizon=0.;
+  for(int i=1;i<=${CONTACT_SHADOW_SAMPLES};i++){
+    float t=float(i)*${f(CONTACT_SHADOW_REACH / CONTACT_SHADOW_SAMPLES)};
+    horizon=max(horizon,(creaseStepHeight(sourceUv+toward*t)-here)/t);
+  }
+  if(horizon<=0.)return 0.;
+  // The light's center above the steps' horizon, in its radii; the share of its disc below.
+  float x=clamp((atan(light.z,across)-atan(horizon))/${f(LIGHT_RADIUS)},-1.,1.);
+  return (acos(x)-x*sqrt(1.-x*x))/${f(Math.PI)};
+}
+`;
 
 /** Shared shader: air/film Fresnel, one eye in front of the screen, and the shared room. */
 export const stickerVertex = `
@@ -31,6 +73,7 @@ varying vec2 uv;
 uniform sampler2D printImage;
 uniform sampler2D cutImage;
 uniform sampler2D normalImage;
+uniform sampler2D heightImage;
 uniform vec2 size;
 uniform mat3 normalTransform;
 uniform vec2 pointTurn;
@@ -56,6 +99,7 @@ float environment(vec3 r) {
 float linear(float v) { return v<=.04045?v/12.92:pow((v+.055)/1.055,2.4); }
 float display(float v) { return v<=.0031308?v*12.92:1.055*pow(v,1./2.4)-.055; }
 ${laminateFragment}
+${contactShadowFragment}
 void main() {
   vec2 sourceUv=sourceBounds.xy+uv*sourceBounds.zw;
   vec4 art=texture2D(printImage,sourceUv);
@@ -69,8 +113,10 @@ void main() {
   vec3 surfaceNormal=normalize(vec3(slope,1.));
   vec3 n=normalize(normalTransform*surfaceNormal);
   // The room's light on the slope against the flat paper's shades the crease; flat, it is exactly 1.
+  // A step's contact shadow takes the ceiling light's part out of the slope's.
   float flatLight=roomIrradiance(normalize(normalTransform*vec3(0.,0.,1.)));
-  float creaseLight=1.+${f(CREASE_SHADING)}*(roomIrradiance(n)-flatLight)/flatLight;
+  float slopeLight=roomIrradiance(n)-creaseContactShadow(sourceUv,encoded)*roomLightIrradiance(n);
+  float creaseLight=1.+${f(CREASE_SHADING)}*(slopeLight-flatLight)/flatLight;
   vec2 localPoint=(sourceUv-.5)*size/min(size.x,size.y);
   vec2 point=vec2(pointTurn.x*localPoint.x-pointTurn.y*localPoint.y,
     pointTurn.y*localPoint.x+pointTurn.x*localPoint.y);

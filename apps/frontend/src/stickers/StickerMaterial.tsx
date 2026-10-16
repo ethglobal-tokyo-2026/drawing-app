@@ -19,6 +19,7 @@ export function StickerMaterial({
   print,
   cut,
   normal,
+  height,
   normalBounds,
   foil,
   turn = 0,
@@ -31,6 +32,8 @@ export function StickerMaterial({
   print: string;
   cut: string;
   normal?: string;
+  /** The crease's steps' height, registered with its normal. */
+  height?: string;
   normalBounds?: StickerSurface["normalBounds"];
   foil?: StickerFoilMaterial;
   turn?: number;
@@ -49,7 +52,7 @@ export function StickerMaterial({
   const surface = useRef<HTMLSpanElement>(null);
   const heldTurn = useRef(turn);
   const heldActive = useRef(active);
-  const heldMaterial = useRef({ print, cut, normal, normalBounds, foil, finish });
+  const heldMaterial = useRef({ print, cut, normal, height, normalBounds, foil, finish });
   const heldCreaseProgress = useRef(onCreaseProgress);
   const heldCreaseEligibility = useRef({ canRevealCrease, startCreaseReveal });
   useLayoutEffect(() => {
@@ -59,8 +62,8 @@ export function StickerMaterial({
     heldCreaseProgress.current = onCreaseProgress;
   }, [onCreaseProgress]);
   useLayoutEffect(() => {
-    heldMaterial.current = { print, cut, normal, normalBounds, foil, finish };
-  }, [print, cut, normal, normalBounds, foil, finish]);
+    heldMaterial.current = { print, cut, normal, height, normalBounds, foil, finish };
+  }, [print, cut, normal, height, normalBounds, foil, finish]);
   useLayoutEffect(() => {
     heldActive.current = active;
   }, [active]);
@@ -71,6 +74,7 @@ export function StickerMaterial({
       print: heldMaterial.current.print,
       cut: heldMaterial.current.cut,
       normal: heldMaterial.current.normal,
+      ...(heldMaterial.current.height && { height: heldMaterial.current.height }),
       ...(heldMaterial.current.foil && { foil: heldMaterial.current.foil }),
       ...(heldMaterial.current.normalBounds && { normalBounds: heldMaterial.current.normalBounds }),
       turn: heldTurn.current,
@@ -103,10 +107,11 @@ export function StickerMaterial({
         cut,
         normal,
         finish,
+        ...(height && { height }),
         ...(foil && { foil }),
         ...(normalBounds && { normalBounds }),
       });
-  }, [print, cut, normal, normalBounds, foil, finish]);
+  }, [print, cut, normal, height, normalBounds, foil, finish]);
   useLayoutEffect(() => {
     heldTurn.current = turn;
     if (ref.current) turnSticker(ref.current, turn);

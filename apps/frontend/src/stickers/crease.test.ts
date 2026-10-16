@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  HEIGHT_LEVELS,
   NORMAL_RANGE_LEVELS,
   NORMAL_SLOPE,
   RAMP,
   STICKER_THICKNESS,
+  creaseHeight,
   creasePixels,
   drape,
   stackedSurface,
@@ -128,7 +130,7 @@ describe("crease", () => {
     expect([...pixels.normal.slice(plateau, plateau + 3)]).toEqual([128, 128, 255]);
   });
 
-  it("keeps a flat raised sticker's geometric normal without an unused height image or invented crease", () => {
+  it("keeps a flat raised sticker's geometric normal and height flat, without an invented crease", () => {
     const own = field((x) => (x < 90 ? 1 : 0));
     const pixels = creasePixels({
       width: W,
@@ -140,7 +142,7 @@ describe("crease", () => {
     expect(pixels).not.toBeNull();
     if (!pixels) throw new Error("The raised sticker lost its material geometry");
     const center = ((H / 2) * W + W / 2) * 4;
-    expect(Object.keys(pixels).sort()).toEqual(["base", "normal"]);
+    expect(new Set(pixels.height.filter((_, i) => i % 4 === 0))).toEqual(new Set([0]));
     expect([...pixels.normal.slice(center, center + 4)]).toEqual([128, 128, 255, 255]);
     const twiceAsHigh = creasePixels({
       width: W,
@@ -152,6 +154,30 @@ describe("crease", () => {
     expect(twiceAsHigh).not.toBeNull();
     expect(twiceAsHigh?.normal).toEqual(pixels?.normal);
     expect(pixels?.base[center + 3]).toBe(0);
+  });
+
+  it("keeps the steps' height in an opaque image of its own, within a level, flat where they are", () => {
+    // Stairs two stickers high: each tread is flat, and each riser a sharp step.
+    const stairs = field((x) => (x < 40 ? 2 : x < 80 ? 1 : 0));
+    const pixels = creasePixels({
+      width: W,
+      height: H,
+      surface: stairs,
+      own: everywhere,
+      scale: 1,
+    });
+    if (!pixels) throw new Error("The stairs raised no crease");
+    const heightAt = (x: number, y = H / 2) => creaseHeight(pixels.height[(y * W + x) * 4]);
+    for (const [x, tread] of [
+      [20, 2],
+      [60, 1],
+      [100, 0],
+      [0, 2],
+      [W - 1, 0],
+    ])
+      expect(Math.abs(heightAt(x) - tread)).toBeLessThanOrEqual(1 / HEIGHT_LEVELS);
+    expect(heightAt(30, 5)).toBe(heightAt(10, H - 5));
+    expect(new Set(pixels.height.filter((_, i) => i % 4 === 3))).toEqual(new Set([255]));
   });
 
   it("bridges nearby supports and dips into a clearly separated gap", () => {
