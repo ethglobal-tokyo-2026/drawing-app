@@ -29,7 +29,7 @@
 | Drop shadow            | a real sticker's thickness, about 1 px, softened by the light's size                                                                                                                                              | Sticker thickness 0.13–0.23 mm                                                                                                                                                     | measured / computed                                                                                            |
 | Foil                   | a real grating (1400 nm period); the palette mapping is art direction (no green); metal reflectance; its room from the same solve                                                                                 | Stam's diffraction shaders                                                                                                                                                         | computed; the palette is a design decision (DESIGN.md)                                                         |
 | Motion                 | the reflection follows the hand, tremor included                                                                                                                                                                  | One Euro filter, tuned on ad0ll's recorded iPad traces                                                                                                                             | measured                                                                                                       |
-| Re-centering           | the viewer settles back after a posture change                                                                                                                                                                    | A heuristic for the head moving                                                                                                                                                    | design decision; decision 4                                                                                    |
+| Re-centering           | the viewer settles back once a new pose outlasts a look                                                                                                                                                           | iOS 26's Liquid Glass light re-centers by how long a pose lasts                                                                                                                    | design decision; decision 4                                                                                    |
 | Not modeled            | Oren–Nayar backscatter (≤3% under a coat), scattering inside paper (under a pixel), fluorescent whitening (an LED gives no UV), the coat's birefringence (F0 0.040–0.043)                                         | The paper research                                                                                                                                                                 | measured as negligible                                                                                         |
 
 ## Decisions for ad0ll
@@ -49,9 +49,11 @@
    - Recommended: life size.
 4. **Re-centering at extreme poses.**
    - Today the viewer re-centers within a second of any turn past 25° (`RECENTER_RELEASE`, `RECENTER_MS`). So a held extreme pose (far left, right, forward or back) loses the grazing view's contrast: at β 120, crease contrast goes from −40% while moving to −14% once held.
-   - When you tilt to look, your head hasn't moved. When you lie down, it has.
-   - Recommended: re-center only after a new pose is held well past a look (several seconds), easing over a few seconds, so tilting to look keeps the room still. The times are a feel thing, tuned on the iPad like the strengths.
-   - Or never re-center, which is fully physical: in bed, the ceiling light is behind the phone, and only the room lights the board.
+   - When you tilt to look, your head hasn't moved. When you lie down, it has. Without face tracking, only how long a pose lasts tells them apart.
+   - iOS 26's Liquid Glass light, the closest shipped match, re-centers once the device stays past 12.5° for 10 s or past 25° for 5 s, with a 1.5 s fade, and the timer restarts when the device comes back inside. These are its undocumented defaults, read from its system framework (`LightSourceSupport`). UIKit's parallax drifts back continuously instead, which would slide a held highlight away.
+   - Recommended: Liquid Glass's two tiers and a 1.5 s ease, measured over the whole turn, since lying on your side turns the phone within the screen's plane. A look that comes back never re-centers.
+   - Never re-centering is fully physical, but in bed the ceiling light sits behind the phone and the laminate goes dead; turning in a chair or handing the phone over leaves the light somewhere arbitrary; and the heading drifts without a compass.
+   - Research notes: `data/scratch/physical-model/recentering.txt`.
 
 ## Build, after the decisions (each lane owns its files)
 
@@ -63,7 +65,7 @@
 - **R2, the light:** brightness from lumens; CIE halo; 0.5° edge; foreshortened by sin e; fixed in the room. Eye distance and still pose by device class.
 - **R3, paper and coat:** interfaced Lambertian with δ; gloss blur 0.024; n 1.51; PBR Neutral highlight compression.
 - **R4, creases:** the S-curve at real thickness, L about 2 mm, symmetric tones, `CREASE_STEEPENING` gone, contact-shadow cap raised. Today's steepened slope (7.3°) already matches a 2 mm drape over a 0.175 mm sticker, so the shading's strength stays. At extreme poses, the depth comes from decision 4, from long shadows at raking light, and from R1's room lighting creases when the light is behind the screen.
-- **R5, motion:** the re-centering limit (decision 4); the 15° turn left over at β 135.
+- **R5, motion:** re-centering by how long a pose lasts (decision 4), counted whether the device moves or holds, so fidgeting after lying down still re-centers; the 15° turn left over at β 135.
 - **R6:** the physical-model table moves into `docs/research/sticker-laminate/README.md`, with sources, and tests follow each change.
 - **Checks before deploy:**
   - every light, crease, laminate, foil and shadow e2e in both engines;
