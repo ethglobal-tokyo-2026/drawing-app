@@ -50,14 +50,15 @@
   background: var(--key-shadow-ink);
 }
 
-/* The penumbra head-on, and upright, where the light grazes the screen and spreads it most. */
+/* The penumbra head-on, and upright, where the light grazes the screen and spreads it most: each blur
+   per px of elevation, which keyShadow.ts derives from the light and writes on the layer. */
 .sticker-key-shadow::before {
-  filter: blur(calc(var(--sticker-elevation) * 0.36));
+  filter: blur(calc(var(--sticker-elevation) * var(--key-shadow-sharp-blur)));
   opacity: var(--key-shadow-sharp, 1);
 }
 
 .sticker-key-shadow::after {
-  filter: blur(calc(var(--sticker-elevation) * 1.16));
+  filter: blur(calc(var(--sticker-elevation) * var(--key-shadow-soft-blur)));
   opacity: var(--key-shadow-soft, 0);
 }
 

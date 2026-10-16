@@ -3,6 +3,7 @@ import { memo, useEffectEvent, useLayoutEffect, useMemo, useRef } from "react";
 import { useTranslation } from "../i18n/react";
 import { spokenPair } from "../kyoto-seika/spokenSubject";
 import { formatNo, spokenDuration } from "../stickers/format";
+import { rereadKeyShadowElevation } from "../stickers/keyShadow";
 import { playStick } from "../stickers/stick";
 import { StickerFigure } from "../stickers/StickerFigure";
 import type { BoardSticker } from "./boardSticker";
@@ -85,6 +86,15 @@ export const PlacedSticker = memo(function PlacedSticker({
     playStick(el, { from: "land", delay: 380, reduced }),
   );
   const landed = useEffectEvent(onLanded);
+  // In hand, its CSS lifts it well off the board, so its key shadow re-registers its elevation.
+  const lifted = inHand === "drag";
+  const registeredLifted = useRef(lifted);
+  useLayoutEffect(() => {
+    const el = lift.current;
+    if (registeredLifted.current === lifted || !el) return;
+    registeredLifted.current = lifted;
+    rereadKeyShadowElevation(el);
+  }, [lifted]);
   // Before the first paint, so it never shows in place before it lands.
   useLayoutEffect(() => {
     const el = lift.current;

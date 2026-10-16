@@ -148,7 +148,7 @@ export const StickerFigure = memo(function StickerFigure({
   ].filter(Boolean);
   return (
     <span ref={ref} className={classes.join(" ")} style={style}>
-      {/* The shoji's key shadow, beneath everything; a foil's band throws its own. */}
+      {/* The room light's key shadow, beneath everything; a foil's band throws its own. */}
       {!foilMaterial && (
         <span ref={keyShadowLayer} className="sticker-key-shadow" aria-hidden="true" />
       )}

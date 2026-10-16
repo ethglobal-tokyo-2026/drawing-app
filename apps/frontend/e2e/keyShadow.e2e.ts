@@ -35,7 +35,7 @@ async function openBoard(page: Page) {
 
 /**
  * After a reading lands, where a board sticker's key shadow sits against its figure, in CSS px, beside
- * the shoji's direction on screen.
+ * the room light's direction on screen.
  */
 async function shadowAt(page: Page, beta: number, gamma: number) {
   await page.evaluate(([b, g]) => window.stickerBoardDragFixture.tilt(b, g), [beta, gamma]);
@@ -49,9 +49,18 @@ async function shadowAt(page: Page, beta: number, gamma: number) {
     const under = shadow.getBoundingClientRect();
     shadow.style.transform = "";
     const [x, y] = window.stickerBoardDragFixture.roomLight();
-    return { offset: [cast.left - under.left, cast.top - under.top], light: [x, y] };
+    const elevation = parseFloat(getComputedStyle(shadow).getPropertyValue("--sticker-elevation"));
+    const [throwX, throwY] = window.stickerBoardDragFixture.keyShadowThrow();
+    return {
+      offset: [cast.left - under.left, cast.top - under.top],
+      light: [x, y],
+      thrown: [throwX * elevation, throwY * elevation],
+    };
   });
 }
+
+/** How far, per axis in CSS px, a shown key shadow may lag the light before it moves (keyShadow.ts). */
+const MOVE_GATE_PX = 0.25;
 
 test("a sticker's key shadow falls away from the room's light at every pose", async ({ page }) => {
   await openBoard(page);
@@ -62,15 +71,21 @@ test("a sticker's key shadow falls away from the room's light at every pose", as
     [47, -25],
     [90, 0],
   ]) {
-    const { offset, light } = await shadowAt(page, beta, gamma);
-    const length = Math.hypot(offset[0], offset[1]);
-    const away = -(offset[0] * light[0] + offset[1] * light[1]) / (length * Math.hypot(...light));
-    expect(length, `β ${beta}, γ ${gamma}: the key shadow moved off its sticker`).toBeGreaterThan(
-      0.1,
-    );
+    const { offset, light, thrown } = await shadowAt(page, beta, gamma);
+    const length = Math.hypot(thrown[0], thrown[1]);
+    const away = -(thrown[0] * light[0] + thrown[1] * light[1]) / (length * Math.hypot(...light));
     expect(
-      away,
-      `β ${beta}, γ ${gamma}: the key shadow points away from the light`,
-    ).toBeGreaterThan(0.99);
+      Math.hypot(offset[0], offset[1]),
+      `β ${beta}, γ ${gamma}: the key shadow moved off its sticker`,
+    ).toBeGreaterThan(0.1);
+    expect(away, `β ${beta}, γ ${gamma}: the light throws it away from itself`).toBeGreaterThan(
+      0.99,
+    );
+    // A stuck board's shadow moves only past the gate at its own elevation, so it lags by less.
+    for (const axis of [0, 1])
+      expect(
+        Math.abs(offset[axis] - thrown[axis]),
+        `β ${beta}, γ ${gamma}: the key shadow sits where the light throws it`,
+      ).toBeLessThan(MOVE_GATE_PX + 0.01);
   }
 });

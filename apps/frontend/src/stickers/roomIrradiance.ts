@@ -71,21 +71,27 @@ const disc = (d: number, blur: number) =>
   1 / (1 + Math.exp((d + ROOM.light.radius) / blur));
 
 /**
+ * The ceiling light's body, edge blur included, summed ring by ring over its plane one unit along it:
+ * each ring weighted by `weight` at its distance from the middle and by the solid angle it covers.
+ */
+export function overLightBody(weight: (d: number) => number) {
+  const { radius, feather } = ROOM.light;
+  const steps = 512;
+  const reach = radius + 12 * feather;
+  let sum = 0;
+  for (let i = 0; i < steps; i++) {
+    const d = ((i + 0.5) / steps) * reach;
+    // A ring seen from one unit before the plane: dω = dA / (1 + d²)^(3/2).
+    sum += (weight(d) * disc(d, feather) * 2 * Math.PI * d * (reach / steps)) / (1 + d * d) ** 1.5;
+  }
+  return sum;
+}
+
+/**
  * The ceiling light's power: its radiance times the solid angle its body covers, edge blur included,
  * as gloss mirrors it. The halo is the room it lights, which the bounce already holds.
  */
-const LIGHT_POWER = (() => {
-  const { radius, feather, radiance } = ROOM.light;
-  const steps = 512;
-  const reach = radius + 12 * feather;
-  let solidAngle = 0;
-  for (let i = 0; i < steps; i++) {
-    const d = ((i + 0.5) / steps) * reach;
-    // A ring on the plane one unit along the light, seen from one unit before it: dω = dA / (1 + d²)^(3/2).
-    solidAngle += (disc(d, feather) * 2 * Math.PI * d * (reach / steps)) / (1 + d * d) ** 1.5;
-  }
-  return radiance * solidAngle;
-})();
+const LIGHT_POWER = ROOM.light.radiance * overLightBody(() => 1);
 
 const c = bounceIrradiance(ROOM.glossBounce);
 
