@@ -1,13 +1,16 @@
 import { recordBody, tapReplay } from "@drawing-app/api/testing/replays";
 import type { LiffMockApi } from "@line/liff-mock";
-import { mkdir, rmdir } from "node:fs/promises";
-import { setTimeout as pause } from "node:timers/promises";
 import { openDb } from "../../../packages/db/src/index.ts";
 import { expect, type Locator, type Page } from "@playwright/test";
 import { GAME_CONFIG } from "../src/gratitude/gameConfig.ts";
 import { strings } from "../src/i18n/strings/index.ts";
-import { E2E_DATA_DIR, E2E_DATABASE } from "./dataDir.ts";
-import { E2E_BIGWHEEL_ID, E2E_BIGWHEEL_LINE_ID, E2E_HANA_ID } from "./personPair.ts";
+import { E2E_DATABASE } from "./dataDir.ts";
+import {
+  E2E_BIGWHEEL_ID,
+  E2E_BIGWHEEL_LINE_ID,
+  E2E_HANA_ID,
+  holdPersonPair,
+} from "./personPair.ts";
 import {
   actorHeaders,
   boardSticker,
@@ -34,46 +37,8 @@ const { app, explore, giving, personSwitch, receiving, stickerBoard, stickerCrea
   strings;
 const language = "en";
 
-// Both projects share the fixed pair. An exclusive fixture keeps their actions serial even when
-// the rest of the browser suite uses parallel workers and unrelated, randomly named people.
 const test = browserTest.extend<{ personPairLock: void }>({
-  personPairLock: [
-    async ({ page }, provide) => {
-      const lock = `${E2E_DATA_DIR}/person-pair.lock`;
-      const deadline = Date.now() + 150_000;
-      for (;;) {
-        try {
-          await mkdir(lock);
-          break;
-        } catch (error) {
-          if (!(error instanceof Error && "code" in error && error.code === "EEXIST")) throw error;
-          if (Date.now() >= deadline)
-            throw new Error("The isolated person pair remained busy for 150 seconds");
-          await pause(250);
-        }
-      }
-      try {
-        const db = openDb(E2E_DATABASE);
-        const historical = db.$client
-          .prepare<[], { sticker_id: string; received_at: number }>(
-            "select sticker_id, received_at from gifts where received_at is not null",
-          )
-          .all()
-          .map((row) => `${row.sticker_id}@${row.received_at}`);
-        db.$client.close();
-        // A fresh test context starts after earlier cases' receives; their notices are fixture history.
-        // Seed once, leaving this case's real notice acknowledgments intact across every page reload.
-        await page.addInitScript((noticed) => {
-          if (localStorage.getItem("draw.gifts.noticed") === null)
-            localStorage.setItem("draw.gifts.noticed", JSON.stringify(noticed));
-        }, historical);
-        await provide();
-      } finally {
-        await rmdir(lock);
-      }
-    },
-    { auto: true },
-  ],
+  personPairLock: [holdPersonPair, { auto: true }],
 });
 test.describe.configure({ mode: "serial", timeout: 120_000 });
 
