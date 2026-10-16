@@ -1,10 +1,12 @@
 /**
  * Research-only thin dielectric reference over display-referred sticker print.
  * Exact interface Fresnel, finite view directions, geometric slope normals, and sRGB decoding are
- * combined with an explicitly approximate nine-tap angular environment filter. Its tent width is
- * an appearance parameter, not a measured microfacet roughness or a full layered-material BSDF.
- * Outgoing Fresnel attenuates the calibrated print; adhesive transport and internal returns are not
- * reconstructed. Parameters describe a virtual scene, not manufacturer measurements.
+ * combined with an explicitly approximate nine-tap angular environment filter, whose gloss tent
+ * spreads as measured glossy paper's lobe does; it is not a full layered-material BSDF.
+ * Outgoing Fresnel attenuates the calibrated print, and the coat's internal returns darken it as an
+ * interfaced Lambertian's do; adhesive transport is not reconstructed. The display transform clips:
+ * the app's highlight compression is a display decision, outside this reference. The scene's light
+ * and room are virtual; the coat's index, the paper's albedo and the lobe are measured.
  */
 export type Vec3 = readonly [number, number, number];
 export type Rgb = readonly [number, number, number];
@@ -20,13 +22,24 @@ export interface Pose {
 }
 export type Environment = (direction: Vec3) => number;
 
-export const MATERIAL_GLOSS: Material = { ior: 1.5, roughness: 0.016 };
-export const MATERIAL_MATTE: Material = { ior: 1.5, roughness: 0.16 };
+/** BOPP's refractive index (US patents on BOPP film). */
+const BOPP_INDEX = 1.51;
+/**
+ * Gloss's tent: glossy paper's half-vector σ of 0.5° (Akao 2010, Nakamura 2022) doubles in the
+ * reflection, and the tent's σ is its width over √2.
+ */
+export const MATERIAL_GLOSS: Material = {
+  ior: BOPP_INDEX,
+  roughness: Math.SQRT2 * 2 * ((0.5 * Math.PI) / 180),
+};
+export const MATERIAL_MATTE: Material = { ior: BOPP_INDEX, roughness: 0.16 };
 export const CAMERA_DISTANCE = 2.4;
 export const POSE_RADIANS = 0.38;
 export const STICKER_THICKNESS = 0.35;
-/** A calibrated diffuse-print illumination proxy, not an integral of the analytic environment. */
-export const BASE_ILLUMINATION = 0.9;
+/** Glossy white paper's diffuse radiance factor (Akao et al. 2010, JIST). */
+export const PAPER_ALBEDO = 0.855;
+/** Lit white paper's display-linear level seen square-on, which sets the exposure. */
+export const PAPER_WHITE = 0.864;
 export const ENVIRONMENT = {
   ambient: 0.14,
   peak: 3.2,
@@ -61,6 +74,40 @@ export function dielectricFresnel(cosine: number, ior: number): number {
   const perpendicular = (c - ior * transmitted) / (c + ior * transmitted);
   const parallel = (ior * c - transmitted) / (ior * c + transmitted);
   return (perpendicular * perpendicular + parallel * parallel) / 2;
+}
+
+/**
+ * The print's illumination before the coat's outgoing Fresnel, so white paper seen square-on shows
+ * PAPER_WHITE: a calibrated proxy, not an integral of the analytic environment.
+ */
+export const BASE_ILLUMINATION = PAPER_WHITE / (1 - dielectricFresnel(1, BOPP_INDEX));
+
+const internalReflectances = new Map<number, number>();
+/**
+ * The share of the paper's diffuse light the coat's underside sends back, K = 1 − (1 − r_e)/n², with
+ * r_e the film's cosine-weighted reflectance from outside, by Simpson's rule over the cosine.
+ */
+export function internalReflectance(ior: number): number {
+  const known = internalReflectances.get(ior);
+  if (known !== undefined) return known;
+  const steps = 512;
+  let sum = 0;
+  for (let i = 0; i <= steps; i++) {
+    const c = i / steps;
+    sum += (i === 0 || i === steps ? 1 : i % 2 ? 4 : 2) * dielectricFresnel(c, ior) * 2 * c;
+  }
+  const k = 1 - (1 - sum / (3 * steps)) / (ior * ior);
+  internalReflectances.set(ior, k);
+  return k;
+}
+
+/**
+ * A print channel's linear albedo under the coat against white paper's, as an interfaced Lambertian:
+ * the print absorbs again what the coat's underside returns, so ρa(1 − ρK)/(1 − ρaK) over ρ.
+ */
+export function coatDarkening(albedo: number, internal: number): number {
+  const returned = PAPER_ALBEDO * internal;
+  return (albedo * (1 - returned)) / (1 - albedo * returned);
 }
 
 export function srgbToLinear(value: number): number {
@@ -192,6 +239,8 @@ export function reflectedEnvironment(
 export interface CoatField {
   reflection: number;
   transmission: number;
+  /** K, which darkens the print under the coat. */
+  internalReflectance: number;
   environment: number;
   color: Rgb;
 }
@@ -214,9 +263,17 @@ export function coatField(input: {
   return {
     reflection,
     transmission: 1 - reflection,
+    internalReflectance: internalReflectance(input.material.ior),
     environment: reflected,
     color: [value, value, value],
   };
+}
+
+/** The print's linear albedo under the coat, channel by channel. */
+function darkenedPrint(print: Rgb, coat: CoatField): Rgb {
+  const [r, g, b] = printToLinear(print);
+  const k = coat.internalReflectance;
+  return [coatDarkening(r, k), coatDarkening(g, k), coatDarkening(b, k)];
 }
 
 /** SDR display transform clips the combined linear result, after HDR reflection and transmission. */
@@ -225,7 +282,7 @@ export function compositePrint(
   coat: CoatField,
   baseIllumination = BASE_ILLUMINATION,
 ): Rgb {
-  const base = printToLinear(print);
+  const base = darkenedPrint(print, coat);
   return linearToPrint([
     bound(base[0] * baseIllumination * coat.transmission + coat.color[0]),
     bound(base[1] * baseIllumination * coat.transmission + coat.color[1]),
@@ -323,7 +380,7 @@ export function renderMaterialReference(input: MaterialReference): MaterialFrame
         input.print[i * 4 + 1] / 255,
         input.print[i * 4 + 2] / 255,
       ];
-      const linear = printToLinear(print),
+      const linear = darkenedPrint(print, coat),
         displayed = compositePrint(print, coat, baseIllumination);
       let clipped = false;
       for (let c = 0; c < 3; c++) {

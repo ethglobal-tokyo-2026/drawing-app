@@ -124,7 +124,7 @@ await test("dielectric reflection is four percent at a normal air/1.5 interface"
   assert.ok(m.dielectricFresnel(0.25, 1.5) > 0.04);
 });
 
-await test("linear reflection of a white environment lifts black to about sRGB 56", () => {
+await test("linear reflection of a white environment lifts black to about sRGB 57", () => {
   const m = math();
   const coat = m.coatField({
     point: [0, 0],
@@ -133,8 +133,26 @@ await test("linear reflection of a white environment lifts black to about sRGB 5
     environment: () => 1,
   });
   const color = m.compositePrint([0, 0, 0], coat);
-  for (const channel of color) near(channel * 255, 56.326, 0.01);
+  for (const channel of color) near(channel * 255, 57.267, 0.01);
   assert.ok(color[0] * 255 > 50, "Display-space source-over would produce about 10");
+});
+
+await test("the coat's internal returns deepen a mid-gray print and keep white paper and black ink", () => {
+  const m = math();
+  const coat = m.coatField({
+    point: [0, 0],
+    normal: [0, 0, 1],
+    material: m.MATERIAL_GLOSS,
+    environment: () => 0.14,
+  });
+  const unreturned = { ...coat, internalReflectance: 0 };
+  for (const ink of [0, 1])
+    assert.deepEqual(
+      m.compositePrint([ink, ink, ink], coat),
+      m.compositePrint([ink, ink, ink], unreturned),
+    );
+  const gray = [188 / 255, 188 / 255, 188 / 255] as const;
+  assert.ok(m.compositePrint(gray, coat)[0] < m.compositePrint(gray, unreturned)[0] - 10 / 255);
 });
 
 await test("a white nonabsorbing reference stays white in uniform white light", () => {
@@ -156,8 +174,8 @@ await test("declared diffuse calibration and HDR window leave visible headroom o
   const input = { point: [0, 0] as const, normal: [0, 0, 1] as const, material: m.MATERIAL_GLOSS };
   const dark = m.compositePrint([1, 1, 1], m.coatField({ ...input, environment: () => 0.14 }));
   const bright = m.compositePrint([1, 1, 1], m.coatField({ ...input, environment: () => 1.8 }));
-  near(dark[0] * 255, 239.78, 0.03);
-  near(bright[0] * 255, 247.69, 0.03);
+  near(dark[0] * 255, 239.81, 0.03);
+  near(bright[0] * 255, 247.96, 0.03);
   assert.ok((bright[0] - dark[0]) * 255 > 7);
 });
 
