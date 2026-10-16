@@ -9,16 +9,15 @@ const HOLO_ROOM_ORDERS = 0.6;
 /**
  * Lookup RGBA8: RGB is linear chromaticity / max channel; A²×8 is integrated Y.
  * Coordinates: u in [−2,2], sigma in [.035,.22], texel-center mapped to 512×32.
- * The room's window, light level and quadrature grid are compiled in.
- * foilSources[16]: the window's grid² quadrature samples (unit incident xyz, solid angle), then the
- * room's lamps (unit incident xyz, solid angle × radiance relative to the room level), from
+ * The room's window radiance and light level are compiled in.
+ * foilSources[16]: the light's quadrature samples (unit incident xyz, solid angle), from
  * roomFoilSources or createFoilSourceSamples. Unused entries are zero.
  * foilStyle is the style's index in FOIL_STYLES: holo and pink, the chromatic styles, come first, then
  * Kyoto Seika, whose screentone the shader prints. Tint and ink are linear RGB.
  * shadeFoil receives print coordinates in screentone tiles, shared oriented normal/view/groove
  * direction and pixel footprints.
  */
-export function createFoilFragment({ window, level, grid }: FoilRoom) {
+export function createFoilFragment({ window, level }: FoilRoom) {
   const dot = f(SCREENTONE.dotRadius);
   return `
 uniform sampler2D foilLookup;
@@ -39,16 +38,6 @@ vec3 highlightShoulder(vec3 c,float knee){
  if(peak<=knee)return c;
  return c*(knee+(1.-knee)*(1.-exp(-(peak-knee)/(1.-knee))))/peak;
 }
-float foilPanel(vec2 p,vec2 center,vec2 extent){
- vec2 d=abs(p-center)-extent;
- return 1.-smoothstep(-.07,.07,max(d.x,d.y));
-}
-// The shared room as the foil mirrors it: its bounce at metal's levels, and two soft panels beside
-// the shoji that tilting sweeps across the band.
-float foilRoom(vec3 r){
- vec2 q=roomPlane(r);
- return roomFoil(r)+.6*foilPanel(q,vec2(-.46,-.34),vec2(.17,.1))+.45*foilPanel(q,vec2(.55,.04),vec2(.1,.26));
-}
 // The room's ceiling light, relative to its radiance, which foil sets as the window's.
 float foilWindowLight(vec3 r){return roomSources(r,.045)/${f(ROOM.light.radiance)};}
 float foilCoat(float cosine){
@@ -63,9 +52,8 @@ float foilDots(vec2 print,float footprint){
  float resolved=smoothstep(-.5,.5,(${dot}-distance)/max(footprint,.0001));
  return mix(resolved,2.*3.14159265359*${dot}*${dot},clamp((footprint-.25)/.75,0.,1.));
 }
-// The window's quadrature is lit by its radiance; the lamps sample the room's bright features, whose
-// mirror image foilRoom already carries, so they add only colored orders. Shift moves both orders
-// toward longer or shorter wavelengths.
+// The light's quadrature, lit by the window's radiance. Shift moves both orders toward longer or
+// shorter wavelengths.
 vec3 foilDiffraction(vec3 n,vec3 view,vec3 tangent,float footprint,float shift){
  if(dot(n,view)<=0.)return vec3(0.);
  vec3 t=normalize(tangent-dot(tangent,n)*n),b=cross(n,t);
@@ -81,18 +69,17 @@ vec3 foilDiffraction(vec3 n,vec3 view,vec3 tangent,float footprint,float shift){
   vec4 lookup=texture2D(foilLookup,(coord*vec2(511.,31.)+.5)/vec2(512.,32.));
   float energy=lookup.a*lookup.a*8.;
   vec3 color=lookup.rgb/max(foilY(lookup.rgb),.000001)*energy;
-  float light=float(i)<${f(grid * grid)}?${f(window.radiance)}:${f(level)};
-  sum+=color*exp(-.5*v*v/(sigma*sigma))/(2.50662827463*sigma)*source.w*light;
+  sum+=color*exp(-.5*v*v/(sigma*sigma))/(2.50662827463*sigma)*source.w;
  }
- return sum;
+ return sum*${f(window.radiance)};
 }
 // The room's bounce meets the grooves from every side, so each stretch of band sends some first order
-// to the eye with no lamp in line with it. That floor keeps holo colored at any pose. Its hues sweep
-// around the band and travel round it as the reflection moves through the room, up or across.
+// to the eye with the light nowhere in line with it. That floor keeps holo colored at any pose. Its hues
+// sweep around the band and travel round it as the reflection moves through the room, up or across.
 // It reads the second order from aqua through sky, lilac and pink to lemon, taking only the hue, so the
-// slots the eye's sensitivity dims in the lamps' orders still show. Its spread is the lookup's
+// slots the eye's sensitivity dims in the light's orders still show. Its spread is the lookup's
 // narrowest, or aqua and sky blur into the first order's red tail. The sweep rests on aqua instead of
-// crossing the gray bridge and green below it, and aqua is lifted so the lamps' lilac doesn't drown it.
+// crossing the gray bridge and green below it, and aqua is lifted so the light's lilac doesn't drown it.
 vec3 foilRoomOrders(vec3 r,float polar,float footprint){
  float sigma=clamp(sqrt(.035*.035+footprint*footprint),.035,.22);
  float u=max(.62,.85+.27*sin(3.*polar+3.*(dot(r,roomUp)+dot(r,roomAcross))));
@@ -105,7 +92,7 @@ vec3 shadeFoil(vec2 print,float polar,vec3 n,vec3 view,vec3 tangent,float printF
  float coat=foilCoat(cosine);
  vec3 reflected=normalize(2.*cosine*n-view);
  bool chromatic=foilStyle<1.5;
- float room=foilRoom(reflected)*${f(level)};
+ float room=roomFoil(reflected)*${f(level)};
  float sources=foilWindowLight(reflected)*${f(window.radiance)};
  float environment=room+sources;
  vec3 f0=pow((vec3(.91,.92,.92)+.055)/1.055,vec3(2.4));
@@ -113,9 +100,9 @@ vec3 shadeFoil(vec2 print,float polar,vec3 n,vec3 view,vec3 tangent,float printF
  vec3 underlying;
  float quiet=1.;
  if(chromatic){
-  // A smooth room diffracts back to neutral and discrete sources keep the zero order's share. Holo
-  // gives part of the room's light to its lamps, and its strong orders take the zero order's
-  // light, so color isn't washed out by metal; pink keeps the whole room as candy pink metal.
+  // A smooth room diffracts back to neutral and the light keeps the zero order's share. Holo's
+  // strong orders take the zero order's light, so color isn't washed out by metal; pink keeps the
+  // whole room as candy pink metal.
   bool pink=foilStyle>.5;
   vec3 tint=pink?foilTint:vec3(1.);
   // Holo stock's hue bands sweep around the sticker on top of the optics, so the band shows

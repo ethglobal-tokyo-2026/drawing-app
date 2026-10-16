@@ -112,7 +112,7 @@ vec3 laminateGlitter(vec3 coat,vec2 cellPoint,float footprint,float scale,vec3 s
  float flash=roomSources(r,${f(GLITTER.lobe)});
  vec3 hue=laminateHue(facet.z);
  vec3 tint=mix(vec3(1.),vec3(linear(hue.r),linear(hue.g),linear(hue.b)),${f(GLITTER.tint)});
- vec3 mirror=tint*foilRoom(r)*${f(FOIL_ROOM.level)}+flash;
+ vec3 mirror=tint*roomFoil(r)*${f(FOIL_ROOM.level)}+flash;
  vec3 coatNormal=normalize(normalTransform*surfaceNormal);
  float cosine=clamp(dot(coatNormal,view),0.,1.);
  float sheen=foilCoat(cosine);

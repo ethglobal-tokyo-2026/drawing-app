@@ -143,8 +143,7 @@ function render(options: FoilFixtureOptions = {}) {
     geometry = "flat",
     side = 240,
   } = options;
-  // The independent reference integrates only the window, so diagnostics leave the lamps out.
-  const room = { ...rooms[roomName], grid, lamps: diagnostic ? [] : FOIL_ROOM.lamps };
+  const room = { ...rooms[roomName], grid };
   const program = programForRoom(room);
   const uniform = (name: string) => gpu.getUniformLocation(program, name);
   // The renderer's palette, tint and ink for this style, read from the same design tokens.
@@ -192,7 +191,7 @@ function render(options: FoilFixtureOptions = {}) {
   );
   gpu.uniform1f(uniform("polar"), (polar * Math.PI) / 180);
   gpu.uniform1f(uniform("foilStyle"), FOIL_STYLES.indexOf(style));
-  // The room as the renderer orients it for this pose, and its shoji and lamps as the foil's sources;
+  // The room as the renderer orients it for this pose, and its ceiling light as the foil's sources;
   // the diffraction reference integrates its own window, in the screen's axes.
   const frame = roomFrame({ beta, gamma, screenAngle: 0 });
   for (const [name, value] of [

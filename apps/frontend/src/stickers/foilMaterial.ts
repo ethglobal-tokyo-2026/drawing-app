@@ -51,18 +51,12 @@ export function createFoilLookup(style: FoilStyle, palette: readonly Rgb[]): Loo
   lookupCache.set(key, lookup);
   return lookup;
 }
-/** Gaussian quadrature for the feathered source measure, computed only when source geometry changes. */
-function sourceAxis(halfExtent: number, edge: number, count: number) {
-  const steps = 512,
-    extent = halfExtent + edge;
-  const coordinates = Array.from(
-    { length: steps },
-    (_, i) => ((2 * (i + 0.5)) / steps - 1) * extent,
-  );
-  const weights = coordinates.map((x) => {
-    const t = Math.max(0, Math.min(1, (Math.abs(x) - halfExtent + edge) / (2 * edge)));
-    return ((1 - t * t * (3 - 2 * t)) * 2 * extent) / steps;
-  });
+/** Gaussian quadrature (Golub–Welsch) for a measure given as weights at evenly spaced coordinates. */
+function gaussQuadrature(
+  coordinates: readonly number[],
+  weights: readonly number[],
+  count: number,
+) {
   const mass = weights.reduce((sum, w) => sum + w, 0);
   let previous = coordinates.map(() => 0),
     current = coordinates.map(() => 1 / Math.sqrt(mass)),
@@ -114,47 +108,41 @@ function sourceAxis(halfExtent: number, edge: number, count: number) {
   }
   return matrix.map((row, i) => ({ position: row[i], weight: mass * eigenvectors[0][i] ** 2 }));
 }
-type Lamp = readonly [x: number, y: number, power: number];
+/** The feathered window's measure along one axis. */
+function sourceAxis(halfExtent: number, edge: number, count: number) {
+  const steps = 512,
+    extent = halfExtent + edge;
+  const coordinates = Array.from(
+    { length: steps },
+    (_, i) => ((2 * (i + 0.5)) / steps - 1) * extent,
+  );
+  const weights = coordinates.map((x) => {
+    const t = Math.max(0, Math.min(1, (Math.abs(x) - halfExtent + edge) / (2 * edge)));
+    return ((1 - t * t * (3 - 2 * t)) * 2 * extent) / steps;
+  });
+  return gaussQuadrature(coordinates, weights, count);
+}
 /**
- * Room lamps around the overhead window, on the plane one unit toward the viewer (y runs down the
- * screen), with solid angle × radiance relative to the room. Lamps nearer the axis color the far side
- * of the band and wider ones the near side, so the band shows several hues at rest and tilting shifts
- * them.
- */
-export const foilRoomLamps: readonly Lamp[] = [
-  [-0.12, -0.05, 0.14],
-  [0.09, -0.16, 0.15],
-  [0.11, 0.19, 0.12],
-  [-0.23, 0.13, 0.13],
-  [-0.1, -0.28, 0.15],
-  [0.33, 0.06, 0.13],
-  [-0.3, -0.3, 0.15],
-];
-/**
- * The lit room the foil mirrors: the overhead window, the room's own light level, the window's
- * quadrature grid per axis, and the lamps.
+ * The lit room the foil mirrors: the overhead window, the room's own light level, and the window's
+ * quadrature grid per axis.
  */
 export interface FoilRoom {
   readonly window: OverheadWindow;
   readonly level: number;
   readonly grid: number;
-  readonly lamps: readonly Lamp[];
 }
 export const FOIL_ROOM: FoilRoom = {
   window: OVERHEAD_WINDOW,
   level: 1,
   grid: 3,
-  lamps: foilRoomLamps,
 };
 /**
  * xyzw samples: the window's grid² quadrature (incident unit direction, solid angle including its
- * feather), then the lamps (incident unit direction, power). The shader reads sixteen.
+ * feather). The shader reads sixteen.
  */
-export function createFoilSourceSamples({ window, grid, lamps }: FoilRoom) {
+export function createFoilSourceSamples({ window, grid }: FoilRoom) {
   if (!Number.isInteger(grid) || grid < 1 || grid > 4)
     throw new Error("Foil source grid must be between one and four");
-  if (grid * grid + lamps.length > 16)
-    throw new Error(`A ${grid}×${grid} window and ${lamps.length} lamps exceed sixteen sources`);
   const horizontal = sourceAxis(window.halfWidth, window.feather, grid),
     vertical = sourceAxis(window.halfHeight, window.feather, grid);
   const samples = new Float32Array(64);
@@ -167,10 +155,45 @@ export function createFoilSourceSamples({ window, grid, lamps }: FoilRoom) {
       samples.set([px / d, py / d, 1 / d, (sx.weight * sy.weight) / d ** 3], at);
       at += 4;
     }
-  for (const [px, py, power] of lamps) {
-    const d = Math.hypot(px, py, 1);
-    samples.set([px / d, py / d, 1 / d, power], at);
-    at += 4;
-  }
+  return samples;
+}
+/** A round light on the plane one unit along it: its radius and its logistic edge blur. */
+export interface FoilDisc {
+  readonly radius: number;
+  readonly feather: number;
+}
+/** The round light's rings of samples, inner to outer, about as many as each ring's radius: sixteen. */
+const DISC_RINGS = [3, 5, 8];
+/** roomShader's roomDisc: the light's body at distance d from its middle, through a logistic blur. */
+export const discProfile = (d: number, { radius, feather }: FoilDisc) =>
+  1 / (1 + Math.exp((d - radius) / feather)) - 1 / (1 + Math.exp((d + radius) / feather));
+/**
+ * xyzw samples of a round light in its plane's axes (x across, y down, z along the light): incident
+ * unit direction and solid angle. Rings sit at the Gauss nodes of the disc's radial measure, its
+ * blurred edge and the plane's solid angle included; each ring's samples are evenly spaced around it,
+ * turned half a step from the ring inside it so no two rings line up.
+ */
+export function createFoilDiscSamples(disc: FoilDisc) {
+  const steps = 512,
+    reach = disc.radius + 12 * disc.feather;
+  const coordinates = Array.from({ length: steps }, (_, i) => ((i + 0.5) / steps) * reach);
+  // A ring of radius d on the plane, seen from one unit before it: dω = 2πd·dd / (1 + d²)^(3/2).
+  const weights = coordinates.map(
+    (d) => (discProfile(d, disc) * 2 * Math.PI * d * (reach / steps)) / (1 + d * d) ** 1.5,
+  );
+  const samples = new Float32Array(64);
+  let at = 0;
+  gaussQuadrature(coordinates, weights, DISC_RINGS.length).forEach(({ position, weight }, ring) => {
+    const count = DISC_RINGS[ring],
+      d = Math.hypot(position, 1);
+    for (let k = 0; k < count; k++) {
+      const angle = (2 * Math.PI * (k + 0.5 * (ring % 2))) / count;
+      samples.set(
+        [(position * Math.cos(angle)) / d, (position * Math.sin(angle)) / d, 1 / d, weight / count],
+        at,
+      );
+      at += 4;
+    }
+  });
   return samples;
 }

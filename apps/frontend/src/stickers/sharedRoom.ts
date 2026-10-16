@@ -1,12 +1,33 @@
-import { createFoilSourceSamples } from "./foilMaterial";
+import { createFoilDiscSamples } from "./foilMaterial";
 import { currentLight, type DevicePose } from "./light";
 import { IDENTITY, inverse, rotate, STILL_POSE, upOnScreen } from "./lightMode";
 import { OVERHEAD_WINDOW } from "./overheadWindow";
 
 /** One room fixed in the world, seen from one eye that stays put while the hand turns the device. */
 
-/** A room lamp: azimuth from straight ahead (beyond the device) toward the viewer's left, elevation, power. */
-type RoomLamp = readonly [azimuth: number, elevation: number, power: number];
+/** The ceiling light's radiance as paper and gloss see it; foil sees it at the overhead window's. */
+const LIGHT_RADIANCE = 1.5 * OVERHEAD_WINDOW.radiance;
+const glossBounce = {
+  ceiling: 0.124,
+  litWall: 0.112,
+  walls: 0.072,
+  floor: 0.072,
+  litWallFade: 0.35,
+} as const;
+/**
+ * The same room at foil's light level. Metal mirrors the room's own radiance, and the conductor in
+ * foil's shader is the metal's reflectance, so only the light's scale changes.
+ */
+const foilBounce = (() => {
+  const scale = OVERHEAD_WINDOW.radiance / LIGHT_RADIANCE;
+  return {
+    ceiling: glossBounce.ceiling * scale,
+    litWall: glossBounce.litWall * scale,
+    walls: glossBounce.walls * scale,
+    floor: glossBounce.floor * scale,
+    litWallFade: glossBounce.litWallFade,
+  };
+})();
 
 /**
  * The room. The eye's distance in CSS px (an unverified guess for about 32 cm), and its elevation
@@ -17,8 +38,8 @@ type RoomLamp = readonly [azimuth: number, elevation: number, power: number];
  * ceiling it lights, the coat's haze and the eye's veiling glare, as the disc blurred at a wide
  * logistic scale, at a level against its body; and its radiance. The bounce off the ceiling, the
  * wall beyond the device, the other walls and the floor, which gloss and foil each mirror, and how far
- * the lit wall fades toward the ceiling: gloss's is the fill a real room gives under one light, its
- * floor lit as its walls are. Lamps at fixed points in the room, which only foil's diffraction sees.
+ * the lit wall fades toward the ceiling: the fill a real room gives under one light, its floor lit as
+ * its walls are.
  */
 export const ROOM = {
   eyeDistance: 1900,
@@ -30,17 +51,10 @@ export const ROOM = {
     feather: 0.045,
     haloLevel: 0.12,
     haloScale: 0.12,
-    radiance: 1.5 * OVERHEAD_WINDOW.radiance,
+    radiance: LIGHT_RADIANCE,
   },
-  glossBounce: { ceiling: 0.124, litWall: 0.112, walls: 0.072, floor: 0.072, litWallFade: 0.35 },
-  foilBounce: { ceiling: 0.95, litWall: 1.15, walls: 0.62, floor: 0.34, litWallFade: 0 },
-  lamps: [
-    [32, 60, 0.14],
-    [-30, 62, 0.14],
-    [150, 10, 0.15],
-    [40, 30, 0.13],
-    [180, 18, 0.13],
-  ] satisfies readonly RoomLamp[],
+  glossBounce,
+  foilBounce,
 } as const;
 
 type Vec3 = [number, number, number];
@@ -114,11 +128,6 @@ export function roomFrame(pose: DevicePose = currentLight()) {
   const split = Math.abs(skew) > 1e-9 ? (1 - Math.sqrt(1 - skew * skew)) / skew : 0;
   const across = unit(add(levelAxis, scale(plumbAxis, -split)));
   const down = unit(add(plumbAxis, scale(levelAxis, -split)));
-  const ahead = scale(h, -1);
-  const lamps = ROOM.lamps.map(([azimuth, elevation, power]) => ({
-    direction: toward(ahead, left, up, azimuth, elevation),
-    power,
-  }));
   // Carried into the device's axes now, with y turned down for the shader.
   const flip = (v: Vec3): Vec3 => {
     const [x, y, z] = toScreen(rotate(turn, toDevice(v)));
@@ -131,44 +140,21 @@ export function roomFrame(pose: DevicePose = currentLight()) {
     across: flip(across),
     down: flip(down),
     eye: scale(flip(eye), ROOM.eyeDistance),
-    lamps: lamps.map((lamp) => ({ ...lamp, direction: flip(lamp.direction) })),
   };
 }
 
 export type RoomFrame = ReturnType<typeof roomFrame>;
 
-// Foil's quadrature takes the ceiling light as a square of the disc's area, at its middle.
-const lightHalfSide = (ROOM.light.radius * Math.sqrt(Math.PI)) / 2;
-const lightSources = createFoilSourceSamples({
-  window: {
-    x: 0,
-    y: 0,
-    halfWidth: lightHalfSide,
-    halfHeight: lightHalfSide,
-    feather: ROOM.light.feather,
-    radiance: ROOM.light.radiance,
-  },
-  level: 1,
-  grid: 3,
-  lamps: [],
-});
+const lightSources = createFoilDiscSamples(ROOM.light);
 
-/**
- * The foil's sources in screen axes: the ceiling light's quadrature, laid out around the light, then
- * the room's lamps.
- */
+/** The foil's sources in screen axes: the ceiling light's round quadrature, laid out around the light. */
 export function roomFoilSources(frame: RoomFrame) {
   const out = new Float32Array(64);
-  for (let i = 0; i < 36; i += 4) {
+  for (let i = 0; i < out.length; i += 4) {
     const [x, y, z, w] = lightSources.subarray(i, i + 4);
     for (let c = 0; c < 3; c++)
       out[i + c] = x * frame.across[c] + y * frame.down[c] + z * frame.light[c];
     out[i + 3] = w;
   }
-  if (9 + frame.lamps.length > 16)
-    throw new Error(
-      `The ceiling light and ${frame.lamps.length} lamps exceed foil's sixteen sources`,
-    );
-  frame.lamps.forEach(({ direction, power }, k) => out.set([...direction, power], 36 + 4 * k));
   return out;
 }
