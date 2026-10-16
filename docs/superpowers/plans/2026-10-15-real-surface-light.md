@@ -1,65 +1,84 @@
-# Real-surface light: one light
+# Real-surface light: a measured physical model
 
-The board behaves like real stickers under one real room: the light follows the hand, tremor included, and creases and drop shadows follow the room's light. On ad0ll's iPad (6fa74f2b), three things were wrong.
+**Goal (ad0ll):** "an accurate simulation that looks really, really visually striking." Every value is measured or computed from a source. Where it isn't, it's labeled a design decision, with its reason.
 
-**What ad0ll saw:**
+- **Live:** one soft ceiling light, steeper creases, paper light and drop shadows (4bfb1b06).
+- **Next deploy** (branch `round2`): foil lit by the one light only, shadow softness from the light, the crease step's contact shadow, and aligned specs.
+- **Research notes:** `data/scratch/physical-model/`.
 
-- **Three separate lights:** the shoji, a ceiling lamp seen lying flat, and a marumado seen near upright and at about 30° of tilt.
-- **A "plus symbol":** the shoji's kumiko lattice, whose cells reflect larger than many stickers.
-- **No visible crease shadows:**
-  - a 2.5° slope;
-  - 60% fill;
-  - the marumado lighting creases from the front.
+## The model, term by term
 
-  Upright, the bottom slope was only 1.9% darker.
+| Term | Value | Basis | Kind |
+| --- | --- | --- | --- |
+| Eye distance | phone 34 cm (about 2050 CSS px); tablet 50 cm (about 2600 CSS px) | Boccardo 2021 and 2023, Chen 2022 (600 people photographed in public), Naipal 2025: phones 33–37 cm. Young 2012: tablets 50 cm by motion capture, still the best adult measurement | measured |
+| Phone or tablet | the screen's short side ≥ 600 CSS px, with a coarse pointer, means a tablet | Android's 600 dp boundary. A viewport test would misread an iPad in Split View or in LINE | computed |
+| Still pose | tablet 36°; phone 47° | Young 2012 measured tablets; phones are derived from Chen 2022's gaze angles | measured / derived |
+| The light's place | fixed in the room, above and behind the viewer | It no longer moves with the still pose | design decision: placed so its glare crosses the reading band |
+| The light's size | a 45 cm round diffuser, 21–24° across, its height foreshortened by sin e | The 8-tatami standard (JLMA, 3,800 lm); Panasonic HH-CK0825CA (2023) | measured / computed |
+| The light's brightness | radiance from lumens and diffuser area, about 120× paper white; its reflection about 5× paper | 3,800 lm; 200 lx room light (JIS Z 9125:2023); Fresnel | computed |
+| The light's edge | sharp, about 0.5° before each coat's own blur | The haze of gloss BOPP lamination film, 1.2% (Ball & Doggett datasheet) | measured |
+| The light's color | neutral, the display's white (D65) | True Tone adapts the screen to the room; Japanese ceiling lights are color-tunable, with no measured common setting | design decision |
+| Halo | veiling glare, 1.85%·deg/(Δ + 0.32°) of the light's body; no bloom | CIE 146:2002. The glare illusion is what makes a limited highlight read as a light | measured formula |
+| Room bounce | a radiosity solve of a 3.6×3.6×2.4 m room lit by the one light, at ceiling .8, walls .6, floor .3, baked to 6×32×32 RGBA8 | EN 12464-1 reflectances; radiosity is accurate to about 10% against measurement (CIE 171, DIALux validations) | computed; room size and reflectances within EN's range are design decisions |
+| Fill share | follows from the solve: about 17% flat, 20% at the reading pose, 34% upright | The solve | computed |
+| The coat's reflection | BOPP film n 1.51, exact Fresnel, gloss blur σ_h 0.5° (spread 0.024, up from 0.002) | Refractive index from patents; measured glossy-paper BRDFs (Akao 2010, Nakamura 2022) | measured |
+| Paper under the coat | interfaced Lambertian: both Fresnel passes plus internal reflection deepen and saturate colors; paper albedo 0.855; lit paper white 0.864 replaces the authored 0.9 | OpenPBR v1.1.1 coat darkening; Williams–Clapper; Akao 2010 | measured / computed; how much (δ) is decision 2 |
+| Paper's brightness | follows the light, clamp((E/E_still)^0.4, 0.85, 1); the board can follow later | Shipped designs keep content brightness fixed | design decision (ad0ll) |
+| Tone | compress highlights only, with Khronos PBR Neutral's hue-keeping curve and its desaturation toward white. It starts at 0.88 instead of 0.76, and drops PBR Neutral's black offset, so paper and ink stay as drawn | A screen can't show the light's real luminance; ACES and AgX change the artists' colors | design decision |
+| Crease shape | a draped sheet's S-curve, 1 − smoothstep(d/L), at a real sticker's thickness, L about 2 mm; slope about 7.5° with no multiplier; top and bottom bend equally | Thin-plate mechanics; 3M IJ180 thickness and peel strength; film moduli | computed; L inside the computed 1.5–2.6 mm is a design decision, since a settled adhesive's grip is unmeasured |
+| Contact shadow | the step's shadow, h·cot e, softened by the light's size; its cap raised from 3 px so raking light casts long shadows | Shadow geometry | computed |
+| Drop shadow | a real sticker's thickness, about 1 px, softened by the light's size | Sticker thickness 0.13–0.23 mm | measured / computed |
+| Foil | a real grating (1400 nm period); the palette mapping is art direction (no green); metal reflectance; its room from the same solve | Stam's diffraction shaders | computed; the palette is a design decision (DESIGN.md) |
+| Motion | the reflection follows the hand, tremor included | One Euro filter, tuned on ad0ll's recorded iPad traces | measured |
+| Re-centering | the viewer settles back after a posture change | A heuristic for the head moving | design decision; decision 4 |
+| Not modeled | Oren–Nayar backscatter (≤3% under a coat), scattering inside paper (under a pixel), fluorescent whitening (an LED gives no UV), the coat's birefringence (F0 0.040–0.043) | The paper research | measured as negligible |
 
-- **No visible drop shadows:** 2 px of elevation.
+## Decisions for ad0ll
 
-**Research and the spike** (`data/scratch/light-diagnosis/`, `data/scratch/one-light/`, branch `one-light-spike` at ca70faee): a real room has one light and about 25–35% fill, and real draped stickers have 8–30° slopes. The spike's variant c, built from that, gives one light across the whole sweep and readable art. Bottom slopes against top, at physical strength: 11% darker upright, 17% at β 105, 3% at the reading pose.
+1. **The light's reflection at its real brightness.** Physically it's about 5× paper white, and a screen can't show that, so the print under it turns white. Real stickers do the same in a band of tilts.
+   - Or cap it near half its brightness (a design decision): the print stays readable under it, but it no longer reads as a light.
+   - Recommended: physical.
+2. **How much the coat deepens the art's colors (δ).**
+   - At 1, physical: mid-tones deepen and colors saturate. Gray #BCBCBC becomes #9B9B9B, and skin #F0C8A8 becomes #E3A986. Paper white and black stay put.
+   - At 0, colors stay as drawn: printed as if for the laminated stock, also physical.
+   - Recommended: a mock on the 21-sticker board at 1, 0.5 and 0, then choose by eye.
+3. **The board's physical scale.** At life size, a sticker on the board is a small real sticker (about 1.9 cm on an iPhone), and creases are drawn at real thickness and drape. Miniature makes them sub-pixel.
+   - Recommended: life size.
+4. **Re-centering at extreme poses.**
+   - Today the viewer re-centers within a second of any turn past 25° (`RECENTER_RELEASE`, `RECENTER_MS`). So a held extreme pose (far left, right, forward or back) loses the grazing view's contrast: at β 120, crease contrast goes from −40% while moving to −14% once held.
+   - When you tilt to look, your head hasn't moved. When you lie down, it has.
+   - Recommended: re-center only after a new pose is held well past a look (several seconds), easing over a few seconds, so tilting to look keeps the room still. The times are a feel thing, tuned on the iPad like the strengths.
+   - Or never re-center, which is fully physical: in bed, the ceiling light is behind the phone, and only the room lights the board.
 
-## Decisions (ad0ll, 2026-10-15)
+## Build, after the decisions (each lane owns its files)
 
-1. **One light:** a round, soft ceiling light about 22° across, above and behind the viewer, a little left, about 17° above the still pose's normal.
-   - Its halo stays.
-   - No lattice, no extra lamps.
-   - Its reflection shows only in a band of tilts, as a real one does. Shading and shadows respond everywhere.
-2. **Fill is about 30% of the light,** and the floor is about as bright as the walls, as under a ceiling light.
-3. **The paper follows the light slightly:** clamp((E/E_still)^0.4, 0.85, 1.0), all named constants.
-   - Build it so it can be made fuller later: the board can dim by the same factor through a compositor-only overlay, with its share at 0 for now.
-4. **Foil's diffraction lamps go** (`ROOM.lamps`). Holo's colors come from the one light and the room's bounce; the holo harness must still pass.
-5. **Creases are steepened ×3 in the shader,** about 2.5° → 7.5°, a gentle real drape, at physical strength (`CREASE_SHADING` 1). The gloss breaks at creases too.
-6. **A crease's step casts a short contact shadow** away from the light: length h·cot e, capped near 3 px. A fold darkening at the foot stays.
-7. **Drop shadows sit at a real sticker's thickness,** about 1 CSS px, with a 1 px ambient contact shadow. The elevation is a named constant, to tune by feel.
-8. **Lying flat, crease lighting flips** (+4%). That's accepted for now; revisit after the device check.
-
-## Build (each lane owns its files)
-
-- **A, the one light** (`sharedRoom.ts`'s light and bounces, `roomShader.ts`, `roomIrradiance.ts`, `laminateShader.ts`'s flash, `stickerRendererGpu.ts`'s room uniforms): decisions 1–2.
-  - Delete `ROOM.lights`, `roomRound` and the lattice.
-  - `roomFrame(pose).light` stays the one light's direction.
-- **B, foil** (`foilShader.ts`, `foilMaterial.ts`, `ROOM.lamps`, `ROOM.foilBounce`), after A: decision 4. The foil's source samples follow the disc. Retune foil's bounce, and run the holo harness.
-- **C, creases steeper** (`stickerShader.ts`'s normal decode): decision 5.
-- **D, the step's contact shadow** (the crease bake and the shader): decision 6. The drape's height goes in the normal texture's alpha, and the shader marches a few samples toward the light.
-- **E, paper light** (`stickerShader.ts`'s paper term, a board overlay): decision 3.
-- **F, drop shadows** (`keyShadow.ts`, sticker CSS, tokens): decision 7.
-- **G, tests and docs,** after the others:
-  - the sweeps track the one light's glare, since there's no lattice now;
-  - `sharedRoom.test`, `keyShadow.test`, `creaseLight`;
-  - the README's room section.
+- **R1, the room's bounce:**
+  - a generator that solves and bakes the room, in the way `generateFoilLookup.ts` makes its basis;
+  - gloss and foil read it with a reflection ray against the box;
+  - creases take its spherical harmonics;
+  - `glossBounce`, `foilBounce` and `roomBounce` retire.
+- **R2, the light:** brightness from lumens; CIE halo; 0.5° edge; foreshortened by sin e; fixed in the room. Eye distance and still pose by device class.
+- **R3, paper and coat:** interfaced Lambertian with δ; gloss blur 0.024; n 1.51; PBR Neutral highlight compression.
+- **R4, creases:** the S-curve at real thickness, L about 2 mm, symmetric tones, `CREASE_STEEPENING` gone, contact-shadow cap raised.
+- **R5, motion:** the re-centering limit (decision 4); the 15° turn left over at β 135.
+- **R6:** the physical-model table moves into `docs/research/sticker-laminate/README.md`, with sources, and tests follow each change.
 - **Checks before deploy:**
-  - every light, crease, laminate, foil and shadow e2e, in both engines;
+  - every light, crease, laminate, foil and shadow e2e in both engines;
   - the holo harness;
   - a critique on the 21-sticker board;
-  - ad0ll's device check.
+  - ad0ll's device check in LINE.
 
-## Left after this
+## Open
 
-- **Each foil's metal and the room's bounce** (ad0ll: right after this version): gold warms the bounce it reflects, silver keeps it neutral, rose gold tints it, holo diffracts it. Research and a spike first.
-- **ad0ll's device check in LINE, on iPad and phone, with the recorder on:** motion, the screen angle, and the strengths, by feel.
+- **Bright paper upright on ad0ll's iPad:** not reproduced in WebKit, where everything darkens there.
+  - It could be the real room's reflection in the iPad's glass, or LINE reporting the iPad's rotation differently.
+  - It needs a screenshot at that pose, and a recorder run (developer slip) while tilting. A screenshot tells the two apart, since it shows only what the app drew, never the glass's glare.
+- **Each foil's metal and the room's bounce** (ad0ll: after this): gold warms it, silver keeps it neutral, rose gold tints it, holo diffracts it. R1's solve gives the bounce to color.
 - **Static shadows left:** the photo sticker, gift bag, give sheet pick, gift received notice and receive dialog. The tray is unchecked.
 - **Cost, if the device check shows a problem:** cache each sticker's layout between publishes, and skip the work after the copies when only the light changed.
+- **HDR output:** an HDR canvas (WebGPU in Safari 26) could show the reflection at real brightness. Unverified in LINE; deferred.
 
 ## Platform limits
 
-- **Android (Chromium, and LINE's Android WebView):** `deviceorientation` fires only after a 0.1° change, so slow tilts step and fine tremor is lost. iOS has no threshold.
+- **Android (Chromium, and LINE's Android WebView):** `deviceorientation` fires only after a 0.1° change, so slow tilts step. iOS has no threshold.
 - **LINE's in-app browser on iPad:** the screen angle is unverified on a device.
