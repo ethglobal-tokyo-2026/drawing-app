@@ -5,7 +5,7 @@ import {
   currentLight,
   installLight,
   MAX_PUBLISHES_PER_SECOND,
-  RECENTER,
+  RECENTER_MS,
   reflectionPx,
   subscribeLight,
   type DevicePose,
@@ -39,8 +39,8 @@ let stopRecording = () => {};
 
 /** A sensor's frame. */
 const FRAME_MS = 16;
-/** Long enough for the light to land on a held reading; shorter than every re-centering hold. */
-const settle = () => vi.advanceTimersByTime(2000);
+/** Long enough for the light to land on a held reading, and for the viewer to re-center. */
+const settle = () => vi.advanceTimersByTime(2 * RECENTER_MS);
 /** A pointer moved to (x, y): a mouse unless it says it's a pen or a finger. */
 const pointAt = (x: number, y: number, pointerType = "mouse", type = "pointermove") =>
   window.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, pointerType }));
@@ -121,13 +121,6 @@ const landAt = (beta: number, gamma: number, alpha = 0) => {
   return close;
 };
 
-/** A new visible document: a fresh start for the light, which keeps its state per document. */
-const openDocument = () => {
-  document = browserDocument.implementation.createHTMLDocument();
-  root = document.documentElement;
-  vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
-};
-
 beforeEach(() => {
   vi.useFakeTimers({
     toFake: [
@@ -138,10 +131,12 @@ beforeEach(() => {
       "clearTimeout",
     ],
   });
-  openDocument();
+  document = browserDocument.implementation.createHTMLDocument();
+  root = document.documentElement;
   published = [];
   stopRecording = subscribeLight((pose) => published.push(pose));
   usePermission(permissionStore());
+  vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
   const add = window.addEventListener.bind(window);
   const remove = window.removeEventListener.bind(window);
   vi.spyOn(window, "addEventListener").mockImplementation((type, listener, options) => {
@@ -517,8 +512,6 @@ describe("the shared light", () => {
 
 describe("the viewer", () => {
   const turned = () => angleBetween(currentLight().turn ?? IDENTITY, IDENTITY);
-  /** The re-centering tier for a slight turn, which waits longer, and the one for a wide turn. */
-  const [slight, wide] = RECENTER.tiers;
   /** Expects the published turn to carry the world's axes from `from`'s device axes into `to`'s. */
   const expectTurnBetween = (from: readonly number[], to: readonly number[]) => {
     const turn = currentLight().turn ?? IDENTITY;
@@ -551,29 +544,29 @@ describe("the viewer", () => {
     expect(turned()).toBeLessThan(0.01);
   });
 
-  it("eases onto a device held past a release in a fixed time, then holds still", () => {
+  it("re-centers on a device held past the release in a fixed time, then holds still", () => {
     landAt(STILL_POSE.beta, 0);
-    tiltTo(STILL_POSE.beta, 0, 60);
-    vi.advanceTimersByTime(wide.holdMs - FRAME_MS);
-    expect(turned()).toBeCloseTo(60, 6);
     const before = published.length;
+    tiltTo(STILL_POSE.beta, 0, 60);
+    vi.advanceTimersByTime(4 * FRAME_MS);
+    expect(turned()).toBeGreaterThan(55);
     const eased: { at: number; turn: number }[] = [];
     const stop = subscribeLight(() => eased.push({ at: performance.now(), turn: turned() }));
     try {
-      vi.advanceTimersByTime(2 * RECENTER.easeMs);
+      settle();
     } finally {
       stop();
     }
     expect(turned()).toBeLessThan(1e-6);
     // It lands within the ease's time, never backs off, and each redraw but the landing moves the
     // reflection visibly.
-    expect(eased[eased.length - 1].at - eased[0].at).toBeLessThanOrEqual(RECENTER.easeMs);
+    expect(eased[eased.length - 1].at - eased[0].at).toBeLessThanOrEqual(RECENTER_MS);
     for (let i = 1; i < eased.length; i++) {
       expect(eased[i].turn).toBeLessThan(eased[i - 1].turn);
       if (i < eased.length - 1)
         expect(reflectionPx(eased[i - 1].turn - eased[i].turn)).toBeGreaterThanOrEqual(0.5);
     }
-    expect(published.length - before).toBeLessThan(RECENTER.easeMs / FRAME_MS + 8);
+    expect(published.length - before).toBeLessThan(RECENTER_MS / FRAME_MS + 8);
     const held = currentLight();
     const count = published.length;
     for (let i = 0; i < 50; i++) {
@@ -588,9 +581,8 @@ describe("the viewer", () => {
   it("goes on re-centering after a pause, on a device lying still", () => {
     const close = landAt(STILL_POSE.beta, 0);
     tiltTo(STILL_POSE.beta, 0, 60);
-    vi.advanceTimersByTime(wide.holdMs + RECENTER.easeMs / 2);
+    vi.advanceTimersByTime(RECENTER_MS / 2);
     expect(turned()).toBeGreaterThan(10);
-    expect(turned()).toBeLessThan(50);
     close();
     vi.advanceTimersByTime(5000);
     expect(turned()).toBeGreaterThan(10);
@@ -600,86 +592,6 @@ describe("the viewer", () => {
       vi.advanceTimersByTime(200);
     }
     expect(turned()).toBeLessThan(1e-3);
-  });
-
-  /** How far behind its clock the light may step: the frames after a reading, a hold and the ease. */
-  const LATE_MS = 3 * FRAME_MS;
-  let tiltedAt = 0;
-  /** Tilts the device `degrees` forward of the still pose. */
-  const tiltBy = (degrees: number) => tiltTo(STILL_POSE.beta + degrees, 0);
-  /** Lands the viewer at the still pose, then tilts; returns what closes the screen. */
-  const tiltFromStill = (degrees: number) => {
-    const close = landAt(STILL_POSE.beta, 0);
-    tiltBy(degrees);
-    tiltedAt = performance.now();
-    return close;
-  };
-  /** The viewer's turn, in degrees, `ms` after the tilt from the still pose. */
-  const turnAt = (ms: number) => {
-    vi.advanceTimersByTime(tiltedAt + ms - performance.now());
-    return turned();
-  };
-  /** Expects the viewer to keep the room `holdMs` into the tilt, then ease onto the device. */
-  const expectRecenteredAfter = (holdMs: number, degrees: number) => {
-    expect(turnAt(holdMs - FRAME_MS)).toBeCloseTo(degrees, 6);
-    const halfway = turnAt(holdMs + RECENTER.easeMs / 2) / degrees;
-    expect(halfway).toBeGreaterThan(0.45);
-    expect(halfway).toBeLessThan(0.55);
-    expect(turnAt(holdMs + RECENTER.easeMs + LATE_MS)).toBeLessThan(1e-6);
-  };
-
-  it("keeps the room through a wide turn for the wide tier's hold, then eases onto the device", () => {
-    tiltFromStill(wide.release + 5);
-    expectRecenteredAfter(wide.holdMs, wide.release + 5);
-  });
-
-  it("keeps the room through a slight turn for the slight tier's longer hold", () => {
-    tiltFromStill(slight.release + 2.5);
-    expectRecenteredAfter(slight.holdMs, slight.release + 2.5);
-  });
-
-  it("never re-centers on a turn that comes back inside before its hold, however long it then lasts", () => {
-    tiltFromStill(wide.release + 5);
-    turnAt(wide.holdMs - 1000);
-    tiltBy(slight.release - 2.5);
-    expect(turnAt(2 * slight.holdMs)).toBeCloseTo(slight.release - 2.5, 6);
-  });
-
-  it("counts a slight turn's hold from when it first went past, through a wide turn before it", () => {
-    tiltFromStill(wide.release + 5);
-    turnAt(wide.holdMs - 2000);
-    tiltBy(wide.release - 5);
-    expectRecenteredAfter(slight.holdMs, wide.release - 5);
-  });
-
-  it("goes on counting a hold through a pause and a reinstalled controller", () => {
-    const close = tiltFromStill(wide.release + 5);
-    turnAt(wide.holdMs / 2);
-    close();
-    uninstall();
-    uninstall = installLight(root);
-    showScreen();
-    expectRecenteredAfter(wide.holdMs, wide.release + 5);
-  });
-
-  it("maps the room as a fresh start does once re-centered on a device tilted past upright", () => {
-    landAt(STILL_POSE.beta, 0);
-    // A hand tilting the device back past upright over two seconds, then holding it there.
-    const sweepMs = 2000;
-    for (let t = 0; t < sweepMs; t += FRAME_MS) {
-      tiltTo(STILL_POSE.beta + ((135 - STILL_POSE.beta) * t) / sweepMs, 0);
-      vi.advanceTimersByTime(FRAME_MS);
-    }
-    tiltTo(135, 0);
-    vi.advanceTimersByTime(wide.holdMs + RECENTER.easeMs + LATE_MS);
-    expect(turned()).toBeLessThan(1e-6);
-    const recentered = roomFrame();
-    uninstall();
-    openDocument();
-    landAt(135, 0);
-    const fresh = roomFrame();
-    for (const key of ["up", "light", "eye"] as const)
-      fresh[key].forEach((v, i) => expect(recentered[key][i]).toBeCloseTo(v, 9));
   });
 
   it("settles on the same frame for one pose, whichever side the device turned to it from", () => {
@@ -821,8 +733,6 @@ describe("following the hand", () => {
     for (const trace of traces.traces.map((rows) =>
       rows.map(([t, a, b, g]): Reading => [t, a, b, g]),
     )) {
-      // Each trace is a separate recording: a fresh document, so none starts from another's viewer.
-      openDocument();
       const frames = replay(trace);
       const moving = frames.filter(
         (f, i) => i > 0 && readingPx(frames[i - 1].reading, f.reading) >= 1,
