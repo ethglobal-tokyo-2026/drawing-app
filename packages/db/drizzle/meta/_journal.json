@@ -141,6 +141,13 @@
       "when": 1791895289244,
       "tag": "0019_gift_delivery",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1792108073725,
+      "tag": "0020_kyoto_seika_subject_marks",
+      "breakpoints": true
     }
   ]
 }

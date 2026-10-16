@@ -1,5 +1,6 @@
 import { chatMenuBatches } from "./chatMenuBatches.ts";
 import { gifts } from "./gifts.ts";
+import { kyotoSeikaSubjectsMarkedForDeletion } from "./kyotoSeikaSubjectsMarkedForDeletion.ts";
 import { personSwitchSessions } from "./personSwitchSessions.ts";
 import { gratitude } from "./gratitude.ts";
 import { stickerPlacements } from "./stickerPlacements.ts";
@@ -16,6 +17,7 @@ export {
   chatMenuBatches,
   gifts,
   gratitude,
+  kyotoSeikaSubjectsMarkedForDeletion,
   personSwitchSessions,
   stickerPlacements,
   stickers,
@@ -41,4 +43,5 @@ export const allTables = [
   gratitude,
   chatMenuBatches,
   suiTransactions,
+  kyotoSeikaSubjectsMarkedForDeletion,
 ] as const;
