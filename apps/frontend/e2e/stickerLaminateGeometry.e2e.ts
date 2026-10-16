@@ -15,10 +15,21 @@ const pixelsOf = (canvas: Locator) =>
     return context.getImageData(0, 0, el.width, el.height);
   });
 
+/** Whether a material canvas shows anything other than `before`. */
+const changedFrom = (canvas: Locator, before: JSHandle<ImageData>) =>
+  canvas.evaluate((el, before) => {
+    if (!(el instanceof HTMLCanvasElement))
+      throw new Error("The material snapshot is not a canvas");
+    const context = el.getContext("2d");
+    if (!context) throw new Error("The material snapshot context is missing");
+    const now = context.getImageData(0, 0, el.width, el.height).data;
+    return now.length !== before.data.length || now.some((value, i) => value !== before.data[i]);
+  }, before);
+
 /**
- * Against `before`, turned a quarter turn clockwise on screen: whether the canvas changed, how far each
- * opaque pixel is from what `before` showed at the same place on screen, and how far `before` is from
- * a quarter turn of itself, which is what a reflection that turned with the sticker would show.
+ * Against `before`, turned a quarter turn clockwise on screen: how far each opaque pixel is from what
+ * `before` showed at the same place on screen, and how far `before` is from a quarter turn of itself,
+ * which is what a reflection that turned with the sticker would show.
  */
 const againstQuarterTurn = (canvas: Locator, before: JSHandle<ImageData>) =>
   canvas.evaluate((el, before) => {
@@ -29,8 +40,7 @@ const againstQuarterTurn = (canvas: Locator, before: JSHandle<ImageData>) =>
     const side = el.width;
     const now = context.getImageData(0, 0, side, side).data,
       was = before.data;
-    let changed = false,
-      onScreen = 0,
+    let onScreen = 0,
       turnedWithIt = 0;
     for (let y = 0; y < side; y++)
       for (let x = 0; x < side; x++) {
@@ -39,12 +49,11 @@ const againstQuarterTurn = (canvas: Locator, before: JSHandle<ImageData>) =>
           j = (x * side + side - 1 - y) * 4;
         if (now[i + 3] !== 255 || was[i + 3] !== 255 || was[j + 3] !== 255) continue;
         for (let c = 0; c < 3; c++) {
-          if (now[i + c] !== was[i + c]) changed = true;
           onScreen = Math.max(onScreen, Math.abs(now[i + c] - was[j + c]));
           turnedWithIt = Math.max(turnedWithIt, Math.abs(was[i + c] - was[j + c]));
         }
       }
-    return { changed, onScreen, turnedWithIt };
+    return { onScreen, turnedWithIt };
   }, before);
 
 test("a turn-only React update redraws the held reflection in the sticker's new axes", async ({
@@ -54,26 +63,17 @@ test("a turn-only React update redraws the held reflection in the sticker's new 
   await page.goto("/e2e/stickerLaminate.html?reload=1&board=1&count=0&side=300");
   const coat = page.locator("[data-reload] canvas.sticker-material");
   await expect(coat).toHaveAttribute("data-state", "ready");
+  const diagnostic = await pixelsOf(coat);
   await page.evaluate((print) => window.laminateFixture.update({ print }), GRAY_PRINT);
-  // The diagnostic print's black ink is gone once the gray print has drawn.
-  await expect
-    .poll(() =>
-      coat.evaluate((el) => {
-        if (!(el instanceof HTMLCanvasElement))
-          throw new Error("The material snapshot is not a canvas");
-        const context = el.getContext("2d");
-        if (!context) throw new Error("The material snapshot context is missing");
-        return context.getImageData(Math.floor(0.24 * el.width), Math.floor(0.83 * el.height), 1, 1)
-          .data[0];
-      }),
-    )
-    .toBeGreaterThan(100);
+  // Under the glare the diagnostic print's black ink reads bright, so a changed coat, not a bright
+  // pixel, shows the gray print drawn.
+  await expect.poll(() => changedFrom(coat, diagnostic)).toBe(true);
   const pose = await page.evaluate(() => window.laminateFixture.getPose());
   const before = await pixelsOf(coat);
   await page.evaluate(() => window.laminateFixture.update({ turn: 90 }));
   await expect(coat).toHaveAttribute("data-state", "ready");
   // A retained ready snapshot redraws on the shared frame queue; readiness alone is not a new frame.
-  await expect.poll(async () => (await againstQuarterTurn(coat, before)).changed).toBe(true);
+  await expect.poll(() => changedFrom(coat, before)).toBe(true);
   const turned = await againstQuarterTurn(coat, before);
   expect(await page.evaluate(() => window.laminateFixture.getPose())).toEqual(pose);
   // The room stays put on screen while the sticker turns under it.
