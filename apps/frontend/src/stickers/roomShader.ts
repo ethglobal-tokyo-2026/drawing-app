@@ -1,5 +1,5 @@
 import { glslFloat as f } from "./glsl";
-import { LIGHT_RADIANCE, ROOM_LIGHT } from "./roomIrradiance";
+import { LIGHT_RADIANCE, LIGHT_REFLECTION_RADIANCE, ROOM_LIGHT } from "./roomIrradiance";
 import { ROOM } from "./sharedRoom";
 
 const { light } = ROOM;
@@ -60,6 +60,6 @@ float roomBounce(vec3 r){
  vec2 at=vec2(azimuth*${f(1 / (2 * Math.PI))},acos(clamp(dot(r,roomUp),-1.,1.))*${f(1 / Math.PI)});
  return texture2D(roomLightMap,at).r*${f(ROOM_LIGHT.scale * LIGHT_RADIANCE)};
 }
-// The one source every coat mirrors: the ceiling light, at its radiance.
-float roomSources(vec3 r,float spread){return ${f(LIGHT_RADIANCE)}*roomCeilingLight(r,spread);}
+// Reduce the source before its profile, so reflection headroom never flattens its smooth edge.
+float roomSources(vec3 r,float spread){return ${f(LIGHT_REFLECTION_RADIANCE)}*roomCeilingLight(r,spread);}
 `;

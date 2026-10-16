@@ -28,7 +28,7 @@ const CREASE_SHADING = 1;
 const SELF_SHADOW_SAMPLES = 12;
 
 /** The room's light's angular radius, from its radius one unit along it: it softens a shadow's edge. */
-const LIGHT_RADIUS = Math.atan(ROOM.light.radius);
+export const LIGHT_ANGULAR_RADIUS = Math.atan(ROOM.light.radius);
 
 /**
  * The drape's self-shadow: the share of the room's light that the draped surface toward it hides, from
@@ -42,7 +42,7 @@ float creaseHeightAt(vec2 heightUv){
 }
 // The share of the light's disc, its center \`elevation\` up, below a horizon \`horizon\` up.
 float discBelow(float elevation,float horizon){
-  float x=clamp((elevation-horizon)/${f(LIGHT_RADIUS)},-1.,1.);
+  float x=clamp((elevation-horizon)/${f(LIGHT_ANGULAR_RADIUS)},-1.,1.);
   return (acos(x)-x*sqrt(1.-x*x))/${f(Math.PI)};
 }
 float creaseSelfShadow(vec2 sourceUv,vec2 slope){

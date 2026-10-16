@@ -34,7 +34,11 @@ const variant = new URLSearchParams(location.search).get("variant");
 if (variant !== null && variant !== "crease-overflow" && variant !== "mixed-21")
   throw new Error(`Unknown large sticker board fixture variant: ${variant}`);
 const stickerCount = variant === "crease-overflow" ? 3 : variant === "mixed-21" ? 21 : 15;
-const size = variant === "mixed-21" ? { W: 1200, H: 1454, U: 1200 } : { W: 1032, H: 1376, U: 1032 };
+const size = new URLSearchParams(location.search).has("fitViewport")
+  ? { W: innerWidth, H: innerHeight, U: innerWidth }
+  : variant === "mixed-21"
+    ? { W: 1200, H: 1454, U: 1200 }
+    : { W: 1032, H: 1376, U: 1032 };
 const field = fieldOf(size.W, size.H);
 const svg = (body: string) =>
   `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600">${body}</svg>`)}`;

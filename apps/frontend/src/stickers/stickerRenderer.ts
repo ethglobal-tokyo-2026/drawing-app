@@ -21,6 +21,8 @@ export interface StickerSurface {
   normal?: string;
   /** The drape's height, registered with its normal; it loads and commits with the normal. */
   height?: string;
+  /** Encoded height-gradient bound in physical CSS px per normalized texture coordinate. */
+  maxSlope?: number;
   turn: number;
   finish: LaminateFinish;
   foil?: StickerFoilMaterial;
@@ -108,10 +110,12 @@ export class MountedSurface {
   normalUrl?: string;
   normalTexture: WebGLTexture | null = null;
   heightUrl?: string;
+  maxSlope?: number;
   heightTexture: WebGLTexture | null = null;
   pendingNormal: {
     url?: string;
     height?: string;
+    maxSlope?: number;
     material?: NonNullable<MountedSurface["pendingPrintCut"]>;
     gpu: StickerRenderer;
     bounds?: StickerSurface["normalBounds"];
@@ -163,6 +167,7 @@ export class MountedSurface {
     this.normalBounds = undefined;
     this.normalTexture = null;
     this.heightUrl = undefined;
+    this.maxSlope = undefined;
     this.heightTexture = null;
     this.pendingNormal = null;
     this.initialize();
@@ -533,6 +538,7 @@ export class MountedSurface {
   replaceNormal(url?: string) {
     const gpu = this.gpu;
     const height = url ? this.options.height : undefined;
+    const maxSlope = url ? this.options.maxSlope : undefined;
     if (
       !gpu ||
       gpu.disposed ||
@@ -540,6 +546,7 @@ export class MountedSurface {
       (this.pendingNormal &&
         this.pendingNormal.url === url &&
         this.pendingNormal.height === height &&
+        this.pendingNormal.maxSlope === maxSlope &&
         JSON.stringify(this.pendingNormal.bounds) === JSON.stringify(this.options.normalBounds))
     )
       return;
@@ -560,6 +567,7 @@ export class MountedSurface {
     if (
       this.normalUrl === url &&
       this.heightUrl === height &&
+      this.maxSlope === maxSlope &&
       JSON.stringify(this.normalBounds) === JSON.stringify(this.options.normalBounds)
     ) {
       this.normalFailure = null;
@@ -576,6 +584,7 @@ export class MountedSurface {
         const oldHeight = this.heightUrl;
         this.normalUrl = undefined;
         this.heightUrl = undefined;
+        this.maxSlope = undefined;
         this.normalBounds = undefined;
         this.normalTexture = gpu.flat;
         this.heightTexture = gpu.flatHeight;
@@ -607,6 +616,7 @@ export class MountedSurface {
     const pending: NonNullable<MountedSurface["pendingNormal"]> = {
       url,
       height,
+      maxSlope,
       gpu,
       bounds: this.options.normalBounds,
     };
@@ -642,6 +652,7 @@ export class MountedSurface {
           const oldHeight = this.heightUrl;
           this.normalUrl = url;
           this.heightUrl = height;
+          this.maxSlope = maxSlope;
           this.normalBounds = normalBounds;
           this.normalTexture = texture;
           this.heightTexture = heightTexture;
@@ -790,6 +801,7 @@ export class MountedSurface {
     if (this.pendingNormal?.height) this.pendingNormal.gpu.release(this.pendingNormal.height);
     this.normalUrl = undefined;
     this.heightUrl = undefined;
+    this.maxSlope = undefined;
     this.normalBounds = undefined;
     this.normalTexture = null;
     this.heightTexture = null;
@@ -845,7 +857,7 @@ export function updateSticker(
   canvas: HTMLCanvasElement,
   options: Pick<
     StickerSurface,
-    "print" | "cut" | "normal" | "height" | "finish" | "foil" | "normalBounds"
+    "print" | "cut" | "normal" | "height" | "maxSlope" | "finish" | "foil" | "normalBounds"
   >,
   requestedCoverageFrame?: { width: number; height: number },
 ) {
@@ -871,6 +883,7 @@ export function updateSticker(
     Object.assign(surface.options, options, {
       foil: options.foil,
       height: options.height,
+      maxSlope: options.maxSlope,
       normalBounds: options.normalBounds,
     });
     if (surface.gpu?.textureValidationFailure) {

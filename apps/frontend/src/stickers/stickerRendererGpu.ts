@@ -15,7 +15,8 @@ import {
   notePerformance,
   timeOurWork,
 } from "../performance/performanceRecorder";
-import { stickerFragment, stickerVertex } from "./stickerShader";
+import { LIGHT_ANGULAR_RADIUS, stickerFragment, stickerVertex } from "./stickerShader";
+import { creaseCanShade } from "./creaseSelfShadow";
 import { releaseCanvas } from "../ui/releaseCanvas";
 import { REDUCED_MOTION } from "../ui/useReducedMotion";
 import { setCreaseRevealSize } from "./creaseRevealSize";
@@ -935,6 +936,40 @@ export class StickerRenderer {
       const material = tile.surface.printCut;
       const foil = material?.foil;
       if (!textures) continue;
+      const turn = (options.turn * Math.PI) / 180,
+        flightX = ((options.tiltX ?? 0) * Math.PI) / 180,
+        flightY = ((options.tiltY ?? 0) * Math.PI) / 180;
+      const cosTurn = Math.cos(turn),
+        sinTurn = Math.sin(turn),
+        cosX = Math.cos(flightX),
+        sinX = Math.sin(flightX),
+        cosY = Math.cos(flightY),
+        sinY = Math.sin(flightY);
+      // Rz(turn) Rx(flightX) Ry(flightY), in GL column order; the device's pose turns the room instead.
+      writeNormalColumn(
+        0,
+        cosTurn * cosY - sinTurn * sinX * sinY,
+        sinTurn * cosY + cosTurn * sinX * sinY,
+        -cosX * sinY,
+      );
+      writeNormalColumn(1, -sinTurn * cosX, cosTurn * cosX, sinX);
+      writeNormalColumn(
+        2,
+        cosTurn * sinY + sinTurn * sinX * cosY,
+        sinTurn * sinY - cosTurn * sinX * cosY,
+        cosX * cosY,
+      );
+      gl.uniformMatrix3fv(this.uniforms.get("normalTransform") ?? null, false, normalTransform);
+      const bounds = tile.surface.normalBounds;
+      const canShade =
+        !tile.flat &&
+        creaseCanShade(
+          room.light,
+          normalTransform,
+          tile.surface.maxSlope,
+          [tile.width * (bounds?.width ?? 1), tile.height * (bounds?.height ?? 1)],
+          LIGHT_ANGULAR_RADIUS,
+        );
       const output = foil?.coverage;
       setCreaseRevealSize(
         tile.surface.container,
@@ -949,9 +984,9 @@ export class StickerRenderer {
         gl.bindTexture(gl.TEXTURE_2D, i === 2 && tile.flat ? this.flat : textures[i]);
         gl.uniform1i(this.uniforms.get(["printImage", "cutImage", "normalImage"][i]) ?? null, i);
       }
-      // The flat snapshot casts no self-shadow either, as a sticker without a crease casts none.
+      // A disc above every encoded slope cannot cast a self-shadow; the blank height skips its march.
       gl.activeTexture(gl.TEXTURE5);
-      gl.bindTexture(gl.TEXTURE_2D, tile.flat ? this.flatHeight : textures[3]);
+      gl.bindTexture(gl.TEXTURE_2D, canShade ? textures[3] : this.flatHeight);
       gl.uniform1i(this.uniforms.get("heightImage") ?? null, 5);
       const coverage = foil?.coverage;
       gl.activeTexture(gl.TEXTURE3);
@@ -967,7 +1002,6 @@ export class StickerRenderer {
         coverage ? coverage.width / coverage.sourceWidth : 1,
         coverage ? coverage.height / coverage.sourceHeight : 1,
       );
-      const bounds = tile.surface.normalBounds;
       gl.uniform4f(
         this.uniforms.get("normalBounds") ?? null,
         bounds?.x ?? 0,
@@ -993,30 +1027,6 @@ export class StickerRenderer {
       gl.uniform2f(this.uniforms.get("size") ?? null, tile.width, tile.height);
       gl.uniform2f(this.uniforms.get("screenCenter") ?? null, tile.screenX, tile.screenY);
       gl.uniform1f(this.uniforms.get("screenScale") ?? null, tile.screenScale);
-      const turn = (options.turn * Math.PI) / 180,
-        flightX = ((options.tiltX ?? 0) * Math.PI) / 180,
-        flightY = ((options.tiltY ?? 0) * Math.PI) / 180;
-      const cosTurn = Math.cos(turn),
-        sinTurn = Math.sin(turn),
-        cosX = Math.cos(flightX),
-        sinX = Math.sin(flightX),
-        cosY = Math.cos(flightY),
-        sinY = Math.sin(flightY);
-      // Rz(turn) Rx(flightX) Ry(flightY), in GL column order; the device's pose turns the room instead.
-      writeNormalColumn(
-        0,
-        cosTurn * cosY - sinTurn * sinX * sinY,
-        sinTurn * cosY + cosTurn * sinX * sinY,
-        -cosX * sinY,
-      );
-      writeNormalColumn(1, -sinTurn * cosX, cosTurn * cosX, sinX);
-      writeNormalColumn(
-        2,
-        cosTurn * sinY + sinTurn * sinX * cosY,
-        sinTurn * sinY - cosTurn * sinX * cosY,
-        cosX * cosY,
-      );
-      gl.uniformMatrix3fv(this.uniforms.get("normalTransform") ?? null, false, normalTransform);
       gl.uniform2f(this.uniforms.get("pointTurn") ?? null, cosTurn, sinTurn);
       gl.uniform1f(
         this.uniforms.get("roughness") ?? null,
@@ -1100,6 +1110,7 @@ export class StickerRenderer {
           finish: surface.printCut?.finish ?? surface.options.finish,
           normal: surface.normalUrl,
           height: surface.heightUrl,
+          maxSlope: surface.maxSlope,
           normalBounds: surface.normalBounds,
         };
         surface.snapshotCoverageFrame = surface.printCut?.foil?.description.frame;

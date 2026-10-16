@@ -297,7 +297,7 @@ export class CreaseStore {
    * Shows a bake's crease, unless the sticker's stack has changed since it was posted, or a bake of
    * the same stack already shows: replacing it would press it in again.
    */
-  land({ id, key, crease, normalBounds }: Extract<CreaseReply, { ok: true }>) {
+  land({ id, key, crease, normalBounds, maxSlope }: Extract<CreaseReply, { ok: true }>) {
     if (this.#wanted.get(id) !== key || this.#baked.get(id)?.key === key) return;
     this.#put(id, {
       key,
@@ -305,6 +305,7 @@ export class CreaseStore {
         crease: {
           ...byImage((image) => URL.createObjectURL(crease[image])),
           ...(normalBounds && { normalBounds }),
+          ...(maxSlope !== undefined && { maxSlope }),
         },
       }),
     });

@@ -20,6 +20,7 @@ export function StickerMaterial({
   cut,
   normal,
   height,
+  maxSlope,
   normalBounds,
   foil,
   turn = 0,
@@ -34,6 +35,7 @@ export function StickerMaterial({
   normal?: string;
   /** The drape's height, registered with its normal. */
   height?: string;
+  maxSlope?: number;
   normalBounds?: StickerSurface["normalBounds"];
   foil?: StickerFoilMaterial;
   turn?: number;
@@ -52,7 +54,7 @@ export function StickerMaterial({
   const surface = useRef<HTMLSpanElement>(null);
   const heldTurn = useRef(turn);
   const heldActive = useRef(active);
-  const heldMaterial = useRef({ print, cut, normal, height, normalBounds, foil, finish });
+  const heldMaterial = useRef({ print, cut, normal, height, maxSlope, normalBounds, foil, finish });
   const heldCreaseProgress = useRef(onCreaseProgress);
   const heldCreaseEligibility = useRef({ canRevealCrease, startCreaseReveal });
   useLayoutEffect(() => {
@@ -62,8 +64,8 @@ export function StickerMaterial({
     heldCreaseProgress.current = onCreaseProgress;
   }, [onCreaseProgress]);
   useLayoutEffect(() => {
-    heldMaterial.current = { print, cut, normal, height, normalBounds, foil, finish };
-  }, [print, cut, normal, height, normalBounds, foil, finish]);
+    heldMaterial.current = { print, cut, normal, height, maxSlope, normalBounds, foil, finish };
+  }, [print, cut, normal, height, maxSlope, normalBounds, foil, finish]);
   useLayoutEffect(() => {
     heldActive.current = active;
   }, [active]);
@@ -75,6 +77,9 @@ export function StickerMaterial({
       cut: heldMaterial.current.cut,
       normal: heldMaterial.current.normal,
       ...(heldMaterial.current.height && { height: heldMaterial.current.height }),
+      ...(heldMaterial.current.maxSlope !== undefined && {
+        maxSlope: heldMaterial.current.maxSlope,
+      }),
       ...(heldMaterial.current.foil && { foil: heldMaterial.current.foil }),
       ...(heldMaterial.current.normalBounds && { normalBounds: heldMaterial.current.normalBounds }),
       turn: heldTurn.current,
@@ -108,10 +113,11 @@ export function StickerMaterial({
         normal,
         finish,
         ...(height && { height }),
+        ...(maxSlope !== undefined && { maxSlope }),
         ...(foil && { foil }),
         ...(normalBounds && { normalBounds }),
       });
-  }, [print, cut, normal, height, normalBounds, foil, finish]);
+  }, [print, cut, normal, height, maxSlope, normalBounds, foil, finish]);
   useLayoutEffect(() => {
     heldTurn.current = turn;
     if (ref.current) turnSticker(ref.current, turn);

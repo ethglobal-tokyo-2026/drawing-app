@@ -45,6 +45,14 @@ const smoothstep = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
 };
+/** Past a steep inspection angle, keep the shared eye in front without changing the room or its light. */
+function frontEye(eye: Vec3): Vec3 {
+  const start = Math.cos(60 * RAD);
+  if (eye[2] >= start) return eye;
+  const floor = Math.cos(75 * RAD);
+  const span = start - floor;
+  return unit([eye[0], eye[1], floor + span * Math.exp((eye[2] - start) / span)]);
+}
 /** A direction at an azimuth toward `left` from `ahead` and an elevation above `up`. */
 const toward = (ahead: Vec3, left: Vec3, up: Vec3, azimuth: number, elevation: number) =>
   unit(
@@ -103,7 +111,7 @@ export function roomFrame(pose: DevicePose = currentLight()) {
     light: flip(light),
     across: flip(across),
     down: flip(down),
-    eye: scale(flip(eye), ROOM.eyeDistance),
+    eye: scale(frontEye(flip(eye)), ROOM.eyeDistance),
   };
 }
 

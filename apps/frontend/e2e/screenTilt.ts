@@ -10,6 +10,17 @@ export const holdPortrait = (page: Page) =>
       });
   });
 
+/** Delivers a background/return transition through the document's real visibility listener. */
+export const hideAndShow = (page: Page) =>
+  page.evaluate(() => {
+    const previous = Object.getOwnPropertyDescriptor(document, "visibilityState");
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+    document.dispatchEvent(new Event("visibilitychange"));
+    if (previous) Object.defineProperty(document, "visibilityState", previous);
+    else Reflect.deleteProperty(document, "visibilityState");
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+
 /**
  * On the laminate fixture: the light glides to the device's absolute pose and comes to rest on the
  * reading, within the light's half-degree tremor step. A pause, such as a remounted sticker letting go

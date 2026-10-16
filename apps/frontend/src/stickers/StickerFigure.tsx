@@ -20,7 +20,10 @@ import "./sticker-figure.css";
  * A sticker's crease, baked: its base; its geometric normal data, which the sticker material lights
  * and reflects; and the drape's height, over which it casts its own shadow.
  */
-export type Crease = Record<CreaseImage, string> & { normalBounds?: CreaseBounds };
+export type Crease = Record<CreaseImage, string> & {
+  normalBounds?: CreaseBounds;
+  maxSlope?: number;
+};
 
 interface Props {
   urls: StickerUrls;
@@ -164,6 +167,7 @@ export const StickerFigure = memo(function StickerFigure({
         cut={mask}
         normal={readyCrease === crease ? crease?.normal : undefined}
         height={readyCrease === crease ? crease?.height : undefined}
+        maxSlope={readyCrease === crease ? crease?.maxSlope : undefined}
         normalBounds={readyCrease === crease ? crease?.normalBounds : undefined}
         turn={turn}
         finish={laminate}

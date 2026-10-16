@@ -191,8 +191,9 @@ describe("CreaseStore", () => {
     const normalBounds = { x: -0.1, y: 0, width: 1.2, height: 1.1 };
     const baked = bake(job);
     store.want([job]);
-    store.land({ ...baked, normalBounds });
+    store.land({ ...baked, normalBounds, maxSlope: 17 });
     expect(store.creaseOf(job.id)?.normalBounds).toEqual(normalBounds);
+    expect(store.creaseOf(job.id)?.maxSlope).toBe(17);
     store.clear();
     expect(revoke).toHaveBeenCalledTimes(Object.keys(baked.crease ?? {}).length);
     expect(revoke.mock.calls.every(([url]) => typeof url === "string")).toBe(true);

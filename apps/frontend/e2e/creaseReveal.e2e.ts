@@ -188,6 +188,43 @@ const upper: [number, number, number, number] = [22, 22, 70, 70];
 const lower: [number, number, number, number] = [150, 150, 70, 70];
 const art: [number, number, number, number] = [103, 103, 34, 34];
 
+async function pairedArtPixels(page: Page) {
+  return page.locator("[data-reveal] .sticker-material-surface").evaluate((surface, box) => {
+    const bent = surface.querySelector("canvas.sticker-material");
+    const flat = surface.querySelector("canvas.sticker-material-flat");
+    if (!(flat instanceof HTMLCanvasElement)) return null;
+    if (!(bent instanceof HTMLCanvasElement))
+      throw new Error("The bent material canvas is missing");
+    if (flat.width !== bent.width || flat.height !== bent.height)
+      throw new Error("The paired material canvases have different dimensions");
+    const read = (canvas: HTMLCanvasElement) => {
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("The material pixel context is missing");
+      const left = Math.floor((box[0] * canvas.width) / 240);
+      const top = Math.floor((box[1] * canvas.height) / 240);
+      const right = Math.ceil(((box[0] + box[2]) * canvas.width) / 240);
+      const bottom = Math.ceil(((box[1] + box[3]) * canvas.height) / 240);
+      return context.getImageData(left, top, right - left, bottom - top).data;
+    };
+    const a = read(bent),
+      b = read(flat);
+    let peak = 0,
+      alphaMin = 255;
+    for (let i = 0; i < a.length; i++) {
+      peak = Math.max(peak, Math.abs(a[i] - b[i]));
+      if (i % 4 === 3) alphaMin = Math.min(alphaMin, a[i], b[i]);
+    }
+    const progress = Number(
+      (surface instanceof HTMLElement && surface.style.getPropertyValue("--crease-reveal")) || 0,
+    );
+    return {
+      peak,
+      alphaMin,
+      feather: surface.hasAttribute("data-crease-reveal") && progress > 0 && progress < 1,
+    };
+  }, art);
+}
+
 async function openFixture(page: Page, query = "") {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -251,6 +288,15 @@ async function observeDiagonal(
     await page.clock.runFor(16);
     const paint = await figurePixels(page);
     const coat = await coatPixels(page);
+    const paired = await pairedArtPixels(page);
+    if (paired) {
+      expect(paired.peak, "The raw flat and bent artwork RGBA must match exactly").toBe(0);
+      expect(paired.alphaMin, "Both material snapshots must keep the artwork opaque").toBe(255);
+    }
+    // WebKit rounds the complementary masked layers by one byte, even with identical opaque pixels.
+    const featherRounding =
+      page.context().browser()?.browserType().name() === "webkit" && paired?.feather ? 1 : 0;
+    const displayedTolerance = Math.max(artTolerance, featherRounding);
     if (constant) {
       expect(
         difference(flat.paint, paint, constant),
@@ -264,11 +310,11 @@ async function observeDiagonal(
     expect(
       difference(flat.paint, paint, art),
       "The reveal must leave the artwork visible",
-    ).toBeLessThanOrEqual(artTolerance);
+    ).toBeLessThanOrEqual(displayedTolerance);
     expect(
       difference(flat.coat, coat, art),
       "Flat artwork must keep its reflection",
-    ).toBeLessThanOrEqual(artTolerance);
+    ).toBeLessThanOrEqual(displayedTolerance);
     if (difference(coat, paint, upper) > 2 && difference(flat.coat, coat, upper) > 1) {
       expect(
         difference(flat.paint, paint, lower),

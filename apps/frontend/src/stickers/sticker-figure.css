@@ -62,6 +62,14 @@
   opacity: var(--key-shadow-soft, 0);
 }
 
+/* WebKit otherwise repaints the masked blurs when their opacity changes. */
+@supports (font: -apple-system-body) {
+  .sticker-key-shadow::before,
+  .sticker-key-shadow::after {
+    will-change: opacity;
+  }
+}
+
 .sticker-figure__img {
   position: absolute;
   inset: 0;

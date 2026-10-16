@@ -91,26 +91,18 @@ test("an opaque sticker detail pauses the covered Sticker Board and uncovering i
     window.dispatchEvent(Object.assign(new Event("deviceorientation"), { beta: 40, gamma: 28 })),
   );
   await expect.poll(() => snapshot(detailCoat)).not.toBe(detailBefore);
-  const held = await page.evaluate(async () => {
-    const { currentLight, subscribeLight } = await import("../src/stickers/light.ts");
-    return new Promise<ReturnType<typeof currentLight>>((resolve, reject) => {
-      const timeout = window.setTimeout(() => {
-        unsubscribe();
-        window.clearTimeout(quiet);
-        reject(new Error("The material light did not settle within 5 seconds"));
-      }, 5000);
-      const finish = () => {
-        unsubscribe();
-        window.clearTimeout(timeout);
-        resolve(currentLight());
-      };
-      let quiet = window.setTimeout(finish, 250);
-      const unsubscribe = subscribeLight(() => {
-        window.clearTimeout(quiet);
-        quiet = window.setTimeout(finish, 250);
-      });
-    });
-  });
+  // A quiet timer can fire between throttled display frames while the filter is still approaching.
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        const { beta, gamma } = (await import("../src/stickers/light.ts")).currentLight();
+        return { beta, gamma };
+      }),
+    )
+    .toEqual({ beta: 40, gamma: 28 });
+  const held = await page.evaluate(async () =>
+    (await import("../src/stickers/light.ts")).currentLight(),
+  );
   expect(
     await snapshotCopies(boardCoat),
     "The opaque detail covers every board material surface",

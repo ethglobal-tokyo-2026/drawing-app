@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, expect, it, vi } from "vitest";
+import { act } from "react";
 import { renderInHost } from "../ui/testing";
 import { StickerFigure } from "./StickerFigure";
 import { mountSticker, updateSticker } from "./stickerRenderer";
@@ -43,4 +44,32 @@ it("keeps the foil descriptor when only the print or presentation turn changes",
   expect(replacement?.cut).toBe("/cut.png");
   expect(replacement?.foil).toBe(material);
   expect(mountSticker).toHaveBeenCalledOnce();
+});
+
+it("forwards the accepted crease's slope bound with its height image", async () => {
+  const decode = vi.spyOn(HTMLImageElement.prototype, "decode").mockResolvedValue();
+  try {
+    rendered = renderInHost(
+      <StickerFigure
+        urls={{ png: "/print.png", mask: "/cut.png" }}
+        width={240}
+        height={240}
+        crease={{ base: "/base.png", normal: "/normal.png", height: "/height.png", maxSlope: 17 }}
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(vi.mocked(updateSticker).mock.calls.at(-1)?.[1]).toMatchObject({
+      normal: "/normal.png",
+      height: "/height.png",
+      maxSlope: 17,
+    });
+    rendered.rerender(
+      <StickerFigure urls={{ png: "/print.png", mask: "/cut.png" }} width={240} height={240} />,
+    );
+    expect(vi.mocked(updateSticker).mock.calls.at(-1)?.[1]).not.toHaveProperty("maxSlope");
+  } finally {
+    decode.mockRestore();
+  }
 });

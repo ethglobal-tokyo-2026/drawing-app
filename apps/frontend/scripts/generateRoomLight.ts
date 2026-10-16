@@ -13,11 +13,11 @@ import {
   CEILING_ABOVE_DEVICE,
   DEVICE_HEIGHT,
   DIFFUSER_RADIUS,
-  LIGHT_AZIMUTH,
-  LIGHT_ELEVATION,
+  LIGHT_PLACEMENTS,
   REFLECTANCE,
   ROOM_SIZE,
 } from "../src/stickers/roomGeometry";
+import { VIEWING, type ViewingClass } from "../src/stickers/viewing";
 
 type Vec3 = readonly [number, number, number];
 
@@ -35,13 +35,6 @@ const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 
 const { width: W, depth: D, height: H } = ROOM_SIZE;
 const light: Vec3 = [W / 2, D / 2, H];
-const run = CEILING_ABOVE_DEVICE / Math.tan(LIGHT_ELEVATION * RAD);
-// The light is toward the viewer (+y) and to their left (+x) of the device.
-const device: Vec3 = [
-  light[0] - run * Math.sin(LIGHT_AZIMUTH * RAD),
-  light[1] - run * Math.cos(LIGHT_AZIMUTH * RAD),
-  DEVICE_HEIGHT,
-];
 /** The disc's intensity per unit radiance along its axis: radiance times its area. */
 const AXIAL_INTENSITY = Math.PI * DIFFUSER_RADIUS * DIFFUSER_RADIUS;
 
@@ -96,9 +89,6 @@ addFace("wall to the left", [W, 0, 0], [0, D, 0], [0, 0, H], [-1, 0, 0], REFLECT
 const N = patches.length;
 console.log(
   `Room ${W}×${D}×${H} m, reflectances ${JSON.stringify(REFLECTANCE)}, ${N} patches of about ${PATCH_SIZE} m`,
-);
-console.log(
-  `Device at ${device.map((v) => v.toFixed(3)).join(", ")} m, the light ${Math.hypot(...sub(light, device)).toFixed(3)} m away at ${LIGHT_ELEVATION}° up, ${LIGHT_AZIMUTH}° left of straight behind`,
 );
 
 /** Irradiance from the disc, as a point facing down, per unit radiance. */
@@ -194,7 +184,7 @@ const AXES = [
 ] as const;
 
 /** The room's radiance seen from the device along a unit direction: the face it meets, its B/π. */
-function radianceAlong(d: Vec3) {
+function radianceAlong(d: Vec3, device: Vec3) {
   let nearest = Infinity;
   let face: number = FLOOR;
   AXES.forEach(({ far, down, up }, axis) => {
@@ -213,105 +203,131 @@ function radianceAlong(d: Vec3) {
   return radiosityOn(faces[face], p) / Math.PI;
 }
 
-started = performance.now();
-const radiance = new Float64Array(MAP.width * MAP.height);
-for (let row = 0; row < MAP.height; row++) {
-  const [top, bottom] = [
-    Math.cos((Math.PI * row) / MAP.height),
-    Math.cos((Math.PI * (row + 1)) / MAP.height),
+function buildMap(viewingClass: ViewingClass) {
+  const placement = LIGHT_PLACEMENTS[viewingClass];
+  const run = CEILING_ABOVE_DEVICE / Math.tan(placement.elevation * RAD);
+  const device: Vec3 = [
+    light[0] - run * Math.sin(placement.azimuth * RAD),
+    light[1] - run * Math.cos(placement.azimuth * RAD),
+    DEVICE_HEIGHT,
   ];
-  for (let column = 0; column < MAP.width; column++) {
-    let sum = 0;
-    for (let a = 0; a < RAYS_PER_SIDE; a++)
-      for (let b = 0; b < RAYS_PER_SIDE; b++) {
-        // Even in cos θ and in azimuth, so every ray stands for the same solid angle.
-        const z = top + ((bottom - top) * (a + 0.5)) / RAYS_PER_SIDE;
-        const phi = (2 * Math.PI * (column + (b + 0.5) / RAYS_PER_SIDE)) / MAP.width;
-        const s = Math.sqrt(Math.max(0, 1 - z * z));
-        sum += radianceAlong([s * Math.cos(phi), s * Math.sin(phi), z]);
-      }
-    radiance[row * MAP.width + column] = sum / RAYS_PER_SIDE ** 2;
-  }
-}
-const scale = radiance.reduce((m, v) => Math.max(m, v), 0);
-const pixels = Buffer.alloc(MAP.width * MAP.height * 4);
-radiance.forEach((v, i) => {
-  const value = Math.round((255 * v) / scale);
-  pixels.set([value, value, value, 255], i * 4);
-});
-console.log(
-  `Map ${MAP.width}×${MAP.height} from ${RAYS_PER_SIDE ** 2} rays a texel in ${((performance.now() - started) / 1000).toFixed(1)} s; its brightest radiance ${scale.toExponential(4)} of the light's`,
-);
-
-/** The irradiance on paper at the device facing n, from the map as stored and from the patches. */
-function roomOnPaper(n: Vec3) {
-  let fromMap = 0;
+  console.log(
+    `Solving the ${viewingClass} view at ${device.map((v) => v.toFixed(3)).join(", ")} m`,
+  );
+  const mapStarted = performance.now();
+  const radiance = new Float64Array(MAP.width * MAP.height);
   for (let row = 0; row < MAP.height; row++) {
-    const [top, bottom] = [Math.PI * row, Math.PI * (row + 1)].map((t) => Math.cos(t / MAP.height));
-    const solidAngle = ((2 * Math.PI) / MAP.width) * (top - bottom);
-    const theta = (Math.PI * (row + 0.5)) / MAP.height;
+    const [top, bottom] = [
+      Math.cos((Math.PI * row) / MAP.height),
+      Math.cos((Math.PI * (row + 1)) / MAP.height),
+    ];
     for (let column = 0; column < MAP.width; column++) {
-      const phi = (2 * Math.PI * (column + 0.5)) / MAP.width;
-      const d: Vec3 = [
-        Math.sin(theta) * Math.cos(phi),
-        Math.sin(theta) * Math.sin(phi),
-        Math.cos(theta),
-      ];
-      const value = (pixels[(row * MAP.width + column) * 4] / 255) * scale;
-      fromMap += value * Math.max(0, dot(n, d)) * solidAngle;
+      let sum = 0;
+      for (let a = 0; a < RAYS_PER_SIDE; a++)
+        for (let b = 0; b < RAYS_PER_SIDE; b++) {
+          // Even in cos θ and in azimuth, so every ray stands for the same solid angle.
+          const z = top + ((bottom - top) * (a + 0.5)) / RAYS_PER_SIDE;
+          const phi = (2 * Math.PI * (column + (b + 0.5) / RAYS_PER_SIDE)) / MAP.width;
+          const s = Math.sqrt(Math.max(0, 1 - z * z));
+          sum += radianceAlong([s * Math.cos(phi), s * Math.sin(phi), z], device);
+        }
+      radiance[row * MAP.width + column] = sum / RAYS_PER_SIDE ** 2;
     }
   }
-  let fromPatches = 0;
-  patches.forEach((q, i) => {
-    const d = sub(q.center, device);
-    const r2 = dot(d, d);
-    const r = Math.sqrt(r2);
-    const cosPaper = dot(d, n) / r;
-    const cosPatch = -dot(d, q.normal) / r;
-    if (cosPaper > 0 && cosPatch > 0)
-      fromPatches += (B[i] * cosPaper * cosPatch * q.area) / (Math.PI * r2);
+  const scale = radiance.reduce((m, v) => Math.max(m, v), 0);
+  const pixels = Buffer.alloc(MAP.width * MAP.height * 4);
+  radiance.forEach((v, i) => {
+    const value = Math.round((255 * v) / scale);
+    pixels.set([value, value, value, 255], i * 4);
   });
-  return { fromMap, fromPatches };
-}
-
-/** Paper's normal at an elevation above level, toward the viewer. */
-const towardViewer = (degrees: number): Vec3 => [
-  0,
-  Math.cos(degrees * RAD),
-  Math.sin(degrees * RAD),
-];
-const stillDirect = directAt(device, towardViewer(54));
-console.log(
-  "Each surface's mean radiance against the tablet's still pose's direct irradiance / π:",
-);
-for (const face of faces) {
-  let sum = 0;
-  for (let k = 0; k < face.nu * face.nv; k++) sum += B[face.first + k];
-  console.log(`  ${face.name.padEnd(18)} ${(sum / (face.nu * face.nv) / stillDirect).toFixed(3)}`);
-}
-console.log("The room's share of the light on paper, by its normal's elevation toward the viewer:");
-for (const [degrees, label] of [
-  [90, "flat"],
-  [54, "tablet still"],
-  [43, "phone still"],
-  [0, "upright"],
-  [-20, "past upright"],
-] as const) {
-  const n = towardViewer(degrees);
-  const direct = directAt(device, n);
-  const { fromMap, fromPatches } = roomOnPaper(n);
-  const share = (room: number) => `${((100 * room) / (room + direct)).toFixed(1)}%`;
   console.log(
-    `  ${String(degrees).padStart(3)}° ${label.padEnd(13)} map ${share(fromMap)}, patches ${share(fromPatches)}`,
+    `Map ${MAP.width}×${MAP.height} from ${RAYS_PER_SIDE ** 2} rays a texel in ${((performance.now() - mapStarted) / 1000).toFixed(1)} s; its brightest radiance ${scale.toExponential(4)} of the light's`,
   );
+
+  /** The irradiance on paper at the device facing n, from the map as stored and from the patches. */
+  function roomOnPaper(n: Vec3) {
+    let fromMap = 0;
+    for (let row = 0; row < MAP.height; row++) {
+      const [top, bottom] = [Math.PI * row, Math.PI * (row + 1)].map((t) =>
+        Math.cos(t / MAP.height),
+      );
+      const solidAngle = ((2 * Math.PI) / MAP.width) * (top - bottom);
+      const theta = (Math.PI * (row + 0.5)) / MAP.height;
+      for (let column = 0; column < MAP.width; column++) {
+        const phi = (2 * Math.PI * (column + 0.5)) / MAP.width;
+        const d: Vec3 = [
+          Math.sin(theta) * Math.cos(phi),
+          Math.sin(theta) * Math.sin(phi),
+          Math.cos(theta),
+        ];
+        const value = (pixels[(row * MAP.width + column) * 4] / 255) * scale;
+        fromMap += value * Math.max(0, dot(n, d)) * solidAngle;
+      }
+    }
+    let fromPatches = 0;
+    patches.forEach((q, i) => {
+      const d = sub(q.center, device);
+      const r2 = dot(d, d);
+      const r = Math.sqrt(r2);
+      const cosPaper = dot(d, n) / r;
+      const cosPatch = -dot(d, q.normal) / r;
+      if (cosPaper > 0 && cosPatch > 0)
+        fromPatches += (B[i] * cosPaper * cosPatch * q.area) / (Math.PI * r2);
+    });
+    return { fromMap, fromPatches };
+  }
+
+  /** Paper's normal at an elevation above level, toward the viewer. */
+  const towardViewer = (degrees: number): Vec3 => [
+    0,
+    Math.cos(degrees * RAD),
+    Math.sin(degrees * RAD),
+  ];
+  const stillDirect = directAt(device, towardViewer(90 - VIEWING[viewingClass].stillBeta));
+  console.log("Each surface's mean radiance against the still pose's direct irradiance / π:");
+  for (const face of faces) {
+    let sum = 0;
+    for (let k = 0; k < face.nu * face.nv; k++) sum += B[face.first + k];
+    console.log(
+      `  ${face.name.padEnd(18)} ${(sum / (face.nu * face.nv) / stillDirect).toFixed(3)}`,
+    );
+  }
+  console.log(
+    "The room's share of the light on paper, by its normal's elevation toward the viewer:",
+  );
+  for (const [degrees, label] of [
+    [90, "flat"],
+    [90 - VIEWING.tablet.stillBeta, "tablet still"],
+    [90 - VIEWING.phone.stillBeta, "phone still"],
+    [0, "upright"],
+    [-20, "past upright"],
+  ] as const) {
+    const n = towardViewer(degrees);
+    const direct = directAt(device, n);
+    const { fromMap, fromPatches } = roomOnPaper(n);
+    const share = (room: number) => `${((100 * room) / (room + direct)).toFixed(1)}%`;
+    console.log(
+      `  ${String(degrees).padStart(3)}° ${label.padEnd(13)} map ${share(fromMap)}, patches ${share(fromPatches)}`,
+    );
+  }
+
+  return {
+    geometry: {
+      roomSize: ROOM_SIZE,
+      deviceHeight: DEVICE_HEIGHT,
+      reflectance: REFLECTANCE,
+      diffuserRadius: DIFFUSER_RADIUS,
+      light: placement,
+    },
+    width: MAP.width,
+    height: MAP.height,
+    scale,
+    pixels: pixels.toString("base64"),
+  };
 }
 
 await writeFile(
   new URL("../src/stickers/roomLight.json", import.meta.url),
-  JSON.stringify(
-    { width: MAP.width, height: MAP.height, scale, pixels: pixels.toString("base64") },
-    null,
-    2,
-  ) + "\n",
+  JSON.stringify({ phone: buildMap("phone"), tablet: buildMap("tablet") }, null, 2) + "\n",
 );
 console.log("Saved src/stickers/roomLight.json");

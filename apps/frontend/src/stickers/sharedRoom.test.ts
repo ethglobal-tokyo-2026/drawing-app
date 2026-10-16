@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   attitudeOf,
+  IDENTITY,
   inverse,
   multiply,
   poseOf,
@@ -74,6 +75,38 @@ const rimOnPlane = (frame: ReturnType<typeof roomFrame>) => {
 };
 
 describe("roomFrame", () => {
+  it("keeps the eye in front through a full turn without moving the room", () => {
+    const still = roomFrame(turnedBy(IDENTITY));
+    for (const degrees of [45, 60, 75, 90, 120, 150, 179.999, 180, 180.001, 210, 270, 315]) {
+      for (const by of [attitudeOf(0, degrees, 0), attitudeOf(0, 0, degrees)]) {
+        const frame = roomFrame(turnedBy(by));
+        expect(frame.eye.every(Number.isFinite)).toBe(true);
+        expect(frame.eye[2] / ROOM.eyeDistance).toBeGreaterThan(0.25);
+        expect(Math.hypot(...frame.eye)).toBeCloseTo(ROOM.eyeDistance, 8);
+        for (const key of ["up", "toward", "light", "across", "down"] as const)
+          heldInWorld(still[key], by).forEach((v, i) => expect(frame[key][i]).toBeCloseTo(v, 8));
+      }
+    }
+  });
+
+  it("bends the eye continuously beyond an ordinary inspection angle", () => {
+    const eyeAt = (degrees: number) => unit(roomFrame(turnedBy(attitudeOf(0, degrees, 0))).eye);
+    for (const degrees of [30, 45, 59]) {
+      const expected = heldInWorld([0, 0, 1], attitudeOf(0, degrees, 0));
+      eyeAt(degrees).forEach((v, i) => expect(v).toBeCloseTo(expected[i], 9));
+    }
+    const step = 0.001;
+    for (const boundary of [60, 180]) {
+      const before = eyeAt(boundary - step);
+      const at = eyeAt(boundary);
+      const after = eyeAt(boundary + step);
+      for (let i = 0; i < 3; i++) {
+        expect(Math.abs(after[i] - before[i])).toBeLessThan(0.001);
+        expect((after[i] - at[i]) / step).toBeCloseTo((at[i] - before[i]) / step, 4);
+      }
+    }
+  });
+
   it("lays the light's plane level across and plumb down, where the diffuser's rim spans the shader's ellipse", () => {
     const { radius, aspect } = ROOM.light;
     for (const by of [attitudeOf(0, 0, 0), attitudeOf(0, 25, 0), attitudeOf(15, -10, 12)]) {

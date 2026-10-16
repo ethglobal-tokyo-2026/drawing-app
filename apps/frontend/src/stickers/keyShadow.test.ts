@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DevicePose } from "./light";
 import { keyShadow, keyShadowLayer, rereadKeyShadowElevation } from "./keyShadow";
 import { STILL_POSE } from "./lightMode";
+import { roomFrame } from "./sharedRoom";
 
 /** The light the layers follow: what it holds and the one listener a mounted layer subscribes. */
 const light = vi.hoisted(() => ({
@@ -24,11 +25,15 @@ const at = (beta: number, gamma = 0) => keyShadow({ beta, gamma, screenAngle: 0 
 const reach = ({ x, y }: { x: number; y: number }) => Math.hypot(x, y);
 
 describe("keyShadow", () => {
-  it("falls down and right from the reading pose, under a light at the top left, and further and softer upright", () => {
+  it("falls away from the room's light, and further and softer upright", () => {
     const reading = at(STILL_POSE.beta);
     const upright = at(90);
-    expect(reading.y).toBeGreaterThan(0);
-    expect(reading.x).toBeGreaterThan(0);
+    for (const beta of [STILL_POSE.beta, 70, 90]) {
+      const { x, y } = at(beta);
+      const [lx, ly] = roomFrame({ ...STILL_POSE, beta }).light;
+      expect(x * lx + y * ly).toBeLessThan(0);
+      expect(x * ly - y * lx).toBeCloseTo(0, 9);
+    }
     expect(upright.y).toBeGreaterThan(reading.y);
     expect(upright.soft).toBeGreaterThan(reading.soft);
     expect(upright.sharp + upright.soft).toBeLessThan(reading.sharp + reading.soft);

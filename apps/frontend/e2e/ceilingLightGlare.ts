@@ -147,8 +147,7 @@ export function lumaDifference(a: Frame, b: Frame) {
 
 /**
  * Waits for the light to land exactly on `reading`, as it does once a reading is held, then for the
- * material to draw it. With `quietMs`, the pose must also hold that long, which outlasts a
- * re-centering viewer's spaced steps.
+ * material to draw it. With `quietMs`, the published pose must also hold that long.
  */
 export async function landOn(page: Page, reading: Reading, deadlineMs: number, quietMs = 0) {
   const landed = await page.evaluate(
@@ -212,7 +211,7 @@ export const stickerPoint = (
     { clip, offset },
   );
 
-/** Fails if the viewer has moved off `rest`, as it does once a pose lasts past a re-centering hold. */
+/** Fails if a sweep has changed the visible session's reference attitude. */
 async function expectViewerOn(page: Page, rest: Reading, last: Reading) {
   const off = await page.evaluate(
     async ({ rest, last }) => {
@@ -226,7 +225,7 @@ async function expectViewerOn(page: Page, rest: Reading, last: Reading) {
     },
     { rest, last },
   );
-  expect(off, "The viewer re-centered: the poses outlasted its hold").toBeLessThan(0.01);
+  expect(off, "The visible session's reference changed during the sweep").toBeLessThan(0.01);
 }
 
 /** The viewer's turn from the device, in degrees: none once it is centered on the device. */
@@ -250,8 +249,7 @@ export async function capture(
 
 /**
  * Lands on each pose in turn, capturing it promptly, with the viewer centered on `rest`, then lands
- * back on `rest`: inside every re-centering release, so the next excursion starts its holds afresh.
- * The frames are measured afterwards, since a hold counts while they are.
+ * back on `rest`. The frames are measured afterwards.
  */
 export async function sweep(
   page: Page,

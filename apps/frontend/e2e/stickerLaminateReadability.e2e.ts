@@ -205,8 +205,7 @@ const glossLightAt = (page: Page, poses: DevicePose[], at: ScreenPoint) =>
   );
 
 /**
- * The most, in degrees, any step's viewer turned from one centered on `rest`, as it does once a pose
- * outlasts a re-centering hold.
+ * The most, in degrees, any step's reference moved from the session's initial `rest`.
  */
 const viewerOffRest = (
   page: Page,
@@ -314,8 +313,7 @@ test("the first iPad sensor reading glides the laminate to the device's pose, an
   expect(await page.evaluate(() => window.laminateFixture.getPose())).toEqual(stillPose);
 
   // The first reading, a little past the still pose. The viewer centers on it, and a small tilt from
-  // it carries the glare across the paper, inside the viewer's first re-centering release, so the
-  // viewer stays centered on it while the paper is read.
+  // it carries the glare across the paper while the session keeps its reference.
   const rest: Reading = { alpha: 0, beta: stillPose.beta + 5, gamma: 0 };
   // The first pose the light writes after the reading, which lies on its way rather than at it.
   const first = await page.evaluate(
@@ -381,8 +379,7 @@ test("a tilt sweep carries the ceiling light's reflection across full-cut gloss 
   await holdPose(page, beta, gamma);
 
   // Tilts that carry the glare's middle down past the white paper's right edge, away from the print
-  // beside it, in steps of half the paper: its body crosses the whole paper and leaves it. Every step
-  // is past the viewer's first re-centering release, so the readings are solved first, each step only
+  // beside it, in steps of half the paper: its body crosses the whole paper and leaves it. Each step
   // lands and keeps what it shows, and the steps are measured once the sweep is done.
   const box = await onScreen(page.locator("[data-white]"));
   const aims: { y: number; reading: Reading }[] = [];
@@ -407,7 +404,7 @@ test("a tilt sweep carries the ceiling light's reflection across full-cut gloss 
       rest,
       aims.map(({ reading }, i) => ({ reading, pose: steps[i].pose })),
     ),
-    "The viewer re-centered: the sweep outlasted its hold",
+    "The visible session's reference changed during the sweep",
   ).toBeLessThan(0.01);
 
   // The ink is outside the light where the light's blurred edge has fallen below its veil: from

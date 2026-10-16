@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { expectLanded, holdPortrait } from "./screenTilt.ts";
+import { expectLanded, hideAndShow, holdPortrait } from "./screenTilt.ts";
 
 test.beforeEach(({ page }) => holdPortrait(page));
 
@@ -52,11 +52,11 @@ const BLACK = flatPrint("#000000");
 const ROUNDING = 0.02;
 
 /**
- * Lands the light on [beta, 0], then waits for the viewer to re-center there, as it does once a held
- * device's pose lasts. The eye then faces the screen square-on, as at the still pose, and holds still,
+ * Returns the page before a fresh reading at [beta, 0]. The eye faces the screen square-on and holds,
  * so white less black is the paper's own light, not the coat's Fresnel at an oblique eye.
  */
 async function landCentered(page: Page, beta: number) {
+  await hideAndShow(page);
   await expectLanded(page, [beta, 0]);
   await expect
     .poll(() => page.evaluate(() => window.laminateFixture.getPose().turn?.[0] ?? 1))

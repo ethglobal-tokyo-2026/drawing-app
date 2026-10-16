@@ -1,7 +1,7 @@
 import { coatFresnel } from "./coat";
 import { srgbToLinear } from "./foilMaterial";
 import { glslFloat as f } from "./glsl";
-import { LIGHT_RADIANCE } from "./roomIrradiance";
+import { LIGHT_REFLECTION_RADIANCE } from "./roomIrradiance";
 import { SCREENTONE } from "./screentone";
 
 /**
@@ -132,7 +132,7 @@ vec3 shadeFoil(vec2 print,float polar,vec3 n,vec3 view,vec3 tangent,float printF
   // Holo stock's hue bands sweep around the sticker on top of the optics, so the band shows
   // several palette hues at once and tilt still slides them; spreading the orders from their
   // mean keeps that color legible on a narrow band.
-  orders=foilDiffraction(n,view,tangent,angularFootprint,pink?0.:.22*sin(3.*polar))*${f(LIGHT_RADIANCE * light)};
+  orders=foilDiffraction(n,view,tangent,angularFootprint,pink?0.:.22*sin(3.*polar))*${f(LIGHT_REFLECTION_RADIANCE * light)};
   if(!pink){
    orders+=foilRoomOrders(reflected,polar,angularFootprint);
    float strength=foilY(orders);

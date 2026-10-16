@@ -77,6 +77,7 @@ export type CreaseReply =
       id: string;
       key: string;
       crease: Record<CreaseImage, Blob> | null;
+      maxSlope?: number;
       normalBounds?: CreaseBounds;
       timings: CreaseTimings;
     }
@@ -230,6 +231,7 @@ async function bake(board: string, job: CreaseJob): Promise<CreaseReply> {
       id: job.id,
       key: job.key,
       crease,
+      ...(pixels && { maxSlope: pixels.maxSlope }),
       timings: { decode: t1 - t0, draw: t2 - t1, shade: t3 - t2, encode: t4 - t3, total: t4 - t0 },
     };
   } finally {
@@ -366,6 +368,7 @@ async function bakeExpanded(
       key: job.key,
       crease,
       ...(crease && {
+        maxSlope: pixels?.maxSlope,
         normalBounds: {
           x: output.x / job.width,
           y: output.y / job.height,

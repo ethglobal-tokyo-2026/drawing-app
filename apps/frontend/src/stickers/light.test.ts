@@ -32,7 +32,6 @@ describe.each([await loadLightAs("phone"), await loadLightAs("tablet")])(
     currentLight,
     installLight,
     MAX_PUBLISHES_PER_SECOND,
-    RECENTER,
     reflectionPx,
     subscribeLight,
     angleBetween,
@@ -61,7 +60,7 @@ describe.each([await loadLightAs("phone"), await loadLightAs("tablet")])(
 
     /** A sensor's frame. */
     const FRAME_MS = 16;
-    /** Long enough for the light to land on a held reading; shorter than every re-centering hold. */
+    /** Long enough for the light to land on a held reading. */
     const settle = () => vi.advanceTimersByTime(2000);
     /** A pointer moved to (x, y): a mouse unless it says it's a pen or a finger. */
     const pointAt = (x: number, y: number, pointerType = "mouse", type = "pointermove") =>
@@ -545,8 +544,6 @@ describe.each([await loadLightAs("phone"), await loadLightAs("tablet")])(
        * centered on the device reads no more, whatever its pose's rounding.
        */
       const TURN_FLOOR = angleBetween(IDENTITY, [1 - Number.EPSILON / 2, 0, 0, 0]);
-      /** The re-centering tier for a slight turn, which waits longer, and the one for a wide turn. */
-      const [slight, wide] = RECENTER.tiers;
       /** Expects the published turn to carry the world's axes from `from`'s device axes into `to`'s. */
       const expectTurnBetween = (from: readonly number[], to: readonly number[]) => {
         const turn = currentLight().turn ?? IDENTITY;
@@ -582,148 +579,81 @@ describe.each([await loadLightAs("phone"), await loadLightAs("tablet")])(
         expect(turned()).toBeLessThan(0.01);
       });
 
-      it("eases onto a device held past a release in a fixed time, then holds still", () => {
+      it("keeps a deliberate tilt through a long hold and restores the room on return", () => {
         landAt(STILL_POSE.beta, 0);
-        tiltTo(STILL_POSE.beta, 0, 60);
-        vi.advanceTimersByTime(wide.holdMs - FRAME_MS);
-        expect(turned()).toBeCloseTo(60, 6);
-        const before = published.length;
-        const eased: { at: number; turn: number }[] = [];
-        const stop = subscribeLight(() => eased.push({ at: performance.now(), turn: turned() }));
-        try {
-          vi.advanceTimersByTime(2 * RECENTER.easeMs);
-        } finally {
-          stop();
-        }
-        expect(turned()).toBeLessThanOrEqual(TURN_FLOOR);
-        // It lands within the ease's time, never backs off, and each redraw but the landing moves the
-        // reflection visibly.
-        expect(eased[eased.length - 1].at - eased[0].at).toBeLessThanOrEqual(RECENTER.easeMs);
-        for (let i = 1; i < eased.length; i++) {
-          expect(eased[i].turn).toBeLessThan(eased[i - 1].turn);
-          if (i < eased.length - 1)
-            expect(reflectionPx(eased[i - 1].turn - eased[i].turn)).toBeGreaterThanOrEqual(0.5);
-        }
-        expect(published.length - before).toBeLessThan(RECENTER.easeMs / FRAME_MS + 8);
-        const held = currentLight();
+        const before = roomFrame();
+        tiltTo(STILL_POSE.beta + 45, 0);
+        settle();
+        const inspecting = currentLight();
         const count = published.length;
-        for (let i = 0; i < 50; i++) {
-          tiltTo(STILL_POSE.beta, 0, 60);
-          vi.advanceTimersByTime(200);
-        }
-        expect(currentLight()).toEqual(held);
+        vi.advanceTimersByTime(20_000);
+        expect(currentLight()).toEqual(inspecting);
+        expect(turned()).toBeCloseTo(45, 6);
         expect(published).toHaveLength(count);
         expect(vi.getTimerCount()).toBe(0);
+        tiltTo(STILL_POSE.beta, 0);
+        settle();
+        expect(roomFrame()).toEqual(before);
       });
 
-      it("goes on re-centering after a pause, on a device lying still", () => {
+      it("keeps its reference through a slow inspection and a controller reinstall", () => {
         const close = landAt(STILL_POSE.beta, 0);
-        tiltTo(STILL_POSE.beta, 0, 60);
-        vi.advanceTimersByTime(wide.holdMs + RECENTER.easeMs / 2);
-        expect(turned()).toBeGreaterThan(10);
-        expect(turned()).toBeLessThan(50);
-        close();
-        vi.advanceTimersByTime(5000);
-        expect(turned()).toBeGreaterThan(10);
-        showScreen();
-        for (let i = 0; i < 20; i++) {
-          tiltTo(STILL_POSE.beta, 0, 60);
-          vi.advanceTimersByTime(200);
+        for (let seconds = 0; seconds <= 20; seconds++) {
+          tiltTo(STILL_POSE.beta + 30 + seconds, 0);
+          vi.advanceTimersByTime(1000);
         }
-        expect(turned()).toBeLessThan(1e-3);
-      });
-
-      /** How far behind its clock the light may step: the frames after a reading, a hold and the ease. */
-      const LATE_MS = 3 * FRAME_MS;
-      let tiltedAt = 0;
-      /** Tilts the device `degrees` forward of the still pose. */
-      const tiltBy = (degrees: number) => tiltTo(STILL_POSE.beta + degrees, 0);
-      /** Lands the viewer at the still pose, then tilts; returns what closes the screen. */
-      const tiltFromStill = (degrees: number) => {
-        const close = landAt(STILL_POSE.beta, 0);
-        tiltBy(degrees);
-        tiltedAt = performance.now();
-        return close;
-      };
-      /** The viewer's turn, in degrees, `ms` after the tilt from the still pose. */
-      const turnAt = (ms: number) => {
-        vi.advanceTimersByTime(tiltedAt + ms - performance.now());
-        return turned();
-      };
-      /** Expects the viewer to keep the room `holdMs` into the tilt, then ease onto the device. */
-      const expectRecenteredAfter = (holdMs: number, degrees: number) => {
-        expect(turnAt(holdMs - FRAME_MS)).toBeCloseTo(degrees, 6);
-        const halfway = turnAt(holdMs + RECENTER.easeMs / 2) / degrees;
-        expect(halfway).toBeGreaterThan(0.45);
-        expect(halfway).toBeLessThan(0.55);
-        expect(turnAt(holdMs + RECENTER.easeMs + LATE_MS)).toBeLessThanOrEqual(TURN_FLOOR);
-      };
-
-      it("keeps the room through a wide turn for the wide tier's hold, then eases onto the device", () => {
-        tiltFromStill(wide.release + 5);
-        expectRecenteredAfter(wide.holdMs, wide.release + 5);
-      });
-
-      it("keeps the room through a slight turn for the slight tier's longer hold", () => {
-        tiltFromStill(slight.release + 2.5);
-        expectRecenteredAfter(slight.holdMs, slight.release + 2.5);
-      });
-
-      it("never re-centers on a turn that comes back inside before its hold, however long it then lasts", () => {
-        tiltFromStill(wide.release + 5);
-        turnAt(wide.holdMs - 1000);
-        tiltBy(slight.release - 2.5);
-        expect(turnAt(2 * slight.holdMs)).toBeCloseTo(slight.release - 2.5, 6);
-      });
-
-      it("counts a slight turn's hold from when it first went past, through a wide turn before it", () => {
-        tiltFromStill(wide.release + 5);
-        turnAt(wide.holdMs - 2000);
-        tiltBy(wide.release - 5);
-        expectRecenteredAfter(slight.holdMs, wide.release - 5);
-      });
-
-      it("goes on counting a hold through a pause and a reinstalled controller", () => {
-        const close = tiltFromStill(wide.release + 5);
-        turnAt(wide.holdMs / 2);
+        expect(turned()).toBeCloseTo(50, 6);
+        const inspecting = currentLight();
         close();
         uninstall();
         uninstall = installLight(root);
         showScreen();
-        expectRecenteredAfter(wide.holdMs, wide.release + 5);
+        vi.advanceTimersByTime(20_000);
+        expect(currentLight()).toEqual(inspecting);
+        tiltTo(STILL_POSE.beta, 0);
+        settle();
+        expectTurnBetween([0, STILL_POSE.beta, 0], [0, STILL_POSE.beta, 0]);
       });
 
-      it("maps the room as a fresh start does once re-centered on a device tilted past upright", () => {
+      it("waits for a fresh reading after the page returns, then centers on the new posture", () => {
         landAt(STILL_POSE.beta, 0);
-        // A hand tilting the device back past upright over two seconds, then holding it there.
-        const sweepMs = 2000;
-        for (let t = 0; t < sweepMs; t += FRAME_MS) {
-          tiltTo(STILL_POSE.beta + ((135 - STILL_POSE.beta) * t) / sweepMs, 0);
-          vi.advanceTimersByTime(FRAME_MS);
-        }
-        tiltTo(135, 0);
-        vi.advanceTimersByTime(wide.holdMs + RECENTER.easeMs + LATE_MS);
+        tiltTo(STILL_POSE.beta + 30, 0);
+        settle();
+        const inspecting = currentLight();
+        const visibility = vi.spyOn(document, "visibilityState", "get");
+        visibility.mockReturnValue("hidden");
+        document.dispatchEvent(new Event("visibilitychange"));
+        vi.advanceTimersByTime(30_000);
+        visibility.mockReturnValue("visible");
+        document.dispatchEvent(new Event("visibilitychange"));
+        vi.advanceTimersByTime(20_000);
+        expect(currentLight()).toEqual(inspecting);
+        expect(vi.getTimerCount()).toBe(0);
+        tiltTo(135, 15, 120);
+        vi.advanceTimersByTime(FRAME_MS);
+        expect(angles(currentLight())).toEqual(pose(135, 15));
         expect(turned()).toBeLessThanOrEqual(TURN_FLOOR);
-        const recentered = roomFrame();
+        const resumed = roomFrame();
         uninstall();
         openDocument();
-        landAt(135, 0);
+        landAt(135, 15, 120);
         const fresh = roomFrame();
         for (const key of ["up", "light", "eye"] as const)
-          fresh[key].forEach((v, i) => expect(recentered[key][i]).toBeCloseTo(v, 9));
+          fresh[key].forEach((v, i) => expect(resumed[key][i]).toBeCloseTo(v, 9));
       });
 
-      it("settles on the same frame for one pose, whichever side the device turned to it from", () => {
+      it("shows the same held pose from either direction within a visible session", () => {
+        landAt(STILL_POSE.beta, 0);
         const settleAt = (alpha: number) => {
           tiltTo(STILL_POSE.beta, 0, alpha);
-          vi.advanceTimersByTime(30000);
-          expect(turned()).toBeLessThanOrEqual(TURN_FLOOR);
+          settle();
           return roomFrame();
         };
-        landAt(STILL_POSE.beta, 0);
         const fromBelow = settleAt(60);
         settleAt(120);
-        expect(settleAt(60)).toEqual(fromBelow);
+        const fromAbove = settleAt(60);
+        for (const key of ["up", "light", "eye"] as const)
+          fromBelow[key].forEach((v, i) => expect(fromAbove[key][i]).toBeCloseTo(v, 9));
       });
 
       it("keeps its heading when the listener restarts with alpha counted from elsewhere", () => {

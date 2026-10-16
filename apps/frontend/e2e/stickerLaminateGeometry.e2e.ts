@@ -69,7 +69,7 @@ const againstQuarterTurn = (canvas: Locator, before: JSHandle<ImageData>) =>
  * On the laminate fixture: centers the viewer on the still pose, the first reading, then tilts until
  * the glare puts `at` of the ceiling light at `target`, and waits for the light to land there and the
  * stickers to draw it. The still glare is off the screen, so the paper a test measures sits near it:
- * a small tilt stays inside the viewer's re-centering release, and the light then holds.
+ * the visible session keeps its reference, and the light then holds.
  */
 async function holdGlare(page: Page, target: ScreenPoint, at?: LightPoint) {
   const still = await page.evaluate(() => window.laminateFixture.getPose());

@@ -242,43 +242,11 @@ function cropInto(
   }
 }
 
-/** Plane levels apart by less than this, in sticker thicknesses, drape as one. */
-const LEVEL_QUANTUM = 1 / 64;
-
-/**
- * The support planes' levels, lowest first: the lowest point, the level of every flat stretch, and the
- * highest point, so antialiased edges fall between two planes.
- */
-function plateauLevels(field: Float32Array, width: number, height: number) {
-  const found = new Set<number>();
-  let lowest = Infinity;
-  let highest = -Infinity;
-  for (let y = 1; y < height - 1; y++)
-    for (let x = 1; x < width - 1; x++) {
-      const i = y * width + x;
-      const v = field[i];
-      lowest = Math.min(lowest, v);
-      highest = Math.max(highest, v);
-      if (
-        field[i - 1] === v &&
-        field[i + 1] === v &&
-        field[i - width] === v &&
-        field[i + width] === v
-      )
-        found.add(Math.round(v / LEVEL_QUANTUM));
-    }
-  const levels = [lowest];
-  for (const level of [...found].sort((a, b) => a - b).map((q) => q * LEVEL_QUANTUM))
-    if (level > levels[levels.length - 1] + LEVEL_QUANTUM / 2) levels.push(level);
-  if (highest > levels[levels.length - 1] + LEVEL_QUANTUM / 2) levels.push(highest);
-  return levels;
-}
-
 /**
  * A stiff sheet laid over `field`: narrow gaps are bridged level with their supports, then beside a
- * step the sheet drapes as a thin plate clamped at both ends does, H·(1 − smoothstep(d/run)), flat at
- * the shoulder and the foot and bending equally at each. The run is RAMP beside a step one sticker
- * high and grows as √height.
+ * step a symmetric parabolic-envelope average approximates a clamped plate's cubic, flat at the
+ * shoulder and foot and bending equally at each. Its run grows as RAMP·√height. Every envelope uses
+ * the actual surface, so a distant support cannot split a cliff's height into shorter drapes.
  */
 export function drape(
   field: Float32Array,
@@ -308,26 +276,19 @@ export function drape(
     out.fill(field[source + width - 1], start + padding + width, start + extendedWidth);
   }
   bridgeGaps(out, extendedWidth, extendedHeight, scale);
-  const levels = plateauLevels(out, extendedWidth, extendedHeight);
-  // Each support plane's step drapes on its own, and the drapes stack: every sum of them stays
-  // continuous and monotone beside stairs, wherever their edges fall.
+  const k = 1 / (reach * reach);
+  envelopePass(out, extendedWidth, extendedHeight, k, -1, true);
+  envelopePass(out, extendedWidth, extendedHeight, k, -1, false);
   const layer = new Float32Array(out.length);
-  const draped = new Float32Array(out.length).fill(levels[0]);
-  for (let n = 1; n < levels.length; n++) {
-    const step = levels[n] - levels[n - 1];
-    for (let i = 0; i < out.length; i++)
-      layer[i] = Math.min(1, Math.max(0, (out[i] - levels[n - 1]) / step));
-    // A closing by a parabola ramps the step down as (1 − d/run)², over RAMP·√step, as a plate's run
-    // grows, and fills the foot in 2D. With u that parabola, 1 − smoothstep(d/run) is 3u − 2u^1.5.
-    const k = 1 / (step * reach * reach);
-    envelopePass(layer, extendedWidth, extendedHeight, k, -1, true);
-    envelopePass(layer, extendedWidth, extendedHeight, k, -1, false);
-    envelopePass(layer, extendedWidth, extendedHeight, k, 1, true);
-    envelopePass(layer, extendedWidth, extendedHeight, k, 1, false);
-    for (let i = 0; i < out.length; i++) {
-      const u = Math.min(1, Math.max(0, layer[i]));
-      draped[i] += step * u * (3 - 2 * Math.sqrt(u));
-    }
+  const draped = new Float32Array(out.length);
+  // A stronger lower envelope rounds the shoulder without lowering the sheet through its supports.
+  // Symmetric transition points approximate the cubic while preserving each envelope's monotonicity.
+  for (const transition of [0.25, 0.5, 0.75]) {
+    layer.set(out);
+    const lowerK = k / (1 - transition);
+    envelopePass(layer, extendedWidth, extendedHeight, lowerK, 1, true);
+    envelopePass(layer, extendedWidth, extendedHeight, lowerK, 1, false);
+    for (let i = 0; i < out.length; i++) draped[i] += layer[i] / 3;
   }
   const crop = new Float32Array(width * height);
   cropInto(draped, extendedWidth, padding, width, height, crop);
@@ -474,7 +435,10 @@ export interface CreaseInput {
  * Normal RGB describes the raw draped surface independently of the cut, as encodeNormal packs it, and
  * the height the draped surface too, as creaseHeight reads it.
  */
-export type CreasePixels = Record<CreaseImage, Uint8ClampedArray<ArrayBuffer>>;
+export type CreasePixels = Record<CreaseImage, Uint8ClampedArray<ArrayBuffer>> & {
+  /** Bounds the encoded height's gradient in physical CSS px per normalized texture coordinate. */
+  maxSlope: number;
+};
 
 /** The crease and geometric normals over `surface`, or null when nothing rises. */
 export function creasePixels({
@@ -558,10 +522,18 @@ export function creasePixels({
   let lowestPoint = Infinity;
   for (const level of field) lowestPoint = Math.min(lowestPoint, level);
   const heights = image();
+  let across = 0;
+  let down = 0;
   for (let i = 0; i < field.length; i++) {
     const level = Math.round((field[i] - lowestPoint) * HEIGHT_LEVELS);
     const shaded = Math.round((highest[i] - lowestPoint) * HEIGHT_LEVELS) > level;
     heights.set([level, shaded ? 255 : 0, level, 255], i * 4);
+    const encoded = heights[i * 4];
+    if (i % width > 0) across = Math.max(across, Math.abs(encoded - heights[(i - 1) * 4]));
+    if (i >= width) down = Math.max(down, Math.abs(encoded - heights[(i - width) * 4]));
   }
-  return { base, normal, height: heights };
+  // Each bilinear derivative interpolates adjacent differences. Bounding both axes also bounds a
+  // diagonal ray, including quantization; the renderer scales the bound to its current texture extent.
+  const maxSlope = (Math.hypot(across * width, down * height) * STICKER_THICKNESS) / HEIGHT_LEVELS;
+  return { base, normal, height: heights, maxSlope };
 }

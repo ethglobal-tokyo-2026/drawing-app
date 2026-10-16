@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { COAT, coatedPaperReflectance } from "./coat";
 import { STILL_POSE } from "./lightMode";
-import { LIGHT_AZIMUTH, LIGHT_ELEVATION } from "./roomGeometry";
+import {
+  DEVICE_HEIGHT,
+  DIFFUSER_RADIUS,
+  LIGHT_AZIMUTH,
+  LIGHT_ELEVATION,
+  LIGHT_PLACEMENTS,
+  REFLECTANCE,
+  ROOM_SIZE,
+} from "./roomGeometry";
+import savedRoomLight from "./roomLight.json";
 import {
   bounceIrradiance,
   inRoomAxes,
@@ -46,6 +55,16 @@ function mapRow(row: number) {
 }
 
 describe("the room's light", () => {
+  it("uses a generated map from the active room and source geometry", () => {
+    for (const viewingClass of ["phone", "tablet"] as const)
+      expect(savedRoomLight).toHaveProperty([viewingClass, "geometry"], {
+        roomSize: ROOM_SIZE,
+        deviceHeight: DEVICE_HEIGHT,
+        reflectance: REFLECTANCE,
+        diffuserRadius: DIFFUSER_RADIUS,
+        light: LIGHT_PLACEMENTS[viewingClass],
+      });
+  });
   it("projects the bounce into harmonics whose irradiance is within 2% of the map's own", () => {
     const normals: Vec3[] = [
       [1, 0, 0],
@@ -59,17 +78,16 @@ describe("the room's light", () => {
       expect(Math.abs(bounceIrradiance(n) / mapIrradiance(n) - 1)).toBeLessThan(0.02);
   });
 
-  it("keeps the difference between a surface facing left and its mirror facing right", () => {
-    // Only the terms odd in x carry it, a few percent of the bounce. These facings are where the room
-    // makes it largest; elsewhere the bands harmonics drop are a larger part of it.
+  it("keeps the difference between surfaces facing toward and away from the light's side of the room", () => {
+    // The centered source leaves left/right symmetric; the terms odd toward the viewer carry its offset.
     for (const facing of [
-      [1, 0, 0],
+      [0, 1, 0],
       [1, 1, 0],
-      [1, 0, 1],
+      [0, 1, 1],
       [1, 1, 1],
     ] as const) {
       const n = unit(facing);
-      const mirrored: Vec3 = [-n[0], n[1], n[2]];
+      const mirrored: Vec3 = [n[0], -n[1], n[2]];
       const harmonics = bounceIrradiance(n) - bounceIrradiance(mirrored);
       const map = mapIrradiance(n) - mapIrradiance(mirrored);
       expect(Math.abs(harmonics / map - 1)).toBeLessThan(0.15);

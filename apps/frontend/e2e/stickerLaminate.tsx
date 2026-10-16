@@ -78,12 +78,14 @@ const creaseFoil = {
   normal: rampNormal,
   base: creaseImage(rampPixels.base),
   height: creaseImage(rampPixels.height),
+  maxSlope: rampPixels.maxSlope,
 };
 const reload = new URLSearchParams(location.search).has("reload");
 const replacement: {
   print: string;
   normal?: string;
   height?: string;
+  maxSlope?: number;
   turn: number;
   veiled: boolean;
 } = {

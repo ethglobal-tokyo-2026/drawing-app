@@ -4,6 +4,7 @@ import { about, compose, sendReading, type Rotation } from "./deviceRotation";
 import { glareReading } from "./glarePose";
 import { ipad } from "./ipad";
 import { phone } from "./phone";
+import { hideAndShow } from "./screenTilt";
 import {
   capture,
   expectHeldHeight,
@@ -257,7 +258,7 @@ for (const device of DEVICES)
           expectHeldHeight(leftRight, `Left/right, ${turnName(turn)}`);
       });
 
-    test("turned from upright onto its side, the settled glare is a fresh session's", async ({
+    test("returned on its side, the glare is a fresh session's after a fresh reading", async ({
       page,
     }, testInfo) => {
       test.setTimeout(120_000);
@@ -281,14 +282,11 @@ for (const device of DEVICES)
       const pose = held(about.x(stillBeta + 10), 90);
       const reading = await sendReading(page, pose);
       await landOn(page, reading, 3000);
-      // Through the viewer's re-centering, then once the light stops publishing. The glare is off
-      // the sticker all the while, so the viewer's own turn from the device shows how it closes.
-      const turned: number[] = [];
-      for (let i = 0; i < 6; i++) {
-        turned.push(await viewerTurn(page));
-        await page.waitForTimeout(1000);
-      }
-      const settledMs = await landOn(page, reading, 20_000, 1500);
+      const turned = [await viewerTurn(page)];
+      await hideAndShow(page);
+      // A visibility return alone holds the last frame; the next reading supplies the new posture.
+      turned.push(await viewerTurn(page));
+      const settledMs = await landOn(page, await sendReading(page, pose), 3000);
       turned.push(await viewerTurn(page));
       const settled = await capture(page, clip, testInfo, "turn-20-settled");
       // A settled viewer's glare is off the sticker, so a look from the settled pose shows it.
@@ -325,9 +323,9 @@ for (const device of DEVICES)
       );
       const detail = `${listPath(glares)}\nSettled after ${Math.round(settledMs)} ms; the viewer's turn each second: ${turned.map((t) => t.toFixed(1)).join(", ")}`;
 
-      // No lasting jump: once the device has turned, the viewer only closes on it, and lands.
-      const backOffs = turned.slice(1).filter((t, i) => t > turned[i] + 0.5);
-      expect.soft(backOffs, `The viewer turns away from the device:\n${detail}`).toEqual([]);
+      expect
+        .soft(turned[1], `The reference changed before a fresh reading:\n${detail}`)
+        .toBe(turned[0]);
       expect
         .soft(turned[turned.length - 1], `The viewer never lands:\n${detail}`)
         .toBeLessThan(0.01);
@@ -335,7 +333,7 @@ for (const device of DEVICES)
       expect(lookFresh.glare, `No glare in the fresh session's look:\n${detail}`).not.toBeNull();
       const target = lookFresh.glare;
       if (!lookSettled.glare || !target) return;
-      // A settled viewer depends only on the pose, so the frames match to the pixel, held or looking.
+      // A fresh resumed reference matches a newly opened page, held or looking.
       for (const [label, a, b] of [
         ["held", heldSettled, heldFresh],
         ["looking", lookSettled, lookFresh],

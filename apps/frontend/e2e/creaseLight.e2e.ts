@@ -28,7 +28,11 @@ const bandCrease = (page: Page) =>
       context.putImageData(new ImageData(data, side, side), 0, 0);
       return canvas.toDataURL();
     };
-    return { normal: image(pixels.normal), height: image(pixels.height) };
+    return {
+      normal: image(pixels.normal),
+      height: image(pixels.height),
+      maxSlope: pixels.maxSlope,
+    };
   });
 
 /**
@@ -114,6 +118,39 @@ const WHITE = flatPrint("#ffffff");
 /** Black paper takes no light, so its coat is the reflection alone. */
 const BLACK = flatPrint("#000000");
 
+test("a crease keeps its appearance through a long inspection and restores it on return", async ({
+  page,
+}) => {
+  await page.goto("/e2e/stickerLaminate.html?reload=1");
+  await expect(coatOf(page)).toHaveAttribute("data-state", "ready");
+  const crease = await bandCrease(page);
+  await page.evaluate(({ crease, print }) => window.laminateFixture.update({ print, ...crease }), {
+    crease,
+    print: WHITE,
+  });
+  const beta = await page.evaluate(
+    async () => (await import("../src/stickers/lightMode.ts")).STILL_POSE.beta,
+  );
+  await expectLanded(page, [beta, 0]);
+  await settledRows(page, ROWS);
+  const snapshot = () =>
+    coatOf(page).evaluate((canvas) => {
+      if (!(canvas instanceof HTMLCanvasElement)) throw new Error("The laminate canvas is missing");
+      return canvas.toDataURL();
+    });
+  const before = await snapshot();
+  await expectLanded(page, [beta + 45, 0]);
+  await settledRows(page, ROWS);
+  const inspecting = await snapshot();
+  expect(inspecting).not.toBe(before);
+  await page.clock.install();
+  await page.clock.runFor(20_000);
+  expect(await snapshot()).toBe(inspecting);
+  await expectLanded(page, [beta, 0]);
+  await settledRows(page, ROWS);
+  expect(await snapshot()).toBe(before);
+});
+
 /** A coat to read: its print, and whether it carries the band's height image, which the self-shadow marches. */
 interface Coat {
   print: string;
@@ -122,8 +159,7 @@ interface Coat {
 
 /**
  * The band's sticker at the screen's foot, turned `turn` degrees on screen: each coat's rows at β, γ 0,
- * in order. The fixture loads afresh, so the viewer centers on the reading and can't re-center between
- * the coats read there.
+ * in order. The fixture loads afresh, so each pose starts with the viewer centered on its reading.
  */
 async function coatsAt(page: Page, beta: number, bands: Bands, coats: Coat[], turn = 0) {
   await page.goto("/e2e/stickerLaminate.html?reload=1");
@@ -140,6 +176,7 @@ async function coatsAt(page: Page, beta: number, bands: Bands, coats: Coat[], tu
       print: coat.print,
       normal: crease.normal,
       height: coat.height ? crease.height : undefined,
+      maxSlope: coat.height ? crease.maxSlope : undefined,
       turn,
     });
     await expectLanded(page, [beta, 0]);

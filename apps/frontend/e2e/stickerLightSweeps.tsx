@@ -8,7 +8,9 @@ import "../src/styles/tokens.css";
 // reflection, so the ceiling light's glare stands out wherever the pose puts it.
 const svg = (body: string) =>
   `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800">${body}</svg>`)}`;
-const print = svg('<rect width="600" height="800" fill="black"/>');
+const print = svg(
+  `<rect width="600" height="800" fill="${new URLSearchParams(location.search).has("white") ? "white" : "black"}"/>`,
+);
 const cut = svg('<rect width="600" height="800" fill="white"/>');
 
 document.body.style.cssText =

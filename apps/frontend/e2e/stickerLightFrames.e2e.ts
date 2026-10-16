@@ -77,7 +77,7 @@ test("sticker detail restores identical laminate and foil after screen orientati
   expect(turned.paper).not.toBe(first.paper);
   expect(turned.foil).not.toBe(first.foil);
   expect(await heldPose(page, 0, 42, 3, 124)).toEqual(first);
-  // Inside the viewer's re-centering dead zone, so the same reading gives the same light.
+  // The session keeps its reference, so the same reading gives the same light.
   for (let repeat = 0; repeat < 3; repeat++) {
     await heldPose(page, 90, 46, 10, 128);
     await heldPose(page, 90, 36, -9, 120);

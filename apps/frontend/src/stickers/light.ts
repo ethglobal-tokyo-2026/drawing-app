@@ -72,23 +72,6 @@ export const MAX_PUBLISHES_PER_SECOND = 60;
  */
 export const reflectionPx = (degrees: number) =>
   2 * ROOM.eyeDistance * Math.tan((degrees * Math.PI) / 180);
-/**
- * The viewer re-centers on the device, since people shift in their seats: once the device has stayed
- * past a tier's release, in degrees from where the viewer is centered, for that tier's hold, moving
- * or held, the viewer eases onto it over easeMs and lands there, so a settled viewer depends only on
- * the pose. Without face tracking, only how long a pose lasts tells a look from a change of posture.
- * iOS 26 Liquid Glass's motion light defaults, read from its system framework.
- */
-export const RECENTER = {
-  tiers: [
-    { release: 12.5, holdMs: 10_000 },
-    { release: 25, holdMs: 5_000 },
-  ],
-  easeMs: 1_500,
-} as const;
-/** No tier's hold counting: the device inside every release. */
-const insideEvery = () => RECENTER.tiers.map((): number | null => null);
-
 const samePose = (a: DevicePose, b: DevicePose) =>
   a.beta === b.beta &&
   a.gamma === b.gamma &&
@@ -104,16 +87,12 @@ const documentLights = new WeakMap<
   Document,
   {
     pose: DevicePose;
-    /**
-     * The device's attitude as last written, the one the viewer is centered on, and per re-centering
-     * tier, when the reading went past its release.
-     */
+    /** The last filtered attitude and the visible session's reference attitude. */
     attitude: {
       lit: Quaternion;
       rest: Quaternion;
-      recentering: boolean;
-      pastSince: readonly (number | null)[];
     } | null;
+    needsReference: boolean;
     fromSensor: boolean;
     seenRotation: boolean;
     fallbackPhase: number;
@@ -145,6 +124,7 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
   const kept = documentLights.get(doc) ?? {
     pose: { ...STILL_POSE },
     attitude: null,
+    needsReference: false,
     fromSensor: false,
     seenRotation: false,
     fallbackPhase: 0,
@@ -182,15 +162,8 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
   let aimed: DevicePose = { ...kept.pose };
   let readingAt = -Infinity;
   let shownScreenAngle = kept.pose.screenAngle;
-  /** The attitude the viewer is centered on, as last shown, and the ease that re-centers it. */
+  /** The reference stays fixed during inspection; a fresh reading after backgrounding replaces it. */
   let rest: Quaternion = kept.attitude?.rest ?? IDENTITY;
-  let shownRest = rest;
-  let recentering = kept.attitude?.recentering ?? false;
-  /** Per tier, when the reading went past its release, while it stays past. */
-  let pastSince = kept.attitude?.pastSince ?? insideEvery();
-  let easeFrom = rest;
-  /** When the ease started; unset, it starts from where the viewer is on the next frame. */
-  let easeStarted: number | null = null;
   /**
    * The readings' filtered speed in °/s, squared, which noise can take below none; the last two
    * readings; the readings' rate and the filter's in Hz, and when each last stepped.
@@ -238,41 +211,8 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     const speed = Math.sqrt(Math.max(0, squaredSpeed));
     lit = slerp(lit, to, smoothing(MIN_CUTOFF_HZ + SPEED_COEFFICIENT * speed, rate));
   };
-  /** Whether the device is past a tier's release, its hold counting. */
-  const counting = () => pastSince.some((since) => since !== null);
-  /**
-   * Eases the viewer onto the device once the device has stayed past a tier's release for its hold,
-   * and lands it there. The release is measured from the reading, so the first reading, which the
-   * filter carries the light to, never trips it.
-   */
-  const recenter = (now: number) => {
-    if (!recentering) {
-      const off = angleBetween(rest, reading);
-      pastSince = RECENTER.tiers.map(({ release }, i) =>
-        off > release ? (pastSince[i] ?? now) : null,
-      );
-      recentering = RECENTER.tiers.some(({ holdMs }, i) => {
-        const since = pastSince[i];
-        return since !== null && now - since >= holdMs;
-      });
-      if (!recentering) return;
-      pastSince = insideEvery();
-    }
-    if (easeStarted === null) {
-      easeFrom = rest;
-      easeStarted = now;
-    }
-    const t = Math.max(0, (now - easeStarted) / RECENTER.easeMs);
-    if (t < 1) {
-      rest = slerp(easeFrom, lit, t * t * (3 - 2 * t));
-      return;
-    }
-    rest = lit;
-    recentering = false;
-    easeStarted = null;
-  };
   const keepAttitude = () => {
-    kept.attitude = { lit, rest, recentering, pastSince };
+    kept.attitude = { lit, rest };
   };
   const publish = (pose: DevicePose) => {
     publishedPose = pose;
@@ -298,9 +238,8 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
         lit = reading;
     }
     freshReading = false;
-    recenter(now);
     keepAttitude();
-    const landed = lit === reading && !recentering;
+    const landed = lit === reading;
     const pose = {
       ...(lit === reading ? aimed : poseOf(lit, aimed)),
       turn: multiply(inverse(lit), rest),
@@ -310,20 +249,17 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     const due =
       aimed.screenAngle !== shownScreenAngle ||
       reflectionPx(angleBetween(lit, shownLit)) >= PUBLISH_PX ||
-      reflectionPx(angleBetween(rest, shownRest)) >= PUBLISH_PX ||
       (landed && !samePose(pose, publishedPose));
     // A frame a quarter short of the cap's interval still publishes, so a 60 Hz screen's jittered
     // frames all do while a 120 Hz screen publishes every other frame.
     const capped = now - publishedAt < 750 / MAX_PUBLISHES_PER_SECOND;
     if (due && !capped) {
       shownLit = lit;
-      shownRest = rest;
       shownScreenAngle = aimed.screenAngle;
       publishedAt = now;
       publish(pose);
     }
-    // A held device may send no readings: frames go on counting its hold.
-    if (!landed || counting() || (due && capped)) frame = win.requestAnimationFrame(write);
+    if (!landed || (due && capped)) frame = win.requestAnimationFrame(write);
   };
 
   const aim = (pose: DevicePose, alpha: number | null) => {
@@ -333,16 +269,21 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     // Without alpha, each change in gravity is the smallest turn that explains it.
     const attitude =
       alpha === null ? withGravity(reading, up) : attitudeOf(alpha, pose.beta, pose.gamma);
-    if (!kept.fromSensor) {
+    const returning = kept.needsReference;
+    if (returning) {
+      // A returned page has no current posture until this reading; start its new session together.
+      lit = shownLit = rest = attitude;
+      kept.needsReference = false;
+      squaredSpeed = 0;
+      previous = [];
+      stepped = now;
+    } else if (!kept.fromSensor) {
       // The still pose and the fallback are in the screen's own axes: the light starts from where
       // theirs shows, whichever way the screen is turned. The viewer is centered on the reading.
       aimed = readAt(publishedPose, pose.screenAngle);
-      lit = shownLit = shownRest = withGravity(attitude, upOnScreen({ ...aimed, screenAngle: 0 }));
+      lit = shownLit = withGravity(attitude, upOnScreen({ ...aimed, screenAngle: 0 }));
       shownScreenAngle = aimed.screenAngle;
       rest = attitude;
-      recentering = false;
-      pastSince = insideEvery();
-      easeStarted = null;
       squaredSpeed = 0;
       previous = [];
       stepped = now;
@@ -355,8 +296,6 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
       lit = turned(lit);
       shownLit = turned(shownLit);
       rest = turned(rest);
-      shownRest = turned(shownRest);
-      easeFrom = turned(easeFrom);
       notePerformance(
         "orientation",
         `heading kept across a restarted listener: alpha moved ${angleBetween(c, IDENTITY).toFixed(1)}°`,
@@ -368,7 +307,7 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     readingAt = now;
     freshReading = true;
     measure(attitude, now);
-    step(attitude, now);
+    if (!returning) step(attitude, now);
     keepAttitude();
     if (!frame) frame = win.requestAnimationFrame(write);
   };
@@ -377,18 +316,16 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     win.cancelAnimationFrame(frame);
     frame = 0;
     if (mode === "fallback-wave") fallbackElapsed = fallbackPublished;
-    // The light holds where it was last shown, and the filter starts again from there; an
-    // unfinished re-centering eases on from where the viewer is.
+    // The light holds where it was last shown, and the filter starts again from there.
     lit = reading = shownLit;
-    rest = shownRest;
     aimed = { ...publishedPose };
     squaredSpeed = 0;
     previous = [];
-    easeStarted = null;
     if (kept.fromSensor) keepAttitude();
   };
 
   const refresh = () => {
+    if (doc.visibilityState !== "visible" && kept.fromSensor) kept.needsReference = true;
     const active = installed && holders > 0 && doc.visibilityState === "visible";
     if (active && !listening) {
       win.addEventListener("deviceorientation", fromTilt, { passive: true });
@@ -413,8 +350,7 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     }
     pause();
     mode = next;
-    // A pending re-centering, or a hold being counted, goes on while the device holds still.
-    if ((mode === "device-tilt" && (recentering || counting())) || mode === "fallback-wave") {
+    if (mode === "fallback-wave") {
       fallbackStarted = win.performance.now();
       frame = win.requestAnimationFrame(write);
     }

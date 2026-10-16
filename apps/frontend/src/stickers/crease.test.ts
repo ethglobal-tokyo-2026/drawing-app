@@ -463,6 +463,93 @@ describe("the drape's profile", () => {
   const slopesOf = (profile: number[]) =>
     profile.map((_, x) => (profile[Math.max(0, x - 1)] - profile[Math.min(LONG - 1, x + 1)]) / 2);
 
+  it("bounds the encoded height's bilinear slopes, including diagonal creases", () => {
+    for (const angle of [0, 17, 45]) {
+      const radians = (angle * Math.PI) / 180;
+      const pixels = pixelsOver([
+        field((x, y) =>
+          Number((x - W / 2) * Math.cos(radians) + (y - H / 2) * Math.sin(radians) < 0),
+        ),
+      ]);
+      const at = (x: number, y: number) =>
+        creaseHeight(pixels.height[(y * W + x) * 4]) * STICKER_THICKNESS;
+      expect(Number.isFinite(pixels.maxSlope)).toBe(true);
+      for (let y = 0; y < H - 1; y++)
+        for (let x = 0; x < W - 1; x++) {
+          const a = at(x, y),
+            b = at(x + 1, y),
+            c = at(x, y + 1),
+            d = at(x + 1, y + 1);
+          for (const u of [0, 0.5, 1])
+            for (const v of [0, 0.5, 1]) {
+              const dx = ((b - a) * (1 - v) + (d - c) * v) * W;
+              const dy = ((c - a) * (1 - u) + (d - b) * u) * H;
+              expect(Math.hypot(dx, dy), `angle ${angle} at ${x},${y}`).toBeLessThanOrEqual(
+                pixels.maxSlope + 1e-6,
+              );
+            }
+        }
+    }
+  });
+
+  it("keeps a cliff's drape independent of a distant intermediate support", () => {
+    const height = 90;
+    const alone = drape(
+      field((x) => (x < 60 ? 2 : 0), LONG, height),
+      LONG,
+      height,
+      1,
+    );
+    const beside = drape(
+      field((x, y) => (x < 60 ? 2 : x >= 150 && x < 170 && y > 20 && y < 70 ? 1 : 0), LONG, height),
+      LONG,
+      height,
+      1,
+    );
+    for (let y = 0; y < height; y++)
+      for (let x = 40; x < 95; x++)
+        expect(beside[y * LONG + x], `at ${x},${y}`).toBeCloseTo(alone[y * LONG + x], 6);
+  });
+
+  it("moves continuously as an intermediate support approaches a cliff", () => {
+    const height = 5;
+    const supportAt = (edge: number) =>
+      field((x) => (x < 60 ? 2 : Math.max(0, Math.min(1, x + 1 - edge))), LONG, height);
+    let previous = drape(supportAt(110), LONG, height, 1);
+    for (let edge = 109.75; edge >= 65; edge -= 0.25) {
+      const next = drape(supportAt(edge), LONG, height, 1);
+      for (let x = 45; x < 100; x++)
+        expect(
+          Math.abs(next[2 * LONG + x] - previous[2 * LONG + x]),
+          `edge ${edge}, x ${x}`,
+        ).toBeLessThanOrEqual(0.25 + 1e-6);
+      previous = next;
+    }
+  });
+
+  it("keeps a changing tread monotone through oblique and concave corners", () => {
+    const height = 90;
+    const ends = [
+      (y: number) => y / 2,
+      (y: number) => Math.abs(y - height / 2),
+      (y: number) => (y < height / 2 ? 20 : 0),
+      (y: number) => 6 + 15 * Math.sin(y / 12),
+    ];
+    for (const end of ends) {
+      const surface = drape(
+        field((x, y) => (x < 60 ? 2 : x < 60 + end(y) ? 1 : 0), LONG, height),
+        LONG,
+        height,
+        1,
+      );
+      for (let y = 0; y < height; y++)
+        for (let x = 1; x < LONG; x++)
+          expect(surface[y * LONG + x], `at ${x},${y}`).toBeLessThanOrEqual(
+            surface[y * LONG + x - 1] + 1e-6,
+          );
+    }
+  });
+
   it.each([
     [1, 1],
     [1, 2],
