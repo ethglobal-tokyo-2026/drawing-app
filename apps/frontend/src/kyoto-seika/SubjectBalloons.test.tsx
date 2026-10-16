@@ -12,6 +12,7 @@ import { FADED } from "./dealMotion";
 import { CHARRED_AT_ROLL, TEASE_LINES } from "./dieMood";
 import { SubjectBalloons } from "./SubjectBalloons";
 import { DEAL, SPORTS, TEST_SUBJECTS, WIND } from "./testSubjects";
+import { HOLD_MS } from "./useHold";
 
 const LAYOUT = dealLayout({
   width: 390,
@@ -49,7 +50,7 @@ const still = (deal: Deal) => (
 /** The deal as the harness last held it. */
 let dealtNow: Deal = DEAL;
 /** The clouds over a deal its die rolls and its taps pick, as the drawing screen holds one. */
-function Harness() {
+function Harness({ onHold }: { onHold?: (subject: KyotoSeikaSubject) => void }) {
   const [deal, setDeal] = useState(DEAL);
   useEffect(() => {
     dealtNow = deal;
@@ -57,7 +58,9 @@ function Harness() {
   const roll = () =>
     setDeal((d) => rollDie(TEST_SUBJECTS, d, { dealt: [], random: seededRandom(3) }) ?? d);
   const pick = (place: number) => setDeal((d) => togglePick(d, place) ?? d);
-  return <SubjectBalloons deal={deal} layout={LAYOUT} onRoll={roll} onPick={pick} />;
+  return (
+    <SubjectBalloons deal={deal} layout={LAYOUT} onRoll={roll} onPick={pick} onHold={onHold} />
+  );
 }
 
 const toggles = (host: HTMLElement) => [
@@ -198,6 +201,65 @@ describe("the Kyoto Seika clouds", () => {
       expect(wind.textContent).toBe(`${WIND.ja}${WIND.reading}`);
       expect(sports.textContent).toBe(SPORTS.ja);
     }
+  });
+});
+
+describe("words marked for deletion", () => {
+  const MARKED = DEAL.subjects[1];
+  const { spoken } = strings.kyotoSeika.marks;
+
+  /** A finger on `el` for `ms` of the faked clock, then lifted; the browser's click follows the lift. */
+  function pressFor(el: Element, ms: number) {
+    const at = { clientX: 100, clientY: 100, pointerId: 1, bubbles: true };
+    act(() => void el.dispatchEvent(new PointerEvent("pointerdown", at)));
+    act(() => void vi.advanceTimersByTime(ms));
+    act(() => void el.dispatchEvent(new PointerEvent("pointerup", at)));
+    act(() => void el.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+  }
+
+  it("tags only their clouds, and names those as marked: in English with its English", async () => {
+    const { host } = render(
+      <SubjectBalloons
+        deal={DEAL}
+        layout={LAYOUT}
+        onRoll={idle}
+        onPick={idle}
+        marked={new Set([MARKED.ja])}
+      />,
+    );
+    const tagged = [...host.querySelectorAll(".subject-balloon")].map(
+      (cloud) => cloud.querySelector(".subject-balloon__cut") !== null,
+    );
+    expect(tagged).toEqual(DEAL.subjects.map((s) => s === MARKED));
+    const names = () => toggles(host).map((t) => t.getAttribute("aria-label"));
+    expect(names()).toEqual(
+      DEAL.subjects.map((s) =>
+        s === MARKED ? spoken.en.replace("{{subject}}", said(s)) : said(s),
+      ),
+    );
+    await inLanguage("ja");
+    expect(names()).toEqual(
+      DEAL.subjects.map((s) => (s === MARKED ? spoken.ja.replace("{{subject}}", s.ja) : s.ja)),
+    );
+  });
+
+  it("without onHold, a press picks however long it's held", () => {
+    vi.useFakeTimers();
+    const { host } = render(<Harness />);
+    pressFor(toggles(host)[0], HOLD_MS);
+    expect(dealtNow.picked).toEqual([0]);
+  });
+
+  it("with onHold, a short press picks, and a held one hands over its subject and doesn't pick", () => {
+    vi.useFakeTimers();
+    const onHold = vi.fn();
+    const { host } = render(<Harness onHold={onHold} />);
+    pressFor(toggles(host)[0], HOLD_MS - 1);
+    expect(dealtNow.picked).toEqual([0]);
+    expect(onHold).not.toHaveBeenCalled();
+    pressFor(toggles(host)[1], HOLD_MS);
+    expect(onHold.mock.calls).toEqual([[DEAL.subjects[1]]]);
+    expect(dealtNow.picked).toEqual([0]);
   });
 });
 
