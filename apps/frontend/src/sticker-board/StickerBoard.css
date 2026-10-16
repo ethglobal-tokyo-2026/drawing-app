@@ -25,6 +25,16 @@
   pointer-events: none;
 }
 
+/* Over the backing and under the stickers, it dims the board with the room's light, as the stickers'
+   paper dims (paperLight.ts). Transparent until the board takes a share of that dimming. */
+.board-dimming {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* Where stickers sit. It stacks nothing itself, so each sticker stacks among the board's layers. */
 .board-stage {
   position: absolute;

@@ -1,5 +1,6 @@
 /* A sticker as material, filling its box. The kiss-cut and the ambient shadow are drop shadows, so the
-   silhouette casts them rather than the box. Its elevation is a design height: the real one is sub-pixel. */
+   silhouette casts them rather than the box. Loose, its elevation is a design height; stuck, it's the
+   sticker's real thickness. */
 .sticker-figure {
   position: relative;
   display: block;
@@ -22,7 +23,7 @@
   initial-value: 0.25;
 }
 
-/* The shoji's key shadow (keyShadow.ts): the silhouette pre-blurred sharp and soft in its own layer,
+/* The room light's key shadow (keyShadow.ts): the silhouette pre-blurred sharp and soft in its own layer,
    moved with the light through transform, so a move recomposites it and never repaints a blur. */
 .sticker-key-shadow {
   position: absolute;
@@ -49,7 +50,7 @@
   background: var(--key-shadow-ink);
 }
 
-/* The penumbra head-on, and upright, where the shoji grazes the screen and spreads it most. */
+/* The penumbra head-on, and upright, where the light grazes the screen and spreads it most. */
 .sticker-key-shadow::before {
   filter: blur(calc(var(--sticker-elevation) * 0.36));
   opacity: var(--key-shadow-sharp, 1);
@@ -74,11 +75,11 @@
   -webkit-user-drag: none;
 }
 
-/* Stuck to a board, a sticker sits close to it. Its image shows only inside its cut, leaving out the
-   cast baked round it, and a still copy of its silhouette casts the kiss-cut and the board's ambient
-   shadow, as a foil band does. */
+/* Stuck to a board, a sticker lies on it, lifted only its own thickness. Its image shows only inside its
+   cut, leaving out the cast baked round it, and a still copy of its silhouette casts the kiss-cut and
+   the contact shadow, as a foil band does. */
 .sticker-figure.is-stuck {
-  --sticker-elevation: 2px;
+  --sticker-elevation: var(--sticker-thickness);
 }
 
 .sticker-figure.is-stuck .sticker-figure__img {

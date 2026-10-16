@@ -1,27 +1,16 @@
 import { glslFloat as f } from "./glsl";
 import { ROOM } from "./sharedRoom";
 
-const { shoji: s } = ROOM;
-const extent = `vec2(${f(s.halfWidth)},${f(s.halfHeight)})`;
-const cell = `vec2(${f((2 * s.halfWidth) / s.columns)},${f((2 * s.halfHeight) / s.rows)})`;
-// A bar's half width in cells along each axis: its share of a column's width, the same in both directions.
-const barHalf = `vec2(${f(s.bar / 2)},${f((s.bar / 2) * (s.halfWidth / s.columns / (s.halfHeight / s.rows)))})`;
+const { light } = ROOM;
 const bounce = (levels: (typeof ROOM)["glossBounce" | "foilBounce"]) =>
   `vec4(${f(levels.ceiling)},${f(levels.litWall)},${f(levels.walls)},${f(levels.floor)}),${f(levels.litWallFade)}`;
-const lights = ROOM.lights
-  .map(
-    (l, i) =>
-      `+roomRound(r,roomLights[${i}],${f(l.radius)},${f(l.feather)},${f(l.radiance)},${f(l.core)},${f(l.coreRadiance)},${f(l.haloLevel)},${f(l.haloScale)},spread)`,
-  )
-  .join("");
 
 /**
- * The one room every material mirrors, fixed in the world (prototype). roomUp, roomToward (the viewer,
- * level), roomLight and the shoji's roomAcross (viewer's right) and roomDown axes, and roomLights,
- * the round lights' directions in ROOM.lights' order, are in screen axes, y down, from roomFrame;
- * roomEye is in CSS px from the screen's center. A direction's shoji
- * coordinates are on the plane one unit along the light. roomFootprint is the reflection's change
- * across one pixel on that plane, which main sets before any branch.
+ * The one room every material mirrors, fixed in the world. roomUp, roomToward (the viewer, level),
+ * roomLight and its plane's roomAcross (viewer's right) and roomDown axes are in screen axes, y down,
+ * from roomFrame; roomEye is in CSS px from the screen's center. A direction's place on the light's
+ * plane is on the plane one unit along the light. roomFootprint is the reflection's change across one
+ * pixel on that plane, which main sets before any branch.
  */
 export const roomFragment = `
 uniform vec3 roomUp;
@@ -30,49 +19,28 @@ uniform vec3 roomLight;
 uniform vec3 roomAcross;
 uniform vec3 roomDown;
 uniform vec3 roomEye;
-uniform vec3 roomLights[${ROOM.lights.length}];
 float roomFootprint;
 vec2 roomPlane(vec3 r){
  float z=dot(r,roomLight);
  return z>.05?vec2(dot(r,roomAcross),dot(r,roomDown))/z:vec2(1e3);
 }
-// The frame along each axis through a logistic blur of scale b: the box's exact convolution, so it
-// fades in and out with no step and no cutoff.
-vec2 roomShojiAxes(vec2 q,float b){
- vec2 d=abs(q);
- return 1./(1.+exp(clamp((d-${extent})/b,-40.,40.)))-1./(1.+exp(clamp((d+${extent})/b,-40.,40.)));
+// The ceiling light's disc at distance d from its middle on its plane, through a logistic blur of
+// scale b: the exact convolution along its radius, so it fades in and out with no step and no cutoff.
+float roomDisc(float d,float b){
+ return 1./(1.+exp(clamp((d-${f(light.radius)})/b,-40.,40.)))-1./(1.+exp(clamp((d+${f(light.radius)})/b,-40.,40.)));
 }
-// One bar of half width b at distance d, in cells, softened over w cells.
-float roomBar(float d,float b,float w){return 1.-smoothstep(b-w,b+w+.0001,d);}
-// Kumiko along one axis: bars at whole cells; once w spans much of a cell, only their average shows,
-// so the lattice never aliases.
-float roomBars(float u,float b,float w){
- return mix(roomBar(abs(fract(u+.5)-.5),b,w),2.*b,smoothstep(.2,.45,w));
+// The ceiling light seen through a coat whose lobe is spread wide: its edge blurs by the lobe, and by
+// a pixel's footprint so a steep crease never aliases it; its halo, the ceiling it lights and the
+// eye's veiling glare, brightens before the disc arrives and fades after it leaves.
+float roomCeilingLight(vec3 r,float spread){
+ float d=length(roomPlane(r));
+ float blur=sqrt(${f(light.feather * light.feather)}+${f(0.4 * 0.4)}*spread*spread+roomFootprint*roomFootprint);
+ return ${f(light.haloLevel)}*roomDisc(d,${f(light.haloScale)})+roomDisc(d,blur);
 }
-// The shoji screen: washi glowing brightest at its middle, darker kumiko over it, and its frame, all
-// blurred by a coat whose lobe is spread wide, plus the halo of the wall and ceiling it lights and the
-// eye's veiling glare, which brighten before the frame arrives and fade after it leaves.
-float roomShoji(vec3 r,float spread){
- vec2 q=roomPlane(r);
- vec2 h=roomShojiAxes(q,${f(s.haloScale)});
- float halo=${f(s.haloLevel)}*h.x*h.y;
- float blur=sqrt(${f(s.feather * s.feather)}+${f(0.4 * 0.4)}*spread*spread);
- vec2 f=roomShojiAxes(q,blur);
- float frame=f.x*f.y;
- if(frame<.001)return halo;
- vec2 local=q/${extent};
- vec2 cells=(local*.5+.5)*${extent}*2./${cell};
- // Bars soften by less than the frame's edge, so the lattice stays readable in the glare's middle.
- vec2 w=vec2(2.4*blur+roomFootprint)/${cell};
- float bars=max(roomBars(cells.x,${barHalf}.x,w.x),roomBars(cells.y,${barHalf}.y,w.y));
- // The bottom rail: one more bar the rail's share of a row above the frame's lower edge.
- bars=max(bars,roomBar(abs(cells.y-${f(s.rows - s.rail)}),${barHalf}.y,w.y)*(1.-smoothstep(.2,.45,w.y)));
- return halo+frame*(1.-${f(s.glow)}*.5*dot(local,local))*(1.-${f(s.barShade)}*bars);
-}
-// The room's bounce: the ceiling, the wall the shoji lights (beyond the device), the other walls, a
-// soft horizon, and the floor. Levels are ceiling, lit wall, walls, floor. The lit wall fades by
-// litFade toward the ceiling, so a flat device mirrors a soft band toward its top edge rather than an
-// even gray over the ink.
+// The room's bounce: the ceiling, the wall beyond the device, the other walls, a soft horizon, and
+// the floor. Levels are ceiling, lit wall, walls, floor. The lit wall fades by litFade toward the
+// ceiling, so a flat device mirrors a soft band toward its top edge rather than an even gray over the
+// ink.
 float roomBounce(vec3 r,vec4 levels,float litFade){
  float rise=dot(r,roomUp);
  float ahead=-dot(r,roomToward)/max(sqrt(max(1.-rise*rise,0.)),.001);
@@ -81,20 +49,8 @@ float roomBounce(vec3 r,vec4 levels,float litFade){
  float upper=mix(wall,levels.x,smoothstep(.72,.95,rise));
  return mix(levels.w,upper,smoothstep(-.14,.08,rise));
 }
-// A round light seen through a coat whose lobe is spread wide: its body's edge blurs as the shoji's
-// does; its core spreads into the lobe keeping its power, so a rough coat dims it rather than
-// widening a white disk; and its halo lights the surfaces around it.
-float roomRound(vec3 r,vec3 at,float radius,float feather,float radiance,float core,float coreRadiance,float haloLevel,float haloScale,float spread){
- float d=acos(clamp(dot(r,at),-1.,1.));
- float blur=sqrt(feather*feather+${f(0.4 * 0.4)}*spread*spread);
- float body=1./(1.+exp(clamp((d-radius)/blur,-40.,40.)))+haloLevel*exp(-d*d/(haloScale*haloScale));
- // The lobe's deviation from the logistic scale its blur uses.
- float lobe=${f(0.4 * (Math.PI / Math.sqrt(3)))}*spread;
- float spreadCore=core*core+lobe*lobe;
- return radiance*body+coreRadiance*core*core/spreadCore*exp(-.5*d*d/spreadCore);
-}
-// Every source the room's coats mirror: the shoji and the round lights, at their radiance.
-float roomSources(vec3 r,float spread){return ${f(ROOM.shoji.radiance)}*roomShoji(r,spread)${lights};}
+// The one source every coat mirrors: the ceiling light, at its radiance.
+float roomSources(vec3 r,float spread){return ${f(light.radiance)}*roomCeilingLight(r,spread);}
 float roomGloss(vec3 r){return roomBounce(r,${bounce(ROOM.glossBounce)});}
 float roomFoil(vec3 r){return roomBounce(r,${bounce(ROOM.foilBounce)});}
 `;

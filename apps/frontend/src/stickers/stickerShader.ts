@@ -12,6 +12,12 @@ import { SCREENTONE } from "./screentone";
  */
 export const CREASE_SHADING = 1;
 
+/**
+ * How many times steeper than the bake a crease's slopes are drawn, for its shading and its gloss alike:
+ * a real sticker drapes over about a millimeter, steeper than the app's geometry.
+ */
+const CREASE_STEEPENING = 3;
+
 /** Shared shader: air/film Fresnel, one eye in front of the screen, and the shared room. */
 export const stickerVertex = `
 attribute vec2 position;
@@ -35,6 +41,8 @@ uniform vec4 normalBounds;
 uniform vec2 amounts;
 uniform float hasFoil;
 uniform float opaquePaper;
+// The room's light on the flat paper against the still pose's, as paperLight.ts follows it.
+uniform float paperLight;
 // Where the sticker's center sits on screen, in CSS px from the visual viewport's center (y down),
 // and how many CSS px on screen one of its short sides spans.
 uniform vec2 screenCenter;
@@ -54,9 +62,10 @@ void main() {
   vec3 base=mix(vec3(1.),art.rgb,art.a);
   // Frame-constant rotations are composed on the CPU, rather than at every covered fragment.
   // Flat and bent snapshots share the print and light; their diagonal reveal is composited afterward.
-  // The crease's slope, as crease.ts packs it: R and G in NORMAL_SLOPEs, divided by B's range.
+  // The crease's slope, as crease.ts packs it (R and G in NORMAL_SLOPEs, divided by B's range), steepened.
+  // The packing clips at NORMAL_RANGE, so the steepening happens here; flat stays exactly flat.
   vec3 encoded=texture2D(normalImage,(sourceUv-normalBounds.xy)/normalBounds.zw).rgb*255.;
-  vec2 slope=(encoded.rg-128.)/127.*(1.+(255.-encoded.b)/${f(NORMAL_RANGE_LEVELS)})*${f(NORMAL_SLOPE)};
+  vec2 slope=(encoded.rg-128.)/127.*(1.+(255.-encoded.b)/${f(NORMAL_RANGE_LEVELS)})*${f(NORMAL_SLOPE * CREASE_STEEPENING)};
   vec3 surfaceNormal=normalize(vec3(slope,1.));
   vec3 n=normalize(normalTransform*surfaceNormal);
   // The room's light on the slope against the flat paper's shades the crease; flat, it is exactly 1.
@@ -81,7 +90,7 @@ void main() {
   vec3 reflected=normalize(2.*dot(view,n)*n-view);
   vec2 shojiPoint=roomPlane(reflected);
   roomFootprint=max(length(dFdx(shojiPoint)),length(dFdy(shojiPoint)));
-  vec3 coat=laminateCoat(vec3(linear(base.r),linear(base.g),linear(base.b))*creaseLight*.9*(1.-fresnel)+fresnel*environment(reflected),
+  vec3 coat=laminateCoat(vec3(linear(base.r),linear(base.g),linear(base.b))*creaseLight*paperLight*.9*(1.-fresnel)+fresnel*environment(reflected),
     sourceUv*size,printFootprint*tile,surfaceNormal,view);
   // Paper never clips: the brightest reflection rolls off, so it keeps its gradation over the print.
   vec3 result=clamp(highlightShoulder(coat,.88),0.,1.);
@@ -96,7 +105,7 @@ void main() {
   if(foilAlpha>0.) {
     // Concentric grooves disperse outward from the center, so each stretch of band takes another light.
     vec3 radial=normalTransform*vec3(localPoint/max(length(localPoint),.0001),0.);
-    vec3 metal=shadeFoil(printCoordinate,atan(localPoint.y,localPoint.x),n,view,radial,printFootprint,angularFootprint)*creaseLight;
+    vec3 metal=shadeFoil(printCoordinate,atan(localPoint.y,localPoint.x),n,view,radial,printFootprint,angularFootprint)*creaseLight*paperLight;
     color+=vec3(display(metal.r),display(metal.g),display(metal.b))*foilAlpha;
   }
   float alpha=paperAlpha+foilAlpha;

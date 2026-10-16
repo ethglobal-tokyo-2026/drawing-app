@@ -3,10 +3,10 @@ import { STILL_POSE } from "./lightMode";
 import { paperIrradiance } from "./roomIrradiance";
 import { roomFrame, type RoomFrame } from "./sharedRoom";
 
-/** The longest throw per unit of elevation, where the shoji nears the screen's horizon. */
+/** The longest throw per unit of elevation, where the light nears the screen's horizon. */
 const MAX_REACH = 1.5;
-/** The shoji's height on screen upright, where its shadow is softest: the soft layer's blur is set for it. */
-const UPRIGHT_LIGHT_Z = 0.556;
+/** The light's height over the screen upright, where its shadow is softest: the soft layer's blur is set for it. */
+const UPRIGHT_LIGHT_Z = roomFrame({ ...STILL_POSE, beta: 90 }).light[2];
 /** The sharp and soft mix moves in steps this size, so the tremor never repaints it. */
 const MIX_STEP = 0.05;
 /**
@@ -16,18 +16,20 @@ const MIX_STEP = 0.05;
 const MOVE_PX = 0.25;
 const HIGHEST_ELEVATION_PX = 14;
 
-/** The shoji's share of the light on the screen's flat paper, all its key shadow takes away. */
-const shojiShare = (frame: RoomFrame) => {
-  const { shoji, total } = paperIrradiance(frame);
-  return shoji / total;
+/** The room light's part of paperIrradiance: the one line that names its field. */
+const keyLight = (irradiance: ReturnType<typeof paperIrradiance>) => irradiance.light;
+/** The room light's share of the light on the screen's flat paper, all its key shadow takes away. */
+const keyShare = (frame: RoomFrame) => {
+  const irradiance = paperIrradiance(frame);
+  return keyLight(irradiance) / irradiance.total;
 };
-const STILL_SHARE = shojiShare(roomFrame(STILL_POSE));
+const STILL_SHARE = keyShare(roomFrame(STILL_POSE));
 const step = (value: number) => (Math.round(value / MIX_STEP) * MIX_STEP).toFixed(2);
 
 /**
- * The shoji's key shadow under a sticker lifted one unit, from the room's light in screen axes (y down,
+ * The room light's key shadow under a sticker lifted one unit, from the light in screen axes (y down,
  * z toward the viewer): its offset falls away from the light, and its penumbra, which grows as 1/L_z²,
- * is a mix of a sharp head-on blur and a soft upright one. Its strength is the shoji's share of the
+ * is a mix of a sharp head-on blur and a soft upright one. Its strength is the light's share of the
  * screen's light against the still pose's, where the design sets its ink.
  */
 export function keyShadow(pose: DevicePose) {
@@ -37,7 +39,7 @@ export function keyShadow(pose: DevicePose) {
   const reach = Math.hypot(lx, ly) / z;
   const k = reach > MAX_REACH ? MAX_REACH / reach : 1;
   const soft = Math.min(1, Math.max(0, (1 / z ** 2 - 1) / (1 / UPRIGHT_LIGHT_Z ** 2 - 1)));
-  const strength = shojiShare(frame) / STILL_SHARE;
+  const strength = keyShare(frame) / STILL_SHARE;
   return {
     x: (-lx / z) * k,
     y: (-ly / z) * k,

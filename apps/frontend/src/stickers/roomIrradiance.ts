@@ -1,11 +1,12 @@
 import { glslFloat as f } from "./glsl";
-import { lightPower, ROOM, type RoomFrame } from "./sharedRoom";
+import { ROOM, type RoomFrame } from "./sharedRoom";
 
 /**
  * The room's light falling on a sticker's paper, which shades its creases: the irradiance E(n) on a
  * surface facing n. The bounce surrounds the device, so it is projected once into spherical harmonics
- * in the room's axes (Ramamoorthi and Hanrahan). Each source is small and stays high above every
- * crease's horizon, so it adds exactly its power, radiance times solid angle, times n·its direction.
+ * in the room's axes (Ramamoorthi and Hanrahan). The ceiling light is small and stays high above
+ * every crease's horizon, so it adds exactly its power, radiance times solid angle, times n·its
+ * direction.
  */
 
 type Levels = (typeof ROOM)["glossBounce"];
@@ -64,67 +65,51 @@ function bounceIrradiance(levels: Levels) {
   };
 }
 
-/** The solid angle of a rectangle centered one unit away, from its half extents on that plane. */
-const rectangleSolidAngle = (a: number, b: number) =>
-  4 * Math.asin((a * b) / Math.sqrt((1 + a * a) * (1 + b * b)));
-
-/** How many round sources the shader sums; unused ones have no power. */
-export const ROUND_SOURCES = 4;
+/** roomShader's roomDisc: the ceiling light's body at distance d from its middle on its plane. */
+const disc = (d: number, blur: number) =>
+  1 / (1 + Math.exp((d - ROOM.light.radius) / blur)) -
+  1 / (1 + Math.exp((d + ROOM.light.radius) / blur));
 
 /**
- * The room's sources in screen axes, toward each and its power: the shoji along roomFrame's light,
- * then the round lights, body and core, at the power foil mirrors them with.
+ * The ceiling light's power: its radiance times the solid angle its body covers, edge blur included,
+ * as gloss mirrors it. The halo is the room it lights, which the bounce already holds.
  */
-function roundSources(frame: RoomFrame) {
-  const { shoji } = ROOM;
-  return [
-    {
-      direction: frame.light,
-      power: shoji.radiance * rectangleSolidAngle(shoji.halfWidth, shoji.halfHeight),
-    },
-    ...frame.lights.map((source) => ({ direction: source.direction, power: lightPower(source) })),
-  ];
-}
-
-/** The round sources' uniform: each one's direction, then its power. */
-export function roomIrradianceSources(frame: RoomFrame) {
-  const sources = roundSources(frame);
-  if (sources.length > ROUND_SOURCES)
-    throw new Error(
-      `The room has ${sources.length} round sources; the shader sums ${ROUND_SOURCES}`,
-    );
-  const out = new Float32Array(4 * ROUND_SOURCES);
-  sources.forEach(({ direction, power }, i) => out.set([...direction, power], 4 * i));
-  return out;
-}
+const LIGHT_POWER = (() => {
+  const { radius, feather, radiance } = ROOM.light;
+  const steps = 512;
+  const reach = radius + 12 * feather;
+  let solidAngle = 0;
+  for (let i = 0; i < steps; i++) {
+    const d = ((i + 0.5) / steps) * reach;
+    // A ring on the plane one unit along the light, seen from one unit before it: dω = dA / (1 + d²)^(3/2).
+    solidAngle += (disc(d, feather) * 2 * Math.PI * d * (reach / steps)) / (1 + d * d) ** 1.5;
+  }
+  return radiance * solidAngle;
+})();
 
 const c = bounceIrradiance(ROOM.glossBounce);
 
 type Vec3 = readonly [number, number, number];
 const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 
-/** The shader's roomIrradiance on paper facing n, in screen axes: the shoji's part and the whole. */
+/** The shader's roomIrradiance on paper facing n, in screen axes: the ceiling light's part and the whole. */
 export function paperIrradiance(frame: RoomFrame, n: Vec3 = [0, 0, 1]) {
   const y = dot(n, frame.up);
   const z = dot(n, frame.toward);
   const x2 = Math.max(1 - y * y - z * z, 0);
   const bounceLight =
     c.c0 + c.cy * y + c.cz * z + c.cyz * y * z + c.czz * (3 * z * z - 1) + c.cxy * (x2 - y * y);
-  const [shoji, ...lights] = roundSources(frame).map(
-    ({ direction, power }) => power * Math.max(dot(n, direction), 0),
-  );
-  return { shoji, total: lights.reduce((sum, light) => sum + light, bounceLight + shoji) };
+  const light = LIGHT_POWER * Math.max(dot(n, frame.light), 0);
+  return { light, total: bounceLight + light };
 }
 
 /** roomIrradiance(n): the irradiance on paper facing n, in screen axes. Needs roomFragment first. */
 export const roomIrradianceFragment = `
-uniform vec4 irradianceSources[${ROUND_SOURCES}];
 float roomIrradiance(vec3 n){
  float y=dot(n,roomUp);
  float z=dot(n,roomToward);
  float x2=max(1.-y*y-z*z,0.);
- float e=${f(c.c0)}+${f(c.cy)}*y+${f(c.cz)}*z+${f(c.cyz)}*y*z+${f(c.czz)}*(3.*z*z-1.)+${f(c.cxy)}*(x2-y*y);
- for(int i=0;i<${ROUND_SOURCES};i++)e+=irradianceSources[i].w*max(dot(n,irradianceSources[i].xyz),0.);
- return e;
+ return ${f(c.c0)}+${f(c.cy)}*y+${f(c.cz)}*z+${f(c.cyz)}*y*z+${f(c.czz)}*(3.*z*z-1.)+${f(c.cxy)}*(x2-y*y)
+  +${f(LIGHT_POWER)}*max(dot(n,roomLight),0.);
 }
 `;

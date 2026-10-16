@@ -86,10 +86,15 @@
   --sticker-cast: drop-shadow(0.5px 1px 1px rgba(28, 24, 36, 0.16))
     drop-shadow(1px 3px 4px rgba(28, 24, 36, 0.08));
   /* A sticker's own shadows (StickerFigure): the room's even light, occluded straight beneath it, and
-     the shoji's key shadow, a layer that follows the light (stickers/keyShadow.ts), in this ink */
+     the room light's key shadow, a layer that follows the light (stickers/keyShadow.ts), in this ink */
   --sticker-ambient: drop-shadow(0 0 1px rgba(28, 24, 36, 0.14));
-  --sticker-ambient-board: drop-shadow(0 0 0.6px rgba(28, 24, 36, 0.16));
+  /* Stuck, its contact shadow: the even light occluded 1px all round its edge, which shows its
+     thickness at every pose */
+  --sticker-ambient-board: drop-shadow(0 0 1px rgba(28, 24, 36, 0.2));
   --key-shadow-ink: rgba(28, 24, 36, 0.2);
+  /* A laminated sticker's real thickness, about 1 CSS px on a phone or iPad: a stuck sticker's
+     elevation, so its key shadow shows an edge, never a lift. Tune by feel. */
+  --sticker-thickness: 1px;
 
   /* Motion beyond the contract */
   --t-turn: 500ms;

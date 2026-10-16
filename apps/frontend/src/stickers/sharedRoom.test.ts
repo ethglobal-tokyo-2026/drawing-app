@@ -47,22 +47,22 @@ const mirrored = (pose: DevicePose) => {
   return [dot(mirror, side), dot(mirror, frame.up), dot(mirror, frame.toward)];
 };
 
-/** Where a point on a flat screen, in CSS px from its center, mirrors the shoji, in its own axes. */
-const shojiAt = (frame: ReturnType<typeof roomFrame>, x: number, y: number) => {
+/** Where a point on a flat screen, in CSS px from its center, mirrors on the light's plane, in its axes. */
+const planeAt = (frame: ReturnType<typeof roomFrame>, x: number, y: number) => {
   const view = unit([frame.eye[0] - x, frame.eye[1] - y, frame.eye[2]]);
   const r = [-view[0], -view[1], view[2]];
   return [dot(r, frame.across), dot(r, frame.down)].map((v) => v / dot(r, frame.light));
 };
 
 describe("roomFrame", () => {
-  it("squares the shoji so its rails read level and its bars plumb at the still pose", () => {
+  it("squares the light's plane so its across axis reads level and its down axis plumb at the still pose", () => {
     const frame = roomFrame(turnedBy(attitudeOf(0, 0, 0)));
     const step = 60;
     const [acrossX, downX] = [0, 1].map(
-      (i) => shojiAt(frame, step, 0)[i] - shojiAt(frame, -step, 0)[i],
+      (i) => planeAt(frame, step, 0)[i] - planeAt(frame, -step, 0)[i],
     );
     const [acrossY, downY] = [0, 1].map(
-      (i) => shojiAt(frame, 0, step)[i] - shojiAt(frame, 0, -step)[i],
+      (i) => planeAt(frame, 0, step)[i] - planeAt(frame, 0, -step)[i],
     );
     expect(Math.abs(Math.atan2(downX, acrossX) / RAD)).toBeLessThan(0.5);
     expect(Math.abs(Math.atan2(acrossY, downY) / RAD)).toBeLessThan(0.5);
@@ -77,14 +77,14 @@ describe("roomFrame", () => {
     }
   });
 
-  it("slides the reflection sideways for a tilt about the long axis, with the shoji held in the world", () => {
+  it("slides the reflection sideways for a tilt about the long axis, with the light held in the world", () => {
     const still = roomFrame(turnedBy(attitudeOf(0, 0, 0)));
     for (const roll of [-10, 10]) {
       const by = attitudeOf(0, 0, roll);
       const rolled = turnedBy(by);
       const [side] = mirrored(rolled);
       expect(Math.abs(side)).toBeCloseTo(Math.sin(2 * Math.abs(roll) * RAD), 6);
-      // On screen, the shoji turns only as far as its axes, still in the world, lean on the rolled screen.
+      // On screen, the light's plane turns only as far as its axes, still in the world, lean on the rolled screen.
       const frame = roomFrame(rolled);
       for (const axis of ["down", "across"] as const)
         expect(turnedOnScreen(still[axis], frame[axis])).toBeCloseTo(

@@ -7,7 +7,7 @@ import { LAMINATE_FINISHES } from "./laminate";
  * bigger sticker shows more fine flecks rather than bigger ones. The share of cells holding a flake,
  * in each of two lattices; the second lattice's pitch over the first's; each flake's radius in
  * first-lattice cells; the spread of their tilts, as a normal offset; the width of the lobe that
- * catches the window; and how far their hue tints the white of the mirror.
+ * catches the ceiling light; and how far their hue tints the white of the mirror.
  */
 const GLITTER = {
   pitch: 3.5,
@@ -95,8 +95,8 @@ vec3 laminateHue(float t){
  return foilAllowedHue(mix(c,laminatePalette[5],step(5.,t)));
 }
 // Flakes fixed in the coat, one cell at most each, every flake a tiny mirror at its own tilt: it shows
-// its hue lit by the room it reflects, and flashes white where that reflection meets one of the
-// room's sources, so a tilt changes which flakes flash. The coat's own reflection stays over it.
+// its hue lit by the room it reflects, and flashes white where that reflection meets the ceiling
+// light, so a tilt changes which flakes flash. The coat's own reflection stays over it.
 // Linear RGB.
 vec3 laminateGlitter(vec3 coat,vec2 cellPoint,float footprint,float scale,vec3 surfaceNormal,vec3 view){
  vec2 cell=floor(cellPoint);
