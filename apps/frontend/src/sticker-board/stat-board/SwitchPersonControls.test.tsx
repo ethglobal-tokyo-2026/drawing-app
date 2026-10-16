@@ -61,6 +61,7 @@ describe("SwitchPersonControls", () => {
       expectedPrivySubject: "hana",
       expectedSuiAddress: null,
       personSwitchMode: "live",
+      marksKyotoSeikaSubjects: false,
     };
     view.rerender(
       <SessionEnvelopeContext

@@ -27,6 +27,18 @@ export const canSelectPerson = (config: PersonSwitchConfig, authenticatedUserId:
   config.operatorUserId === authenticatedUserId &&
   config.hanaUserId !== null;
 
+/**
+ * Only the configured operator marks Kyoto Seika Subjects for deletion, and only acting as themself,
+ * so a recording made acting as Hana never shows a mark.
+ */
+export const marksKyotoSeikaSubjects = (
+  config: PersonSwitchConfig,
+  session: Pick<ResolvedSession, "authenticatedUserId" | "selectedUserId">,
+) =>
+  config.operatorUserId !== null &&
+  config.operatorUserId === session.authenticatedUserId &&
+  config.operatorUserId === session.selectedUserId;
+
 /** Validate retained configuration even while switching is off; never create missing users. */
 export function validatePersonSwitchConfig(db: Db, config: PersonSwitchConfig): void {
   if (config.operatorUserId === null && config.hanaUserId === null && config.mode === "off") return;
@@ -157,5 +169,6 @@ export function sessionEnvelope(deps: AppDeps, session: ResolvedSession): Sessio
     expectedPrivySubject: privySubject(deps.lineChannelId, selected.lineUserId),
     expectedSuiAddress: selected.suiAddress,
     personSwitchMode: enabled ? deps.personSwitch.mode : "off",
+    marksKyotoSeikaSubjects: marksKyotoSeikaSubjects(deps.personSwitch, session),
   };
 }

@@ -263,6 +263,11 @@ export const errors = {
     en: "Some settings haven’t saved or applied on this device. Resolve the affected settings before switching.",
     ja: "保存できていない設定、またはこの端末で適用できていない設定があります。該当する設定を確認してから切り替えてください。",
   },
+  /** Kyoto Seika deal, before Begin: holding a subject to mark or unmark it for deletion, or loading the marks (/api/kyoto-seika/subjects-marked-for-deletion), from anyone but the operator acting as themself, through problemOf */
+  operator_only: {
+    en: "This account can’t mark subjects for deletion.",
+    ja: "このアカウントでは、題材を削除候補にできません。",
+  },
   /** Sticker detail: loading where it's been (GET /api/stickers/:stickerId), in “Couldn’t load where it’s been…”, or Giving: packing it (POST /api/gifts), in “couldn’t be packed”, through problemOf */
   sticker_not_found: {
     en: "Couldn’t find this sticker. Go back to your board and try again.",

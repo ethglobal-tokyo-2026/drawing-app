@@ -69,6 +69,8 @@ export interface DiagnosticFields {
   slowFrames?: number;
   device?: string;
   report?: string;
+  /** A Kyoto Seika Subject marked or unmarked for deletion: its ja. */
+  word?: string;
 }
 
 /** A sticker image's URL names nothing but its public content hash, so it's logged whole. */
@@ -217,6 +219,7 @@ const loggedFields = {
   slowFrames: true,
   device: true,
   report: true,
+  word: true,
 } satisfies Record<keyof DiagnosticFields, true>;
 
 const isLoggedField = (key: string): key is keyof DiagnosticFields =>

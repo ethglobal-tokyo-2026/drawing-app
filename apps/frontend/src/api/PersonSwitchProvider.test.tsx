@@ -44,6 +44,7 @@ const session: SessionEnvelope = {
   expectedPrivySubject: "me",
   expectedSuiAddress: null,
   personSwitchMode: "verify",
+  marksKyotoSeikaSubjects: false,
 };
 let unmount = () => {};
 afterEach(() => {

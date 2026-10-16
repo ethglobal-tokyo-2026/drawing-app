@@ -18,6 +18,8 @@ export type SessionEnvelope = {
   expectedPrivySubject: string;
   expectedSuiAddress: string | null;
   personSwitchMode: "off" | "verify" | "live";
+  /** Whether holding a Kyoto Seika Subject on a deal marks it for deletion: the operator's alone. */
+  marksKyotoSeikaSubjects: boolean;
 };
 export type PersonSwitchConfig = {
   mode: "off" | "verify" | "live";

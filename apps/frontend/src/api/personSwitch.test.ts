@@ -20,6 +20,7 @@ const envelope = (userId = operator, version = "first"): SessionEnvelope => ({
   expectedPrivySubject: userId,
   expectedSuiAddress: null,
   personSwitchMode: "verify",
+  marksKyotoSeikaSubjects: userId === operator,
 });
 function deferred<T>() {
   let resolve!: (value: T) => void;

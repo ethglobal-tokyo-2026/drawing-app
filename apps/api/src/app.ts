@@ -14,6 +14,7 @@ import { apiError, limitBody, notFound, onError, validate } from "./errors.ts";
 import { exploreRoutes } from "./routes/explore.ts";
 import { giftRoutes } from "./routes/gifts.ts";
 import { gratitudeRoutes } from "./routes/gratitude.ts";
+import { kyotoSeikaRoutes } from "./routes/kyotoSeika.ts";
 import { lineMenuRoutes } from "./routes/lineMenu.ts";
 import { performanceReportRoutes } from "./routes/performanceReports.ts";
 import { sessionRoutes } from "./routes/session.ts";
@@ -111,6 +112,7 @@ export function createApp(deps: AppDeps) {
       .route("/sticker-boards", stickerBoardRoutes(deps))
       .route("/gifts", giftRoutes(deps))
       .route("/gratitude", gratitudeRoutes(deps))
+      .route("/kyoto-seika", kyotoSeikaRoutes(deps))
       // /explore and /users
       .route("/", exploreRoutes(deps))
       .onError(onError)

@@ -9,6 +9,7 @@ export function sessionEnvelope(me: Me, overrides: Partial<SessionEnvelope> = {}
     expectedPrivySubject: me.lineUserId ?? me.id,
     expectedSuiAddress: null,
     personSwitchMode: "off",
+    marksKyotoSeikaSubjects: false,
     ...overrides,
   };
 }
