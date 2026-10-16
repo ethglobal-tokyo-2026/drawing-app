@@ -19,6 +19,7 @@ export interface HoldHandlers {
   onPointerLeave: () => void;
   onClickCapture: (event: ReactMouseEvent) => void;
   onContextMenu: (event: ReactMouseEvent) => void;
+  onKeyDown: () => void;
 }
 
 /**
@@ -77,6 +78,10 @@ export function useHold(ms: number, onHold: () => void, key: unknown): HoldHandl
     // A long press would raise the browser's own menu over the cloud.
     onContextMenu: (event) => {
       if (press.current || fired.current) event.preventDefault();
+    },
+    // A hold let go off the element makes no click, so the click a key makes isn't the hold's.
+    onKeyDown: () => {
+      fired.current = false;
     },
   };
 }

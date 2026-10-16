@@ -97,4 +97,18 @@ describe("a held press", () => {
     act(() => button.click());
     expect(onClick).toHaveBeenCalledOnce();
   });
+
+  it("lets a key's press through after a hold whose release made no click", () => {
+    const { button, onClick } = held();
+    send(button, "pointerdown");
+    wait(HOLD_MS);
+    // Let go off the button: the browser makes no click, and a key's press comes next.
+    send(button, "pointerout");
+    act(
+      () =>
+        void button.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })),
+    );
+    act(() => button.click());
+    expect(onClick).toHaveBeenCalledOnce();
+  });
 });
