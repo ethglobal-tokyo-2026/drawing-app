@@ -1,3 +1,4 @@
+import type { KyotoSeikaSubject } from "@drawing-app/api/client";
 import {
   useEffect,
   useLayoutEffect,
@@ -18,6 +19,7 @@ import { dealKinds, pickedPair, type Deal } from "./deal";
 import type { SubjectKind } from "./subjectList";
 import { SubjectBalloons } from "./SubjectBalloons";
 import type { SubjectListState } from "./useKyotoSeikaSheet";
+import { useSubjectsMarkedForDeletion, type MarksFailure } from "./useSubjectsMarkedForDeletion";
 import "./kyoto-seika-deal.css";
 
 /** The pair area's width and the space the deal stands in. */
@@ -63,6 +65,7 @@ export function KyotoSeikaDeal({
 }: Props) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
+  const marks = useSubjectsMarkedForDeletion();
   const balloons = useRef<HTMLDivElement>(null);
   const pairArea = useRef<HTMLDivElement>(null);
   const [space, setSpace] = useState<DealSpace | null>(null);
@@ -140,6 +143,13 @@ export function KyotoSeikaDeal({
     return () => clearTimeout(done);
   }, [leaving, reduced, screen]);
 
+  const marksFailed = (failure: MarksFailure) =>
+    failure.kind === "load"
+      ? t(($) => $.kyotoSeika.marks.loadFailed)
+      : failure.kind === "mark"
+        ? t(($) => $.kyotoSeika.marks.markFailed, { word: failure.word })
+        : t(($) => $.kyotoSeika.marks.unmarkFailed, { word: failure.word });
+
   return (
     <>
       <div ref={balloons} className="kyoto-seika-deal">
@@ -156,7 +166,29 @@ export function KyotoSeikaDeal({
             shown &&
             layout &&
             list.status === "loaded" && (
-              <SubjectBalloons deal={shown} layout={layout} onRoll={onRoll} onPick={onPick} />
+              <>
+                <SubjectBalloons
+                  deal={shown}
+                  layout={layout}
+                  onRoll={onRoll}
+                  onPick={onPick}
+                  {...(marks && {
+                    marked: marks.marked,
+                    onHold: (subject: KyotoSeikaSubject) => marks.toggle(subject.ja),
+                  })}
+                />
+                {marks?.failure && space && (
+                  // Just over Begin, where the deal's room ends.
+                  <div className="kyoto-seika-deal__marks-failure" style={{ top: space.bottom }}>
+                    <ErrorLine
+                      detail={problemOf(marks.failure.error).detail}
+                      onRetry={marks.failure.retry}
+                    >
+                      {marksFailed(marks.failure)}
+                    </ErrorLine>
+                  </div>
+                )}
+              </>
             )
           )}
         </div>

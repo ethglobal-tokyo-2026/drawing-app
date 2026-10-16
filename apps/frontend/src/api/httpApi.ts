@@ -218,6 +218,9 @@ export function createSessionApi(api: ServerClient = createServerClient()): Sess
 export function createHttpApi(api: ServerClient = createServerClient()): ApiClient {
   const boards = api["sticker-boards"];
   const gift = (giftId: string) => ({ param: { giftId } });
+  const marks = api["kyoto-seika"]["subjects-marked-for-deletion"];
+  // The client puts a param into the path as it's given, so a word's `/`, `?` or `%` is encoded here.
+  const markedWord = (word: string) => ({ param: { word: encodeURIComponent(word) } });
 
   return {
     setLanguageChoice: async (language) => {
@@ -234,6 +237,26 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       const response = await api.me["kyoto-seika-practice"].$post({ json: change });
       if (!response.ok) throw await refusal(response, "POST /api/me/kyoto-seika-practice");
       return (await response.json()).me;
+    },
+
+    subjectsMarkedForDeletion: async () => {
+      const response = await marks.$get();
+      if (!response.ok)
+        throw await refusal(response, "GET /api/kyoto-seika/subjects-marked-for-deletion");
+      return (await response.json()).words;
+    },
+    markSubjectForDeletion: async (word) => {
+      const response = await marks[":word"].$put(markedWord(word));
+      if (!response.ok)
+        throw await refusal(response, `PUT /api/kyoto-seika/subjects-marked-for-deletion/${word}`);
+    },
+    unmarkSubjectForDeletion: async (word) => {
+      const response = await marks[":word"].$delete(markedWord(word));
+      if (!response.ok)
+        throw await refusal(
+          response,
+          `DELETE /api/kyoto-seika/subjects-marked-for-deletion/${word}`,
+        );
     },
 
     stickerBoard: async (userId = "me") => {

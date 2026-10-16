@@ -15,3 +15,13 @@ Each entry:
   - `people`: a person, a group or a character, creatures and spirits included (双子, 小学生, 鬼).
 
 Words newer than JMdict's commonness marks (推し) come in only by hand.
+
+## Words marked for deletion
+
+The operator marks a dealt word for deletion by holding its cloud for 3 seconds on a deal, and unmarks it the same way. Marks live in the server's database, in `kyoto_seika_subjects_marked_for_deletion`, by the word's `ja`; a marked word is still dealt, tagged 「トル」 for the operator only, until it's taken out of `subjects.json` here. To read them on the box:
+
+```sh
+sqlite3 -readonly /srv/drawing-api/data/drawing-app.db "select word from kyoto_seika_subjects_marked_for_deletion order by created_at"
+```
+
+A mark whose word is no longer in the list stays as a record and does nothing.

@@ -22,6 +22,15 @@
   pointer-events: auto;
 }
 
+/* A mark, unmark or the marks' load that failed, its foot at the deal's lower edge (set inline). */
+.kyoto-seika-deal__marks-failure {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  translate: 0 -100%;
+  pointer-events: auto;
+}
+
 /* A large screen lays the pair out 500px wide over Begin, room enough for three clouds over two, so
    the five stay one cluster rather than parting to the screen's sides, then draws them larger. */
 @media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {

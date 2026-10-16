@@ -92,6 +92,16 @@ export interface ApiClient {
   /** POST /api/me/kyoto-seika-practice: Kyoto Seika Practice Mode, in Settings. */
   setKyotoSeikaPractice: (change: { kyotoSeikaPractice: boolean }) => Promise<Me>;
 
+  /**
+   * GET /api/kyoto-seika/subjects-marked-for-deletion: the Kyoto Seika Subjects the operator marked,
+   * by their `ja`, oldest mark first. Anyone else is refused with operator_only.
+   */
+  subjectsMarkedForDeletion: () => Promise<string[]>;
+  /** PUT /api/kyoto-seika/subjects-marked-for-deletion/:word; marking a marked word changes nothing. */
+  markSubjectForDeletion: (word: string) => Promise<void>;
+  /** DELETE /api/kyoto-seika/subjects-marked-for-deletion/:word; an unmarked word stays as it is. */
+  unmarkSubjectForDeletion: (word: string) => Promise<void>;
+
   /** GET /api/sticker-boards/:userId; `me` for your own. */
   stickerBoard: (userId?: string) => Promise<StickerBoard>;
   /** GET /api/sticker-boards/:userId/user-stats */
